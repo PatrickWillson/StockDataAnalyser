@@ -6,7 +6,7 @@ Run manually with: pytest tests/test_fx_client_live.py -v
 """
 
 import pytest
-from core.fx_client import FXClient
+from clients.fx_client import FXClient
 
 
 @pytest.mark.skip(reason="Live API test - run manually when needed")

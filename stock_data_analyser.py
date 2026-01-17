@@ -6,7 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 # Import Core Modules (You will create these next)
-from core.eodhd_client import EODHDClient
+from clients.eodhd_client import EODHDClient
 from core.graham_math import GrahamCalculator
 from core.anomaly_detector import AnomalyDetector
 

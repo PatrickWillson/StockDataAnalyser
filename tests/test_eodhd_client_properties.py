@@ -8,7 +8,7 @@ Each test runs 100+ iterations with randomly generated data.
 import pytest
 from hypothesis import given, strategies as st, settings
 from unittest.mock import Mock, patch
-from core.eodhd_client import EODHDClient
+from clients.eodhd_client import EODHDClient
 
 
 # Feature: stock-data-analyser, Property 1: Ticker suffix preservation
@@ -85,14 +85,16 @@ def test_london_fix_application(price, eps, exchange):
     
     **Validates: Requirements 3.2**
     """
-    client = EODHDClient("test_api_key")
+    from core.financial_data_processor import FinancialDataProcessor
+    
+    processor = FinancialDataProcessor()
     warnings = []
     
     # Calculate P/E ratio
     pe_ratio = price / eps
     
     # Apply London Fix
-    adjusted_price = client._apply_london_fix(price, eps, exchange, warnings)
+    adjusted_price = processor.apply_london_fix(price, eps, exchange, warnings)
     
     if exchange == "LSE" and pe_ratio > 500:
         # Price should be divided by 100
@@ -128,7 +130,8 @@ def test_currency_conversion_application(price, currency_pair):
     
     **Validates: Requirements 1.8**
     """
-    from core.fx_client import FXClient
+    from clients.fx_client import FXClient
+    from core.financial_data_processor import FinancialDataProcessor
     
     # Create a mock FX client with fixed rates for testing
     mock_fx_client = Mock(spec=FXClient)
@@ -136,13 +139,13 @@ def test_currency_conversion_application(price, currency_pair):
         1.0 if from_c == to_c else 1.5  # Simple mock: 1.5 for any conversion
     )
     
-    client = EODHDClient("test_api_key", fx_client=mock_fx_client)
+    processor = FinancialDataProcessor(fx_client=mock_fx_client)
     warnings = []
     
     price_currency, financials_currency = currency_pair
     
     # Apply currency conversion
-    converted_price = client._apply_currency_conversion(
+    converted_price = processor.apply_currency_conversion(
         price, price_currency, financials_currency, warnings
     )
     

@@ -6,7 +6,7 @@ These tests verify the client works correctly with mocked API responses.
 
 import pytest
 from unittest.mock import Mock, patch
-from core.eodhd_client import EODHDClient
+from clients.eodhd_client import EODHDClient
 
 
 def test_fetch_all_data_basic():

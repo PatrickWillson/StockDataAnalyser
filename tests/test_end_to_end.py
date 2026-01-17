@@ -12,7 +12,7 @@ import pytest
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from core.eodhd_client import EODHDClient
+from clients.eodhd_client import EODHDClient
 from core.graham_math import GrahamCalculator
 from core.anomaly_detector import AnomalyDetector
 from stock_data_analyser import generate_dossier_content, save_dossier

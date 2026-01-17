@@ -35,20 +35,6 @@ python stock_data_analyser.py VOD.L
 python stock_data_analyser.py RY.TO
 ```
 
-## Project Structure
-
-```
-stock-data-analyser/
-├── stock_data_analyser.py  # Main entry point (CLI)
-├── core/
-│   ├── eodhd_client.py     # API client for EODHD
-│   ├── graham_math.py      # Graham methodology calculations
-│   └── anomaly_detector.py # Statistical anomaly detection
-├── data/                   # Output directory for dossiers
-├── requirements.txt        # Python dependencies
-└── .env                    # API configuration
-```
-
 ## Output
 
 The system generates a structured Markdown file (`[TICKER]_DOSSIER.md`) containing:

@@ -6,7 +6,7 @@ Tests the FX rate fetching functionality.
 
 import pytest
 from unittest.mock import Mock, patch
-from core.fx_client import FXClient
+from clients.fx_client import FXClient
 
 
 def test_same_currency_returns_one():

@@ -7,7 +7,7 @@ Frankfurter is backed by European Central Bank data.
 
 import requests
 from typing import Optional
-from core.base_client import BaseAPIClient
+from clients.base_client import BaseAPIClient
 
 
 class FXClient(BaseAPIClient):
