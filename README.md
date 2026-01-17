@@ -46,7 +46,7 @@ The system generates a structured Markdown file (`[TICKER]_DOSSIER.md`) containi
 ## Requirements
 
 - Python 3.9+
-- EODHD API key (get one at https://eodhd.com/)
+- EODHD API key (get one at [https://eodhd.com?via=patrick](https://eodhd.com?via=patrick))
 
 ## License
 
