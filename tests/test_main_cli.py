@@ -16,19 +16,12 @@ def test_missing_api_key_error():
     Test that system exits with code 1 when EODHD_API_KEY is not set.
     Validates: Requirements 11.1
     """
-    # Arrange: Mock environment without API key and reload module
-    with patch.dict(os.environ, {}, clear=True):
-        # Reload dotenv to clear any cached values
-        from dotenv import load_dotenv
-        load_dotenv(override=True)
-        
-        with patch('sys.argv', ['stock_data_analyser.py', 'AAPL.US']):
-            with patch('builtins.print') as mock_print:
-                # Import fresh module
-                import importlib
-                import stock_data_analyser
-                importlib.reload(stock_data_analyser)
-                
+    # Arrange: Mock the API_KEY as None to simulate missing key
+    import stock_data_analyser
+    
+    with patch('sys.argv', ['stock_data_analyser.py', 'AAPL.US']):
+        with patch('builtins.print') as mock_print:
+            with patch.object(stock_data_analyser, 'API_KEY', None):
                 # Act & Assert: Run main and expect SystemExit
                 with pytest.raises(SystemExit) as exc_info:
                     stock_data_analyser.main()

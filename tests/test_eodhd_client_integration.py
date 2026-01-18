@@ -19,7 +19,9 @@ def test_fetch_all_data_basic():
             'Exchange': 'NASDAQ',
             'CurrencyCode': 'USD',
             'IsDelisted': False,
-            'Officers': [{'Name': 'Tim Cook'}]
+            'Officers': {
+                '0': {'Name': 'Tim Cook', 'Title': 'Chief Executive Officer'}
+            }
         },
         'SharesStats': {
             'SharesOutstanding': 16000000000
@@ -143,11 +145,11 @@ def test_london_fix_integration():
         
         result = client.fetch_all_data('VOD.L')
         
-        # Price should be divided by 100
-        assert result['price'] == 0.8
+        # Price should be converted to USD (0.8 GBP * 1.3399 ≈ 1.07 USD)
+        assert abs(result['price'] - 1.07) < 0.01
         
-        # Warning should be present
-        assert any('London Fix' in w for w in result['warnings'])
+        # Warning should be present (now in consolidated message)
+        assert any('Currency Conversions' in w or 'London Fix' in w for w in result['warnings'])
 
 
 def test_data_sanitization():

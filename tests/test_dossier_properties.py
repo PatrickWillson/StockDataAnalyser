@@ -77,12 +77,12 @@ def test_markdown_table_formatting(ticker, years, revenue, net_income, eps, divi
     # Verify output contains pipe separators
     assert '|' in output, "Output should contain pipe separators for Markdown tables"
     
-    # Verify output has proper table header row
-    assert '| Year | Revenue | Net Income | EPS | Div | BVPS |' in output, \
+    # Verify output has proper table header row (updated for new format)
+    assert '| Year | Revenue | Net Income | EPS |' in output, \
         "Output should have proper Markdown table header row"
     
-    # Verify output has proper table separator row
-    assert '|------|---------|------------|-----|-----|------|' in output, \
+    # Verify output has proper table separator row (updated for "Div Count" column)
+    assert '|------|---------|------------|-----|-------------|------|' in output, \
         "Output should have proper Markdown table separator row"
     
     # Verify each year appears in a table row

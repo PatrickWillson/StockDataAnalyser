@@ -236,9 +236,11 @@ def test_epv_normalization_correctness(earnings_list):
     normalized_earnings = sum(earnings_list) / len(earnings_list)
     expected_epv = normalized_earnings / 0.10  # Cost of capital = 10%
     
-    assert isinstance(result, float), f"Expected float, got {type(result)}"
-    assert abs(result - expected_epv) < 0.01, \
-        f"EPV mismatch: expected ~{round(expected_epv, 2)}, got {result}"
+    # EPV now returns a dict with detailed breakdown
+    assert isinstance(result, dict), f"Expected dict, got {type(result)}"
+    assert 'epv' in result, "Result should contain 'epv' key"
+    assert abs(result['epv'] - expected_epv) < 0.01, \
+        f"EPV mismatch: expected ~{round(expected_epv, 2)}, got {result['epv']}"
 
 
 # Feature: stock-data-analyser, Property 7: Earnings stability test correctness

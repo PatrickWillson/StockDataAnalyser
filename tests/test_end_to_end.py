@@ -213,7 +213,7 @@ def test_end_to_end_workflow():
     assert 'CRITICAL ALERTS' in dossier_content
     assert 'DEFENSIVE INVESTOR TESTS' in dossier_content
     assert 'ENTERPRISING INVESTOR TESTS' in dossier_content
-    assert '10-YEAR FINANCIALS' in dossier_content
+    assert '20-YEAR FINANCIALS' in dossier_content
     assert '|' in dossier_content  # Markdown table syntax
 
 

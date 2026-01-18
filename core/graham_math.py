@@ -87,8 +87,8 @@ class GrahamCalculator:
         if shares_outstanding == 0:
             return "N/A"
         
-        # Calculate TBVPS
-        tangible_equity = total_equity - intangible_assets - goodwill
+        # Calculate TBVPS - use absolute values to handle negative reporting
+        tangible_equity = total_equity - abs(intangible_assets) - abs(goodwill)
         tbvps = tangible_equity / shares_outstanding
         
         # Handle negative TBVPS
@@ -197,25 +197,43 @@ class GrahamCalculator:
         
         return round(margin_of_safety, 1)
     
-    def compute_epv(self) -> float:
+    def compute_epv(self) -> dict:
         """
-        Calculate Earnings Power Value (EPV).
+        Calculate Earnings Power Value (EPV) with detailed breakdown.
         
         Formula: Normalized Earnings / Cost of Capital
         Normalized Earnings = Average of last 5-10 years
         Cost of Capital = 10%
         
         Returns:
-            float: EPV rounded to 2 decimals
+            dict: {
+                'epv': float (enterprise value),
+                'normalized_earnings': float,
+                'years_used': int,
+                'cost_of_capital': float,
+                'epv_per_share': float
+            }
         """
         history = self.data.get('history', {})
         if not history:
-            return 0.0
+            return {
+                'epv': 0.0,
+                'normalized_earnings': 0.0,
+                'years_used': 0,
+                'cost_of_capital': self.COST_OF_CAPITAL,
+                'epv_per_share': 0.0
+            }
         
         # Get years sorted descending (most recent first)
         years = sorted(history.keys(), reverse=True)
         if not years:
-            return 0.0
+            return {
+                'epv': 0.0,
+                'normalized_earnings': 0.0,
+                'years_used': 0,
+                'cost_of_capital': self.COST_OF_CAPITAL,
+                'epv_per_share': 0.0
+            }
         
         # Get last 5-10 years of net income
         earnings = []
@@ -226,15 +244,32 @@ class GrahamCalculator:
         
         # Need at least 5 years for normalization
         if len(earnings) < 5:
-            return 0.0
+            return {
+                'epv': 0.0,
+                'normalized_earnings': 0.0,
+                'years_used': len(earnings),
+                'cost_of_capital': self.COST_OF_CAPITAL,
+                'epv_per_share': 0.0
+            }
         
         # Calculate normalized earnings (average)
         normalized_earnings = sum(earnings) / len(earnings)
         
-        # Calculate EPV
+        # Calculate EPV (enterprise value)
         epv = normalized_earnings / self.COST_OF_CAPITAL
         
-        return round(epv, 2)
+        # Get shares for per-share calculation
+        latest_year = years[0]
+        shares = history[latest_year].get('shares_outstanding', 1)
+        epv_per_share = epv / shares if shares > 0 else 0.0
+        
+        return {
+            'epv': round(epv, 2),
+            'normalized_earnings': round(normalized_earnings, 2),
+            'years_used': len(earnings),
+            'cost_of_capital': self.COST_OF_CAPITAL,
+            'epv_per_share': round(epv_per_share, 2)
+        }
     
     def run_investor_tests(self, investor_type: str = "defensive") -> dict:
         """
@@ -495,10 +530,11 @@ class GrahamCalculator:
             if pe_ratio < self.ENT_MAX_PE_RATIO:
                 return 'PASS'
         
-        # Test 2: Price < 120% of Net Tangible Assets (Net-Net Value)
-        net_net_value = self.compute_net_net()
-        if isinstance(net_net_value, float) and net_net_value > 0:
-            max_price = net_net_value * 1.20
+        # Test 2: Price < 120% of Tangible Book Value (not Net-Net)
+        # Graham's standard rule: buy at discount to book value
+        tbvps = self.compute_tbvps(round_result=False)
+        if isinstance(tbvps, float) and tbvps > 0:
+            max_price = tbvps * 1.20
             if price < max_price:
                 return 'PASS'
         
@@ -515,7 +551,7 @@ class GrahamCalculator:
         graham_number = self.compute_graham_number()
         net_net_value = self.compute_net_net()  # Rounded for display
         net_net_value_raw = self.compute_net_net(round_result=False)  # Unrounded for comparison
-        epv = self.compute_epv()
+        epv_data = self.compute_epv()  # Now returns dict
         
         price = self.data.get('price', 0.0)
         margin_of_safety = self.compute_margin_of_safety(graham_number, price)
@@ -528,13 +564,14 @@ class GrahamCalculator:
         defensive_tests = self.run_investor_tests("defensive")
         enterprising_tests = self.run_investor_tests("enterprising")
         
-        # Determine verdict
-        verdict = self._determine_verdict(graham_number, margin_of_safety, epv, 
+        # Determine verdict (pass EPV value for backward compatibility)
+        verdict = self._determine_verdict(graham_number, margin_of_safety, epv_data['epv'], 
                                          defensive_tests, enterprising_tests)
         
         metrics = {
             'graham_number': graham_number,
-            'epv': epv,
+            'epv': epv_data['epv'],  # Keep backward compatibility
+            'epv_details': epv_data,  # Add detailed breakdown
             'net_net_value': net_net_value,
             'margin_of_safety': margin_of_safety,
             'verdict': verdict,
@@ -575,9 +612,11 @@ class GrahamCalculator:
             if not defensive_pass and enterprising_pass:
                 return "ENTERPRISING BUY"
         
-        # Handle positive margin of safety
+        # Handle positive margin of safety with tiers
         if isinstance(margin_of_safety, float):
-            if margin_of_safety > 0:
+            if margin_of_safety >= 20:
+                return "STRONG BUY (Undervalued)"
+            elif margin_of_safety > 0:
                 return "UNDERVALUED"
             else:
                 return "OVERVALUED"
