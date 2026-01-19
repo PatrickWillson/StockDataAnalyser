@@ -5,6 +5,7 @@ These tests verify universal properties that should hold across all valid inputs
 Each test runs 100+ iterations with randomly generated data.
 """
 
+import pytest
 from hypothesis import given, strategies as st, settings
 import math
 from core.graham_math import GrahamCalculator
@@ -197,14 +198,14 @@ def test_margin_of_safety_formula_correctness(graham_number, price):
 @given(
     earnings_list=st.lists(
         st.floats(min_value=-1e9, max_value=1e9, allow_nan=False, allow_infinity=False),
-        min_size=5,
+        min_size=7,  # Changed from 5 to 7 to match new requirement
         max_size=10
     )
 )
 def test_epv_normalization_correctness(earnings_list):
     """
-    Property: For any earnings history, normalized earnings should equal 
-    the average of the most recent 5-10 years of earnings.
+    Property: For any earnings history with >= 7 years, normalized earnings should equal 
+    the average of all years including losses.
     
     This test verifies the EPV normalization is correctly implemented.
     """
@@ -239,8 +240,119 @@ def test_epv_normalization_correctness(earnings_list):
     # EPV now returns a dict with detailed breakdown
     assert isinstance(result, dict), f"Expected dict, got {type(result)}"
     assert 'epv' in result, "Result should contain 'epv' key"
-    assert abs(result['epv'] - expected_epv) < 0.01, \
-        f"EPV mismatch: expected ~{round(expected_epv, 2)}, got {result['epv']}"
+    
+    # Handle negative or zero average case
+    if normalized_earnings > 0:
+        assert abs(result['epv'] - expected_epv) < 0.01, \
+            f"EPV mismatch: expected ~{round(expected_epv, 2)}, got {result['epv']}"
+    else:
+        # Should return 0.0 for negative/zero average (wrapped by compute_epv)
+        assert result['epv'] == 0.0, \
+            f"Expected 0.0 for negative/zero average, got {result['epv']}"
+
+
+# Feature: graham-data-quality, Property 3: Full-Cycle EPV Calculation
+# Validates: Requirements 3.1, 3.3
+@settings(max_examples=100)
+@given(
+    net_incomes=st.lists(
+        st.floats(min_value=-1000000, max_value=1000000, allow_nan=False, allow_infinity=False),
+        min_size=7,
+        max_size=10
+    )
+)
+def test_full_cycle_epv_includes_all_years(net_incomes):
+    """
+    Property 3: Full-Cycle EPV Calculation
+    
+    For any financial history with >= 7 years, the normalized earnings 
+    should equal the arithmetic mean of ALL years including losses.
+    
+    **Validates: Requirements 3.1, 3.3**
+    """
+    # Arrange: Create mock history
+    history = {}
+    for i, net_income in enumerate(net_incomes):
+        year = str(2024 - i)
+        history[year] = {
+            'net_income': net_income,
+            'revenue': abs(net_income) * 10,
+            'eps': net_income / 1000000,
+            'shares_outstanding': 1000000
+        }
+    
+    # Act: Calculate EPV using the new normalized method
+    calculator = GrahamCalculator({'shares_outstanding': 1000000})
+    result = calculator.compute_epv_normalized(history, round_result=False)
+    
+    # Assert: Verify calculation
+    expected_avg = sum(net_incomes) / len(net_incomes)
+    
+    if expected_avg > 0:
+        # Should return dict with correct normalized earnings
+        assert isinstance(result, dict), f"Expected dict for positive average, got {type(result)}"
+        assert result['normalized_earnings'] == pytest.approx(expected_avg, rel=1e-6), \
+            f"Normalized earnings mismatch: expected {expected_avg}, got {result['normalized_earnings']}"
+        assert result['years_used'] == len(net_incomes), \
+            f"Years used mismatch: expected {len(net_incomes)}, got {result['years_used']}"
+        
+        # Verify all net incomes are included
+        assert len(result['net_incomes']) == len(net_incomes), \
+            "All net incomes should be included"
+        
+        # Verify EPV calculation
+        expected_epv = expected_avg / 0.10
+        assert result['epv'] == pytest.approx(expected_epv, rel=1e-6), \
+            f"EPV mismatch: expected {expected_epv}, got {result['epv']}"
+    else:
+        # Negative average should return N/A
+        assert isinstance(result, str), f"Expected string for negative average, got {type(result)}"
+        assert "Negative normalized earnings" in result, \
+            f"Expected 'Negative normalized earnings' message, got {result}"
+
+
+# Feature: graham-data-quality, Property 4: Negative EPV Handling
+# Validates: Requirements 3.7
+@settings(max_examples=100)
+@given(
+    # Generate lists where the average will be negative
+    net_incomes=st.lists(
+        st.floats(min_value=-1000000, max_value=1000000, allow_nan=False, allow_infinity=False),
+        min_size=7,
+        max_size=10
+    ).filter(lambda x: sum(x) / len(x) <= 0)
+)
+def test_negative_epv_returns_na(net_incomes):
+    """
+    Property 4: Negative EPV Handling
+    
+    For any financial history where the average net income is negative or zero,
+    EPV should return "N/A" with explanation.
+    
+    **Validates: Requirements 3.7**
+    """
+    # Arrange: Create mock history with negative average
+    history = {}
+    for i, net_income in enumerate(net_incomes):
+        year = str(2024 - i)
+        history[year] = {
+            'net_income': net_income,
+            'revenue': abs(net_income) * 10,
+            'eps': net_income / 1000000,
+            'shares_outstanding': 1000000
+        }
+    
+    # Act: Calculate EPV using the new normalized method
+    calculator = GrahamCalculator({'shares_outstanding': 1000000})
+    result = calculator.compute_epv_normalized(history, round_result=False)
+    
+    # Assert: Should return N/A string
+    assert isinstance(result, str), \
+        f"Expected string for negative/zero average, got {type(result)}"
+    assert "Negative normalized earnings" in result, \
+        f"Expected 'Negative normalized earnings' message, got {result}"
+    assert "unprofitable over cycle" in result, \
+        f"Expected 'unprofitable over cycle' in message, got {result}"
 
 
 # Feature: stock-data-analyser, Property 7: Earnings stability test correctness

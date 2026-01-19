@@ -96,31 +96,38 @@ def test_ticker_suffix_example():
         
         with patch('sys.argv', ['stock_data_analyser.py', 'AAPL.US']):
             with patch('stock_data_analyser.EODHDClient') as MockClient:
-                with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
-                    with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
-                        with patch('stock_data_analyser.save_dossier') as mock_save:
-                            # Setup mocks
-                            mock_client_instance = Mock()
-                            mock_client_instance.fetch_all_data.return_value = mock_financial_data
-                            MockClient.return_value = mock_client_instance
-                            
-                            mock_calculator_instance = Mock()
-                            mock_calculator_instance.compute_all.return_value = mock_metrics
-                            MockCalculator.return_value = mock_calculator_instance
-                            
-                            mock_detector_instance = Mock()
-                            mock_detector_instance.scan.return_value = mock_anomalies
-                            MockDetector.return_value = mock_detector_instance
-                            
-                            # Act: Run main
-                            stock_data_analyser.main()
-                            
-                            # Assert: Verify US market data was fetched
-                            mock_client_instance.fetch_all_data.assert_called_once_with('AAPL.US')
-                            
-                            # Verify the ticker was processed correctly
-                            assert mock_financial_data['exchange'] == 'NASDAQ'
-                            assert mock_financial_data['currency'] == 'USD'
+                with patch('stock_data_analyser.AlphaVantageClient') as MockAVClient:
+                    with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
+                        with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
+                            with patch('stock_data_analyser.save_dossier') as mock_save:
+                                # Setup mocks
+                                mock_client_instance = Mock()
+                                mock_client_instance.fetch_all_data.return_value = mock_financial_data
+                                MockClient.return_value = mock_client_instance
+                                
+                                mock_av_instance = Mock()
+                                MockAVClient.return_value = mock_av_instance
+                                
+                                mock_calculator_instance = Mock()
+                                mock_calculator_instance.compute_all.return_value = mock_metrics
+                                MockCalculator.return_value = mock_calculator_instance
+                                
+                                mock_detector_instance = Mock()
+                                mock_detector_instance.scan.return_value = mock_anomalies
+                                MockDetector.return_value = mock_detector_instance
+                                
+                                # Act: Run main
+                                stock_data_analyser.main()
+                                
+                                # Assert: Verify US market data was fetched with av_client
+                                assert mock_client_instance.fetch_all_data.called
+                                call_args = mock_client_instance.fetch_all_data.call_args
+                                assert call_args[0][0] == 'AAPL.US'
+                                assert 'av_client' in call_args[1]
+                                
+                                # Verify the ticker was processed correctly
+                                assert mock_financial_data['exchange'] == 'NASDAQ'
+                                assert mock_financial_data['currency'] == 'USD'
 
 
 def test_insufficient_history_warning():
@@ -263,3 +270,231 @@ def test_young_company_handling():
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+def test_fatal_error_when_both_sources_fail():
+    """
+    Test system exits with code 1 when both EODHD and Alpha Vantage fail to provide price.
+    Validates: Requirements 1.5
+    """
+    # Arrange: Mock financial data with price = 0.0 (both sources failed)
+    mock_financial_data = {
+        'ticker': 'NOPRICE',
+        'exchange': 'NASDAQ',
+        'currency': 'USD',
+        'price': 0.0,  # Both sources failed
+        'ceo_name': 'Test CEO',
+        'history': {},
+        'warnings': []
+    }
+    
+    with patch.dict(os.environ, {'EODHD_API_KEY': 'test_key'}):
+        import importlib
+        import stock_data_analyser
+        importlib.reload(stock_data_analyser)
+        
+        with patch('sys.argv', ['stock_data_analyser.py', 'NOPRICE.US']):
+            with patch('stock_data_analyser.EODHDClient') as MockClient:
+                with patch('stock_data_analyser.AlphaVantageClient') as MockAVClient:
+                    with patch('builtins.print') as mock_print:
+                        # Setup mocks
+                        mock_client_instance = Mock()
+                        mock_client_instance.fetch_all_data.return_value = mock_financial_data
+                        MockClient.return_value = mock_client_instance
+                        
+                        mock_av_instance = Mock()
+                        MockAVClient.return_value = mock_av_instance
+                        
+                        # Act & Assert: Run main and expect SystemExit
+                        with pytest.raises(SystemExit) as exc_info:
+                            stock_data_analyser.main()
+                        
+                        # Verify exit code is 1
+                        assert exc_info.value.code == 1, f"Expected exit code 1, got {exc_info.value.code}"
+                        
+                        # Check that fatal error message was printed
+                        # Get all printed text
+                        all_printed_text = ' '.join([str(call[0][0]) if call[0] else '' 
+                                                     for call in mock_print.call_args_list])
+                        
+                        assert 'FATAL ERROR' in all_printed_text, "Expected 'FATAL ERROR' in output"
+                        assert 'Current price unavailable' in all_printed_text, "Expected 'Current price unavailable' in output"
+                        assert "No data is better than wrong data" in all_printed_text, "Expected Graham quote in output"
+                        assert 'EODHD' in all_printed_text, "Expected 'EODHD' in output"
+                        assert 'Alpha Vantage' in all_printed_text, "Expected 'Alpha Vantage' in output"
+
+
+def test_system_continues_when_eodhd_has_price():
+    """
+    Test system continues normally when EODHD provides price (no fallback needed).
+    Validates: Requirements 1.5
+    """
+    # Arrange: Mock financial data with valid price from EODHD
+    mock_financial_data = {
+        'ticker': 'AAPL',
+        'exchange': 'NASDAQ',
+        'currency': 'USD',
+        'price': 150.0,  # EODHD has price
+        'ceo_name': 'Tim Cook',
+        'history': {
+            '2023': {
+                'revenue': 383285000000,
+                'net_income': 96995000000,
+                'eps': 6.16,
+                'dividend': 4,
+                'total_equity': 62146000000,
+                'shares_outstanding': 16000000000,
+                'intangible_assets': 0,
+                'goodwill': 0,
+                'current_assets': 143566000000,
+                'current_liabilities': 145308000000,
+                'total_liabilities': 290437000000,
+                'long_term_debt': 106000000000
+            }
+        },
+        'warnings': []
+    }
+    
+    mock_metrics = {
+        'graham_number': 47.43,
+        'epv': 100.0,
+        'net_net_value': 10.0,
+        'margin_of_safety': 25.5,
+        'verdict': 'UNDERVALUED',
+        'defensive_tests': {
+            'earnings_stability': 'PASS',
+            'current_ratio': 'FAIL',
+            'debt_to_assets': 'PASS',
+            'dividend_record': 'PASS',
+            'earnings_growth': 'PASS',
+            'pe_ratio': 'PASS',
+            'pb_ratio': 'PASS'
+        },
+        'enterprising_tests': {},
+        'warnings': []
+    }
+    
+    mock_anomalies = []
+    
+    with patch.dict(os.environ, {'EODHD_API_KEY': 'test_key'}):
+        import importlib
+        import stock_data_analyser
+        importlib.reload(stock_data_analyser)
+        
+        with patch('sys.argv', ['stock_data_analyser.py', 'AAPL.US']):
+            with patch('stock_data_analyser.EODHDClient') as MockClient:
+                with patch('stock_data_analyser.AlphaVantageClient') as MockAVClient:
+                    with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
+                        with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
+                            with patch('stock_data_analyser.save_dossier') as mock_save:
+                                # Setup mocks
+                                mock_client_instance = Mock()
+                                mock_client_instance.fetch_all_data.return_value = mock_financial_data
+                                MockClient.return_value = mock_client_instance
+                                
+                                mock_av_instance = Mock()
+                                MockAVClient.return_value = mock_av_instance
+                                
+                                mock_calculator_instance = Mock()
+                                mock_calculator_instance.compute_all.return_value = mock_metrics
+                                MockCalculator.return_value = mock_calculator_instance
+                                
+                                mock_detector_instance = Mock()
+                                mock_detector_instance.scan.return_value = mock_anomalies
+                                MockDetector.return_value = mock_detector_instance
+                                
+                                # Act: Run main (should not raise SystemExit)
+                                stock_data_analyser.main()
+                                
+                                # Assert: Verify dossier was saved (system continued)
+                                mock_save.assert_called_once()
+
+
+def test_system_continues_when_alpha_vantage_fallback_succeeds():
+    """
+    Test system continues when EODHD fails but Alpha Vantage fallback succeeds.
+    Validates: Requirements 1.5
+    """
+    # Arrange: Mock financial data with price from Alpha Vantage fallback
+    mock_financial_data = {
+        'ticker': 'YU',
+        'exchange': 'LSE',
+        'currency': 'GBP',
+        'price': 16.50,  # From Alpha Vantage fallback
+        'ceo_name': 'Test CEO',
+        'history': {
+            '2023': {
+                'revenue': 100000000,
+                'net_income': 10000000,
+                'eps': 0.50,
+                'dividend': 0.10,
+                'total_equity': 50000000,
+                'shares_outstanding': 20000000,
+                'intangible_assets': 0,
+                'goodwill': 0,
+                'current_assets': 30000000,
+                'current_liabilities': 20000000,
+                'total_liabilities': 25000000,
+                'long_term_debt': 5000000
+            }
+        },
+        'warnings': ['Price from Alpha Vantage (EODHD price unavailable)']
+    }
+    
+    mock_metrics = {
+        'graham_number': 10.0,
+        'epv': 50.0,
+        'net_net_value': 5.0,
+        'margin_of_safety': 15.0,
+        'verdict': 'FAIRLY VALUED',
+        'defensive_tests': {
+            'earnings_stability': 'PASS',
+            'current_ratio': 'PASS',
+            'debt_to_assets': 'PASS',
+            'dividend_record': 'PASS',
+            'earnings_growth': 'PASS',
+            'pe_ratio': 'PASS',
+            'pb_ratio': 'PASS'
+        },
+        'enterprising_tests': {},
+        'warnings': []
+    }
+    
+    mock_anomalies = []
+    
+    with patch.dict(os.environ, {'EODHD_API_KEY': 'test_key'}):
+        import importlib
+        import stock_data_analyser
+        importlib.reload(stock_data_analyser)
+        
+        with patch('sys.argv', ['stock_data_analyser.py', 'YU.LSE']):
+            with patch('stock_data_analyser.EODHDClient') as MockClient:
+                with patch('stock_data_analyser.AlphaVantageClient') as MockAVClient:
+                    with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
+                        with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
+                            with patch('stock_data_analyser.save_dossier') as mock_save:
+                                # Setup mocks
+                                mock_client_instance = Mock()
+                                mock_client_instance.fetch_all_data.return_value = mock_financial_data
+                                MockClient.return_value = mock_client_instance
+                                
+                                mock_av_instance = Mock()
+                                MockAVClient.return_value = mock_av_instance
+                                
+                                mock_calculator_instance = Mock()
+                                mock_calculator_instance.compute_all.return_value = mock_metrics
+                                MockCalculator.return_value = mock_calculator_instance
+                                
+                                mock_detector_instance = Mock()
+                                mock_detector_instance.scan.return_value = mock_anomalies
+                                MockDetector.return_value = mock_detector_instance
+                                
+                                # Act: Run main (should not raise SystemExit)
+                                stock_data_analyser.main()
+                                
+                                # Assert: Verify dossier was saved (system continued)
+                                mock_save.assert_called_once()
+                                
+                                # Verify warning about Alpha Vantage fallback is present
+                                assert any('Alpha Vantage' in w for w in mock_financial_data['warnings']), \
+                                    "Expected warning about Alpha Vantage fallback"

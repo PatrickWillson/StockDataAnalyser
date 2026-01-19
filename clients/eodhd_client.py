@@ -75,12 +75,62 @@ class EODHDClient(BaseAPIClient):
             print(f"[ERROR] Unexpected error during API request: {str(e)}")
             sys.exit(1)
     
-    def fetch_all_data(self, ticker: str) -> Dict[str, Any]:
+    def _fetch_dividend_history(self, ticker: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        Fetch dividend history from EODHD Dividend API.
+        
+        Args:
+            ticker: Stock ticker with exchange suffix (e.g., AAPL.US, VOD.LSE)
+            
+        Returns:
+            List of dividend records with date, value, declarationDate, paymentDate, etc.
+            Returns None if API call fails (403, 404, etc.)
+        """
+        url = f"https://eodhd.com/api/div/{ticker}"
+        params = {
+            'api_token': self.api_key,
+            'fmt': 'json'
+        }
+        
+        try:
+            response = self._make_request(url, params=params)
+            
+            # Handle expected failures gracefully (403 = subscription tier, 404 = no data)
+            if response.status_code == 403:
+                if self.debug:
+                    print(f"[DEBUG] Dividend API returned 403 (requires higher subscription tier)")
+                return None
+            elif response.status_code == 404:
+                if self.debug:
+                    print(f"[DEBUG] Dividend API returned 404 (no dividend data available)")
+                return None
+            elif response.status_code != 200:
+                if self.debug:
+                    print(f"[DEBUG] Dividend API failed with status {response.status_code}")
+                return None
+            
+            data = response.json()
+            if isinstance(data, list) and len(data) > 0:
+                if self.debug:
+                    print(f"[DEBUG] Dividend API returned {len(data)} dividend records")
+                return data
+            else:
+                if self.debug:
+                    print(f"[DEBUG] Dividend API returned empty data")
+                return None
+                
+        except Exception as e:
+            if self.debug:
+                print(f"[DEBUG] Dividend API request failed: {str(e)}")
+            return None
+    
+    def fetch_all_data(self, ticker: str, av_client: Optional[Any] = None) -> Dict[str, Any]:
         """
         Fetch all required financial data for a ticker.
         
         Args:
             ticker: Stock ticker with exchange suffix (e.g., AAPL.US, VOD.L)
+            av_client: Optional Alpha Vantage client for price fallback
             
         Returns:
             Standardized dictionary containing:
@@ -181,20 +231,57 @@ class EODHDClient(BaseAPIClient):
         else:
             print(f"[INFO] Shares Outstanding: {shares_outstanding:,.0f}")
         
+        # Extract year-specific shares outstanding for accurate EPS calculation
+        shares_by_year = self.processor.extract_shares_by_year(data)
+        if shares_by_year:
+            print(f"[INFO] Found year-specific shares data for {len(shares_by_year)} years")
+            if self.debug:
+                for year in sorted(shares_by_year.keys(), reverse=True)[:3]:
+                    print(f"[DEBUG] {year} shares: {shares_by_year[year]:,.0f}")
+        
+        # Fetch dividend history from Dividend API (primary source)
+        print("\n[INFO] Fetching dividend history...")
+        dividend_api_data = self._fetch_dividend_history(ticker)
+        if dividend_api_data:
+            print(f"[INFO] Retrieved {len(dividend_api_data)} dividend records from Dividend API")
+        else:
+            print("[INFO] Dividend API unavailable - will use Cash Flow data as fallback")
+        
         # Parse financial statements using processor
         print("\n[INFO] Parsing financial statements...")
         balance_sheet = self.processor.parse_balance_sheet(data)
         income_statement = self.processor.parse_income_statement(data)
-        dividend_history, forward_dividend_rate, is_dividend_amounts, dividend_currency = self.processor.parse_dividend_history(data)
+        dividend_history, forward_dividend_rate, is_dividend_amounts, dividend_currency, dividend_sources = self.processor.parse_dividend_history(data, dividend_api_data=dividend_api_data)
         
-        # Merge financial data
+        # Convert dividend history to financials currency if needed
+        # This is critical for Dividend API data which comes in the stock's trading currency
+        if dividend_currency != financials_currency:
+            print(f"[INFO] Converting dividends from {dividend_currency} to {financials_currency}...")
+            fx_rate = self.fx_client.get_rate(dividend_currency, financials_currency)
+            if fx_rate:
+                # Convert all dividend values in history
+                for year_key in dividend_history:
+                    old_value = dividend_history[year_key]
+                    new_value = old_value * fx_rate
+                    dividend_history[year_key] = new_value
+                    if self.debug:
+                        print(f"[DEBUG] Converted {year_key} dividend: {old_value:.4f} {dividend_currency} → {new_value:.4f} {financials_currency}")
+                
+                print(f"[INFO] Historical dividends converted from {dividend_currency} to {financials_currency} at rate {fx_rate:.4f}")
+                currency_conversion_details.append(f"Dividends converted {dividend_currency} → {financials_currency} at rate {fx_rate:.4f}")
+            else:
+                warnings.append(f"WARNING: Could not convert dividends from {dividend_currency} to {financials_currency} - FX rate unavailable")
+                print(f"[WARNING] Could not get FX rate for {dividend_currency}/{financials_currency}")
+        
+        # Merge financial data with year-specific shares
         print("\n[INFO] Merging financial data...")
         history = self.processor.merge_financial_data(balance_sheet, income_statement, 
-                                                      dividend_history, shares_outstanding)
+                                                      dividend_history, shares_outstanding,
+                                                      outstanding_shares_by_year=shares_by_year)
         
         # Get current price
-        price = self.processor.get_current_price(data)
-        print(f"\n[INFO] Current Price: {price}")
+        price, price_source = self.processor.get_current_price(data, av_client=av_client, ticker=ticker, warnings=warnings)
+        print(f"\n[INFO] Current Price: {price} (Source: {price_source})")
         
         # Get most recent EPS for London Fix
         most_recent_eps = 0.0
@@ -269,6 +356,20 @@ class EODHDClient(BaseAPIClient):
             pe_ratio = price / most_recent_eps
             print(f"[INFO] Recalculated P/E ratio: {pe_ratio:.2f} (Price: {price:.2f} / EPS: {most_recent_eps:.2f})")
         
+        # Calculate BVPS from balance sheet for validation
+        calculated_bvps = 0.0
+        if history:
+            sorted_years = sorted(history.keys(), reverse=True)
+            if sorted_years:
+                most_recent_year = sorted_years[0]
+                most_recent_data = history[most_recent_year]
+                total_equity = most_recent_data.get('total_equity', 0.0)
+                year_shares = most_recent_data.get('shares_outstanding', 0.0)
+                
+                if year_shares > 0:
+                    calculated_bvps = total_equity / year_shares
+                    print(f"[INFO] Calculated BVPS: {calculated_bvps:.2f} (Equity: {total_equity:,.0f} / Shares: {year_shares:,.0f})")
+        
         # Add consolidated currency conversion warning if any conversions were performed
         if currency_conversion_details:
             consolidated_warning = "Currency Conversions: " + "; ".join(currency_conversion_details)
@@ -276,12 +377,44 @@ class EODHDClient(BaseAPIClient):
         
         # Cross-validate calculated metrics against API values
         print("\n[INFO] Cross-validating metrics...")
-        validation_warnings = self._cross_validate_metrics(data, pe_ratio, book_value_per_share)
+        validation_warnings = self._cross_validate_metrics(data, pe_ratio, calculated_bvps)
         warnings.extend(validation_warnings)
         
         # Validate data quality
         print("\n[INFO] Validating data quality...")
         self.processor.validate_data_quality(history, warnings)
+        
+        # Determine overall dividend source for data quality assessment
+        dividend_source = 'Unknown'
+        if dividend_sources:
+            sources = set(dividend_sources.values())
+            if len(sources) == 1:
+                # All years use same source
+                source = sources.pop()
+                if source == 'dividend_api':
+                    dividend_source = 'Dividend API'
+                elif source == 'cash_flow':
+                    dividend_source = 'Cash Flow'
+                elif source == 'forward_rate':
+                    dividend_source = 'Forward Rate'
+            else:
+                # Mixed sources
+                dividend_source = 'Mixed'
+        
+        # Add data quality warning if Cash Flow dividend differs significantly from Forward Rate
+        # This indicates potential timing issues or incomplete data for most recent year
+        # Note: Skip this warning if using Dividend API (declared dividends are authoritative)
+        if history:
+            sorted_years = sorted(history.keys(), reverse=True)
+            if sorted_years:
+                most_recent_year = sorted_years[0].split('-')[0]
+                if most_recent_year in dividend_sources:
+                    if dividend_sources[most_recent_year] == 'cash_flow' and forward_dividend_rate and forward_dividend_rate > 0:
+                        most_recent_div = history[sorted_years[0]].get('dividend', 0.0)
+                        if most_recent_div > 0:
+                            diff_pct = abs(most_recent_div - forward_dividend_rate) / forward_dividend_rate * 100
+                            if diff_pct > 10:
+                                warnings.append(f"Dividend Data Quality: {most_recent_year} Cash Flow shows {most_recent_div:.2f} vs Forward Rate {forward_dividend_rate:.2f} ({diff_pct:.1f}% difference) - most recent year may be incomplete due to payment timing")
         
         if warnings:
             print(f"\n[WARNING] Found {len(warnings)} warnings:")
@@ -298,6 +431,8 @@ class EODHDClient(BaseAPIClient):
             'financials_currency': financials_currency,
             'dividend_currency': financials_currency,  # Dividends now converted to financials_currency
             'price': price,
+            'price_source': price_source,  # NEW: Track price source for data quality assessment
+            'dividend_source': dividend_source,  # NEW: Track dividend source for data quality assessment
             'ceo_name': ceo_name,
             'sector': sector,
             'industry': industry,
@@ -306,6 +441,7 @@ class EODHDClient(BaseAPIClient):
             'warnings': warnings,
             'forward_dividend_rate': forward_dividend_rate,
             'is_dividend_amounts': is_dividend_amounts,
+            'dividend_sources': dividend_sources,  # NEW: Source indicators for each year
             # Highlights
             'dividend_per_share': dividend_per_share,
             'dividend_yield': dividend_yield,

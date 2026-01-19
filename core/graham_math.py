@@ -11,7 +11,7 @@ This module implements strict Graham formulas for value investing analysis:
 """
 
 import math
-from typing import Dict, Union, List
+from typing import Dict, Union, List, Any
 
 
 class GrahamCalculator:
@@ -197,12 +197,79 @@ class GrahamCalculator:
         
         return round(margin_of_safety, 1)
     
+    def compute_epv_normalized(self, history: Dict[str, Dict[str, float]], 
+                              round_result: bool = True) -> Union[Dict[str, any], str]:
+        """
+        Calculate Earnings Power Value using Graham's full-cycle methodology.
+        
+        Graham's Method:
+        - Use 7-10 years of earnings data
+        - Include ALL years (profitable and unprofitable)
+        - Loss years reduce the average (they're real value destruction)
+        - Only exclude truly extraordinary one-time events (not cyclical losses)
+        
+        Formula: Average Net Income (7-10 years) / Cost of Capital
+        
+        Args:
+            history: Financial history data
+            round_result: Whether to round results
+            
+        Returns:
+            Dictionary with EPV details or "N/A" string if insufficient data
+        """
+        if not history:
+            return "N/A - No financial history"
+        
+        # Get sorted years (most recent first)
+        sorted_years = sorted(history.keys(), reverse=True)
+        
+        # Need at least 7 years per Graham's methodology
+        if len(sorted_years) < 7:
+            return f"N/A - Insufficient history ({len(sorted_years)} years, minimum 7 required)"
+        
+        # Use up to 10 years
+        years_to_use = sorted_years[:10]
+        
+        # Calculate average net income INCLUDING loss years
+        net_incomes = []
+        for year in years_to_use:
+            net_income = history[year].get('net_income', 0.0)
+            net_incomes.append(net_income)
+        
+        # Arithmetic mean of all years (including losses)
+        normalized_earnings = sum(net_incomes) / len(net_incomes)
+        
+        # If average is negative, company is unprofitable over the cycle
+        if normalized_earnings <= 0:
+            return "N/A - Negative normalized earnings (company unprofitable over cycle)"
+        
+        # Calculate EPV
+        epv = normalized_earnings / self.COST_OF_CAPITAL
+        
+        # Get shares for per-share calculation
+        latest_year = sorted_years[0]
+        shares = history[latest_year].get('shares_outstanding', 0)
+        epv_per_share = epv / shares if shares > 0 else 0.0
+        
+        result = {
+            'epv': round(epv, 2) if round_result else epv,
+            'epv_per_share': round(epv_per_share, 2) if round_result else epv_per_share,
+            'normalized_earnings': round(normalized_earnings, 2) if round_result else normalized_earnings,
+            'years_used': len(years_to_use),
+            'years_included': years_to_use,
+            'net_incomes': [round(ni, 2) if round_result else ni for ni in net_incomes]
+        }
+        
+        return result
+    
     def compute_epv(self) -> dict:
         """
         Calculate Earnings Power Value (EPV) with detailed breakdown.
         
+        This method maintains backward compatibility by wrapping compute_epv_normalized.
+        
         Formula: Normalized Earnings / Cost of Capital
-        Normalized Earnings = Average of last 5-10 years
+        Normalized Earnings = Average of last 7-10 years (including loss years)
         Cost of Capital = 10%
         
         Returns:
@@ -215,7 +282,12 @@ class GrahamCalculator:
             }
         """
         history = self.data.get('history', {})
-        if not history:
+        
+        # Call the new normalized method
+        result = self.compute_epv_normalized(history, round_result=True)
+        
+        # Handle string return (N/A cases)
+        if isinstance(result, str):
             return {
                 'epv': 0.0,
                 'normalized_earnings': 0.0,
@@ -224,52 +296,10 @@ class GrahamCalculator:
                 'epv_per_share': 0.0
             }
         
-        # Get years sorted descending (most recent first)
-        years = sorted(history.keys(), reverse=True)
-        if not years:
-            return {
-                'epv': 0.0,
-                'normalized_earnings': 0.0,
-                'years_used': 0,
-                'cost_of_capital': self.COST_OF_CAPITAL,
-                'epv_per_share': 0.0
-            }
+        # Add cost_of_capital for backward compatibility
+        result['cost_of_capital'] = self.COST_OF_CAPITAL
         
-        # Get last 5-10 years of net income
-        earnings = []
-        for year in years[:10]:  # Take up to 10 most recent years
-            net_income = history[year].get('net_income')
-            if net_income is not None:
-                earnings.append(net_income)
-        
-        # Need at least 5 years for normalization
-        if len(earnings) < 5:
-            return {
-                'epv': 0.0,
-                'normalized_earnings': 0.0,
-                'years_used': len(earnings),
-                'cost_of_capital': self.COST_OF_CAPITAL,
-                'epv_per_share': 0.0
-            }
-        
-        # Calculate normalized earnings (average)
-        normalized_earnings = sum(earnings) / len(earnings)
-        
-        # Calculate EPV (enterprise value)
-        epv = normalized_earnings / self.COST_OF_CAPITAL
-        
-        # Get shares for per-share calculation
-        latest_year = years[0]
-        shares = history[latest_year].get('shares_outstanding', 1)
-        epv_per_share = epv / shares if shares > 0 else 0.0
-        
-        return {
-            'epv': round(epv, 2),
-            'normalized_earnings': round(normalized_earnings, 2),
-            'years_used': len(earnings),
-            'cost_of_capital': self.COST_OF_CAPITAL,
-            'epv_per_share': round(epv_per_share, 2)
-        }
+        return result
     
     def run_investor_tests(self, investor_type: str = "defensive") -> dict:
         """

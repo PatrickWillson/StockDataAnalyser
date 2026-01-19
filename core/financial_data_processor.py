@@ -78,36 +78,88 @@ class FinancialDataProcessor:
             return 0.0
     
     @staticmethod
-    def get_current_price(data: Dict[str, Any]) -> float:
-        """Extract current price from API data."""
+    def extract_shares_by_year(data: Dict[str, Any]) -> Dict[str, float]:
+        """
+        Extract year-specific shares outstanding from outstandingShares.annual.
+        
+        Returns:
+            Dictionary with year (string) as key and shares as value
+        """
+        shares_by_year = {}
+        try:
+            outstanding_shares_data = data.get('outstandingShares', {}).get('annual', {})
+            
+            if outstanding_shares_data:
+                for item in outstanding_shares_data.values():
+                    if isinstance(item, dict) and 'date' in item and 'shares' in item:
+                        year = str(item['date'])
+                        shares = item['shares']
+                        if shares and shares > 0:
+                            shares_by_year[year] = float(shares)
+            
+            return shares_by_year
+        except (KeyError, TypeError, AttributeError):
+            return {}
+    
+    @staticmethod
+    def get_current_price(data: Dict[str, Any], av_client: Optional[Any] = None,
+                         ticker: Optional[str] = None, warnings: Optional[List[str]] = None) -> tuple[float, str]:
+        """
+        Extract current price from API data with Alpha Vantage fallback.
+        
+        Args:
+            data: EODHD API response
+            av_client: Optional Alpha Vantage client for fallback
+            ticker: Ticker symbol (required for fallback)
+            warnings: List to append warnings to
+            
+        Returns:
+            Tuple of (price, source) where source is 'EODHD', 'Alpha Vantage', or 'Missing'
+            
+        Note:
+            Alpha Vantage returns LSE prices in the same currency as EODHD (GBX/pence).
+            No currency conversion is needed.
+        """
+        if warnings is None:
+            warnings = []
+        
         try:
             # Try to get from Highlights first
             highlights = data.get('Highlights', {})
             price = highlights.get('SharePrice')
-            if price:
-                return FinancialDataProcessor.sanitize_value(price)
+            if price is not None:
+                sanitized = FinancialDataProcessor.sanitize_value(price)
+                if sanitized > 0:
+                    return sanitized, 'EODHD'
             
             # Fallback to General section
             general = data.get('General', {})
             price = general.get('SharePrice')
-            if price:
-                return FinancialDataProcessor.sanitize_value(price)
+            if price is not None:
+                sanitized = FinancialDataProcessor.sanitize_value(price)
+                if sanitized > 0:
+                    return sanitized, 'EODHD'
             
             # Try alternative fields
             price = general.get('LastPrice')
-            if price:
-                return FinancialDataProcessor.sanitize_value(price)
+            if price is not None:
+                sanitized = FinancialDataProcessor.sanitize_value(price)
+                if sanitized > 0:
+                    return sanitized, 'EODHD'
             
-            # Try from Technicals as last resort
-            technicals = data.get('Technicals', {})
-            price = technicals.get('52WeekHigh')
-            if price:
-                return FinancialDataProcessor.sanitize_value(price)
+            # EODHD price unavailable - try Alpha Vantage fallback
+            if av_client and ticker:
+                print("[INFO] EODHD price unavailable - attempting Alpha Vantage fallback...")
+                av_price = av_client.get_price(ticker)
+                if av_price:
+                    warnings.append("Price from Alpha Vantage (EODHD price unavailable)")
+                    return av_price, 'Alpha Vantage'
+            
+            # All sources failed
+            return 0.0, 'Missing'
             
         except (KeyError, TypeError):
-            pass
-        
-        return 0.0
+            return 0.0, 'Missing'
     
     def parse_balance_sheet(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
         """
@@ -174,9 +226,19 @@ class FinancialDataProcessor:
                     if eps_value:
                         self._log(f"[DEBUG] Year {year}: Using alternative EPS field")
                 
+                # Use netIncomeFromContinuingOps (Graham's preferred metric) with fallback to netIncome
+                # Graham focused on earning power from continuing operations, excluding discontinued ops
+                net_income_value = year_data.get('netIncomeFromContinuingOps')
+                if net_income_value is None or net_income_value == 'NA' or net_income_value == '':
+                    net_income_value = year_data.get('netIncome')
+                    if net_income_value:
+                        self._log(f"[DEBUG] Year {year}: Using netIncome (netIncomeFromContinuingOps not available)")
+                else:
+                    self._log(f"[DEBUG] Year {year}: Using netIncomeFromContinuingOps")
+                
                 result[year] = {
                     'revenue': self.sanitize_value(year_data.get('totalRevenue')),
-                    'net_income': self.sanitize_value(year_data.get('netIncome')),
+                    'net_income': self.sanitize_value(net_income_value),
                     'eps': self.sanitize_value(eps_value),
                 }
         except (KeyError, TypeError, AttributeError) as e:
@@ -184,75 +246,125 @@ class FinancialDataProcessor:
         
         return result
     
-    def parse_dividend_history(self, data: Dict[str, Any]) -> tuple[Dict[str, float], Optional[float], bool, str]:
+    def parse_dividend_history(self, data: Dict[str, Any], dividend_api_data: Optional[List[Dict[str, Any]]] = None) -> tuple[Dict[str, float], Optional[float], bool, str, Dict[str, str]]:
         """
-        Extract dividend history from SplitsDividends and Cash Flow statements.
+        Extract dividend history from EODHD Dividend API (primary) or Cash Flow statements (fallback).
         Returns total dividend amount per share for each year.
         
+        Priority Order:
+        1. EODHD Dividend API (declared dividends with exact dates)
+        2. Cash Flow dividendsPaid (actual cash distributed)
+        3. ForwardAnnualDividendRate (for most recent year only if others unavailable)
+        
+        Args:
+            data: Full EODHD fundamentals API response
+            dividend_api_data: Optional list of dividend records from EODHD Dividend API
+        
         Returns:
-            Tuple of (dividend_dict, forward_annual_rate, is_amount_data, dividend_currency)
+            Tuple of (dividend_dict, forward_annual_rate, is_amount_data, dividend_currency, source_indicators)
             - dividend_dict: Dictionary with year as key and dividend per share as value
             - forward_annual_rate: Forward annual dividend rate (if available)
             - is_amount_data: True if values are amounts per share, False if counts
-            - dividend_currency: Currency of dividend data (from Cash Flow or General)
+            - dividend_currency: Currency of dividend data
+            - source_indicators: Dictionary with year as key and source as value
         """
         result = {}
+        source_indicators = {}
         forward_rate = None
         is_amount_data = False
         dividend_currency = data.get('General', {}).get('CurrencyCode', 'USD')  # Default to stock currency
         
         try:
             splits_divs = data.get('SplitsDividends', {})
-            if not splits_divs:
-                self._log("[DEBUG] No SplitsDividends section found in API response")
-                return result, forward_rate, is_amount_data, dividend_currency
             
             # Extract forward annual dividend rate
-            forward_rate = splits_divs.get('ForwardAnnualDividendRate')
-            if forward_rate:
-                self._log(f"[DEBUG] Forward Annual Dividend Rate: {forward_rate}")
+            if splits_divs:
+                forward_rate = splits_divs.get('ForwardAnnualDividendRate')
+                if forward_rate:
+                    forward_rate = self.sanitize_value(forward_rate)
+                    self._log(f"[DEBUG] Forward Annual Dividend Rate: {forward_rate}")
             
-            # Try to get dividends from Cash Flow statements (dividendsPaid / shares)
+            # PRIORITY 1: Try EODHD Dividend API data (declared dividends)
+            if dividend_api_data and len(dividend_api_data) > 0:
+                self._log(f"[DEBUG] Processing {len(dividend_api_data)} dividend records from Dividend API")
+                
+                # Aggregate dividends by year (sum all payments in each year)
+                year_totals = {}
+                dividend_currency = dividend_api_data[0].get('currency', dividend_currency)
+                
+                for div_record in dividend_api_data:
+                    # Use payment date if available, otherwise ex-dividend date
+                    date_str = div_record.get('paymentDate') or div_record.get('date')
+                    if date_str:
+                        year = date_str[:4]  # Extract year from YYYY-MM-DD
+                        value = self.sanitize_value(div_record.get('value', 0))
+                        
+                        if value > 0:
+                            year_totals[year] = year_totals.get(year, 0.0) + value
+                            self._log(f"[DEBUG] Year {year}: Added dividend {value:.4f} (from Dividend API)")
+                
+                if year_totals:
+                    result = year_totals
+                    is_amount_data = True
+                    for year in year_totals.keys():
+                        source_indicators[year] = 'dividend_api'
+                    self._log(f"[DEBUG] Aggregated dividends for {len(result)} years from Dividend API (in {dividend_currency})")
+                    return result, forward_rate, is_amount_data, dividend_currency, source_indicators
+            
+            # PRIORITY 2: Try to get dividends from Cash Flow statements (dividendsPaid / shares)
             cash_flow = data.get('Financials', {}).get('Cash_Flow', {}).get('yearly', {})
             outstanding_shares_data = data.get('outstandingShares', {}).get('annual', {})
             
             # Get Cash Flow currency
             cash_flow_currency = data.get('Financials', {}).get('Cash_Flow', {}).get('currency_symbol', 'USD')
             
-            if cash_flow and outstanding_shares_data:
+            if cash_flow:
                 self._log(f"[DEBUG] Found Cash Flow data with {len(cash_flow)} years")
                 self._log(f"[DEBUG] Cash Flow currency: {cash_flow_currency}")
                 
                 # Create a lookup for shares by year
                 shares_by_year = {}
-                for item in outstanding_shares_data.values():
-                    if isinstance(item, dict) and 'date' in item and 'shares' in item:
-                        year = str(item['date'])
-                        shares = item['shares']
-                        shares_by_year[year] = shares
+                if outstanding_shares_data:
+                    for item in outstanding_shares_data.values():
+                        if isinstance(item, dict) and 'date' in item and 'shares' in item:
+                            year = str(item['date'])
+                            shares = item['shares']
+                            shares_by_year[year] = shares
+                
+                # Sort years to identify most recent
+                sorted_years = sorted(cash_flow.keys(), reverse=True)
+                most_recent_year = sorted_years[0].split('-')[0] if sorted_years else None
                 
                 # Calculate dividend per share from dividendsPaid
                 for year, cf_data in cash_flow.items():
                     if isinstance(cf_data, dict):
                         dividends_paid = cf_data.get('dividendsPaid')
+                        year_only = year.split('-')[0]
+                        
                         if dividends_paid and dividends_paid != 'null':
                             try:
                                 div_amount = abs(float(dividends_paid))  # Make positive
-                                year_only = year.split('-')[0]
                                 shares = shares_by_year.get(year_only, 0)
                                 
                                 if shares > 0 and div_amount > 0:
                                     div_per_share = div_amount / shares
                                     result[year_only] = div_per_share
-                                    self._log(f"[DEBUG] Year {year_only}: Dividend per share = {div_per_share:.4f} (from {div_amount:,.0f} / {shares:,.0f} shares)")
+                                    source_indicators[year_only] = 'cash_flow'
+                                    self._log(f"[DEBUG] Year {year_only}: Dividend per share = {div_per_share:.4f} (from {div_amount:,.0f} / {shares:,.0f} shares) [cash_flow]")
                             except (ValueError, TypeError) as e:
                                 self._log(f"[DEBUG] Could not parse dividendsPaid for {year}: {e}")
+                
+                # For most recent year only: use forward rate if cash flow missing
+                if most_recent_year and most_recent_year not in result and forward_rate and forward_rate > 0:
+                    result[most_recent_year] = forward_rate
+                    source_indicators[most_recent_year] = 'forward_rate'
+                    self._log(f"[DEBUG] Year {most_recent_year}: Using ForwardAnnualDividendRate = {forward_rate:.4f} [forward_rate]")
                 
                 if result:
                     is_amount_data = True
                     dividend_currency = cash_flow_currency  # Dividends are in Cash Flow currency
                     self._log(f"[DEBUG] Calculated dividend per share for {len(result)} years from Cash Flow (in {dividend_currency})")
-                    return result, forward_rate, is_amount_data, dividend_currency
+                    return result, forward_rate, is_amount_data, dividend_currency, source_indicators
             
             # Fallback 1: Try Dividends array
             dividend_list = splits_divs.get('Dividends', [])
@@ -268,12 +380,13 @@ class FinancialDataProcessor:
                         amount = div.get('Value') or div.get('Dividend') or div.get('Amount')
                         if amount:
                             year_totals[year] = year_totals.get(year, 0.0) + float(amount)
+                            source_indicators[year] = 'dividends_array'
                 
                 if year_totals:
                     result = year_totals
                     is_amount_data = True
                     self._log(f"[DEBUG] Aggregated dividend amounts for {len(result)} years from Dividends array")
-                    return result, forward_rate, is_amount_data, dividend_currency
+                    return result, forward_rate, is_amount_data, dividend_currency, source_indicators
             
             # Fallback 2: Use NumberDividendsByYear (counts only)
             div_data = splits_divs.get('NumberDividendsByYear', {})
@@ -290,16 +403,18 @@ class FinancialDataProcessor:
                             year = str(value['Year'])
                             count = value['Count']
                             result[year] = self.sanitize_value(count)
+                            source_indicators[year] = 'count'
                     
                     self._log(f"[DEBUG] Parsed {len(result)} years of dividend counts")
-                    return result, forward_rate, is_amount_data, dividend_currency
+                    return result, forward_rate, is_amount_data, dividend_currency, source_indicators
                 
                 elif all(isinstance(k, str) and k.isdigit() and len(k) == 4 for k in list(div_data.keys())[:3]):
                     print(f"[WARNING] Using dividend payment counts (actual amounts not available from API)")
                     self._log(f"[DEBUG] Found year-keyed dividend data")
                     for year, value in div_data.items():
                         result[year] = self.sanitize_value(value)
-                    return result, forward_rate, is_amount_data, dividend_currency
+                        source_indicators[year] = 'count'
+                    return result, forward_rate, is_amount_data, dividend_currency, source_indicators
             
             if not result:
                 self._log("[DEBUG] No dividend history could be parsed")
@@ -307,19 +422,36 @@ class FinancialDataProcessor:
         except (KeyError, TypeError, AttributeError) as e:
             self._log(f"[DEBUG] Error parsing dividend history: {e}")
         
-        return result, forward_rate, is_amount_data, dividend_currency
+        return result, forward_rate, is_amount_data, dividend_currency, source_indicators
     
     @staticmethod
     def merge_financial_data(balance_sheet: Dict, income_statement: Dict, 
-                            dividend_history: Dict, shares_outstanding: float) -> Dict[str, Dict[str, float]]:
+                            dividend_history: Dict, shares_outstanding: float,
+                            outstanding_shares_by_year: Optional[Dict[str, float]] = None) -> Dict[str, Dict[str, float]]:
         """
         Merge balance sheet, income statement, and dividend data by year.
         Calculates EPS from net income if not available.
         
+        Args:
+            balance_sheet: Balance sheet data by year
+            income_statement: Income statement data by year
+            dividend_history: Dividend data by year
+            shares_outstanding: Default shares outstanding (fallback)
+            outstanding_shares_by_year: Optional dict of year-specific shares outstanding
+        
         Returns:
             Dictionary with year as key and merged financial data as value
         """
+        # Include all years from financial statements AND dividend history
         all_years = set(balance_sheet.keys()) | set(income_statement.keys())
+        
+        # Add years from dividend history that might not have financial statements yet
+        for div_year in dividend_history.keys():
+            # Convert year-only format to date format for consistency
+            if '-' not in div_year:
+                div_year_date = f"{div_year}-12-31"
+                all_years.add(div_year_date)
+        
         result = {}
         
         # Count missing dividends and calculated EPS
@@ -337,13 +469,18 @@ class FinancialDataProcessor:
             if div_amount == 0.0 and year_only not in dividend_history:
                 missing_div_count += 1
             
+            # Get year-specific shares if available, otherwise use default
+            year_shares = shares_outstanding
+            if outstanding_shares_by_year and year_only in outstanding_shares_by_year:
+                year_shares = outstanding_shares_by_year[year_only]
+            
             # Get EPS, or calculate from net income if missing
             eps = is_data.get('eps', 0.0)
             net_income = is_data.get('net_income', 0.0)
             
             # If EPS is missing but we have net income and shares, calculate it
-            if eps == 0.0 and net_income != 0.0 and shares_outstanding > 0:
-                eps = net_income / shares_outstanding
+            if eps == 0.0 and net_income != 0.0 and year_shares > 0:
+                eps = net_income / year_shares
                 calculated_eps_count += 1
             
             result[year] = {
@@ -354,7 +491,7 @@ class FinancialDataProcessor:
                 'total_equity': bs_data.get('total_equity', 0.0),
                 'intangible_assets': bs_data.get('intangible_assets', 0.0),
                 'goodwill': bs_data.get('goodwill', 0.0),
-                'shares_outstanding': shares_outstanding,
+                'shares_outstanding': year_shares,  # Use year-specific shares
                 'current_assets': bs_data.get('current_assets', 0.0),
                 'current_liabilities': bs_data.get('current_liabilities', 0.0),
                 'total_liabilities': bs_data.get('total_liabilities', 0.0),

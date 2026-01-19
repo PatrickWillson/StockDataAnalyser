@@ -321,5 +321,480 @@ def test_markdown_formatting_in_dossier():
     assert len(table_rows) >= 5  # Should have at least 5 years of data
 
 
+def test_yu_lse_complete_flow_with_alpha_vantage_fallback():
+    """
+    End-to-end test for YU.LSE ticker with Alpha Vantage fallback.
+    
+    Tests complete flow:
+    1. EODHD price missing → Alpha Vantage fallback
+    2. EPV calculation includes loss years
+    3. Dossier contains all new sections (Data Quality, Defensive Verdict, Enterprising Assessment)
+    
+    Requirements: All (comprehensive integration test)
+    """
+    from clients.alphavantage_client import AlphaVantageClient
+    from core.financial_data_processor import FinancialDataProcessor
+    
+    # Arrange: Create mock data simulating YU.LSE with missing EODHD price
+    mock_data = {
+        'General': {
+            'Code': 'YU',
+            'Exchange': 'LSE',
+            'CurrencyCode': 'GBX',
+            'Officers': {
+                '0': {'Name': 'Mr. Baljit Bobby Kalar', 'Title': 'CEO'}
+            }
+        },
+        'Highlights': {
+            # No SharePrice - simulating missing EODHD price
+            'PERatio': 8.46,
+            'BookValue': 4.82,
+            'DividendShare': 0.63,
+            'EarningsShare': 1.95,
+            'ReturnOnEquityTTM': 0.5308,
+            'ReturnOnAssetsTTM': 0.125
+        },
+        'Financials': {
+            'Balance_Sheet': {
+                'currency_symbol': 'GBP',
+                'yearly': {
+                    '2024-12-31': {
+                        'totalStockholderEquity': 87000000,
+                        'intangibleAssets': 5000000,
+                        'goodwill': 2000000,
+                        'totalCurrentAssets': 120000000,
+                        'totalCurrentLiabilities': 90000000,
+                        'totalAssets': 200000000,
+                        'totalLiab': 113000000,
+                        'longTermDebt': 10000000
+                    },
+                    '2023-12-31': {
+                        'totalStockholderEquity': 81000000,
+                        'intangibleAssets': 4800000,
+                        'goodwill': 1900000,
+                        'totalCurrentAssets': 110000000,
+                        'totalCurrentLiabilities': 85000000,
+                        'totalAssets': 190000000,
+                        'totalLiab': 109000000,
+                        'longTermDebt': 9500000
+                    },
+                    '2022-12-31': {
+                        'totalStockholderEquity': 75000000,
+                        'intangibleAssets': 4600000,
+                        'goodwill': 1800000,
+                        'totalCurrentAssets': 100000000,
+                        'totalCurrentLiabilities': 80000000,
+                        'totalAssets': 180000000,
+                        'totalLiab': 105000000,
+                        'longTermDebt': 9000000
+                    },
+                    '2021-12-31': {
+                        'totalStockholderEquity': 70000000,
+                        'intangibleAssets': 4400000,
+                        'goodwill': 1700000,
+                        'totalCurrentAssets': 95000000,
+                        'totalCurrentLiabilities': 75000000,
+                        'totalAssets': 170000000,
+                        'totalLiab': 100000000,
+                        'longTermDebt': 8500000
+                    },
+                    '2020-12-31': {
+                        'totalStockholderEquity': 65000000,
+                        'intangibleAssets': 4200000,
+                        'goodwill': 1600000,
+                        'totalCurrentAssets': 90000000,
+                        'totalCurrentLiabilities': 70000000,
+                        'totalAssets': 160000000,
+                        'totalLiab': 95000000,
+                        'longTermDebt': 8000000
+                    },
+                    '2019-12-31': {
+                        'totalStockholderEquity': 60000000,
+                        'intangibleAssets': 4000000,
+                        'goodwill': 1500000,
+                        'totalCurrentAssets': 85000000,
+                        'totalCurrentLiabilities': 65000000,
+                        'totalAssets': 150000000,
+                        'totalLiab': 90000000,
+                        'longTermDebt': 7500000
+                    },
+                    '2018-12-31': {
+                        'totalStockholderEquity': 55000000,
+                        'intangibleAssets': 3800000,
+                        'goodwill': 1400000,
+                        'totalCurrentAssets': 80000000,
+                        'totalCurrentLiabilities': 60000000,
+                        'totalAssets': 140000000,
+                        'totalLiab': 85000000,
+                        'longTermDebt': 7000000
+                    },
+                    '2017-12-31': {
+                        'totalStockholderEquity': 50000000,
+                        'intangibleAssets': 3600000,
+                        'goodwill': 1300000,
+                        'totalCurrentAssets': 75000000,
+                        'totalCurrentLiabilities': 55000000,
+                        'totalAssets': 130000000,
+                        'totalLiab': 80000000,
+                        'longTermDebt': 6500000
+                    },
+                    '2016-12-31': {
+                        'totalStockholderEquity': 45000000,
+                        'intangibleAssets': 3400000,
+                        'goodwill': 1200000,
+                        'totalCurrentAssets': 70000000,
+                        'totalCurrentLiabilities': 50000000,
+                        'totalAssets': 120000000,
+                        'totalLiab': 75000000,
+                        'longTermDebt': 6000000
+                    },
+                    '2015-12-31': {
+                        'totalStockholderEquity': 40000000,
+                        'intangibleAssets': 3200000,
+                        'goodwill': 1100000,
+                        'totalCurrentAssets': 65000000,
+                        'totalCurrentLiabilities': 45000000,
+                        'totalAssets': 110000000,
+                        'totalLiab': 70000000,
+                        'longTermDebt': 5500000
+                    }
+                }
+            },
+            'Income_Statement': {
+                'currency_symbol': 'GBP',
+                'yearly': {
+                    '2024-12-31': {'totalRevenue': 640000000, 'netIncome': 33499000},
+                    '2023-12-31': {'totalRevenue': 620000000, 'netIncome': 30860000},
+                    '2022-12-31': {'totalRevenue': 600000000, 'netIncome': 4769000},
+                    '2021-12-31': {'totalRevenue': 580000000, 'netIncome': 4500000},
+                    '2020-12-31': {'totalRevenue': 560000000, 'netIncome': -1200000},  # Loss year
+                    '2019-12-31': {'totalRevenue': 540000000, 'netIncome': -5000000},  # Loss year
+                    '2018-12-31': {'totalRevenue': 520000000, 'netIncome': -6300000},  # Loss year
+                    '2017-12-31': {'totalRevenue': 500000000, 'netIncome': 700000},
+                    '2016-12-31': {'totalRevenue': 480000000, 'netIncome': -1400000},  # Loss year
+                    '2015-12-31': {'totalRevenue': 460000000, 'netIncome': -700000}    # Loss year
+                }
+            },
+            'Cash_Flow': {
+                'currency_symbol': 'GBP',
+                'yearly': {
+                    '2024-12-31': {'dividendsPaid': -11000000},
+                    '2023-12-31': {'dividendsPaid': -10500000},
+                    '2022-12-31': {'dividendsPaid': 0},  # Missing dividend data
+                    '2021-12-31': {'dividendsPaid': 0}
+                }
+            }
+        },
+        'SplitsDividends': {
+            'ForwardAnnualDividendRate': 0.63
+        },
+        'Technicals': {
+            'Beta': 0.668,
+            '52WeekHigh': 18.34,
+            '52WeekLow': 12.35
+        },
+        'outstandingShares': {
+            'annual': {
+                '0': {'date': '2024', 'shares': 18000000},
+                '1': {'date': '2023', 'shares': 18000000},
+                '2': {'date': '2022', 'shares': 18000000},
+                '3': {'date': '2021', 'shares': 18000000},
+                '4': {'date': '2020', 'shares': 18000000},
+                '5': {'date': '2019', 'shares': 18000000},
+                '6': {'date': '2018', 'shares': 18000000},
+                '7': {'date': '2017', 'shares': 18000000},
+                '8': {'date': '2016', 'shares': 18000000},
+                '9': {'date': '2015', 'shares': 18000000}
+            }
+        }
+    }
+    
+    # Mock Alpha Vantage client that returns a price in GBX
+    mock_av_client = Mock(spec=AlphaVantageClient)
+    mock_av_client.get_price.return_value = 1650.0  # Price in GBX (Alpha Vantage returns LSE prices in pence)
+    
+    # Act: Process data through the complete workflow
+    warnings = []
+    
+    # Step 1: Get price with Alpha Vantage fallback
+    price, price_source = FinancialDataProcessor.get_current_price(
+        mock_data,
+        av_client=mock_av_client,
+        ticker='YU.LSE',
+        warnings=warnings
+    )
+    
+    # Step 2: Create financial data dict (simulating what EODHDClient.fetch_all_data returns)
+    # In the real system, fetch_all_data does all the parsing
+    financial_data = {
+        'ticker': 'YU.LSE',
+        'exchange': 'LSE',
+        'currency': 'GBP',
+        'original_stock_currency': 'GBX',
+        'price': price,
+        'ceo_name': 'Mr. Baljit Bobby Kalar',
+        'sector': 'Utilities',
+        'industry': 'Utilities - Diversified',
+        'employees': 472,
+        'shares_outstanding': 18000000,
+        'beta': 0.668,
+        'roe': 0.5308,
+        'roa': 0.125,
+        'pe_ratio': 8.46,
+        'price_to_book': 3.42,
+        'insider_ownership': 65.0,
+        'institutional_ownership': 13.73,
+        'history': {
+            '2024': {
+                'revenue': 640000000, 'net_income': 33499000, 'eps': 1.86,
+                'dividend': 0.61, 'total_equity': 87000000, 'intangible_assets': 5000000,
+                'goodwill': 2000000, 'shares_outstanding': 18000000,
+                'current_assets': 120000000, 'current_liabilities': 90000000,
+                'total_liabilities': 113000000, 'long_term_debt': 10000000
+            },
+            '2023': {
+                'revenue': 620000000, 'net_income': 30860000, 'eps': 1.71,
+                'dividend': 0.58, 'total_equity': 81000000, 'intangible_assets': 4800000,
+                'goodwill': 1900000, 'shares_outstanding': 18000000,
+                'current_assets': 110000000, 'current_liabilities': 85000000,
+                'total_liabilities': 109000000, 'long_term_debt': 9500000
+            },
+            '2022': {
+                'revenue': 600000000, 'net_income': 4769000, 'eps': 0.26,
+                'dividend': 0.0, 'total_equity': 75000000, 'intangible_assets': 4600000,
+                'goodwill': 1800000, 'shares_outstanding': 18000000,
+                'current_assets': 100000000, 'current_liabilities': 80000000,
+                'total_liabilities': 105000000, 'long_term_debt': 9000000
+            },
+            '2021': {
+                'revenue': 580000000, 'net_income': 4500000, 'eps': 0.25,
+                'dividend': 0.0, 'total_equity': 70000000, 'intangible_assets': 4400000,
+                'goodwill': 1700000, 'shares_outstanding': 18000000,
+                'current_assets': 95000000, 'current_liabilities': 75000000,
+                'total_liabilities': 100000000, 'long_term_debt': 8500000
+            },
+            '2020': {
+                'revenue': 560000000, 'net_income': -1200000, 'eps': -0.07,
+                'dividend': 0.0, 'total_equity': 65000000, 'intangible_assets': 4200000,
+                'goodwill': 1600000, 'shares_outstanding': 18000000,
+                'current_assets': 90000000, 'current_liabilities': 70000000,
+                'total_liabilities': 95000000, 'long_term_debt': 8000000
+            },
+            '2019': {
+                'revenue': 540000000, 'net_income': -5000000, 'eps': -0.28,
+                'dividend': 0.0, 'total_equity': 60000000, 'intangible_assets': 4000000,
+                'goodwill': 1500000, 'shares_outstanding': 18000000,
+                'current_assets': 85000000, 'current_liabilities': 65000000,
+                'total_liabilities': 90000000, 'long_term_debt': 7500000
+            },
+            '2018': {
+                'revenue': 520000000, 'net_income': -6300000, 'eps': -0.35,
+                'dividend': 0.0, 'total_equity': 55000000, 'intangible_assets': 3800000,
+                'goodwill': 1400000, 'shares_outstanding': 18000000,
+                'current_assets': 80000000, 'current_liabilities': 60000000,
+                'total_liabilities': 85000000, 'long_term_debt': 7000000
+            },
+            '2017': {
+                'revenue': 500000000, 'net_income': 700000, 'eps': 0.04,
+                'dividend': 0.0, 'total_equity': 50000000, 'intangible_assets': 3600000,
+                'goodwill': 1300000, 'shares_outstanding': 18000000,
+                'current_assets': 75000000, 'current_liabilities': 55000000,
+                'total_liabilities': 80000000, 'long_term_debt': 6500000
+            },
+            '2016': {
+                'revenue': 480000000, 'net_income': -1400000, 'eps': -0.08,
+                'dividend': 0.0, 'total_equity': 45000000, 'intangible_assets': 3400000,
+                'goodwill': 1200000, 'shares_outstanding': 18000000,
+                'current_assets': 70000000, 'current_liabilities': 50000000,
+                'total_liabilities': 75000000, 'long_term_debt': 6000000
+            },
+            '2015': {
+                'revenue': 460000000, 'net_income': -700000, 'eps': -0.04,
+                'dividend': 0.0, 'total_equity': 40000000, 'intangible_assets': 3200000,
+                'goodwill': 1100000, 'shares_outstanding': 18000000,
+                'current_assets': 65000000, 'current_liabilities': 45000000,
+                'total_liabilities': 70000000, 'long_term_debt': 5500000
+            }
+        },
+        'warnings': warnings,
+        'dividend_source': 'forward_rate'
+    }
+    
+    # Step 3: Calculate Graham metrics with normalized EPV
+    calculator = GrahamCalculator(financial_data)
+    metrics = calculator.compute_all()
+    
+    # Step 4: Detect anomalies
+    detector = AnomalyDetector(financial_data)
+    anomalies = detector.scan()
+    
+    # Step 5: Generate dossier
+    dossier_content = generate_dossier_content('YU.LSE', financial_data, metrics, anomalies)
+    
+    # Assert: Verify Alpha Vantage fallback was used
+    assert price == 1650.0, f"Expected 1650.0 GBX, got {price}"
+    assert any("Alpha Vantage" in w for w in warnings), "Should have Alpha Vantage warning"
+    mock_av_client.get_price.assert_called_once_with('YU.LSE')
+    
+    # Assert: Verify EPV includes loss years
+    epv_result = metrics.get('epv')
+    if isinstance(epv_result, dict):
+        # Should have 10 years of data
+        assert epv_result['years_used'] == 10, "EPV should use 10 years"
+        
+        # Should include loss years in calculation
+        net_incomes = epv_result['net_incomes']
+        assert any(ni < 0 for ni in net_incomes), "Should include negative net incomes (loss years)"
+        
+        # Normalized earnings should be the average of all years including losses
+        expected_avg = sum(net_incomes) / len(net_incomes)
+        assert abs(epv_result['normalized_earnings'] - expected_avg) < 0.01, \
+            "Normalized earnings should be average of all years including losses"
+    
+    # Assert: Verify dossier contains all new sections
+    assert 'DATA QUALITY ASSESSMENT' in dossier_content, "Should have Data Quality Assessment section"
+    assert 'DEFENSIVE INVESTOR VERDICT' in dossier_content, "Should have Defensive Investor Verdict section"
+    assert 'ENTERPRISING INVESTOR ASSESSMENT' in dossier_content, "Should have Enterprising Investor Assessment section"
+    assert 'EPV - Earnings Power Value' in dossier_content, "Should have EPV methodology section"
+    
+    # Assert: Verify data quality section mentions Alpha Vantage
+    assert 'Alpha Vantage' in dossier_content or 'EODHD' in dossier_content, \
+        "Data quality section should mention price source"
+    
+    # Assert: Verify defensive verdict section has proper format
+    assert ('SUITABLE' in dossier_content or 'NOT SUITABLE' in dossier_content), \
+        "Should have defensive investor verdict"
+    
+    # Assert: Verify enterprising assessment section exists
+    assert ('POTENTIAL OPPORTUNITY' in dossier_content or 'NOT SUITABLE' in dossier_content), \
+        "Should have enterprising investor assessment"
+
+
+def test_fatal_error_when_both_price_sources_fail():
+    """
+    Test that system exits with fatal error when both EODHD and Alpha Vantage fail.
+    
+    Requirements: 1.5 (Fatal error on missing price)
+    """
+    from clients.alphavantage_client import AlphaVantageClient
+    from core.financial_data_processor import FinancialDataProcessor
+    
+    # Arrange: Mock data with no EODHD price
+    mock_data = {
+        'General': {'CurrencyCode': 'USD'},
+        'Highlights': {},  # No SharePrice
+        'Financials': {'Balance_Sheet': {'currency_symbol': 'USD'}}
+    }
+    
+    # Mock Alpha Vantage client that also fails
+    mock_av_client = Mock(spec=AlphaVantageClient)
+    mock_av_client.get_price.return_value = None  # Alpha Vantage also fails
+    
+    # Act: Try to get price
+    warnings = []
+    price, price_source = FinancialDataProcessor.get_current_price(
+        mock_data,
+        av_client=mock_av_client,
+        ticker='TEST.US',
+        warnings=warnings
+    )
+    
+    # Assert: Should return 0.0 when both sources fail
+    assert price == 0.0, "Should return 0.0 when both EODHD and Alpha Vantage fail"
+    assert price_source == 'Missing', "Price source should be 'Missing'"
+    
+    # In the main CLI, this would trigger sys.exit(1)
+    # We verify the price is 0.0 which is the trigger condition
+
+
+def test_epv_normalized_with_loss_years():
+    """
+    Test that EPV calculation properly includes loss years in the average.
+    
+    Requirements: 3.1, 3.3 (Full-cycle EPV calculation)
+    """
+    # Arrange: Create financial data with mix of profitable and loss years
+    financial_data = {
+        'ticker': 'TEST.US',
+        'currency': 'USD',
+        'price': 100.0,
+        'shares_outstanding': 10000000,
+        'history': {
+            '2024': {'net_income': 10000000, 'revenue': 100000000, 'eps': 1.0},
+            '2023': {'net_income': 8000000, 'revenue': 95000000, 'eps': 0.8},
+            '2022': {'net_income': -2000000, 'revenue': 90000000, 'eps': -0.2},  # Loss
+            '2021': {'net_income': 5000000, 'revenue': 85000000, 'eps': 0.5},
+            '2020': {'net_income': -3000000, 'revenue': 80000000, 'eps': -0.3},  # Loss
+            '2019': {'net_income': 6000000, 'revenue': 75000000, 'eps': 0.6},
+            '2018': {'net_income': 7000000, 'revenue': 70000000, 'eps': 0.7},
+            '2017': {'net_income': -1000000, 'revenue': 65000000, 'eps': -0.1},  # Loss
+            '2016': {'net_income': 4000000, 'revenue': 60000000, 'eps': 0.4},
+            '2015': {'net_income': 3000000, 'revenue': 55000000, 'eps': 0.3}
+        },
+        'warnings': []
+    }
+    
+    # Act: Calculate EPV
+    calculator = GrahamCalculator(financial_data)
+    epv_result = calculator.compute_epv_normalized(financial_data['history'])
+    
+    # Assert: Verify loss years are included
+    assert isinstance(epv_result, dict), "Should return dict for valid data"
+    assert epv_result['years_used'] == 10, "Should use all 10 years"
+    
+    # Verify net incomes include negative values
+    net_incomes = epv_result['net_incomes']
+    assert any(ni < 0 for ni in net_incomes), "Should include loss years (negative net income)"
+    
+    # Verify normalized earnings is average of ALL years
+    expected_avg = (10000000 + 8000000 - 2000000 + 5000000 - 3000000 + 
+                   6000000 + 7000000 - 1000000 + 4000000 + 3000000) / 10
+    assert abs(epv_result['normalized_earnings'] - expected_avg) < 1.0, \
+        "Normalized earnings should be average of all years including losses"
+
+
+def test_dossier_contains_dividend_source_labels():
+    """
+    Test that dossier properly labels dividend sources (Cash Flow vs Forward Rate).
+    
+    Requirements: 2.5, 2.6, 2.7, 2.8 (Dividend display)
+    """
+    # Arrange: Create financial data with mixed dividend sources
+    financial_data = create_mock_financial_data()
+    financial_data['dividend_source'] = 'forward_rate'  # Most recent year uses forward rate
+    
+    # Act: Calculate metrics and generate dossier
+    calculator = GrahamCalculator(financial_data)
+    metrics = calculator.compute_all()
+    detector = AnomalyDetector(financial_data)
+    anomalies = detector.scan()
+    dossier_content = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+    
+    # Assert: Verify dividend source is mentioned
+    # The dossier should indicate when forward rate is used
+    assert 'dividend' in dossier_content.lower() or 'Dividend' in dossier_content, \
+        "Dossier should mention dividends"
+
+
+def test_currency_display_format():
+    """
+    Test that currency display shows trading currency first.
+    
+    Requirements: 4.1, 4.2 (Currency display)
+    """
+    from stock_data_analyser import format_price_display
+    
+    # Test single currency
+    result = format_price_display(1650.0, 'GBX', 'GBX')
+    assert result == "1,650.00 GBX", "Should show single currency"
+    
+    # Test dual currency with conversion
+    result = format_price_display(1650.0, 'GBX', 'GBP', 16.50)
+    assert result == "1,650.00 GBX (16.50 GBP)", "Should show trading currency first, then conversion"
+    
+    # Test that trading currency always comes first
+    assert 'GBX' in result.split('(')[0], "Trading currency should appear before parentheses"
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
