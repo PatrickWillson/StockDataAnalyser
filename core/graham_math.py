@@ -53,6 +53,33 @@ class GrahamCalculator:
         self.data = financial_data
         self.warnings = []
     
+    def _get_latest_financial_year(self, history: dict, years: list) -> str:
+        """
+        Get the most recent year with actual financial data.
+        
+        Skips years that only have dividend data (e.g., future years where
+        dividends are declared but annual financials aren't available yet).
+        
+        Args:
+            history: Financial history dictionary
+            years: List of years sorted in reverse chronological order
+            
+        Returns:
+            Most recent year with financial data, or None if not found
+        """
+        for year in years:
+            year_data = history[year]
+            # Check if year has actual financial data (not just dividend)
+            has_financial_data = (
+                year_data.get('revenue', 0.0) > 0 or
+                year_data.get('net_income', 0.0) != 0 or
+                year_data.get('total_equity', 0.0) > 0 or
+                year_data.get('current_assets', 0.0) > 0
+            )
+            if has_financial_data:
+                return year
+        return None
+    
     def compute_tbvps(self, round_result: bool = True) -> Union[float, str]:
         """
         Calculate Tangible Book Value Per Share.
@@ -69,12 +96,15 @@ class GrahamCalculator:
         if not history:
             return "N/A"
         
-        # Get most recent fiscal year
+        # Get most recent fiscal year with financial data
         years = sorted(history.keys(), reverse=True)
         if not years:
             return "N/A"
         
-        latest_year = years[0]
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return "N/A"
+        
         year_data = history[latest_year]
         
         # Extract required fields
@@ -112,7 +142,7 @@ class GrahamCalculator:
         if tbvps == "N/A":
             return "N/A"
         
-        # Get most recent EPS
+        # Get most recent EPS from year with financial data
         history = self.data.get('history', {})
         if not history:
             return "N/A"
@@ -121,7 +151,10 @@ class GrahamCalculator:
         if not years:
             return "N/A"
         
-        latest_year = years[0]
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return "N/A"
+        
         eps = history[latest_year].get('eps', 0.0)
         
         # Handle negative EPS
@@ -149,12 +182,15 @@ class GrahamCalculator:
         if not history:
             return "N/A"
         
-        # Get most recent fiscal year
+        # Get most recent fiscal year with financial data
         years = sorted(history.keys(), reverse=True)
         if not years:
             return "N/A"
         
-        latest_year = years[0]
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return "N/A"
+        
         year_data = history[latest_year]
         
         # Extract required fields
@@ -246,8 +282,11 @@ class GrahamCalculator:
         # Calculate EPV
         epv = normalized_earnings / self.COST_OF_CAPITAL
         
-        # Get shares for per-share calculation
-        latest_year = sorted_years[0]
+        # Get shares for per-share calculation from most recent year with financial data
+        latest_year = self._get_latest_financial_year(history, sorted_years)
+        if not latest_year:
+            return "N/A - No financial data available"
+        
         shares = history[latest_year].get('shares_outstanding', 0)
         epv_per_share = epv / shares if shares > 0 else 0.0
         
@@ -436,7 +475,16 @@ class GrahamCalculator:
         if not years:
             return 'FAIL'
         
-        latest_year = years[0]
+        # Find most recent year with actual financial data (not just dividend data)
+        latest_year = None
+        for year in years:
+            if history[year].get('current_assets', 0.0) > 0 or history[year].get('total_equity', 0.0) > 0:
+                latest_year = year
+                break
+        
+        if not latest_year:
+            return 'FAIL'
+        
         current_assets = history[latest_year].get('current_assets', 0.0)
         current_liabilities = history[latest_year].get('current_liabilities', 0.0)
         
@@ -451,7 +499,10 @@ class GrahamCalculator:
         if not years:
             return 'FAIL'
         
-        latest_year = years[0]
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return 'FAIL'
+        
         long_term_debt = history[latest_year].get('long_term_debt', 0.0)
         current_assets = history[latest_year].get('current_assets', 0.0)
         current_liabilities = history[latest_year].get('current_liabilities', 0.0)
@@ -478,9 +529,22 @@ class GrahamCalculator:
         if num_years < 10:
             return 'N/A (Too Young)'
         
-        # Get earnings from 10 years ago and most recent
-        oldest_year = years[9]  # 10th year (0-indexed)
-        latest_year = years[0]
+        # Get earnings from 10 years ago and most recent with financial data
+        # Find the most recent year with financial data
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return 'FAIL'
+        
+        # Find the index of the latest financial year
+        latest_index = years.index(latest_year)
+        
+        # Get the year 10 years before the latest financial year
+        # (not just years[9] which might include dividend-only years)
+        financial_years = [y for y in years if self._get_latest_financial_year(history, [y])]
+        if len(financial_years) < 10:
+            return 'N/A (Too Young)'
+        
+        oldest_year = financial_years[9]  # 10th financial year
         
         old_earnings = history[oldest_year].get('net_income', 0.0)
         recent_earnings = history[latest_year].get('net_income', 0.0)
@@ -496,7 +560,10 @@ class GrahamCalculator:
         if not years or price == 0:
             return 'FAIL'
         
-        latest_year = years[0]
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return 'FAIL'
+        
         eps = history[latest_year].get('eps', 0.0)
         
         if eps <= 0:
@@ -510,7 +577,10 @@ class GrahamCalculator:
         if not years or price == 0:
             return 'FAIL'
         
-        latest_year = years[0]
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return 'FAIL'
+        
         total_equity = history[latest_year].get('total_equity', 0.0)
         shares_outstanding = history[latest_year].get('shares_outstanding', 0.0)
         
@@ -526,7 +596,10 @@ class GrahamCalculator:
         if not years:
             return 'FAIL'
         
-        latest_year = years[0]
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return 'FAIL'
+        
         long_term_debt = history[latest_year].get('long_term_debt', 0.0)
         current_assets = history[latest_year].get('current_assets', 0.0)
         current_liabilities = history[latest_year].get('current_liabilities', 0.0)
@@ -541,7 +614,10 @@ class GrahamCalculator:
         if not years:
             return 'FAIL'
         
-        latest_year = years[0]
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return 'FAIL'
+        
         dividend = history[latest_year].get('dividend', 0.0)
         
         return 'PASS' if dividend > 0 else 'FAIL'
@@ -551,7 +627,9 @@ class GrahamCalculator:
         if not years or price == 0:
             return 'FAIL'
         
-        latest_year = years[0]
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return 'FAIL'
         
         # Test 1: P/E < 10
         eps = history[latest_year].get('eps', 0.0)

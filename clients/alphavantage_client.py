@@ -148,6 +148,9 @@ class AlphaVantageClient(BaseAPIClient):
             # Parse response
             data = response.json()
             
+            # Debug: Print full response
+            self._log(f"[DEBUG] Alpha Vantage response: {data}")
+            
             # Check for API error messages
             if 'Error Message' in data:
                 self._log(f"[ERROR] Alpha Vantage error: {data['Error Message']}")
@@ -158,8 +161,19 @@ class AlphaVantageClient(BaseAPIClient):
                 self._log(f"[ERROR] Alpha Vantage rate limit: {data['Note']}")
                 return None
             
+            if 'Information' in data:
+                # Rate limit or other informational message
+                info_msg = data['Information']
+                if 'rate limit' in info_msg.lower() or '25 requests per day' in info_msg.lower():
+                    self._log(f"[ERROR] Alpha Vantage rate limit exceeded (25 requests/day for free tier)")
+                else:
+                    self._log(f"[ERROR] Alpha Vantage info: {info_msg}")
+                return None
+            
             # Parse price from Global Quote
             global_quote = data.get('Global Quote', {})
+            self._log(f"[DEBUG] Global Quote: {global_quote}")
+            
             price_str = global_quote.get('05. price')
             
             if price_str:
@@ -168,6 +182,7 @@ class AlphaVantageClient(BaseAPIClient):
                 return price
             else:
                 self._log(f"[ERROR] No price in Alpha Vantage response for {av_symbol}")
+                self._log(f"[DEBUG] Available keys in Global Quote: {list(global_quote.keys())}")
                 return None
                 
         except requests.exceptions.RequestException as e:

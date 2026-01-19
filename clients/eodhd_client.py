@@ -281,19 +281,54 @@ class EODHDClient(BaseAPIClient):
         
         # Get current price
         price, price_source = self.processor.get_current_price(data, av_client=av_client, ticker=ticker, warnings=warnings)
+        
+        # Check if price is available
+        if price == 0.0 or price_source == 'Missing':
+            print("\n" + "="*70)
+            print("[ERROR] Both sources failed to provide current price data.")
+            print("="*70)
+            print("\nTroubleshooting:")
+            print("1. EODHD API: Price not available in fundamentals endpoint")
+            print("   - This can happen for delisted stocks or data gaps")
+            print("   - Check if ticker format is correct (e.g., AAPL.US, VOD.LSE)")
+            print("\n2. Alpha Vantage Fallback: Failed or not configured")
+            
+            if av_client and av_client.api_key:
+                print("   - API key is set")
+                print("   - May have hit rate limit (25 requests/day for free tier)")
+                print("   - Wait 24 hours or upgrade to premium plan")
+                print(f"   - Ticker: {ticker}")
+            else:
+                print("   - API key NOT set (add ALPHAVANTAGE_API_KEY to .env)")
+                print("   - Get free key at: https://www.alphavantage.co/support/#api-key")
+            
+            print("\n3. Possible Solutions:")
+            print("   - Wait for Alpha Vantage rate limit to reset (24 hours)")
+            print("   - Try a different ticker that has EODHD price data")
+            print("   - Upgrade Alpha Vantage to premium (unlimited requests)")
+            print("   - Check if stock is actively trading")
+            print("="*70)
+            sys.exit(1)
+        
         print(f"\n[INFO] Current Price: {price} (Source: {price_source})")
         
-        # Get most recent EPS for London Fix
+        # Get most recent EPS for London Fix and P/E calculation
+        # Need to find the most recent year with actual financial data (not just dividend data)
         most_recent_eps = 0.0
         if history:
             sorted_years = sorted(history.keys(), reverse=True)
-            if sorted_years:
-                most_recent_eps = history[sorted_years[0]].get('eps', 0.0)
+            # Find most recent year with financial data
+            for year in sorted_years:
+                year_data = history[year]
+                # Check if year has actual financial data (not just dividend)
+                if year_data.get('revenue', 0.0) > 0 or year_data.get('net_income', 0.0) != 0 or year_data.get('total_equity', 0.0) > 0:
+                    most_recent_eps = year_data.get('eps', 0.0)
+                    break
         
         # Determine if London Fix is needed BEFORE applying it
         price_currency = currency
         london_fix_needed = False
-        if exchange == "LSE" and most_recent_eps > 0:
+        if exchange == "LSE" and most_recent_eps > 0 and price > 0:
             pe_ratio = price / most_recent_eps
             if pe_ratio > 500:
                 london_fix_needed = True
@@ -360,8 +395,15 @@ class EODHDClient(BaseAPIClient):
         calculated_bvps = 0.0
         if history:
             sorted_years = sorted(history.keys(), reverse=True)
-            if sorted_years:
-                most_recent_year = sorted_years[0]
+            # Find most recent year with financial data
+            most_recent_year = None
+            for year in sorted_years:
+                year_data = history[year]
+                if year_data.get('revenue', 0.0) > 0 or year_data.get('net_income', 0.0) != 0 or year_data.get('total_equity', 0.0) > 0:
+                    most_recent_year = year
+                    break
+            
+            if most_recent_year:
                 most_recent_data = history[most_recent_year]
                 total_equity = most_recent_data.get('total_equity', 0.0)
                 year_shares = most_recent_data.get('shares_outstanding', 0.0)
@@ -480,6 +522,40 @@ class EODHDClient(BaseAPIClient):
         """
         warnings = []
         
+        # Check Share Count Consistency
+        shares_stats = data.get('SharesStats', {}).get('SharesOutstanding', 0)
+        
+        # Get balance sheet shares from most recent year
+        balance_sheet_shares = 0
+        balance_sheet = data.get('Financials', {}).get('Balance_Sheet', {}).get('yearly', {})
+        if balance_sheet:
+            sorted_years = sorted(balance_sheet.keys(), reverse=True)
+            if sorted_years:
+                balance_sheet_shares = self.processor.sanitize_value(
+                    balance_sheet[sorted_years[0]].get('commonStockSharesOutstanding', 0)
+                )
+        
+        # Get outstandingShares.annual
+        outstanding_shares_annual = 0
+        outstanding_shares_data = data.get('outstandingShares', {}).get('annual', {})
+        if outstanding_shares_data:
+            # Get most recent year
+            for item in outstanding_shares_data.values():
+                if isinstance(item, dict) and 'shares' in item:
+                    outstanding_shares_annual = item.get('shares', 0)
+                    break  # Get first (most recent)
+        
+        # Compare share counts if they differ significantly
+        if shares_stats > 0 and outstanding_shares_annual > 0:
+            diff_pct = abs(outstanding_shares_annual - shares_stats) / shares_stats * 100
+            if diff_pct > 5:  # More than 5% difference
+                warnings.append(
+                    f"[VALIDATION] Share Count: Using {outstanding_shares_annual:,.0f} shares from financial statements. "
+                    f"Market data (SharesStats) shows {shares_stats:,.0f} shares ({diff_pct:.1f}% difference). "
+                    f"Financial statement shares are used for accurate per-share calculations per Graham methodology."
+                )
+                print(f"[INFO] Share count difference: Financial statements {outstanding_shares_annual:,.0f} vs Market data {shares_stats:,.0f}")
+        
         # Check P/E ratio
         api_pe = data.get('Highlights', {}).get('PERatio', 0)
         
@@ -502,7 +578,8 @@ class EODHDClient(BaseAPIClient):
                 warnings.append(
                     f"[VALIDATION] Book Value Discrepancy: API shows ${api_bvps:.2f}, "
                     f"calculated ${calculated_bvps:.2f} ({bvps_diff_pct:.1f}% difference). "
-                    f"May indicate different accounting standards or timing."
+                    f"Calculated value subtracts intangibles/goodwill per Graham methodology. "
+                    f"API may use different share count or accounting treatment."
                 )
                 print(f"[WARNING] Book Value discrepancy detected: API ${api_bvps:.2f} vs Calculated ${calculated_bvps:.2f}")
         
