@@ -40,6 +40,7 @@ htmlcov/
 .nox/
 *.cover
 *.log
+tests/api_responses/  # Captured API responses (for reference only)
 
 # IDE
 .vscode/

@@ -420,24 +420,36 @@ def generate_dossier_content(ticker, financial_data, metrics, anomalies):
                 
                 if revenue > 0:
                     margin = (net_income / revenue) * 100
+                    # Cap margin at reasonable bounds to prevent overflow in variance calculation
+                    margin = max(-1000, min(1000, margin))
                     profit_margins.append(margin)
                     net_incomes.append(net_income)
             
             if len(profit_margins) >= 3:
                 # Calculate standard deviation of profit margins
                 avg_margin = sum(profit_margins) / len(profit_margins)
-                variance = sum((m - avg_margin) ** 2 for m in profit_margins) / len(profit_margins)
-                std_dev = variance ** 0.5
+                try:
+                    variance = sum((m - avg_margin) ** 2 for m in profit_margins) / len(profit_margins)
+                    std_dev = variance ** 0.5
+                except (OverflowError, ValueError):
+                    # Handle extreme values gracefully
+                    std_dev = float('inf')
                 
                 # Count loss years
                 loss_years = sum(1 for ni in net_incomes if ni < 0)
                 
+                # Format std_dev for display
+                if std_dev == float('inf') or std_dev > 999:
+                    std_dev_str = ">999"
+                else:
+                    std_dev_str = f"{std_dev:.1f}"
+                
                 if loss_years > 0:
                     lines.append(f"- **Earnings Volatility**: {loss_years} loss year{'s' if loss_years > 1 else ''} in last {len(recent_5_years)} years")
-                    lines.append(f"  - Profit margin volatility: ±{std_dev:.1f}% (std dev)")
+                    lines.append(f"  - Profit margin volatility: ±{std_dev_str}% (std dev)")
                     lines.append(f"  - Cyclical or turnaround situation - higher risk")
                 elif std_dev > 10:
-                    lines.append(f"- **Earnings Volatility**: High profit margin swings (±{std_dev:.1f}% std dev)")
+                    lines.append(f"- **Earnings Volatility**: High profit margin swings (±{std_dev_str}% std dev)")
                     lines.append(f"  - Indicates cyclical business or operational instability")
                 elif std_dev > 5:
                     lines.append(f"- **Earnings Volatility**: Moderate (±{std_dev:.1f}% std dev)")
