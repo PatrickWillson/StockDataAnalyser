@@ -29,6 +29,15 @@ EODHD_API_KEY=your_api_key_here
 
 **Note**: yfinance (Yahoo Finance) is used for real-time price data and does not require an API key. Only the EODHD API key is required for fundamental financial data.
 
+### EODHD API Package Requirements
+
+To use this tool, you need to purchase the following EODHD API packages:
+
+- **Fundamentals Package** (Required) - Provides balance sheet, income statement, cash flow, and company fundamentals data
+- **EOD Historical Data - All World Package** (Optional) - Provides more accurate and complete dividend history across all exchanges
+
+Without the Fundamentals Package, the tool will not be able to fetch the necessary financial data. The All World Package is recommended for investors who need comprehensive dividend data, but the tool can function with the Fundamentals Package alone (using forward dividend rates as fallback).
+
 ## Usage
 
 ```bash
@@ -132,4 +141,6 @@ The system generates a structured Markdown file (`[TICKER]_DOSSIER.md`) containi
 ## Requirements
 
 - Python 3.9+
-- EODHD API key (get one at [https://eodhd.com?via=patrick](https://eodhd.com?via=patrick))
+- EODHD API key with Fundamentals Package (get one at [https://eodhd.com?via=patrick](https://eodhd.com?via=patrick))
+  - **Required**: Fundamentals Package
+  - **Optional**: EOD Historical Data - All World Package (for enhanced dividend history)
