@@ -220,7 +220,7 @@ def test_yfinance_price_currency_conversion_preserved(price, price_currency, fin
     **Feature: yfinance-price-integration, Property 5: Currency handling is preserved**
     **Validates: Requirements 5.1, 5.2, 5.4**
     """
-    from core.financial_data_processor import FinancialDataProcessor
+    from core.currency_converter import CurrencyConverter
     from clients.fx_client import FXClient
     
     # Create a mock FX client that returns our test rate
@@ -230,28 +230,26 @@ def test_yfinance_price_currency_conversion_preserved(price, price_currency, fin
                 return 1.0
             return fx_rate
     
-    processor = FinancialDataProcessor(fx_client=MockFXClient())
-    warnings = []
+    converter = CurrencyConverter(fx_client=MockFXClient())
     
     # Apply currency conversion
-    converted_price = processor.apply_currency_conversion(
-        price, price_currency, financials_currency, warnings
+    converted_price, success = converter.convert(
+        price, price_currency, financials_currency
     )
     
     if price_currency == financials_currency:
         # No conversion needed
         assert converted_price == price
-        # No currency conversion warning should be added
-        assert not any('Currency Conversion' in w for w in warnings)
+        assert success
     else:
         # Conversion should be applied
         expected_price = price * fx_rate
         assert abs(converted_price - expected_price) < 0.01
+        assert success
         
-        # Warning should be generated
-        assert len(warnings) > 0
-        assert any('Currency Conversion' in w for w in warnings)
-        assert any(price_currency in w and financials_currency in w for w in warnings)
+        # Check conversion history
+        warning = converter.get_consolidated_warning()
+        assert price_currency in warning and financials_currency in warning
 
 
 
@@ -269,24 +267,25 @@ def test_london_fix_applies_to_yfinance_prices(price, eps):
     **Feature: yfinance-price-integration, Property 6: London Fix applies to yfinance prices**
     **Validates: Requirements 5.3**
     """
-    from core.financial_data_processor import FinancialDataProcessor
+    from core.currency_converter import CurrencyConverter
     
-    processor = FinancialDataProcessor()
-    warnings = []
+    converter = CurrencyConverter()
     
     # Calculate P/E ratio
     pe_ratio = price / eps
     
     # Apply London Fix
-    adjusted_price = processor.apply_london_fix(price, eps, 'LSE', warnings)
+    adjusted_price, fix_applied = converter.apply_london_fix(price, eps, 'LSE')
     
     if pe_ratio > 500:
         # London Fix should be applied (price divided by 100)
         expected_price = price / 100
         assert abs(adjusted_price - expected_price) < 0.01
+        assert fix_applied
     else:
         # London Fix should NOT be applied
         assert adjusted_price == price
+        assert not fix_applied
 
 
 @given(
@@ -304,13 +303,13 @@ def test_london_fix_only_applies_to_lse(price, eps, exchange):
     **Feature: yfinance-price-integration, Property 6: London Fix applies to yfinance prices**
     **Validates: Requirements 5.3**
     """
-    from core.financial_data_processor import FinancialDataProcessor
+    from core.currency_converter import CurrencyConverter
     
-    processor = FinancialDataProcessor()
-    warnings = []
+    converter = CurrencyConverter()
     
     # Apply London Fix
-    adjusted_price = processor.apply_london_fix(price, eps, exchange, warnings)
+    adjusted_price, fix_applied = converter.apply_london_fix(price, eps, exchange)
     
     # London Fix should NOT be applied for non-LSE exchanges
     assert adjusted_price == price
+    assert not fix_applied

@@ -1,311 +1,226 @@
-"""
-Tests for Defensive Investor Verdict section in dossier.
+"""Tests for Graham tests section generation.
 
-Requirements 6.1-6.5:
-- Show "SUITABLE" or "NOT SUITABLE" based on test results
-- List failed criteria with ❌ indicators
-- Include Graham quote about defensive investing
-- Provide clear recommendation
+This module tests the GrahamTestsSection class which generates both
+defensive and enterprising investor test sections.
 """
 
 import pytest
-import sys
-import os
-
-# Add parent directory to path to import stock_data_analyser
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
-from stock_data_analyser import generate_dossier_content
+from output.sections.graham_tests import GrahamTestsSection
 
 
-def test_defensive_verdict_suitable():
-    """Test verdict when all defensive tests pass."""
-    # Mock data with all tests passing
-    financial_data = {
-        'ticker': 'TEST.US',
-        'price': 50.0,
-        'currency': 'USD',
-        'original_stock_currency': 'USD',
-        'ceo_name': 'Test CEO',
-        'sector': 'Technology',
-        'industry': 'Software',
-        'employees': 1000,
-        'history': {
-            '2024-12-31': {
-                'revenue': 1000000,
-                'net_income': 100000,
-                'eps': 5.0,
-                'dividend': 1.0,
-                'total_equity': 500000,
-                'shares_outstanding': 10000
-            }
-        }
-    }
-    
+def test_defensive_tests_section_header():
+    """Test that defensive tests section has correct header."""
     metrics = {
-        'verdict': 'STRONG BUY',
-        'graham_number': 100.0,
-        'epv': 1000000,
-        'epv_details': {
-            'epv': 1000000,
-            'epv_per_share': 100.0,
-            'normalized_earnings': 100000,
-            'years_used': 10,
-            'cost_of_capital': 0.10
-        },
-        'net_net_value': 50.0,
-        'margin_of_safety': 50.0,
         'defensive_tests': {
             'earnings_stability': 'PASS',
-            'current_ratio': 'PASS',
-            'debt_to_assets': 'PASS',
-            'dividend_record': 'PASS',
-            'earnings_growth': 'PASS',
-            'pe_ratio': 'PASS',
-            'pb_ratio': 'PASS'
+            'current_ratio': 'PASS'
         },
-        'enterprising_tests': {
-            'earnings_stability': 'PASS',
-            'current_ratio': 'PASS',
-            'debt_to_assets': 'PASS',
-            'dividend_record': 'PASS',
-            'earnings_growth': 'N/A - Not Required',
-            'price_test': 'PASS'
-        },
-        'warnings': []
+        'enterprising_tests': {}
     }
     
-    anomalies = []
+    section = GrahamTestsSection(metrics)
+    lines = section.generate()
+    content = '\n'.join(lines)
     
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
-    
-    # Verify verdict section exists
-    assert "## GRAHAM DEFENSIVE INVESTOR VERDICT" in dossier
-    assert "VERDICT: SUITABLE FOR DEFENSIVE INVESTORS" in dossier
-    
-    # Verify Graham quote is present (Requirement 6.3)
-    assert "Graham's Guidance" in dossier
-    assert "defensive investor should confine himself" in dossier
-    
-    # Verify recommendation is present (Requirement 6.5)
-    assert "Recommendation" in dossier
-    assert "stability, financial strength" in dossier
-    
-    # Verify checkmarks for passed tests
-    assert "✓" in dossier
+    assert "## SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS" in content
 
 
-def test_defensive_verdict_not_suitable():
-    """Test verdict when defensive tests fail."""
-    financial_data = {
-        'ticker': 'TEST.US',
-        'price': 50.0,
-        'currency': 'USD',
-        'original_stock_currency': 'USD',
-        'ceo_name': 'Test CEO',
-        'sector': 'Technology',
-        'industry': 'Software',
-        'employees': 1000,
-        'history': {
-            '2024-12-31': {
-                'revenue': 1000000,
-                'net_income': 100000,
-                'eps': 5.0,
-                'dividend': 1.0,
-                'total_equity': 500000,
-                'shares_outstanding': 10000
-            }
-        }
-    }
-    
+def test_defensive_tests_display_all_tests():
+    """Test that all defensive tests are displayed."""
     metrics = {
-        'verdict': 'OVERVALUED',
-        'graham_number': 100.0,
-        'epv': 1000000,
-        'epv_details': {
-            'epv': 1000000,
-            'epv_per_share': 100.0,
-            'normalized_earnings': 100000,
-            'years_used': 10,
-            'cost_of_capital': 0.10
-        },
-        'net_net_value': 50.0,
-        'margin_of_safety': -20.0,
         'defensive_tests': {
-            'earnings_stability': 'FAIL',
+            'earnings_stability': 'PASS',
             'current_ratio': 'FAIL',
-            'debt_to_assets': 'PASS',
-            'dividend_record': 'FAIL',
-            'earnings_growth': 'FAIL',
+            'debt_to_equity': 'PASS',
+            'dividend_record': 'N/A',
+            'earnings_growth': 'PASS',
             'pe_ratio': 'PASS',
-            'pb_ratio': 'FAIL'
+            'price_to_book': 'PASS'
         },
-        'enterprising_tests': {
-            'earnings_stability': 'PASS',
-            'current_ratio': 'PASS',
-            'debt_to_assets': 'PASS',
-            'dividend_record': 'PASS',
-            'earnings_growth': 'N/A - Not Required',
-            'price_test': 'PASS'
-        },
-        'warnings': []
+        'enterprising_tests': {}
     }
     
-    anomalies = []
+    section = GrahamTestsSection(metrics)
+    lines = section.generate()
+    content = '\n'.join(lines)
     
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
-    
-    # Verify verdict section exists (Requirement 6.1)
-    assert "## GRAHAM DEFENSIVE INVESTOR VERDICT" in dossier
-    assert "VERDICT: NOT SUITABLE FOR DEFENSIVE INVESTORS" in dossier
-    
-    # Verify failed criteria are listed with ❌ (Requirement 6.2)
-    assert "Failed Criteria:" in dossier
-    assert "❌" in dossier
-    assert "❌ Earnings Stability: FAIL" in dossier
-    assert "❌ Current Ratio: FAIL" in dossier
-    assert "❌ Dividend Record: FAIL" in dossier
-    
-    # Verify Graham quote is present (Requirement 6.3)
-    assert "Graham's Guidance" in dossier
-    assert "defensive investor should confine himself" in dossier
-    
-    # Verify recommendation is present (Requirement 6.2)
-    assert "Recommendation" in dossier
-    assert "avoid this stock" in dossier or "unsuitable" in dossier.lower()
+    # Check that all tests are present
+    assert "Earnings Stability: PASS" in content
+    assert "Current Ratio: FAIL" in content
+    assert "Debt To Equity: PASS" in content
+    assert "Dividend Record: N/A" in content
+    assert "Earnings Growth: PASS" in content
+    assert "Pe Ratio: PASS" in content
+    assert "Price To Book: PASS" in content
 
 
-def test_defensive_verdict_with_na_tests():
-    """Test verdict when some tests are N/A (young company)."""
-    financial_data = {
-        'ticker': 'TEST.US',
-        'price': 50.0,
-        'currency': 'USD',
-        'original_stock_currency': 'USD',
-        'ceo_name': 'Test CEO',
-        'sector': 'Technology',
-        'industry': 'Software',
-        'employees': 1000,
-        'history': {
-            '2024-12-31': {
-                'revenue': 1000000,
-                'net_income': 100000,
-                'eps': 5.0,
-                'dividend': 1.0,
-                'total_equity': 500000,
-                'shares_outstanding': 10000
-            }
+def test_defensive_tests_pass_fail_formatting():
+    """Test that PASS and FAIL results are formatted correctly."""
+    metrics = {
+        'defensive_tests': {
+            'earnings_stability': 'PASS',
+            'current_ratio': 'FAIL',
+            'debt_to_equity': 'N/A'
+        },
+        'enterprising_tests': {}
+    }
+    
+    section = GrahamTestsSection(metrics)
+    lines = section.generate()
+    content = '\n'.join(lines)
+    
+    # Check formatting
+    assert "- Earnings Stability: PASS" in content
+    assert "- Current Ratio: FAIL" in content
+    assert "- Debt To Equity: N/A" in content
+
+
+def test_enterprising_tests_section_header():
+    """Test that enterprising tests section has correct header."""
+    metrics = {
+        'defensive_tests': {},
+        'enterprising_tests': {
+            'earnings_stability': 'PASS',
+            'current_ratio': 'PASS'
         }
     }
     
+    section = GrahamTestsSection(metrics)
+    lines = section.generate()
+    content = '\n'.join(lines)
+    
+    assert "## SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS" in content
+
+
+def test_enterprising_tests_display_all_tests():
+    """Test that all enterprising tests are displayed."""
     metrics = {
-        'verdict': 'UNDERVALUED',
-        'graham_number': 100.0,
-        'epv': 1000000,
-        'epv_details': {
-            'epv': 1000000,
-            'epv_per_share': 100.0,
-            'normalized_earnings': 100000,
-            'years_used': 10,
-            'cost_of_capital': 0.10
-        },
-        'net_net_value': 50.0,
-        'margin_of_safety': 10.0,
-        'defensive_tests': {
-            'earnings_stability': 'PASS',
-            'current_ratio': 'PASS',
-            'debt_to_assets': 'PASS',
-            'dividend_record': 'PASS',
-            'earnings_growth': 'N/A (Too Young)',  # Young company
-            'pe_ratio': 'PASS',
-            'pb_ratio': 'PASS'
-        },
+        'defensive_tests': {},
         'enterprising_tests': {
             'earnings_stability': 'PASS',
             'current_ratio': 'PASS',
-            'debt_to_assets': 'PASS',
+            'debt_to_assets': 'FAIL',
             'dividend_record': 'PASS',
-            'earnings_growth': 'N/A - Not Required',
-            'price_test': 'PASS'
-        },
-        'warnings': []
-    }
-    
-    anomalies = []
-    
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
-    
-    # N/A tests should not count as failures
-    assert "VERDICT: SUITABLE FOR DEFENSIVE INVESTORS" in dossier
-    
-    # Should not list N/A as a failed criterion
-    assert "❌ Earnings Growth: N/A" not in dossier
-
-
-def test_defensive_verdict_section_placement():
-    """Test that verdict section appears after defensive tests."""
-    financial_data = {
-        'ticker': 'TEST.US',
-        'price': 50.0,
-        'currency': 'USD',
-        'original_stock_currency': 'USD',
-        'ceo_name': 'Test CEO',
-        'sector': 'Technology',
-        'industry': 'Software',
-        'employees': 1000,
-        'history': {
-            '2024-12-31': {
-                'revenue': 1000000,
-                'net_income': 100000,
-                'eps': 5.0,
-                'dividend': 1.0,
-                'total_equity': 500000,
-                'shares_outstanding': 10000
-            }
+            'pe_ratio': 'PASS',
+            'price_to_book': 'PASS'
         }
     }
     
+    section = GrahamTestsSection(metrics)
+    lines = section.generate()
+    content = '\n'.join(lines)
+    
+    # Check that all tests are present
+    assert "Earnings Stability: PASS" in content
+    assert "Current Ratio: PASS" in content
+    assert "Debt To Assets: FAIL" in content
+    assert "Dividend Record: PASS" in content
+    assert "Pe Ratio: PASS" in content
+    assert "Price To Book: PASS" in content
+
+
+def test_enterprising_tests_includes_growth_note():
+    """Test that enterprising tests section includes note about earnings growth."""
     metrics = {
-        'verdict': 'STRONG BUY',
-        'graham_number': 100.0,
-        'epv': 1000000,
-        'epv_details': {
-            'epv': 1000000,
-            'epv_per_share': 100.0,
-            'normalized_earnings': 100000,
-            'years_used': 10,
-            'cost_of_capital': 0.10
+        'defensive_tests': {},
+        'enterprising_tests': {
+            'earnings_stability': 'PASS'
+        }
+    }
+    
+    section = GrahamTestsSection(metrics)
+    lines = section.generate()
+    content = '\n'.join(lines)
+    
+    # Check for the earnings growth note
+    assert "Note on Earnings Growth:" in content
+    assert "Earnings growth is intentionally not required for Enterprising Investors" in content
+    assert "Graham's logic:" in content
+
+
+def test_both_sections_generated():
+    """Test that both defensive and enterprising sections are generated."""
+    metrics = {
+        'defensive_tests': {
+            'earnings_stability': 'PASS',
+            'current_ratio': 'PASS'
         },
-        'net_net_value': 50.0,
-        'margin_of_safety': 50.0,
+        'enterprising_tests': {
+            'earnings_stability': 'PASS',
+            'current_ratio': 'PASS'
+        }
+    }
+    
+    section = GrahamTestsSection(metrics)
+    lines = section.generate()
+    content = '\n'.join(lines)
+    
+    # Check both sections are present
+    assert "## SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS" in content
+    assert "## SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS" in content
+
+
+def test_section_separators():
+    """Test that sections are properly separated with horizontal rules."""
+    metrics = {
+        'defensive_tests': {
+            'earnings_stability': 'PASS'
+        },
+        'enterprising_tests': {
+            'earnings_stability': 'PASS'
+        }
+    }
+    
+    section = GrahamTestsSection(metrics)
+    lines = section.generate()
+    
+    # Check for horizontal rules
+    assert "---" in lines
+
+
+def test_empty_enterprising_tests():
+    """Test handling of empty enterprising tests dictionary."""
+    metrics = {
+        'defensive_tests': {
+            'earnings_stability': 'PASS'
+        },
+        'enterprising_tests': {}
+    }
+    
+    section = GrahamTestsSection(metrics)
+    lines = section.generate()
+    content = '\n'.join(lines)
+    
+    # Should still have the section header
+    assert "## SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS" in content
+    # Should still have the note
+    assert "Note on Earnings Growth:" in content
+
+
+def test_test_name_formatting():
+    """Test that test names are properly formatted from snake_case."""
+    metrics = {
         'defensive_tests': {
             'earnings_stability': 'PASS',
             'current_ratio': 'PASS',
-            'debt_to_assets': 'PASS',
+            'debt_to_equity': 'PASS',
             'dividend_record': 'PASS',
             'earnings_growth': 'PASS',
             'pe_ratio': 'PASS',
-            'pb_ratio': 'PASS'
+            'price_to_book': 'PASS'
         },
-        'enterprising_tests': {
-            'earnings_stability': 'PASS',
-            'current_ratio': 'PASS',
-            'debt_to_assets': 'PASS',
-            'dividend_record': 'PASS',
-            'earnings_growth': 'N/A - Not Required',
-            'price_test': 'PASS'
-        },
-        'warnings': []
+        'enterprising_tests': {}
     }
     
-    anomalies = []
+    section = GrahamTestsSection(metrics)
+    lines = section.generate()
+    content = '\n'.join(lines)
     
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
-    
-    # Find positions of sections
-    defensive_tests_pos = dossier.find("## SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS")
-    verdict_pos = dossier.find("## GRAHAM DEFENSIVE INVESTOR VERDICT")
-    enterprising_tests_pos = dossier.find("## SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS")
-    
-    # Verify order: Defensive Tests -> Verdict -> Enterprising Tests
-    assert defensive_tests_pos < verdict_pos < enterprising_tests_pos
+    # Check that snake_case is converted to Title Case
+    assert "Earnings Stability:" in content
+    assert "Current Ratio:" in content
+    assert "Debt To Equity:" in content
+    assert "Dividend Record:" in content
+    assert "Earnings Growth:" in content
+    assert "Pe Ratio:" in content
+    assert "Price To Book:" in content

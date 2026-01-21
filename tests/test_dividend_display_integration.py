@@ -10,7 +10,7 @@ import pytest
 import json
 from unittest.mock import Mock, patch
 from clients.eodhd_client import EODHDClient
-from stock_data_analyser import generate_dossier_content
+from output.dossier_generator import DossierGenerator
 from core.graham_math import GrahamCalculator
 
 
@@ -109,7 +109,7 @@ class TestDividendDisplayIntegration:
         metrics = calculator.compute_all()
         
         # Generate dossier
-        dossier = generate_dossier_content('TEST.US', financial_data, metrics, [])
+        dossier = DossierGenerator('TEST.US', financial_data, metrics, []).generate()
         
         # Verify dividend display
         assert 'Paid (Cash Flow)' in dossier
@@ -206,7 +206,7 @@ class TestDividendDisplayIntegration:
         metrics = calculator.compute_all()
         
         # Generate dossier
-        dossier = generate_dossier_content('TEST.US', financial_data, metrics, [])
+        dossier = DossierGenerator('TEST.US', financial_data, metrics, []).generate()
         
         # Verify dividend display
         assert 'Declared (Forward Rate)' in dossier

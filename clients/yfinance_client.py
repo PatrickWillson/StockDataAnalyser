@@ -171,10 +171,7 @@ class YFinanceClient:
         else:
             # Unmapped exchange - log warning and attempt without conversion
             warning_msg = f"Unmapped exchange code '{eodhd_exchange}' for ticker {symbol}.{eodhd_exchange}. Attempting without suffix conversion."
-            if self.debug:
-                self.logger.warning(warning_msg)
-            else:
-                print(f"[WARNING] {warning_msg}")
+            self.logger.warning(warning_msg)
             
             return symbol
 
@@ -221,7 +218,7 @@ class YFinanceClient:
             try:
                 import yfinance as yf
             except ImportError:
-                print("[ERROR] yfinance library not installed. Run: pip install yfinance")
+                self.logger.error("yfinance library not installed. Run: pip install yfinance")
                 return None
             
             # Fetch price using yfinance

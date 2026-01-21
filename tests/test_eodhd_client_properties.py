@@ -85,28 +85,27 @@ def test_london_fix_application(price, eps, exchange):
     
     **Validates: Requirements 3.2**
     """
-    from core.financial_data_processor import FinancialDataProcessor
+    from core.currency_converter import CurrencyConverter
     
-    processor = FinancialDataProcessor()
-    warnings = []
+    converter = CurrencyConverter()
     
     # Calculate P/E ratio
     pe_ratio = price / eps
     
     # Apply London Fix
-    adjusted_price = processor.apply_london_fix(price, eps, exchange, warnings)
+    adjusted_price, fix_applied = converter.apply_london_fix(price, eps, exchange)
     
     if exchange == "LSE" and pe_ratio > 500:
         # Price should be divided by 100
         expected_price = price / 100
         assert abs(adjusted_price - expected_price) < 0.01, \
             f"London Fix should divide price by 100 when P/E > 500 (P/E={pe_ratio:.2f})"
-        # Note: Warnings are now consolidated into a single message at the end, 
-        # so we don't check for individual warnings here
+        assert fix_applied, "London Fix should be marked as applied"
     else:
         # Price should remain unchanged
         assert adjusted_price == price, \
             f"Price should not change when exchange is not LSE or P/E <= 500 (exchange={exchange}, P/E={pe_ratio:.2f})"
+        assert not fix_applied, "London Fix should not be marked as applied"
 
 
 
@@ -131,7 +130,7 @@ def test_currency_conversion_application(price, currency_pair):
     **Validates: Requirements 1.8**
     """
     from clients.fx_client import FXClient
-    from core.financial_data_processor import FinancialDataProcessor
+    from core.currency_converter import CurrencyConverter
     
     # Create a mock FX client with fixed rates for testing
     mock_fx_client = Mock(spec=FXClient)
@@ -139,26 +138,25 @@ def test_currency_conversion_application(price, currency_pair):
         1.0 if from_c == to_c else 1.5  # Simple mock: 1.5 for any conversion
     )
     
-    processor = FinancialDataProcessor(fx_client=mock_fx_client)
-    warnings = []
+    converter = CurrencyConverter(fx_client=mock_fx_client)
     
     price_currency, financials_currency = currency_pair
     
     # Apply currency conversion
-    converted_price = processor.apply_currency_conversion(
-        price, price_currency, financials_currency, warnings
+    converted_price, success = converter.convert(
+        price, price_currency, financials_currency
     )
     
     if price_currency == financials_currency:
         # No conversion should occur
         assert converted_price == price, \
             f"Price should not change when currencies match ({price_currency})"
-        assert len(warnings) == 0, \
-            "No warning should be added when currencies match"
+        assert success, "Conversion should succeed for same currency"
     else:
         # Conversion should occur with mocked rate
         expected_price = price * 1.5
         assert abs(converted_price - expected_price) < 0.01, \
             f"Price should be converted using FX rate"
-        assert any("Currency Conversion" in w for w in warnings), \
-            "Warning should be added when currency conversion is applied"
+        assert abs(converted_price - expected_price) < 0.01, \
+            f"Converted price should match expected (got {converted_price}, expected {expected_price})"
+        assert success, "Conversion should succeed"

@@ -11,7 +11,7 @@ Requirements 8.1-8.6:
 """
 
 import pytest
-from stock_data_analyser import generate_dossier_content
+from output.dossier_generator import DossierGenerator
 
 
 def test_epv_methodology_includes_full_cycle_explanation():
@@ -55,7 +55,7 @@ def test_epv_methodology_includes_full_cycle_explanation():
     anomalies = []
     
     # Act
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+    dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
     
     # Assert: Check for full-cycle explanation
     assert "Graham's Full-Cycle Method:" in dossier
@@ -104,7 +104,7 @@ def test_epv_methodology_explains_loss_years():
     anomalies = []
     
     # Act
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+    dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
     
     # Assert: Check for explanation of loss years
     assert "Loss years reduce the average" in dossier
@@ -151,7 +151,7 @@ def test_epv_methodology_shows_formula():
     anomalies = []
     
     # Act
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+    dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
     
     # Assert: Check for formula
     assert "USD50,000 / 10%" in dossier or "50000 / 10%" in dossier
@@ -198,7 +198,7 @@ def test_epv_methodology_lists_net_incomes():
     anomalies = []
     
     # Act
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+    dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
     
     # Assert: Check that net incomes are listed
     assert "Net Incomes:" in dossier
@@ -248,7 +248,7 @@ def test_epv_methodology_shows_normalized_earnings():
     anomalies = []
     
     # Act
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+    dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
     
     # Assert: Check for normalized earnings
     assert "Normalized Earnings:" in dossier
@@ -296,7 +296,7 @@ def test_epv_methodology_includes_graham_quote():
     anomalies = []
     
     # Act
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+    dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
     
     # Assert: Check for Graham quote
     assert "Graham's Principle" in dossier
@@ -344,7 +344,7 @@ def test_epv_methodology_notes_loss_years():
     anomalies = []
     
     # Act
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+    dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
     
     # Assert: Check that loss years are noted
     assert "loss year" in dossier
@@ -393,7 +393,7 @@ def test_epv_methodology_all_profitable_years():
     anomalies = []
     
     # Act
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+    dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
     
     # Assert: Check for note about all profitable years
     assert "All 10 years were profitable" in dossier

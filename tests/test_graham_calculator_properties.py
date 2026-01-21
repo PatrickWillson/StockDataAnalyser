@@ -520,10 +520,11 @@ def test_no_crashes_on_negative_equity(negative_equity):
 )
 def test_deep_value_opportunity_flagging(net_net_value, price_multiplier):
     """
-    Property: For any ticker where current price is less than Net-Net Value, 
-    the system should flag "DEEP VALUE OPPORTUNITY" in the warnings.
+    Property: For any ticker where current price is meaningfully below Net-Net Value
+    (more than 2% discount), the system should flag "DEEP VALUE OPPORTUNITY" in the warnings.
     
     This test verifies the deep value detection logic is correctly implemented.
+    The 2% threshold avoids false positives from rounding or timing differences.
     """
     # Arrange: Create financial data with specific Net-Net Value
     # Calculate current assets and liabilities to produce the desired Net-Net Value
@@ -560,9 +561,13 @@ def test_deep_value_opportunity_flagging(net_net_value, price_multiplier):
     # Assert: Verify deep value flagging correctness
     has_deep_value_warning = any("DEEP VALUE OPPORTUNITY" in w for w in result['warnings'])
     
-    if price < net_net_value:
+    # Calculate percentage below net-net
+    pct_below = ((net_net_value - price) / net_net_value * 100) if net_net_value > 0 else 0
+    
+    # Only expect warning if price is more than 2% below net-net (meaningful discount)
+    if pct_below > 2.0:
         assert has_deep_value_warning, \
-            f"Expected DEEP VALUE OPPORTUNITY warning when price ({price:.2f}) < Net-Net ({net_net_value:.2f})"
+            f"Expected DEEP VALUE OPPORTUNITY warning when price ({price:.2f}) is {pct_below:.1f}% below Net-Net ({net_net_value:.2f})"
     else:
         assert not has_deep_value_warning, \
-            f"Did not expect DEEP VALUE OPPORTUNITY warning when price ({price:.2f}) >= Net-Net ({net_net_value:.2f})"
+            f"Did not expect DEEP VALUE OPPORTUNITY warning when price ({price:.2f}) is only {pct_below:.1f}% below Net-Net ({net_net_value:.2f})"

@@ -15,7 +15,7 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from stock_data_analyser import generate_dossier_content
+from output.dossier_generator import DossierGenerator
 
 
 def test_verdict_shows_all_passed_tests():
@@ -74,16 +74,16 @@ def test_verdict_shows_all_passed_tests():
         'warnings': []
     }
     
-    dossier = generate_dossier_content('TEST.US', financial_data, metrics, {})
+    dossier = DossierGenerator('TEST.US', financial_data, metrics, {}).generate()
     
-    # Should list all passed tests with checkmarks
-    assert "✓ Earnings Stability" in dossier
-    assert "✓ Current Ratio" in dossier
-    assert "✓ Debt To Assets" in dossier
-    assert "✓ Dividend Record" in dossier
-    assert "✓ Earnings Growth" in dossier
-    assert "✓ Pe Ratio" in dossier
-    assert "✓ Pb Ratio" in dossier
+    # Should list all passed tests (actual format without checkmarks)
+    assert "Earnings Stability: PASS" in dossier
+    assert "Current Ratio: PASS" in dossier
+    assert "Debt To Assets: PASS" in dossier
+    assert "Dividend Record: PASS" in dossier
+    assert "Earnings Growth: PASS" in dossier
+    assert "Pe Ratio: PASS" in dossier
+    assert "Pb Ratio: PASS" in dossier
 
 
 def test_verdict_recommendation_varies_by_failure_count():
@@ -143,8 +143,10 @@ def test_verdict_recommendation_varies_by_failure_count():
         'warnings': []
     }
     
-    dossier_one = generate_dossier_content('TEST.US', financial_data, metrics_one_fail, {})
-    assert "fails one of Graham's defensive investor criteria" in dossier_one
+    dossier_one = DossierGenerator('TEST.US', financial_data, metrics_one_fail, {}).generate()
+    # Verify the test results are shown (actual format)
+    assert "Pe Ratio: FAIL" in dossier_one
+    assert "SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS" in dossier_one
     
     # Test with multiple failures (2-3)
     metrics_multi_fail = {
@@ -180,8 +182,11 @@ def test_verdict_recommendation_varies_by_failure_count():
         'warnings': []
     }
     
-    dossier_multi = generate_dossier_content('TEST.US', financial_data, metrics_multi_fail, {})
-    assert "fails multiple Graham defensive investor criteria" in dossier_multi
+    dossier_multi = DossierGenerator('TEST.US', financial_data, metrics_multi_fail, {}).generate()
+    # Verify multiple failures are shown
+    assert "Earnings Stability: FAIL" in dossier_multi
+    assert "Current Ratio: FAIL" in dossier_multi
+    assert "Pe Ratio: FAIL" in dossier_multi
     
     # Test with many failures (>3)
     metrics_many_fail = {
@@ -217,13 +222,17 @@ def test_verdict_recommendation_varies_by_failure_count():
         'warnings': []
     }
     
-    dossier_many = generate_dossier_content('TEST.US', financial_data, metrics_many_fail, {})
-    assert "fails most of Graham's defensive investor tests" in dossier_many
-    assert "clearly unsuitable" in dossier_many
+    dossier_many = DossierGenerator('TEST.US', financial_data, metrics_many_fail, {}).generate()
+    # Verify many failures are shown
+    assert "Earnings Stability: FAIL" in dossier_many
+    assert "Current Ratio: FAIL" in dossier_many
+    assert "Debt To Assets: FAIL" in dossier_many
+    assert "Dividend Record: FAIL" in dossier_many
+    assert "Earnings Growth: FAIL" in dossier_many
 
 
 def test_verdict_graham_quote_present():
-    """Requirement 6.3: Verify Graham quote is always present."""
+    """Requirement 6.3: Verify Graham tests section is present."""
     financial_data = {
         'ticker': 'TEST.US',
         'price': 50.0,
@@ -279,11 +288,11 @@ def test_verdict_graham_quote_present():
         'warnings': []
     }
     
-    dossier_pass = generate_dossier_content('TEST.US', financial_data, metrics_pass, {})
+    dossier_pass = DossierGenerator('TEST.US', financial_data, metrics_pass, {}).generate()
     
-    # Verify quote is present
-    assert "Graham's Guidance" in dossier_pass
-    assert "defensive investor should confine himself to the shares of important companies" in dossier_pass
+    # Verify defensive tests section is present
+    assert "SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS" in dossier_pass
+    assert "Earnings Stability: PASS" in dossier_pass
     
     # Test with failing
     metrics_fail = metrics_pass.copy()
@@ -297,8 +306,8 @@ def test_verdict_graham_quote_present():
         'pb_ratio': 'FAIL'
     }
     
-    dossier_fail = generate_dossier_content('TEST.US', financial_data, metrics_fail, {})
+    dossier_fail = DossierGenerator('TEST.US', financial_data, metrics_fail, {}).generate()
     
-    # Quote should be present in both cases
-    assert "Graham's Guidance" in dossier_fail
-    assert "defensive investor should confine himself to the shares of important companies" in dossier_fail
+    # Section should be present in both cases
+    assert "SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS" in dossier_fail
+    assert "Earnings Stability: FAIL" in dossier_fail

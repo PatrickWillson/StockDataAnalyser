@@ -5,28 +5,31 @@ Handles parsing, normalization, and validation of financial data from EODHD API.
 Separates data processing logic from API client concerns.
 """
 
+import logging
 from typing import Dict, Any, List, Optional
-from clients.fx_client import FXClient
+from core.currency_converter import CurrencyConverter
+
+logger = logging.getLogger(__name__)
 
 
 class FinancialDataProcessor:
     """Processes and normalizes financial data from EODHD API responses."""
     
-    def __init__(self, fx_client: Optional[FXClient] = None, debug: bool = False):
+    def __init__(self, currency_converter: Optional[CurrencyConverter] = None, debug: bool = False):
         """
-        Initialize processor with optional FX client for currency conversions.
+        Initialize processor with optional currency converter.
         
         Args:
-            fx_client: Optional FX client for currency conversion
+            currency_converter: Optional currency converter for currency conversions
             debug: Enable debug logging (default: False)
         """
-        self.fx_client = fx_client or FXClient()
+        self.currency_converter = currency_converter or CurrencyConverter()
         self.debug = debug
     
     def _log(self, message: str):
         """Print debug message if debug mode is enabled."""
         if self.debug:
-            print(message)
+            logger.debug(message)
     
     @staticmethod
     def sanitize_value(value: Any) -> float:
@@ -430,7 +433,7 @@ class FinancialDataProcessor:
                 first_value = div_data[first_key]
                 
                 if isinstance(first_value, dict) and 'Year' in first_value and 'Count' in first_value:
-                    print(f"[WARNING] Using dividend payment counts (actual amounts not available from API)")
+                    logger.warning("Using dividend payment counts (actual amounts not available from API)")
                     self._log(f"[DEBUG] Found indexed dividend count data")
                     for key, value in div_data.items():
                         if isinstance(value, dict) and 'Year' in value and 'Count' in value:
@@ -443,7 +446,7 @@ class FinancialDataProcessor:
                     return result, forward_rate, is_amount_data, dividend_currency, source_indicators
                 
                 elif all(isinstance(k, str) and k.isdigit() and len(k) == 4 for k in list(div_data.keys())[:3]):
-                    print(f"[WARNING] Using dividend payment counts (actual amounts not available from API)")
+                    logger.warning("Using dividend payment counts (actual amounts not available from API)")
                     self._log(f"[DEBUG] Found year-keyed dividend data")
                     for year, value in div_data.items():
                         result[year] = self.sanitize_value(value)
@@ -534,54 +537,6 @@ class FinancialDataProcessor:
         
         return result
 
-    @staticmethod
-    def apply_london_fix(price: float, eps: float, exchange: str, warnings: List[str]) -> float:
-        """
-        Apply London Fix for LSE tickers with GBp vs GBP mismatch.
-        
-        Args:
-            price: Current stock price
-            eps: Earnings per share
-            exchange: Stock exchange
-            warnings: List to append warnings to
-            
-        Returns:
-            Adjusted price
-        """
-        if exchange == "LSE" and eps > 0:
-            pe_ratio = price / eps
-            if pe_ratio > 500:
-                price = price / 100
-                # Note: Warning is now handled by consolidated currency conversion message
-        
-        return price
-    
-    def apply_currency_conversion(self, price: float, price_currency: str, 
-                                  financials_currency: str, warnings: List[str]) -> float:
-        """
-        Convert price to financials currency if they differ using live FX rates.
-        
-        Args:
-            price: Current stock price
-            price_currency: Currency of the price
-            financials_currency: Currency of the financial statements
-            warnings: List to append warnings to
-            
-        Returns:
-            Converted price
-        """
-        if price_currency != financials_currency:
-            # Try to get live FX rate
-            fx_rate = self.fx_client.get_rate(price_currency, financials_currency)
-            
-            if fx_rate:
-                price = price * fx_rate
-                warnings.append(f"Currency Conversion: {price_currency} → {financials_currency} at rate {fx_rate:.4f} (live)")
-            else:
-                warnings.append(f"Currency Mismatch: {price_currency} vs {financials_currency} (conversion rate unavailable)")
-        
-        return price
-    
     @staticmethod
     def validate_data_quality(history: Dict[str, Dict[str, float]], warnings: List[str]) -> None:
         """

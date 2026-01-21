@@ -9,7 +9,7 @@ Requirements 2.5, 2.6, 2.7, 2.8:
 """
 
 import pytest
-from stock_data_analyser import generate_dossier_content
+from output.dossier_generator import DossierGenerator
 
 
 class TestDividendDisplay:
@@ -74,7 +74,7 @@ class TestDividendDisplay:
         
         anomalies = []
         
-        dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+        dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
         
         # Check that the label appears
         assert 'Paid (Cash Flow)' in dossier
@@ -140,7 +140,7 @@ class TestDividendDisplay:
         
         anomalies = []
         
-        dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+        dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
         
         # Check that the label appears
         assert 'Declared (Forward Rate)' in dossier
@@ -205,7 +205,7 @@ class TestDividendDisplay:
         
         anomalies = []
         
-        dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+        dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
         
         # Check that both labels appear
         assert 'Paid (Cash Flow)' in dossier
@@ -270,7 +270,7 @@ class TestDividendDisplay:
         
         anomalies = []
         
-        dossier = generate_dossier_content('TEST.US', financial_data, metrics, anomalies)
+        dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
         
         # Check that no dividend line appears
         assert 'Trailing Dividend:' not in dossier

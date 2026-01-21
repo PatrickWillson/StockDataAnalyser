@@ -18,10 +18,12 @@ def test_missing_api_key_error():
     """
     # Arrange: Mock the API_KEY as None to simulate missing key
     import stock_data_analyser
+    import logging
     
     with patch('sys.argv', ['stock_data_analyser.py', 'AAPL.US']):
-        with patch('builtins.print') as mock_print:
-            with patch.object(stock_data_analyser, 'API_KEY', None):
+        with patch.object(stock_data_analyser, 'API_KEY', None):
+            # Capture logging output
+            with patch('logging.Logger.error') as mock_log_error:
                 # Act & Assert: Run main and expect SystemExit
                 with pytest.raises(SystemExit) as exc_info:
                     stock_data_analyser.main()
@@ -29,11 +31,10 @@ def test_missing_api_key_error():
                 # Verify exit code is 1
                 assert exc_info.value.code == 1, f"Expected exit code 1, got {exc_info.value.code}"
                 
-                # Check that error message was printed
-                print_calls = [str(call) for call in mock_print.call_args_list]
-                error_printed = any('EODHD_API_KEY' in str(call) and 'ERROR' in str(call) 
-                                   for call in print_calls)
-                assert error_printed, "Expected error message about missing API key"
+                # Check that error message was logged
+                log_calls = [str(call) for call in mock_log_error.call_args_list]
+                error_logged = any('EODHD_API_KEY' in str(call) for call in log_calls)
+                assert error_logged, "Expected error message about missing API key"
 
 
 def test_ticker_suffix_example():
@@ -95,18 +96,18 @@ def test_ticker_suffix_example():
         importlib.reload(stock_data_analyser)
         
         with patch('sys.argv', ['stock_data_analyser.py', 'AAPL.US']):
-            with patch('stock_data_analyser.EODHDClient') as MockClient:
-                with patch('stock_data_analyser.YFinanceClient') as MockYFClient:
+            with patch('stock_data_analyser.ClientFactory.create_eodhd_client') as mock_create_eodhd:
+                with patch('stock_data_analyser.ClientFactory.create_yfinance_client') as mock_create_yf:
                     with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
                         with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
                             with patch('stock_data_analyser.save_dossier') as mock_save:
                                 # Setup mocks
                                 mock_client_instance = Mock()
                                 mock_client_instance.fetch_all_data.return_value = mock_financial_data
-                                MockClient.return_value = mock_client_instance
+                                mock_create_eodhd.return_value = mock_client_instance
                                 
                                 mock_yf_instance = Mock()
-                                MockYFClient.return_value = mock_yf_instance
+                                mock_create_yf.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()
                                 mock_calculator_instance.compute_all.return_value = mock_metrics
@@ -162,14 +163,15 @@ def test_insufficient_history_warning():
     
     with patch.dict(os.environ, {'EODHD_API_KEY': 'test_key'}):
         with patch('sys.argv', ['stock_data_analyser.py', 'YOUNG.US']):
-            with patch('stock_data_analyser.EODHDClient') as MockClient:
+            with patch('stock_data_analyser.ClientFactory.create_eodhd_client') as mock_create_eodhd:
                 mock_client_instance = Mock()
                 mock_client_instance.fetch_all_data.return_value = mock_financial_data_9_years
-                MockClient.return_value = mock_client_instance
+                mock_create_eodhd.return_value = mock_client_instance
                 
                 # Act
                 import stock_data_analyser
-                client = stock_data_analyser.EODHDClient('test_key')
+                from clients.factory import ClientFactory
+                client = ClientFactory.create_eodhd_client('test_key')
                 result = mock_client_instance.fetch_all_data('YOUNG.US')
                 
                 # Assert: Verify warning is present
@@ -202,14 +204,15 @@ def test_insufficient_history_warning():
     
     with patch.dict(os.environ, {'EODHD_API_KEY': 'test_key'}):
         with patch('sys.argv', ['stock_data_analyser.py', 'MATURE.US']):
-            with patch('stock_data_analyser.EODHDClient') as MockClient:
+            with patch('stock_data_analyser.ClientFactory.create_eodhd_client') as mock_create_eodhd:
                 mock_client_instance = Mock()
                 mock_client_instance.fetch_all_data.return_value = mock_financial_data_10_years
-                MockClient.return_value = mock_client_instance
+                mock_create_eodhd.return_value = mock_client_instance
                 
                 # Act
                 import stock_data_analyser
-                client = stock_data_analyser.EODHDClient('test_key')
+                from clients.factory import ClientFactory
+                client = ClientFactory.create_eodhd_client('test_key')
                 result = mock_client_instance.fetch_all_data('MATURE.US')
                 
                 # Assert: Verify no warning
@@ -249,12 +252,12 @@ def test_young_company_handling():
     
     with patch.dict(os.environ, {'EODHD_API_KEY': 'test_key'}):
         with patch('sys.argv', ['stock_data_analyser.py', 'STARTUP.US']):
-            with patch('stock_data_analyser.EODHDClient') as MockClient:
+            with patch('stock_data_analyser.ClientFactory.create_eodhd_client') as mock_create_eodhd:
                 with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
                     # Setup mocks
                     mock_client_instance = Mock()
                     mock_client_instance.fetch_all_data.return_value = mock_financial_data
-                    MockClient.return_value = mock_client_instance
+                    mock_create_eodhd.return_value = mock_client_instance
                     
                     # Create real calculator to test the logic
                     from core.graham_math import GrahamCalculator
@@ -294,16 +297,17 @@ def test_fatal_error_when_both_sources_fail():
         importlib.reload(stock_data_analyser)
         
         with patch('sys.argv', ['stock_data_analyser.py', 'NOPRICE.US']):
-            with patch('stock_data_analyser.EODHDClient') as MockClient:
-                with patch('stock_data_analyser.YFinanceClient') as MockYFClient:
-                    with patch('builtins.print') as mock_print:
+            with patch('stock_data_analyser.ClientFactory.create_eodhd_client') as mock_create_eodhd:
+                with patch('stock_data_analyser.ClientFactory.create_yfinance_client') as mock_create_yf:
+                    # Capture logging output
+                    with patch('logging.Logger.error') as mock_log_error:
                         # Setup mocks
                         mock_client_instance = Mock()
                         mock_client_instance.fetch_all_data.return_value = mock_financial_data
-                        MockClient.return_value = mock_client_instance
+                        mock_create_eodhd.return_value = mock_client_instance
                         
                         mock_yf_instance = Mock()
-                        MockYFClient.return_value = mock_yf_instance
+                        mock_create_yf.return_value = mock_yf_instance
                         
                         # Act & Assert: Run main and expect SystemExit
                         with pytest.raises(SystemExit) as exc_info:
@@ -312,16 +316,16 @@ def test_fatal_error_when_both_sources_fail():
                         # Verify exit code is 1
                         assert exc_info.value.code == 1, f"Expected exit code 1, got {exc_info.value.code}"
                         
-                        # Check that fatal error message was printed
-                        # Get all printed text
-                        all_printed_text = ' '.join([str(call[0][0]) if call[0] else '' 
-                                                     for call in mock_print.call_args_list])
+                        # Check that fatal error message was logged
+                        # Get all logged text
+                        all_logged_text = ' '.join([str(call[0][0]) if call[0] else '' 
+                                                     for call in mock_log_error.call_args_list])
                         
-                        assert 'FATAL ERROR' in all_printed_text, "Expected 'FATAL ERROR' in output"
-                        assert 'Current price unavailable' in all_printed_text, "Expected 'Current price unavailable' in output"
-                        assert "No data is better than wrong data" in all_printed_text, "Expected Graham quote in output"
-                        assert 'EODHD' in all_printed_text, "Expected 'EODHD' in output"
-                        assert 'yfinance' in all_printed_text, "Expected 'yfinance' in output"
+                        assert 'FATAL ERROR' in all_logged_text, "Expected 'FATAL ERROR' in output"
+                        assert 'Current price unavailable' in all_logged_text, "Expected 'Current price unavailable' in output"
+                        assert "No data is better than wrong data" in all_logged_text, "Expected Graham quote in output"
+                        assert 'EODHD' in all_logged_text, "Expected 'EODHD' in output"
+                        assert 'yfinance' in all_logged_text, "Expected 'yfinance' in output"
 
 
 def test_system_continues_when_eodhd_has_price():
@@ -382,18 +386,18 @@ def test_system_continues_when_eodhd_has_price():
         importlib.reload(stock_data_analyser)
         
         with patch('sys.argv', ['stock_data_analyser.py', 'AAPL.US']):
-            with patch('stock_data_analyser.EODHDClient') as MockClient:
-                with patch('stock_data_analyser.YFinanceClient') as MockYFClient:
+            with patch('stock_data_analyser.ClientFactory.create_eodhd_client') as mock_create_eodhd:
+                with patch('stock_data_analyser.ClientFactory.create_yfinance_client') as mock_create_yf:
                     with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
                         with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
                             with patch('stock_data_analyser.save_dossier') as mock_save:
                                 # Setup mocks
                                 mock_client_instance = Mock()
                                 mock_client_instance.fetch_all_data.return_value = mock_financial_data
-                                MockClient.return_value = mock_client_instance
+                                mock_create_eodhd.return_value = mock_client_instance
                                 
                                 mock_yf_instance = Mock()
-                                MockYFClient.return_value = mock_yf_instance
+                                mock_create_yf.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()
                                 mock_calculator_instance.compute_all.return_value = mock_metrics
@@ -468,18 +472,18 @@ def test_system_continues_when_yfinance_fallback_succeeds():
         importlib.reload(stock_data_analyser)
         
         with patch('sys.argv', ['stock_data_analyser.py', 'YU.LSE']):
-            with patch('stock_data_analyser.EODHDClient') as MockClient:
-                with patch('stock_data_analyser.YFinanceClient') as MockYFClient:
+            with patch('stock_data_analyser.ClientFactory.create_eodhd_client') as mock_create_eodhd:
+                with patch('stock_data_analyser.ClientFactory.create_yfinance_client') as mock_create_yf:
                     with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
                         with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
                             with patch('stock_data_analyser.save_dossier') as mock_save:
                                 # Setup mocks
                                 mock_client_instance = Mock()
                                 mock_client_instance.fetch_all_data.return_value = mock_financial_data
-                                MockClient.return_value = mock_client_instance
+                                mock_create_eodhd.return_value = mock_client_instance
                                 
                                 mock_yf_instance = Mock()
-                                MockYFClient.return_value = mock_yf_instance
+                                mock_create_yf.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()
                                 mock_calculator_instance.compute_all.return_value = mock_metrics

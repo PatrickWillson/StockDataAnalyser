@@ -4,7 +4,7 @@ Property-based tests for Dossier Generator functionality.
 
 import pytest
 from hypothesis import given, strategies as st
-from stock_data_analyser import generate_dossier_content
+from output.dossier_generator import DossierGenerator
 
 
 # Feature: stock-data-analyser, Property 11: Markdown table formatting
@@ -72,7 +72,7 @@ def test_markdown_table_formatting(ticker, years, revenue, net_income, eps, divi
     anomalies = []
     
     # Generate dossier content
-    output = generate_dossier_content(ticker, financial_data, metrics, anomalies)
+    output = DossierGenerator(ticker, financial_data, metrics, anomalies).generate()
     
     # Verify output contains pipe separators
     assert '|' in output, "Output should contain pipe separators for Markdown tables"

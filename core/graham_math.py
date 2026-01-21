@@ -13,6 +13,9 @@ This module implements strict Graham formulas for value investing analysis:
 import math
 from typing import Dict, Union, List, Any
 
+from config.graham_constants import GRAHAM_MULTIPLIER, COST_OF_CAPITAL
+from config.investor_thresholds import DEFENSIVE, ENTERPRISING
+
 
 class GrahamCalculator:
     """
@@ -24,24 +27,6 @@ class GrahamCalculator:
     - Young companies (< 10 years history)
     - Missing data
     """
-    
-    # Graham methodology constants
-    GRAHAM_MULTIPLIER = 22.5
-    COST_OF_CAPITAL = 0.10  # 10%
-    
-    # Defensive Investor test thresholds
-    MIN_CURRENT_RATIO = 2.0
-    MIN_EARNINGS_YEARS = 8
-    MAX_PE_RATIO = 15
-    MAX_PB_RATIO = 1.5
-    MIN_EARNINGS_GROWTH = 1.33  # One-third growth = 33%
-    
-    # Enterprising Investor test thresholds
-    ENT_MIN_CURRENT_RATIO = 1.5
-    ENT_MAX_DEBT_ASSETS = 1.10  # Debt < 110% of Net Current Assets
-    ENT_MIN_EARNINGS_YEARS = 5
-    ENT_MAX_PE_RATIO = 10.0
-    ENT_MAX_PB_RATIO = 1.2
     
     def __init__(self, financial_data: dict):
         """
@@ -162,7 +147,7 @@ class GrahamCalculator:
             return "N/A"
         
         # Calculate Graham Number
-        graham_number = math.sqrt(self.GRAHAM_MULTIPLIER * eps * tbvps)
+        graham_number = math.sqrt(GRAHAM_MULTIPLIER * eps * tbvps)
         
         return round(graham_number, 2)
     
@@ -280,7 +265,7 @@ class GrahamCalculator:
             return "N/A - Negative normalized earnings (company unprofitable over cycle)"
         
         # Calculate EPV
-        epv = normalized_earnings / self.COST_OF_CAPITAL
+        epv = normalized_earnings / COST_OF_CAPITAL
         
         # Get shares for per-share calculation from most recent year with financial data
         latest_year = self._get_latest_financial_year(history, sorted_years)
@@ -331,12 +316,12 @@ class GrahamCalculator:
                 'epv': 0.0,
                 'normalized_earnings': 0.0,
                 'years_used': 0,
-                'cost_of_capital': self.COST_OF_CAPITAL,
+                'cost_of_capital': COST_OF_CAPITAL,
                 'epv_per_share': 0.0
             }
         
         # Add cost_of_capital for backward compatibility
-        result['cost_of_capital'] = self.COST_OF_CAPITAL
+        result['cost_of_capital'] = COST_OF_CAPITAL
         
         return result
     
@@ -389,10 +374,10 @@ class GrahamCalculator:
     def _run_defensive_tests(self, history: dict, years: list, num_years: int, price: float) -> dict:
         """Run all 7 Graham Defensive Investor tests."""
         # Test 1: Earnings stability - positive earnings in >= 8 of last 10 years
-        earnings_stability = self._test_earnings_stability(history, years, min_years=self.MIN_EARNINGS_YEARS, period=10)
+        earnings_stability = self._test_earnings_stability(history, years, min_years=DEFENSIVE.MIN_EARNINGS_YEARS, period=10)
         
         # Test 2: Current ratio >= 2.0
-        current_ratio_test = self._test_current_ratio(history, years, min_ratio=self.MIN_CURRENT_RATIO)
+        current_ratio_test = self._test_current_ratio(history, years, min_ratio=DEFENSIVE.MIN_CURRENT_RATIO)
         
         # Test 3: Long-term debt < net current assets
         debt_test = self._test_debt_to_assets(history, years)
@@ -404,10 +389,10 @@ class GrahamCalculator:
         earnings_growth_test = self._test_earnings_growth(history, years, num_years)
         
         # Test 6: P/E ratio < 15
-        pe_test = self._test_pe_ratio(history, years, price, max_pe=self.MAX_PE_RATIO)
+        pe_test = self._test_pe_ratio(history, years, price, max_pe=DEFENSIVE.MAX_PE_RATIO)
         
         # Test 7: P/B ratio < 1.5
-        pb_test = self._test_pb_ratio(history, years, price, max_pb=self.MAX_PB_RATIO)
+        pb_test = self._test_pb_ratio(history, years, price, max_pb=DEFENSIVE.MAX_PB_RATIO)
         
         return {
             'earnings_stability': earnings_stability,
@@ -422,10 +407,10 @@ class GrahamCalculator:
     def _run_enterprising_tests(self, history: dict, years: list, num_years: int, price: float) -> dict:
         """Run Graham Enterprising Investor tests."""
         # Test 1: Earnings stability - positive earnings for last 5 years
-        earnings_stability = self._test_earnings_stability(history, years, min_years=self.ENT_MIN_EARNINGS_YEARS, period=5)
+        earnings_stability = self._test_earnings_stability(history, years, min_years=ENTERPRISING.MIN_EARNINGS_YEARS, period=5)
         
         # Test 2: Current ratio > 1.5
-        current_ratio_test = self._test_current_ratio(history, years, min_ratio=self.ENT_MIN_CURRENT_RATIO)
+        current_ratio_test = self._test_current_ratio(history, years, min_ratio=ENTERPRISING.MIN_CURRENT_RATIO)
         
         # Test 3: Debt < 110% of Net Current Assets
         debt_test = self._test_enterprising_debt(history, years)
@@ -553,7 +538,7 @@ class GrahamCalculator:
             return 'FAIL'
         
         growth_ratio = recent_earnings / old_earnings
-        return 'PASS' if growth_ratio >= self.MIN_EARNINGS_GROWTH else 'FAIL'
+        return 'PASS' if growth_ratio >= DEFENSIVE.MIN_EARNINGS_GROWTH else 'FAIL'
     
     def _test_pe_ratio(self, history: dict, years: list, price: float, max_pe: float = 15) -> str:
         """Test if P/E ratio is below maximum threshold."""
@@ -605,7 +590,7 @@ class GrahamCalculator:
         current_liabilities = history[latest_year].get('current_liabilities', 0.0)
         
         net_current_assets = current_assets - current_liabilities
-        max_allowed_debt = net_current_assets * self.ENT_MAX_DEBT_ASSETS
+        max_allowed_debt = net_current_assets * ENTERPRISING.MAX_DEBT_ASSETS
         
         return 'PASS' if long_term_debt < max_allowed_debt else 'FAIL'
     
@@ -635,7 +620,7 @@ class GrahamCalculator:
         eps = history[latest_year].get('eps', 0.0)
         if eps > 0:
             pe_ratio = price / eps
-            if pe_ratio < self.ENT_MAX_PE_RATIO:
+            if pe_ratio < ENTERPRISING.MAX_PE_RATIO:
                 return 'PASS'
         
         # Test 2: Price < 120% of Tangible Book Value (not Net-Net)
@@ -665,8 +650,13 @@ class GrahamCalculator:
         margin_of_safety = self.compute_margin_of_safety(graham_number, price)
         
         # Check for deep value opportunity (use unrounded value for accurate comparison)
-        if isinstance(net_net_value_raw, float) and price > 0 and price < net_net_value_raw:
-            self.warnings.append("DEEP VALUE OPPORTUNITY - Price below Net-Net Value")
+        # Use a small tolerance to avoid flagging when price and net-net are approximately equal
+        # Only flag if price is meaningfully below net-net (more than 2% difference)
+        if isinstance(net_net_value_raw, float) and price > 0:
+            # Calculate percentage difference: (net_net - price) / net_net * 100
+            pct_below = ((net_net_value_raw - price) / net_net_value_raw * 100) if net_net_value_raw > 0 else 0
+            if pct_below > 2.0:  # Price is more than 2% below net-net
+                self.warnings.append("DEEP VALUE OPPORTUNITY - Price below Net-Net Value")
         
         # Run both defensive and enterprising tests
         defensive_tests = self.run_investor_tests("defensive")

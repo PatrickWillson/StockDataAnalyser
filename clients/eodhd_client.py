@@ -7,10 +7,14 @@ Delegates data processing to FinancialDataProcessor for separation of concerns.
 
 import requests
 import sys
+import logging
 from typing import Dict, Any, Optional, List
 from clients.base_client import BaseAPIClient
 from clients.fx_client import FXClient
+from core.currency_converter import CurrencyConverter
 from core.financial_data_processor import FinancialDataProcessor
+
+logger = logging.getLogger(__name__)
 
 
 class EODHDClient(BaseAPIClient):
@@ -30,8 +34,9 @@ class EODHDClient(BaseAPIClient):
         super().__init__(timeout=30, max_retries=3, backoff_factor=1.0)
         self.api_key = api_key
         self.fx_client = fx_client or FXClient()
+        self.currency_converter = CurrencyConverter(fx_client=self.fx_client)
         self.debug = debug
-        self.processor = FinancialDataProcessor(fx_client=self.fx_client, debug=debug)
+        self.processor = FinancialDataProcessor(currency_converter=self.currency_converter, debug=debug)
     
     def _make_eodhd_request(self, ticker: str) -> Dict[str, Any]:
         """
@@ -57,22 +62,22 @@ class EODHDClient(BaseAPIClient):
             
             # Handle EODHD-specific errors
             if response.status_code == 401:
-                print(f"[ERROR] Authentication failed. Check your EODHD_API_KEY.")
+                logger.error("Authentication failed. Check your EODHD_API_KEY.")
                 sys.exit(1)
             elif response.status_code == 429:
-                print(f"[ERROR] Rate limit exceeded. Please wait and try again.")
+                logger.error("Rate limit exceeded. Please wait and try again.")
                 sys.exit(1)
             elif response.status_code != 200:
-                print(f"[ERROR] API request failed with status {response.status_code}: {response.text}")
+                logger.error(f"API request failed with status {response.status_code}: {response.text}")
                 sys.exit(1)
             
             return response.json()
             
         except requests.exceptions.RequestException as e:
-            print(f"[ERROR] {str(e)}")
+            logger.error(str(e))
             sys.exit(1)
         except Exception as e:
-            print(f"[ERROR] Unexpected error during API request: {str(e)}")
+            logger.error(f"Unexpected error during API request: {str(e)}")
             sys.exit(1)
     
     def _fetch_dividend_history(self, ticker: str) -> Optional[List[Dict[str, Any]]]:
@@ -98,30 +103,30 @@ class EODHDClient(BaseAPIClient):
             # Handle expected failures gracefully (403 = subscription tier, 404 = no data)
             if response.status_code == 403:
                 if self.debug:
-                    print(f"[DEBUG] Dividend API returned 403 (requires higher subscription tier)")
+                    logger.debug("Dividend API returned 403 (requires higher subscription tier)")
                 return None
             elif response.status_code == 404:
                 if self.debug:
-                    print(f"[DEBUG] Dividend API returned 404 (no dividend data available)")
+                    logger.debug("Dividend API returned 404 (no dividend data available)")
                 return None
             elif response.status_code != 200:
                 if self.debug:
-                    print(f"[DEBUG] Dividend API failed with status {response.status_code}")
+                    logger.debug(f"Dividend API failed with status {response.status_code}")
                 return None
             
             data = response.json()
             if isinstance(data, list) and len(data) > 0:
                 if self.debug:
-                    print(f"[DEBUG] Dividend API returned {len(data)} dividend records")
+                    logger.debug(f"Dividend API returned {len(data)} dividend records")
                 return data
             else:
                 if self.debug:
-                    print(f"[DEBUG] Dividend API returned empty data")
+                    logger.debug("Dividend API returned empty data")
                 return None
                 
         except Exception as e:
             if self.debug:
-                print(f"[DEBUG] Dividend API request failed: {str(e)}")
+                logger.debug(f"Dividend API request failed: {str(e)}")
             return None
     
     def fetch_all_data(self, ticker: str, yf_client: Optional[Any] = None) -> Dict[str, Any]:
@@ -144,21 +149,21 @@ class EODHDClient(BaseAPIClient):
         """
         warnings = []
         
-        print(f"\n[INFO] Fetching data for {ticker}...")
+        logger.info(f"Fetching data for {ticker}...")
         
         # Fetch data from API
         data = self._make_eodhd_request(ticker)
         
-        # Debug: Save raw API response to file
+        # Save raw API response to file when debug mode is enabled
         if self.debug:
             import json
             debug_file = f"data/{ticker.replace('.', '_')}_raw_api_response.json"
             try:
                 with open(debug_file, 'w') as f:
                     json.dump(data, f, indent=2)
-                print(f"[DEBUG] Raw API response saved to: {debug_file}")
+                logger.debug(f"Raw API response saved to: {debug_file}")
             except Exception as e:
-                print(f"[DEBUG] Could not save raw API response: {e}")
+                logger.debug(f"Could not save raw API response: {e}")
         
         # Extract general information
         general = data.get('General', {})
@@ -172,24 +177,20 @@ class EODHDClient(BaseAPIClient):
         if not financials_currency or financials_currency == '':
             financials_currency = 'USD'
         
-        print(f"[INFO] Stock Currency: {currency}, Financials Currency: {financials_currency}")
-        
-        # Track currency conversion details for consolidated warning
-        currency_conversion_details = []
+        logger.info(f"Stock Currency: {currency}, Financials Currency: {financials_currency}")
         
         # Add note if currencies don't match
         if currency != financials_currency:
-            currency_conversion_details.append(f"Stock trades in {currency}, financials in {financials_currency}")
-            print(f"[WARNING] Currency Mismatch: Stock trades in {currency}, but financial statements are in {financials_currency}")
+            logger.warning(f"Currency Mismatch: Stock trades in {currency}, but financial statements are in {financials_currency}")
         
         # Extract additional company info
         sector = general.get('Sector', 'N/A')
         industry = general.get('Industry', 'N/A')
         employees = general.get('FullTimeEmployees', 0)
         
-        print(f"[INFO] Company: {general.get('Name', 'Unknown')}")
-        print(f"[INFO] Exchange: {exchange}, Currency: {currency}")
-        print(f"[INFO] Sector: {sector}, Industry: {industry}")
+        logger.info(f"Company: {general.get('Name', 'Unknown')}")
+        logger.info(f"Exchange: {exchange}, Currency: {currency}")
+        logger.info(f"Sector: {sector}, Industry: {industry}")
         
         # Extract highlights data
         highlights = data.get('Highlights', {})
@@ -221,34 +222,34 @@ class EODHDClient(BaseAPIClient):
         is_delisted = general.get('IsDelisted', False)
         if is_delisted:
             warnings.append("WARNING: Company is delisted")
-            print("[WARNING] Company is delisted")
+            logger.warning("Company is delisted")
         
         # Extract shares outstanding
         shares_outstanding = self.processor.extract_shares_outstanding(data)
         if shares_outstanding == 0.0:
             warnings.append("WARNING: Shares outstanding data unavailable")
-            print("[WARNING] Shares outstanding data unavailable")
+            logger.warning("Shares outstanding data unavailable")
         else:
-            print(f"[INFO] Shares Outstanding: {shares_outstanding:,.0f}")
+            logger.info(f"Shares Outstanding: {shares_outstanding:,.0f}")
         
         # Extract year-specific shares outstanding for accurate EPS calculation
         shares_by_year = self.processor.extract_shares_by_year(data)
         if shares_by_year:
-            print(f"[INFO] Found year-specific shares data for {len(shares_by_year)} years")
+            logger.info(f"Found year-specific shares data for {len(shares_by_year)} years")
             if self.debug:
                 for year in sorted(shares_by_year.keys(), reverse=True)[:3]:
-                    print(f"[DEBUG] {year} shares: {shares_by_year[year]:,.0f}")
+                    logger.debug(f"{year} shares: {shares_by_year[year]:,.0f}")
         
         # Fetch dividend history from Dividend API (primary source)
-        print("\n[INFO] Fetching dividend history...")
+        logger.info("Fetching dividend history...")
         dividend_api_data = self._fetch_dividend_history(ticker)
         if dividend_api_data:
-            print(f"[INFO] Retrieved {len(dividend_api_data)} dividend records from Dividend API")
+            logger.info(f"Retrieved {len(dividend_api_data)} dividend records from Dividend API")
         else:
-            print("[INFO] Dividend API unavailable - will use Cash Flow data as fallback")
+            logger.info("Dividend API unavailable - will use Cash Flow data as fallback")
         
         # Parse financial statements using processor
-        print("\n[INFO] Parsing financial statements...")
+        logger.info("Parsing financial statements...")
         balance_sheet = self.processor.parse_balance_sheet(data)
         income_statement = self.processor.parse_income_statement(data)
         dividend_history, forward_dividend_rate, is_dividend_amounts, dividend_currency, dividend_sources = self.processor.parse_dividend_history(data, dividend_api_data=dividend_api_data)
@@ -256,25 +257,25 @@ class EODHDClient(BaseAPIClient):
         # Convert dividend history to financials currency if needed
         # This is critical for Dividend API data which comes in the stock's trading currency
         if dividend_currency != financials_currency:
-            print(f"[INFO] Converting dividends from {dividend_currency} to {financials_currency}...")
-            fx_rate = self.fx_client.get_rate(dividend_currency, financials_currency)
-            if fx_rate:
-                # Convert all dividend values in history
-                for year_key in dividend_history:
-                    old_value = dividend_history[year_key]
-                    new_value = old_value * fx_rate
-                    dividend_history[year_key] = new_value
-                    if self.debug:
-                        print(f"[DEBUG] Converted {year_key} dividend: {old_value:.4f} {dividend_currency} → {new_value:.4f} {financials_currency}")
-                
-                print(f"[INFO] Historical dividends converted from {dividend_currency} to {financials_currency} at rate {fx_rate:.4f}")
-                currency_conversion_details.append(f"Dividends converted {dividend_currency} → {financials_currency} at rate {fx_rate:.4f}")
+            logger.info(f"Converting dividends from {dividend_currency} to {financials_currency}...")
+            converted_dividends = self.currency_converter.convert_batch(
+                dividend_history, dividend_currency, financials_currency
+            )
+            
+            if converted_dividends != dividend_history:
+                # Conversion succeeded
+                dividend_history = converted_dividends
+                logger.info(f"Historical dividends converted from {dividend_currency} to {financials_currency}")
+                if self.debug:
+                    for year_key in list(dividend_history.keys())[:3]:  # Show first 3 for debug
+                        logger.debug(f"Converted {year_key} dividend: {dividend_history[year_key]:.4f} {financials_currency}")
             else:
+                # Conversion failed
                 warnings.append(f"WARNING: Could not convert dividends from {dividend_currency} to {financials_currency} - FX rate unavailable")
-                print(f"[WARNING] Could not get FX rate for {dividend_currency}/{financials_currency}")
+                logger.warning(f"Could not get FX rate for {dividend_currency}/{financials_currency}")
         
         # Merge financial data with year-specific shares
-        print("\n[INFO] Merging financial data...")
+        logger.info("Merging financial data...")
         history = self.processor.merge_financial_data(balance_sheet, income_statement, 
                                                       dividend_history, shares_outstanding,
                                                       outstanding_shares_by_year=shares_by_year)
@@ -284,27 +285,27 @@ class EODHDClient(BaseAPIClient):
         
         # Check if price is available
         if price == 0.0 or price_source == 'Missing':
-            print("\n" + "="*70)
-            print("[ERROR] Both sources failed to provide current price data.")
-            print("="*70)
-            print("\nTroubleshooting:")
-            print("1. EODHD API: Price not available in fundamentals endpoint")
-            print("   - This can happen for delisted stocks or data gaps")
-            print("   - Check if ticker format is correct (e.g., AAPL.US, VOD.LSE)")
-            print("\n2. yfinance Fallback: Failed or unavailable")
-            print("   - yfinance may not have data for this ticker")
-            print("   - Check if ticker format is correct for yfinance")
-            print("   - Verify stock is actively trading")
-            print(f"   - Ticker: {ticker}")
-            print("\n3. Possible Solutions:")
-            print("   - Verify ticker format matches exchange requirements")
-            print("   - Try a different ticker that has EODHD price data")
-            print("   - Check if stock is actively trading")
-            print("   - Check exchange mapping in yfinance client")
-            print("="*70)
+            logger.error("="*70)
+            logger.error("Both sources failed to provide current price data.")
+            logger.error("="*70)
+            logger.error("Troubleshooting:")
+            logger.error("1. EODHD API: Price not available in fundamentals endpoint")
+            logger.error("   - This can happen for delisted stocks or data gaps")
+            logger.error("   - Check if ticker format is correct (e.g., AAPL.US, VOD.LSE)")
+            logger.error("2. yfinance Fallback: Failed or unavailable")
+            logger.error("   - yfinance may not have data for this ticker")
+            logger.error("   - Check if ticker format is correct for yfinance")
+            logger.error("   - Verify stock is actively trading")
+            logger.error(f"   - Ticker: {ticker}")
+            logger.error("3. Possible Solutions:")
+            logger.error("   - Verify ticker format matches exchange requirements")
+            logger.error("   - Try a different ticker that has EODHD price data")
+            logger.error("   - Check if stock is actively trading")
+            logger.error("   - Check exchange mapping in yfinance client")
+            logger.error("="*70)
             sys.exit(1)
         
-        print(f"\n[INFO] Current Price: {price} (Source: {price_source})")
+        logger.info(f"Current Price: {price} (Source: {price_source})")
         
         # Get most recent EPS for London Fix and P/E calculation
         # Need to find the most recent year with actual financial data (not just dividend data)
@@ -329,34 +330,32 @@ class EODHDClient(BaseAPIClient):
         
         # Apply London Fix if needed (converts GBp to GBP)
         if london_fix_needed:
-            price = self.processor.apply_london_fix(price, most_recent_eps, exchange, warnings)
-            price_currency = "GBP"  # After London Fix, price is in GBP
-            currency_conversion_details.append("London Fix applied (GBp → GBP)")
+            price, fix_applied = self.currency_converter.apply_london_fix(price, most_recent_eps, exchange)
+            if fix_applied:
+                price_currency = "GBP"  # After London Fix, price is in GBP
         elif exchange == "LSE" and currency == "GBX" and not is_from_market_cap:
             # No London Fix needed, but currency is GBX, so convert to GBP
             # Skip this if price is from MarketCap (already in GBP)
             price = price / 100
             price_currency = "GBP"
             currency_conversion_details.append("Converted GBX → GBP")
-            print(f"[INFO] Converted GBX to GBP: {price:.2f} GBP")
+            logger.info(f"Converted GBX to GBP: {price:.2f} GBP")
         elif exchange == "LSE" and is_from_market_cap:
             # Price from MarketCap is already in GBP
             price_currency = "GBP"
-            print(f"[INFO] Price from MarketCap is in GBP: {price:.2f} GBP")
+            logger.info(f"Price from MarketCap is in GBP: {price:.2f} GBP")
         
         # Convert price to financials currency if they differ
         if price_currency != financials_currency:
-            print(f"[INFO] Converting price from {price_currency} to {financials_currency}...")
-            fx_rate = self.fx_client.get_rate(price_currency, financials_currency)
+            logger.info(f"Converting price from {price_currency} to {financials_currency}...")
+            converted_price, success = self.currency_converter.convert(price, price_currency, financials_currency)
             
-            if fx_rate:
-                converted_price = price * fx_rate
-                print(f"[INFO] Price conversion: {price:.2f} {price_currency} × {fx_rate:.4f} = {converted_price:.2f} {financials_currency}")
+            if success:
+                logger.info(f"Price conversion: {price:.2f} {price_currency} → {converted_price:.2f} {financials_currency}")
                 price = converted_price
-                currency_conversion_details.append(f"Price converted {price_currency} → {financials_currency} at rate {fx_rate:.4f}")
             else:
                 warnings.append(f"WARNING: Could not convert price from {price_currency} to {financials_currency} - FX rate unavailable")
-                print(f"[WARNING] Could not get FX rate for {price_currency}/{financials_currency}")
+                logger.warning(f"Could not get FX rate for {price_currency}/{financials_currency}")
         
         # Convert Highlights dividends and book value to financials currency
         # Note: For LSE stocks, DividendShare and BookValue in API are already in GBP, not GBX
@@ -367,11 +366,17 @@ class EODHDClient(BaseAPIClient):
             highlights_dividend_currency = "GBP"
         
         if dividend_per_share > 0 and highlights_dividend_currency != financials_currency:
-            fx_rate = self.fx_client.get_rate(highlights_dividend_currency, financials_currency)
-            if fx_rate:
-                dividend_per_share = dividend_per_share * fx_rate
-                book_value_per_share = book_value_per_share * fx_rate
-                print(f"[INFO] Dividend and Book Value converted from {highlights_dividend_currency} to {financials_currency}")
+            converted_dividend, success = self.currency_converter.convert(
+                dividend_per_share, highlights_dividend_currency, financials_currency
+            )
+            converted_book_value, _ = self.currency_converter.convert(
+                book_value_per_share, highlights_dividend_currency, financials_currency
+            )
+            
+            if success:
+                dividend_per_share = converted_dividend
+                book_value_per_share = converted_book_value
+                logger.info(f"Dividend and Book Value converted from {highlights_dividend_currency} to {financials_currency}")
         
         # Convert forward dividend rate to financials currency
         if forward_dividend_rate:
@@ -381,14 +386,16 @@ class EODHDClient(BaseAPIClient):
                 fwd_div_currency = "GBP"
             
             if fwd_div_currency != financials_currency:
-                fx_rate = self.fx_client.get_rate(fwd_div_currency, financials_currency)
-                if fx_rate:
-                    forward_dividend_rate = forward_dividend_rate * fx_rate
+                converted_fwd_rate, success = self.currency_converter.convert(
+                    forward_dividend_rate, fwd_div_currency, financials_currency
+                )
+                if success:
+                    forward_dividend_rate = converted_fwd_rate
         
         # Recalculate P/E ratio using converted price and most recent EPS
         if most_recent_eps > 0:
             pe_ratio = price / most_recent_eps
-            print(f"[INFO] Recalculated P/E ratio: {pe_ratio:.2f} (Price: {price:.2f} / EPS: {most_recent_eps:.2f})")
+            logger.info(f"Recalculated P/E ratio: {pe_ratio:.2f} (Price: {price:.2f} / EPS: {most_recent_eps:.2f})")
         
         # Calculate BVPS from balance sheet for validation
         calculated_bvps = 0.0
@@ -409,20 +416,20 @@ class EODHDClient(BaseAPIClient):
                 
                 if year_shares > 0:
                     calculated_bvps = total_equity / year_shares
-                    print(f"[INFO] Calculated BVPS: {calculated_bvps:.2f} (Equity: {total_equity:,.0f} / Shares: {year_shares:,.0f})")
+                    logger.info(f"Calculated BVPS: {calculated_bvps:.2f} (Equity: {total_equity:,.0f} / Shares: {year_shares:,.0f})")
         
         # Add consolidated currency conversion warning if any conversions were performed
-        if currency_conversion_details:
-            consolidated_warning = "Currency Conversions: " + "; ".join(currency_conversion_details)
+        consolidated_warning = self.currency_converter.get_consolidated_warning()
+        if consolidated_warning:
             warnings.append(consolidated_warning)
         
         # Cross-validate calculated metrics against API values
-        print("\n[INFO] Cross-validating metrics...")
+        logger.info("Cross-validating metrics...")
         validation_warnings = self._cross_validate_metrics(data, pe_ratio, calculated_bvps)
         warnings.extend(validation_warnings)
         
         # Validate data quality
-        print("\n[INFO] Validating data quality...")
+        logger.info("Validating data quality...")
         self.processor.validate_data_quality(history, warnings)
         
         # Determine overall dividend source for data quality assessment
@@ -458,11 +465,11 @@ class EODHDClient(BaseAPIClient):
                                 warnings.append(f"Dividend Data Quality: {most_recent_year} Cash Flow shows {most_recent_div:.2f} vs Forward Rate {forward_dividend_rate:.2f} ({diff_pct:.1f}% difference) - most recent year may be incomplete due to payment timing")
         
         if warnings:
-            print(f"\n[WARNING] Found {len(warnings)} warnings:")
+            logger.warning(f"Found {len(warnings)} warnings:")
             for warning in warnings:
-                print(f"  - {warning}")
+                logger.warning(f"  - {warning}")
         
-        print(f"\n[SUCCESS] Data fetch complete for {ticker}\n")
+        logger.info(f"Data fetch complete for {ticker}")
         
         return {
             'ticker': ticker_code,
@@ -502,8 +509,7 @@ class EODHDClient(BaseAPIClient):
             'week_52_high': week_52_high,
             'week_52_low': week_52_low,
             # Data quality metadata
-            'api_last_update': general.get('UpdatedAt', 'Unknown'),
-            'fx_rate_used': fx_rate if price_currency != financials_currency else 1.0
+            'api_last_update': general.get('UpdatedAt', 'Unknown')
         }
 
     def _cross_validate_metrics(self, data: Dict[str, Any], calculated_pe: float, calculated_bvps: float) -> List[str]:
@@ -553,7 +559,7 @@ class EODHDClient(BaseAPIClient):
                     f"Market data (SharesStats) shows {shares_stats:,.0f} shares ({diff_pct:.1f}% difference). "
                     f"Financial statement shares are used for accurate per-share calculations per Graham methodology."
                 )
-                print(f"[INFO] Share count difference: Financial statements {outstanding_shares_annual:,.0f} vs Market data {shares_stats:,.0f}")
+                logger.info(f"Share count difference: Financial statements {outstanding_shares_annual:,.0f} vs Market data {shares_stats:,.0f}")
         
         # Check P/E ratio
         api_pe = data.get('Highlights', {}).get('PERatio', 0)
@@ -566,7 +572,7 @@ class EODHDClient(BaseAPIClient):
                     f"calculated {calculated_pe:.2f} (annual basis) ({pe_diff_pct:.1f}% difference). "
                     f"Using annual EPS from audited financials per Graham methodology."
                 )
-                print(f"[INFO] P/E difference: API {api_pe:.2f} (TTM) vs Calculated {calculated_pe:.2f} (Annual)")
+                logger.info(f"P/E difference: API {api_pe:.2f} (TTM) vs Calculated {calculated_pe:.2f} (Annual)")
         
         # Check Book Value
         api_bvps = data.get('Highlights', {}).get('BookValue', 0)
@@ -580,7 +586,7 @@ class EODHDClient(BaseAPIClient):
                     f"Calculated value subtracts intangibles/goodwill per Graham methodology. "
                     f"API may use different share count or accounting treatment."
                 )
-                print(f"[WARNING] Book Value discrepancy detected: API ${api_bvps:.2f} vs Calculated ${calculated_bvps:.2f}")
+                logger.warning(f"Book Value discrepancy detected: API ${api_bvps:.2f} vs Calculated ${calculated_bvps:.2f}")
         
         # Check for stale price data
         last_update = data.get('General', {}).get('UpdatedAt', '')
@@ -597,8 +603,8 @@ class EODHDClient(BaseAPIClient):
                         f"[VALIDATION] API data is {days_old} days old (last update: {last_update[:10]}). "
                         f"Price and market data may be stale."
                     )
-                    print(f"[WARNING] API data is {days_old} days old")
+                    logger.warning(f"API data is {days_old} days old")
             except Exception as e:
-                print(f"[DEBUG] Could not parse UpdatedAt date: {e}")
+                logger.debug(f"Could not parse UpdatedAt date: {e}")
         
         return warnings
