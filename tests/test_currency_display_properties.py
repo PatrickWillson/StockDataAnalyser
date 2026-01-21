@@ -201,3 +201,116 @@ def test_conversion_value_appears_in_parentheses(price, trading_currency, financ
         
         # Should contain at least one digit (the converted value)
         assert any(c.isdigit() for c in parentheses_content)
+
+
+
+@given(
+    price=st.floats(min_value=0.01, max_value=10000.0, allow_nan=False, allow_infinity=False),
+    price_currency=st.sampled_from(['USD', 'GBP', 'GBX', 'EUR', 'CAD']),
+    financials_currency=st.sampled_from(['USD', 'GBP', 'EUR', 'CAD']),
+    fx_rate=st.floats(min_value=0.5, max_value=2.0, allow_nan=False, allow_infinity=False)
+)
+def test_yfinance_price_currency_conversion_preserved(price, price_currency, financials_currency, fx_rate):
+    """
+    Property 5: Currency handling is preserved
+    
+    For any price from yfinance, if currency conversion is needed,
+    the system should apply FX conversion and generate appropriate warnings.
+    
+    **Feature: yfinance-price-integration, Property 5: Currency handling is preserved**
+    **Validates: Requirements 5.1, 5.2, 5.4**
+    """
+    from core.financial_data_processor import FinancialDataProcessor
+    from clients.fx_client import FXClient
+    
+    # Create a mock FX client that returns our test rate
+    class MockFXClient:
+        def get_rate(self, from_currency, to_currency):
+            if from_currency == to_currency:
+                return 1.0
+            return fx_rate
+    
+    processor = FinancialDataProcessor(fx_client=MockFXClient())
+    warnings = []
+    
+    # Apply currency conversion
+    converted_price = processor.apply_currency_conversion(
+        price, price_currency, financials_currency, warnings
+    )
+    
+    if price_currency == financials_currency:
+        # No conversion needed
+        assert converted_price == price
+        # No currency conversion warning should be added
+        assert not any('Currency Conversion' in w for w in warnings)
+    else:
+        # Conversion should be applied
+        expected_price = price * fx_rate
+        assert abs(converted_price - expected_price) < 0.01
+        
+        # Warning should be generated
+        assert len(warnings) > 0
+        assert any('Currency Conversion' in w for w in warnings)
+        assert any(price_currency in w and financials_currency in w for w in warnings)
+
+
+
+@given(
+    price=st.floats(min_value=100.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+    eps=st.floats(min_value=0.01, max_value=20.0, allow_nan=False, allow_infinity=False)
+)
+def test_london_fix_applies_to_yfinance_prices(price, eps):
+    """
+    Property 6: London Fix applies to yfinance prices
+    
+    For any LSE stock where yfinance returns a price and P/E ratio > 500,
+    the system should apply the London Fix (divide by 100) and log the conversion.
+    
+    **Feature: yfinance-price-integration, Property 6: London Fix applies to yfinance prices**
+    **Validates: Requirements 5.3**
+    """
+    from core.financial_data_processor import FinancialDataProcessor
+    
+    processor = FinancialDataProcessor()
+    warnings = []
+    
+    # Calculate P/E ratio
+    pe_ratio = price / eps
+    
+    # Apply London Fix
+    adjusted_price = processor.apply_london_fix(price, eps, 'LSE', warnings)
+    
+    if pe_ratio > 500:
+        # London Fix should be applied (price divided by 100)
+        expected_price = price / 100
+        assert abs(adjusted_price - expected_price) < 0.01
+    else:
+        # London Fix should NOT be applied
+        assert adjusted_price == price
+
+
+@given(
+    price=st.floats(min_value=100.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+    eps=st.floats(min_value=0.01, max_value=20.0, allow_nan=False, allow_infinity=False),
+    exchange=st.sampled_from(['US', 'NYSE', 'NASDAQ', 'TO', 'XETRA'])
+)
+def test_london_fix_only_applies_to_lse(price, eps, exchange):
+    """
+    Property 6: London Fix applies to yfinance prices (LSE only)
+    
+    For any non-LSE stock, the London Fix should never be applied
+    regardless of P/E ratio.
+    
+    **Feature: yfinance-price-integration, Property 6: London Fix applies to yfinance prices**
+    **Validates: Requirements 5.3**
+    """
+    from core.financial_data_processor import FinancialDataProcessor
+    
+    processor = FinancialDataProcessor()
+    warnings = []
+    
+    # Apply London Fix
+    adjusted_price = processor.apply_london_fix(price, eps, exchange, warnings)
+    
+    # London Fix should NOT be applied for non-LSE exchanges
+    assert adjusted_price == price

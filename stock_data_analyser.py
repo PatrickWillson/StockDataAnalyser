@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 # Import Core Modules (You will create these next)
 from clients.eodhd_client import EODHDClient
-from clients.alphavantage_client import AlphaVantageClient
+from clients.yfinance_client import YFinanceClient
 from core.graham_math import GrahamCalculator
 from core.anomaly_detector import AnomalyDetector
 
@@ -685,7 +685,9 @@ def generate_dossier_content(ticker, financial_data, metrics, anomalies):
                 
                 if revenue > 0:
                     margin = (net_income / revenue) * 100
-                    profit_margins.append(margin)
+                    # Validate margin is finite (avoid infinity from near-zero revenue)
+                    if abs(margin) < 1e6:  # Reasonable profit margin range
+                        profit_margins.append(margin)
                     if net_income < 0:
                         loss_years += 1
             
@@ -1001,6 +1003,10 @@ def generate_dossier_content(ticker, financial_data, metrics, anomalies):
             intangibles = latest_data_calc.get('intangible_assets', 0)
             goodwill = latest_data_calc.get('goodwill', 0)
             
+            # Initialize tbvps and bvps to avoid UnboundLocalError
+            tbvps = 0
+            bvps = 0
+            
             if total_equity > 0 and shares_used > 0:
                 lines.append(f"- **Total Stockholder Equity**: {unified_currency}{total_equity:,.0f}")
                 lines.append(f"- **Less: Intangible Assets**: {unified_currency}{intangibles:,.0f}")
@@ -1172,10 +1178,10 @@ def generate_dossier_content(ticker, financial_data, metrics, anomalies):
     
     # Evaluate current price source (Requirements 5.2)
     price_source = financial_data.get('price_source', 'EODHD')
-    if price_source == 'EODHD':
-        lines.append("- **Current Price**: ✓ From EODHD (primary source)")
-    elif price_source == 'Alpha Vantage':
-        lines.append("- **Current Price**: ⚠️ From Alpha Vantage (EODHD unavailable)")
+    if price_source == 'yfinance':
+        lines.append("- **Current Price**: ✓ From yfinance (primary source)")
+    elif price_source == 'EODHD':
+        lines.append("- **Current Price**: ⚠️ From EODHD (yfinance unavailable)")
     else:
         lines.append("- **Current Price**: ❌ Missing from all sources")
     
@@ -1219,7 +1225,7 @@ def generate_dossier_content(ticker, financial_data, metrics, anomalies):
     
     # Add note about data quality impact (Requirements 5.7)
     critical_issues = []
-    if price_source not in ['EODHD', 'Alpha Vantage']:
+    if price_source not in ['yfinance', 'EODHD']:
         critical_issues.append("missing price data")
     if years_available < 7:
         critical_issues.append("insufficient financial history")
@@ -1402,6 +1408,12 @@ def generate_dossier_content(ticker, financial_data, metrics, anomalies):
                     lines.append(f"- ✓ Current Ratio: {current_ratio:.2f}x (adequate for enterprising)")
                 else:
                     lines.append(f"- ❌ Current Ratio: {current_ratio:.2f}x (below 1.5x minimum)")
+        else:
+            # Initialize variables to avoid UnboundLocalError
+            current_assets = 0.0
+            current_liabilities = 0.0
+            long_term_debt = 0.0
+            total_assets = 0.0
         
         # Evaluate recent ROE and ROA trends (Requirement 7.4)
         lines.append("")
@@ -1673,8 +1685,8 @@ def main():
         # 1. Fetch Data
         print(f"[1/4] Fetching Fundamentals from EODHD...")
         client = EODHDClient(API_KEY, debug=True)
-        av_client = AlphaVantageClient(debug=True)
-        financial_data = client.fetch_all_data(ticker, av_client=av_client)
+        yf_client = YFinanceClient(debug=True)
+        financial_data = client.fetch_all_data(ticker, yf_client=yf_client)
         
         # Check if price is available - fatal error if not
         price = financial_data.get('price', 0.0)
@@ -1686,8 +1698,8 @@ def main():
             print("\nThe system cannot generate a reliable valuation without current price data.")
             print("Please verify the ticker symbol or try again later.")
             print("\nData sources attempted:")
-            print("  1. EODHD API (Highlights.SharePrice, General.SharePrice, General.LastPrice)")
-            print("  2. Alpha Vantage API (GLOBAL_QUOTE)")
+            print("  1. yfinance (Yahoo Finance - primary source)")
+            print("  2. EODHD API (Highlights.SharePrice, General.SharePrice, General.LastPrice)")
             print("\nBoth sources failed to provide current price data.")
             print("="*80 + "\n")
             sys.exit(1)

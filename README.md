@@ -27,6 +27,8 @@ pip install -r requirements.txt
 EODHD_API_KEY=your_api_key_here
 ```
 
+**Note**: yfinance (Yahoo Finance) is used for real-time price data and does not require an API key. Only the EODHD API key is required for fundamental financial data.
+
 ## Usage
 
 ```bash
@@ -37,7 +39,7 @@ python stock_data_analyser.py RY.TO
 
 ## Supported Stock Exchanges
 
-The Stock Data Analyser supports 50+ stock exchanges worldwide through EODHD API. When EODHD price data is unavailable, the system automatically falls back to Alpha Vantage API with automatic exchange code translation.
+The Stock Data Analyser supports 50+ stock exchanges worldwide through EODHD API. When EODHD price data is unavailable, the system automatically falls back to yfinance (Yahoo Finance) with automatic exchange code translation.
 
 ### Ticker Format
 
@@ -114,20 +116,10 @@ Use the format `SYMBOL.EXCHANGE` where:
 
 The system uses a two-tier approach for price data:
 
-1. **Primary Source**: EODHD API (real-time and historical data)
-2. **Fallback Source**: Alpha Vantage API (when EODHD price unavailable)
+1. **Primary Source**: yfinance (Yahoo Finance - real-time prices, no API key required)
+2. **Fallback Source**: EODHD API (extracted from fundamentals data)
 
-Exchange code translation between EODHD and Alpha Vantage formats is handled automatically. When Alpha Vantage is used, a data quality note is added to the dossier.
-
-### Alpha Vantage Configuration (Optional)
-
-To enable price fallback, add your Alpha Vantage API key to `.env`:
-
-```
-ALPHAVANTAGE_API_KEY=your_alpha_vantage_key_here
-```
-
-**Note**: Alpha Vantage fallback is optional. If the API key is not configured and EODHD price data is unavailable, the system will display a fatal error rather than proceeding with incomplete data (following Graham's principle: "No data is better than wrong data").
+Exchange code translation between EODHD and yfinance formats is handled automatically. yfinance provides current market prices without requiring API keys or rate limits.
 
 ## Output
 

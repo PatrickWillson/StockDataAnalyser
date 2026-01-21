@@ -102,35 +102,73 @@ class FinancialDataProcessor:
             return {}
     
     @staticmethod
-    def get_current_price(data: Dict[str, Any], av_client: Optional[Any] = None,
-                         ticker: Optional[str] = None, warnings: Optional[List[str]] = None) -> tuple[float, str]:
+    def get_current_price(data: Dict[str, Any], yf_client: Optional[Any] = None,
+                         ticker: Optional[str] = None, warnings: Optional[List[str]] = None) -> tuple[float, str, bool]:
         """
-        Extract current price from API data with Alpha Vantage fallback.
+        Extract current price with yfinance as primary source.
+        
+        Priority order:
+        1. yfinance (primary - most current)
+        2. EODHD Highlights.MarketCapitalization / SharesOutstanding (calculated)
+        3. EODHD Highlights.SharePrice
+        4. EODHD General.SharePrice
+        5. EODHD General.LastPrice
         
         Args:
             data: EODHD API response
-            av_client: Optional Alpha Vantage client for fallback
-            ticker: Ticker symbol (required for fallback)
+            yf_client: Optional yfinance client for price fetching (primary source)
+            ticker: Ticker symbol (required for yfinance)
             warnings: List to append warnings to
             
         Returns:
-            Tuple of (price, source) where source is 'EODHD', 'Alpha Vantage', or 'Missing'
+            Tuple of (price, source, is_from_market_cap) where:
+                - price: float price value
+                - source: 'yfinance', 'EODHD', or 'Missing'
+                - is_from_market_cap: True if price was calculated from MarketCap/Shares
             
         Note:
-            Alpha Vantage returns LSE prices in the same currency as EODHD (GBX/pence).
-            No currency conversion is needed.
+            When is_from_market_cap is True, the price is already in the base currency
+            (e.g., GBP for LSE stocks), not in pence (GBX).
         """
         if warnings is None:
             warnings = []
         
+        # Try yfinance first (primary source)
+        if yf_client and ticker:
+            yf_price = yf_client.get_price(ticker)
+            if yf_price and yf_price > 0:
+                warnings.append("Price Source: yfinance (primary source)")
+                return yf_price, 'yfinance', False
+        
+        # Fall back to EODHD price extraction
         try:
-            # Try to get from Highlights first
             highlights = data.get('Highlights', {})
+            
+            # Try to calculate from MarketCapitalization / SharesOutstanding
+            # This gives us price in base currency (GBP for LSE, not GBX)
+            market_cap = highlights.get('MarketCapitalization')
+            shares_stats = data.get('SharesStats', {})
+            shares_outstanding = shares_stats.get('SharesOutstanding')
+            
+            if market_cap and shares_outstanding:
+                market_cap = FinancialDataProcessor.sanitize_value(market_cap)
+                shares_outstanding = FinancialDataProcessor.sanitize_value(shares_outstanding)
+                if market_cap > 0 and shares_outstanding > 0:
+                    calculated_price = market_cap / shares_outstanding
+                    if yf_client:
+                        warnings.append("Price Source: EODHD (calculated from MarketCap / Shares, yfinance unavailable)")
+                    else:
+                        warnings.append("Price Source: EODHD (calculated from MarketCap / Shares)")
+                    return calculated_price, 'EODHD', True  # Mark as from MarketCap
+            
+            # Try to get from Highlights.SharePrice
             price = highlights.get('SharePrice')
             if price is not None:
                 sanitized = FinancialDataProcessor.sanitize_value(price)
                 if sanitized > 0:
-                    return sanitized, 'EODHD'
+                    if yf_client:
+                        warnings.append("Price Source: EODHD (yfinance unavailable)")
+                    return sanitized, 'EODHD', False
             
             # Fallback to General section
             general = data.get('General', {})
@@ -138,28 +176,24 @@ class FinancialDataProcessor:
             if price is not None:
                 sanitized = FinancialDataProcessor.sanitize_value(price)
                 if sanitized > 0:
-                    return sanitized, 'EODHD'
+                    if yf_client:
+                        warnings.append("Price Source: EODHD (yfinance unavailable)")
+                    return sanitized, 'EODHD', False
             
             # Try alternative fields
             price = general.get('LastPrice')
             if price is not None:
                 sanitized = FinancialDataProcessor.sanitize_value(price)
                 if sanitized > 0:
-                    return sanitized, 'EODHD'
-            
-            # EODHD price unavailable - try Alpha Vantage fallback
-            if av_client and ticker:
-                print("[INFO] EODHD price unavailable - attempting Alpha Vantage fallback...")
-                av_price = av_client.get_price(ticker)
-                if av_price:
-                    warnings.append("Price from Alpha Vantage (EODHD price unavailable)")
-                    return av_price, 'Alpha Vantage'
+                    if yf_client:
+                        warnings.append("Price Source: EODHD (yfinance unavailable)")
+                    return sanitized, 'EODHD', False
             
             # All sources failed
-            return 0.0, 'Missing'
+            return 0.0, 'Missing', False
             
         except (KeyError, TypeError):
-            return 0.0, 'Missing'
+            return 0.0, 'Missing', False
     
     def parse_balance_sheet(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
         """

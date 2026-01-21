@@ -96,7 +96,7 @@ def test_ticker_suffix_example():
         
         with patch('sys.argv', ['stock_data_analyser.py', 'AAPL.US']):
             with patch('stock_data_analyser.EODHDClient') as MockClient:
-                with patch('stock_data_analyser.AlphaVantageClient') as MockAVClient:
+                with patch('stock_data_analyser.YFinanceClient') as MockYFClient:
                     with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
                         with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
                             with patch('stock_data_analyser.save_dossier') as mock_save:
@@ -105,8 +105,8 @@ def test_ticker_suffix_example():
                                 mock_client_instance.fetch_all_data.return_value = mock_financial_data
                                 MockClient.return_value = mock_client_instance
                                 
-                                mock_av_instance = Mock()
-                                MockAVClient.return_value = mock_av_instance
+                                mock_yf_instance = Mock()
+                                MockYFClient.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()
                                 mock_calculator_instance.compute_all.return_value = mock_metrics
@@ -119,11 +119,11 @@ def test_ticker_suffix_example():
                                 # Act: Run main
                                 stock_data_analyser.main()
                                 
-                                # Assert: Verify US market data was fetched with av_client
+                                # Assert: Verify US market data was fetched with yf_client
                                 assert mock_client_instance.fetch_all_data.called
                                 call_args = mock_client_instance.fetch_all_data.call_args
                                 assert call_args[0][0] == 'AAPL.US'
-                                assert 'av_client' in call_args[1]
+                                assert 'yf_client' in call_args[1]
                                 
                                 # Verify the ticker was processed correctly
                                 assert mock_financial_data['exchange'] == 'NASDAQ'
@@ -274,7 +274,7 @@ if __name__ == '__main__':
 
 def test_fatal_error_when_both_sources_fail():
     """
-    Test system exits with code 1 when both EODHD and Alpha Vantage fail to provide price.
+    Test system exits with code 1 when both yfinance and EODHD fail to provide price.
     Validates: Requirements 1.5
     """
     # Arrange: Mock financial data with price = 0.0 (both sources failed)
@@ -295,15 +295,15 @@ def test_fatal_error_when_both_sources_fail():
         
         with patch('sys.argv', ['stock_data_analyser.py', 'NOPRICE.US']):
             with patch('stock_data_analyser.EODHDClient') as MockClient:
-                with patch('stock_data_analyser.AlphaVantageClient') as MockAVClient:
+                with patch('stock_data_analyser.YFinanceClient') as MockYFClient:
                     with patch('builtins.print') as mock_print:
                         # Setup mocks
                         mock_client_instance = Mock()
                         mock_client_instance.fetch_all_data.return_value = mock_financial_data
                         MockClient.return_value = mock_client_instance
                         
-                        mock_av_instance = Mock()
-                        MockAVClient.return_value = mock_av_instance
+                        mock_yf_instance = Mock()
+                        MockYFClient.return_value = mock_yf_instance
                         
                         # Act & Assert: Run main and expect SystemExit
                         with pytest.raises(SystemExit) as exc_info:
@@ -321,7 +321,7 @@ def test_fatal_error_when_both_sources_fail():
                         assert 'Current price unavailable' in all_printed_text, "Expected 'Current price unavailable' in output"
                         assert "No data is better than wrong data" in all_printed_text, "Expected Graham quote in output"
                         assert 'EODHD' in all_printed_text, "Expected 'EODHD' in output"
-                        assert 'Alpha Vantage' in all_printed_text, "Expected 'Alpha Vantage' in output"
+                        assert 'yfinance' in all_printed_text, "Expected 'yfinance' in output"
 
 
 def test_system_continues_when_eodhd_has_price():
@@ -383,7 +383,7 @@ def test_system_continues_when_eodhd_has_price():
         
         with patch('sys.argv', ['stock_data_analyser.py', 'AAPL.US']):
             with patch('stock_data_analyser.EODHDClient') as MockClient:
-                with patch('stock_data_analyser.AlphaVantageClient') as MockAVClient:
+                with patch('stock_data_analyser.YFinanceClient') as MockYFClient:
                     with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
                         with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
                             with patch('stock_data_analyser.save_dossier') as mock_save:
@@ -392,8 +392,8 @@ def test_system_continues_when_eodhd_has_price():
                                 mock_client_instance.fetch_all_data.return_value = mock_financial_data
                                 MockClient.return_value = mock_client_instance
                                 
-                                mock_av_instance = Mock()
-                                MockAVClient.return_value = mock_av_instance
+                                mock_yf_instance = Mock()
+                                MockYFClient.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()
                                 mock_calculator_instance.compute_all.return_value = mock_metrics
@@ -410,17 +410,17 @@ def test_system_continues_when_eodhd_has_price():
                                 mock_save.assert_called_once()
 
 
-def test_system_continues_when_alpha_vantage_fallback_succeeds():
+def test_system_continues_when_yfinance_fallback_succeeds():
     """
-    Test system continues when EODHD fails but Alpha Vantage fallback succeeds.
+    Test system continues when yfinance provides price.
     Validates: Requirements 1.5
     """
-    # Arrange: Mock financial data with price from Alpha Vantage fallback
+    # Arrange: Mock financial data with price from yfinance
     mock_financial_data = {
         'ticker': 'YU',
         'exchange': 'LSE',
         'currency': 'GBP',
-        'price': 16.50,  # From Alpha Vantage fallback
+        'price': 16.50,  # From yfinance
         'ceo_name': 'Test CEO',
         'history': {
             '2023': {
@@ -438,7 +438,7 @@ def test_system_continues_when_alpha_vantage_fallback_succeeds():
                 'long_term_debt': 5000000
             }
         },
-        'warnings': ['Price from Alpha Vantage (EODHD price unavailable)']
+        'warnings': ['Price Source: yfinance (primary source)']
     }
     
     mock_metrics = {
@@ -469,7 +469,7 @@ def test_system_continues_when_alpha_vantage_fallback_succeeds():
         
         with patch('sys.argv', ['stock_data_analyser.py', 'YU.LSE']):
             with patch('stock_data_analyser.EODHDClient') as MockClient:
-                with patch('stock_data_analyser.AlphaVantageClient') as MockAVClient:
+                with patch('stock_data_analyser.YFinanceClient') as MockYFClient:
                     with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
                         with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
                             with patch('stock_data_analyser.save_dossier') as mock_save:
@@ -478,8 +478,8 @@ def test_system_continues_when_alpha_vantage_fallback_succeeds():
                                 mock_client_instance.fetch_all_data.return_value = mock_financial_data
                                 MockClient.return_value = mock_client_instance
                                 
-                                mock_av_instance = Mock()
-                                MockAVClient.return_value = mock_av_instance
+                                mock_yf_instance = Mock()
+                                MockYFClient.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()
                                 mock_calculator_instance.compute_all.return_value = mock_metrics
@@ -495,6 +495,6 @@ def test_system_continues_when_alpha_vantage_fallback_succeeds():
                                 # Assert: Verify dossier was saved (system continued)
                                 mock_save.assert_called_once()
                                 
-                                # Verify warning about Alpha Vantage fallback is present
-                                assert any('Alpha Vantage' in w for w in mock_financial_data['warnings']), \
-                                    "Expected warning about Alpha Vantage fallback"
+                                # Verify warning about yfinance is present
+                                assert any('yfinance' in w for w in mock_financial_data['warnings']), \
+                                    "Expected warning about yfinance"

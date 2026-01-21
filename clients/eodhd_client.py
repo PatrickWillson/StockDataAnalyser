@@ -124,13 +124,13 @@ class EODHDClient(BaseAPIClient):
                 print(f"[DEBUG] Dividend API request failed: {str(e)}")
             return None
     
-    def fetch_all_data(self, ticker: str, av_client: Optional[Any] = None) -> Dict[str, Any]:
+    def fetch_all_data(self, ticker: str, yf_client: Optional[Any] = None) -> Dict[str, Any]:
         """
         Fetch all required financial data for a ticker.
         
         Args:
             ticker: Stock ticker with exchange suffix (e.g., AAPL.US, VOD.L)
-            av_client: Optional Alpha Vantage client for price fallback
+            yf_client: Optional yfinance client for price fetching (primary source)
             
         Returns:
             Standardized dictionary containing:
@@ -280,7 +280,7 @@ class EODHDClient(BaseAPIClient):
                                                       outstanding_shares_by_year=shares_by_year)
         
         # Get current price
-        price, price_source = self.processor.get_current_price(data, av_client=av_client, ticker=ticker, warnings=warnings)
+        price, price_source, is_from_market_cap = self.processor.get_current_price(data, yf_client=yf_client, ticker=ticker, warnings=warnings)
         
         # Check if price is available
         if price == 0.0 or price_source == 'Missing':
@@ -291,22 +291,16 @@ class EODHDClient(BaseAPIClient):
             print("1. EODHD API: Price not available in fundamentals endpoint")
             print("   - This can happen for delisted stocks or data gaps")
             print("   - Check if ticker format is correct (e.g., AAPL.US, VOD.LSE)")
-            print("\n2. Alpha Vantage Fallback: Failed or not configured")
-            
-            if av_client and av_client.api_key:
-                print("   - API key is set")
-                print("   - May have hit rate limit (25 requests/day for free tier)")
-                print("   - Wait 24 hours or upgrade to premium plan")
-                print(f"   - Ticker: {ticker}")
-            else:
-                print("   - API key NOT set (add ALPHAVANTAGE_API_KEY to .env)")
-                print("   - Get free key at: https://www.alphavantage.co/support/#api-key")
-            
+            print("\n2. yfinance Fallback: Failed or unavailable")
+            print("   - yfinance may not have data for this ticker")
+            print("   - Check if ticker format is correct for yfinance")
+            print("   - Verify stock is actively trading")
+            print(f"   - Ticker: {ticker}")
             print("\n3. Possible Solutions:")
-            print("   - Wait for Alpha Vantage rate limit to reset (24 hours)")
+            print("   - Verify ticker format matches exchange requirements")
             print("   - Try a different ticker that has EODHD price data")
-            print("   - Upgrade Alpha Vantage to premium (unlimited requests)")
             print("   - Check if stock is actively trading")
+            print("   - Check exchange mapping in yfinance client")
             print("="*70)
             sys.exit(1)
         
@@ -338,12 +332,17 @@ class EODHDClient(BaseAPIClient):
             price = self.processor.apply_london_fix(price, most_recent_eps, exchange, warnings)
             price_currency = "GBP"  # After London Fix, price is in GBP
             currency_conversion_details.append("London Fix applied (GBp → GBP)")
-        elif exchange == "LSE" and currency == "GBX":
+        elif exchange == "LSE" and currency == "GBX" and not is_from_market_cap:
             # No London Fix needed, but currency is GBX, so convert to GBP
+            # Skip this if price is from MarketCap (already in GBP)
             price = price / 100
             price_currency = "GBP"
             currency_conversion_details.append("Converted GBX → GBP")
             print(f"[INFO] Converted GBX to GBP: {price:.2f} GBP")
+        elif exchange == "LSE" and is_from_market_cap:
+            # Price from MarketCap is already in GBP
+            price_currency = "GBP"
+            print(f"[INFO] Price from MarketCap is in GBP: {price:.2f} GBP")
         
         # Convert price to financials currency if they differ
         if price_currency != financials_currency:

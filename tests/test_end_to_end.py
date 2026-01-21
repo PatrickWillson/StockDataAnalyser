@@ -321,18 +321,18 @@ def test_markdown_formatting_in_dossier():
     assert len(table_rows) >= 5  # Should have at least 5 years of data
 
 
-def test_yu_lse_complete_flow_with_alpha_vantage_fallback():
+def test_yu_lse_complete_flow_with_yfinance_fallback():
     """
-    End-to-end test for YU.LSE ticker with Alpha Vantage fallback.
+    End-to-end test for YU.LSE ticker with yfinance primary source.
     
     Tests complete flow:
-    1. EODHD price missing → Alpha Vantage fallback
+    1. yfinance price fetching (primary source)
     2. EPV calculation includes loss years
     3. Dossier contains all new sections (Data Quality, Defensive Verdict, Enterprising Assessment)
     
     Requirements: All (comprehensive integration test)
     """
-    from clients.alphavantage_client import AlphaVantageClient
+    from clients.yfinance_client import YFinanceClient
     from core.financial_data_processor import FinancialDataProcessor
     
     # Arrange: Create mock data simulating YU.LSE with missing EODHD price
@@ -509,17 +509,17 @@ def test_yu_lse_complete_flow_with_alpha_vantage_fallback():
         }
     }
     
-    # Mock Alpha Vantage client that returns a price in GBX
-    mock_av_client = Mock(spec=AlphaVantageClient)
-    mock_av_client.get_price.return_value = 1650.0  # Price in GBX (Alpha Vantage returns LSE prices in pence)
+    # Mock yfinance client that returns a price in GBX
+    mock_yf_client = Mock(spec=YFinanceClient)
+    mock_yf_client.get_price.return_value = 1650.0  # Price in GBX (yfinance returns LSE prices in pence)
     
     # Act: Process data through the complete workflow
     warnings = []
     
-    # Step 1: Get price with Alpha Vantage fallback
-    price, price_source = FinancialDataProcessor.get_current_price(
+    # Step 1: Get price with yfinance
+    price, price_source, is_from_market_cap = FinancialDataProcessor.get_current_price(
         mock_data,
-        av_client=mock_av_client,
+        yf_client=mock_yf_client,
         ticker='YU.LSE',
         warnings=warnings
     )
@@ -631,10 +631,10 @@ def test_yu_lse_complete_flow_with_alpha_vantage_fallback():
     # Step 5: Generate dossier
     dossier_content = generate_dossier_content('YU.LSE', financial_data, metrics, anomalies)
     
-    # Assert: Verify Alpha Vantage fallback was used
+    # Assert: Verify yfinance was used
     assert price == 1650.0, f"Expected 1650.0 GBX, got {price}"
-    assert any("Alpha Vantage" in w for w in warnings), "Should have Alpha Vantage warning"
-    mock_av_client.get_price.assert_called_once_with('YU.LSE')
+    assert any("yfinance" in w for w in warnings), "Should have yfinance warning"
+    mock_yf_client.get_price.assert_called_once_with('YU.LSE')
     
     # Assert: Verify EPV includes loss years
     epv_result = metrics.get('epv')
@@ -657,8 +657,8 @@ def test_yu_lse_complete_flow_with_alpha_vantage_fallback():
     assert 'ENTERPRISING INVESTOR ASSESSMENT' in dossier_content, "Should have Enterprising Investor Assessment section"
     assert 'EPV - Earnings Power Value' in dossier_content, "Should have EPV methodology section"
     
-    # Assert: Verify data quality section mentions Alpha Vantage
-    assert 'Alpha Vantage' in dossier_content or 'EODHD' in dossier_content, \
+    # Assert: Verify data quality section mentions yfinance
+    assert 'yfinance' in dossier_content or 'EODHD' in dossier_content, \
         "Data quality section should mention price source"
     
     # Assert: Verify defensive verdict section has proper format
@@ -672,11 +672,11 @@ def test_yu_lse_complete_flow_with_alpha_vantage_fallback():
 
 def test_fatal_error_when_both_price_sources_fail():
     """
-    Test that system exits with fatal error when both EODHD and Alpha Vantage fail.
+    Test that system exits with fatal error when both yfinance and EODHD fail.
     
     Requirements: 1.5 (Fatal error on missing price)
     """
-    from clients.alphavantage_client import AlphaVantageClient
+    from clients.yfinance_client import YFinanceClient
     from core.financial_data_processor import FinancialDataProcessor
     
     # Arrange: Mock data with no EODHD price
@@ -686,21 +686,21 @@ def test_fatal_error_when_both_price_sources_fail():
         'Financials': {'Balance_Sheet': {'currency_symbol': 'USD'}}
     }
     
-    # Mock Alpha Vantage client that also fails
-    mock_av_client = Mock(spec=AlphaVantageClient)
-    mock_av_client.get_price.return_value = None  # Alpha Vantage also fails
+    # Mock yfinance client that also fails
+    mock_yf_client = Mock(spec=YFinanceClient)
+    mock_yf_client.get_price.return_value = None  # yfinance also fails
     
     # Act: Try to get price
     warnings = []
-    price, price_source = FinancialDataProcessor.get_current_price(
+    price, price_source, _ = FinancialDataProcessor.get_current_price(
         mock_data,
-        av_client=mock_av_client,
+        yf_client=mock_yf_client,
         ticker='TEST.US',
         warnings=warnings
     )
     
     # Assert: Should return 0.0 when both sources fail
-    assert price == 0.0, "Should return 0.0 when both EODHD and Alpha Vantage fail"
+    assert price == 0.0, "Should return 0.0 when both yfinance and EODHD fail"
     assert price_source == 'Missing', "Price source should be 'Missing'"
     
     # In the main CLI, this would trigger sys.exit(1)

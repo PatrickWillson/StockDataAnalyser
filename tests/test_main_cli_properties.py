@@ -18,7 +18,7 @@ def test_fatal_error_on_missing_price_property(ticker, exchange):
     """
     Property 8: Fatal Error on Missing Price
     
-    For any ticker where both EODHD and Alpha Vantage return no price (price = 0.0),
+    For any ticker where both yfinance and EODHD return no price (price = 0.0),
     the system should terminate with exit code 1.
     
     **Validates: Requirements 1.5**
@@ -30,7 +30,7 @@ def test_fatal_error_on_missing_price_property(ticker, exchange):
         'ticker': ticker,
         'exchange': exchange,
         'currency': 'USD',
-        'price': 0.0,  # Both EODHD and Alpha Vantage failed
+        'price': 0.0,  # Both yfinance and EODHD failed
         'ceo_name': 'Test CEO',
         'history': {},
         'warnings': []
@@ -44,15 +44,15 @@ def test_fatal_error_on_missing_price_property(ticker, exchange):
         
         with patch('sys.argv', ['stock_data_analyser.py', full_ticker]):
             with patch('stock_data_analyser.EODHDClient') as MockClient:
-                with patch('stock_data_analyser.AlphaVantageClient') as MockAVClient:
+                with patch('stock_data_analyser.YFinanceClient') as MockYFClient:
                     with patch('builtins.print'):
                         # Setup mocks
                         mock_client_instance = Mock()
                         mock_client_instance.fetch_all_data.return_value = mock_financial_data
                         MockClient.return_value = mock_client_instance
                         
-                        mock_av_instance = Mock()
-                        MockAVClient.return_value = mock_av_instance
+                        mock_yf_instance = Mock()
+                        MockYFClient.return_value = mock_yf_instance
                         
                         # System should exit with code 1
                         with pytest.raises(SystemExit) as exc_info:
@@ -84,7 +84,7 @@ def test_system_continues_with_valid_price_property(ticker, exchange, price):
         'ticker': ticker,
         'exchange': exchange,
         'currency': 'USD',
-        'price': price,  # Valid price from either EODHD or Alpha Vantage
+        'price': price,  # Valid price from either yfinance or EODHD
         'ceo_name': 'Test CEO',
         'history': {
             '2023': {
@@ -134,7 +134,7 @@ def test_system_continues_with_valid_price_property(ticker, exchange, price):
         
         with patch('sys.argv', ['stock_data_analyser.py', full_ticker]):
             with patch('stock_data_analyser.EODHDClient') as MockClient:
-                with patch('stock_data_analyser.AlphaVantageClient') as MockAVClient:
+                with patch('stock_data_analyser.YFinanceClient') as MockYFClient:
                     with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
                         with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
                             with patch('stock_data_analyser.save_dossier') as mock_save:
@@ -144,8 +144,8 @@ def test_system_continues_with_valid_price_property(ticker, exchange, price):
                                     mock_client_instance.fetch_all_data.return_value = mock_financial_data
                                     MockClient.return_value = mock_client_instance
                                     
-                                    mock_av_instance = Mock()
-                                    MockAVClient.return_value = mock_av_instance
+                                    mock_yf_instance = Mock()
+                                    MockYFClient.return_value = mock_yf_instance
                                     
                                     mock_calculator_instance = Mock()
                                     mock_calculator_instance.compute_all.return_value = mock_metrics
