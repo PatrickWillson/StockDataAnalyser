@@ -244,12 +244,25 @@ class GrahamCalculator:
         # Get sorted years (most recent first)
         sorted_years = sorted(history.keys(), reverse=True)
         
-        # Need at least 7 years per Graham's methodology
-        if len(sorted_years) < 7:
-            return f"N/A - Insufficient history ({len(sorted_years)} years, minimum 7 required)"
+        # Filter out incomplete years (years with no financial data, only dividends)
+        # Incomplete years have revenue=0, net_income=0, total_equity=0
+        complete_years = []
+        for year in sorted_years:
+            year_data = history[year]
+            has_financial_data = (
+                year_data.get('revenue', 0.0) > 0 or
+                year_data.get('net_income', 0.0) != 0 or  # Can be negative (loss)
+                year_data.get('total_equity', 0.0) > 0
+            )
+            if has_financial_data:
+                complete_years.append(year)
         
-        # Use up to 10 years
-        years_to_use = sorted_years[:10]
+        # Need at least 7 years per Graham's methodology
+        if len(complete_years) < 7:
+            return f"N/A - Insufficient history ({len(complete_years)} complete years, minimum 7 required)"
+        
+        # Use up to 10 complete years
+        years_to_use = complete_years[:10]
         
         # Calculate average net income INCLUDING loss years
         net_incomes = []

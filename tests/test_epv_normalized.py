@@ -133,7 +133,7 @@ def test_epv_normalized_with_6_years_insufficient_history():
     # Assert: Should return N/A message
     assert isinstance(result, str), "Should return string for insufficient data"
     assert "Insufficient history" in result
-    assert "6 years" in result
+    assert "6 complete years" in result
     assert "minimum 7" in result
 
 

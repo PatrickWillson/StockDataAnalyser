@@ -222,7 +222,7 @@ class FinancialDataProcessor:
                 result[year] = {
                     'total_equity': self.sanitize_value(year_data.get('totalStockholderEquity')),
                     'intangible_assets': self.sanitize_value(year_data.get('intangibleAssets')),
-                    'goodwill': self.sanitize_value(year_data.get('goodwill')),
+                    'goodwill': self.sanitize_value(year_data.get('goodWill')),
                     'current_assets': self.sanitize_value(year_data.get('totalCurrentAssets')),
                     'current_liabilities': self.sanitize_value(year_data.get('totalCurrentLiabilities')),
                     'total_liabilities': self.sanitize_value(year_data.get('totalLiab')),
