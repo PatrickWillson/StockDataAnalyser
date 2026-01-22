@@ -272,3 +272,39 @@ def test_convert_with_negative_amount():
     
     assert amount == -130.0
     assert success is True
+
+
+def test_convert_gbx_to_gbp():
+    """Test GBX to GBP conversion (pence to pounds)."""
+    converter = CurrencyConverter()
+    
+    amount, success = converter.convert(1650.0, 'GBX', 'GBP')
+    
+    assert amount == 16.50  # 1650 / 100
+    assert success is True
+    assert len(converter.conversion_history) == 1
+    assert 'GBX → GBP (÷100)' in converter.conversion_history[0]
+
+
+def test_convert_gbp_to_gbx():
+    """Test GBP to GBX conversion (pounds to pence)."""
+    converter = CurrencyConverter()
+    
+    amount, success = converter.convert(16.50, 'GBP', 'GBX')
+    
+    assert amount == 1650.0  # 16.50 * 100
+    assert success is True
+    assert len(converter.conversion_history) == 1
+    assert 'GBP → GBX (×100)' in converter.conversion_history[0]
+
+
+def test_convert_gbx_to_gbx():
+    """Test GBX to GBX conversion (same currency)."""
+    converter = CurrencyConverter()
+    
+    amount, success = converter.convert(1650.0, 'GBX', 'GBX')
+    
+    assert amount == 1650.0  # No conversion
+    assert success is True
+    assert len(converter.conversion_history) == 0  # No conversion needed
+

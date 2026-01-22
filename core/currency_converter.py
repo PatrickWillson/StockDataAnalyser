@@ -50,6 +50,19 @@ class CurrencyConverter:
         if from_currency == to_currency:
             return amount, True
         
+        # Special handling for GBX ↔ GBP conversion
+        # GBX (pence) is not a real currency, it's just GBP × 100
+        if from_currency == "GBX" and to_currency == "GBP":
+            converted_amount = amount / 100
+            self.conversion_history.append("GBX → GBP (÷100)")
+            logger.debug(f"Converted {amount:.2f} GBX to {converted_amount:.2f} GBP")
+            return converted_amount, True
+        elif from_currency == "GBP" and to_currency == "GBX":
+            converted_amount = amount * 100
+            self.conversion_history.append("GBP → GBX (×100)")
+            logger.debug(f"Converted {amount:.2f} GBP to {converted_amount:.2f} GBX")
+            return converted_amount, True
+        
         # Get FX rate
         fx_rate = self.fx_client.get_rate(from_currency, to_currency)
         

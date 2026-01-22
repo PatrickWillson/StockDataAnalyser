@@ -482,11 +482,25 @@ class FinancialDataProcessor:
         # Include all years from financial statements AND dividend history
         all_years = set(balance_sheet.keys()) | set(income_statement.keys())
         
+        # Detect fiscal year end from existing financial statements
+        # This handles companies with non-December fiscal years (e.g., MSFT uses June 30)
+        fiscal_year_end = "-12-31"  # Default to December 31
+        if balance_sheet or income_statement:
+            # Get the most recent date from either source
+            sample_dates = list(balance_sheet.keys()) + list(income_statement.keys())
+            if sample_dates:
+                # Extract month-day from most recent date (e.g., "2025-06-30" -> "-06-30")
+                most_recent = sorted(sample_dates, reverse=True)[0]
+                if '-' in most_recent:
+                    parts = most_recent.split('-')
+                    if len(parts) == 3:
+                        fiscal_year_end = f"-{parts[1]}-{parts[2]}"
+        
         # Add years from dividend history that might not have financial statements yet
         for div_year in dividend_history.keys():
-            # Convert year-only format to date format for consistency
+            # Convert year-only format to date format using detected fiscal year end
             if '-' not in div_year:
-                div_year_date = f"{div_year}-12-31"
+                div_year_date = f"{div_year}{fiscal_year_end}"
                 all_years.add(div_year_date)
         
         result = {}

@@ -241,8 +241,21 @@ def test_yfinance_price_currency_conversion_preserved(price, price_currency, fin
         # No conversion needed
         assert converted_price == price
         assert success
+    elif (price_currency == 'GBX' and financials_currency == 'GBP') or \
+         (price_currency == 'GBP' and financials_currency == 'GBX'):
+        # Special case: GBX ↔ GBP conversion (not using FX rate)
+        if price_currency == 'GBX' and financials_currency == 'GBP':
+            expected_price = price / 100
+        else:  # GBP to GBX
+            expected_price = price * 100
+        assert abs(converted_price - expected_price) < 0.01
+        assert success
+        
+        # Check conversion history
+        warning = converter.get_consolidated_warning()
+        assert 'GBX' in warning or 'GBP' in warning
     else:
-        # Conversion should be applied
+        # Conversion should be applied using FX rate
         expected_price = price * fx_rate
         assert abs(converted_price - expected_price) < 0.01
         assert success

@@ -185,17 +185,20 @@ class ExecutiveSummarySection(DossierSection):
         if week_52_high > 0 and week_52_low > 0:
             # Convert to unified currency if needed
             if original_stock_currency != unified_currency:
-                # Get FX rate for conversion
-                from clients.fx_client import FXClient
-                fx_client = FXClient()
-                fx_rate = fx_client.get_rate(original_stock_currency, unified_currency)
-                if fx_rate:
+                # Use CurrencyConverter for proper GBX/GBP handling
+                from core.currency_converter import CurrencyConverter
+                converter = CurrencyConverter()
+                
+                high_converted, high_success = converter.convert(week_52_high, original_stock_currency, unified_currency)
+                low_converted, low_success = converter.convert(week_52_low, original_stock_currency, unified_currency)
+                
+                if high_success and low_success:
                     high_display = format_price_display(week_52_high, original_stock_currency, 
-                                                       unified_currency, week_52_high * fx_rate)
+                                                       unified_currency, high_converted)
                     low_display = format_price_display(week_52_low, original_stock_currency, 
-                                                      unified_currency, week_52_low * fx_rate)
+                                                      unified_currency, low_converted)
                 else:
-                    # Fallback if FX rate unavailable
+                    # Fallback if conversion unavailable
                     high_display = format_price_display(week_52_high, original_stock_currency, 
                                                        unified_currency)
                     low_display = format_price_display(week_52_low, original_stock_currency, 
