@@ -1,8 +1,8 @@
 """
 Live FX Client Test (Optional - requires internet connection)
 
-This test makes real API calls to frankfurter.app to verify the integration works.
-Run manually with: pytest tests/test_fx_client_live.py -v
+This test makes real API calls to yfinance to verify the integration works.
+Run manually with: pytest tests/test_fx_client_live.py -v -s
 """
 
 import pytest
@@ -11,8 +11,8 @@ from clients.fx_client import FXClient
 
 @pytest.mark.skip(reason="Live API test - run manually when needed")
 def test_live_fx_rate_eur_to_usd():
-    """Test fetching live EUR to USD rate."""
-    client = FXClient()
+    """Test fetching live EUR to USD rate from yfinance."""
+    client = FXClient(debug=True)
     rate = client.get_rate('EUR', 'USD')
     
     # Rate should be a positive number (typically between 1.0 and 1.3)
@@ -24,8 +24,8 @@ def test_live_fx_rate_eur_to_usd():
 
 @pytest.mark.skip(reason="Live API test - run manually when needed")
 def test_live_fx_rate_gbp_to_usd():
-    """Test fetching live GBP to USD rate."""
-    client = FXClient()
+    """Test fetching live GBP to USD rate from yfinance."""
+    client = FXClient(debug=True)
     rate = client.get_rate('GBP', 'USD')
     
     # Rate should be a positive number (typically between 1.2 and 1.4)
@@ -36,9 +36,35 @@ def test_live_fx_rate_gbp_to_usd():
 
 
 @pytest.mark.skip(reason="Live API test - run manually when needed")
+def test_live_fx_rate_jpy_to_usd():
+    """Test fetching live JPY to USD rate from yfinance."""
+    client = FXClient(debug=True)
+    rate = client.get_rate('JPY', 'USD')
+    
+    # Rate should be a positive number (typically between 0.006 and 0.010)
+    assert rate is not None
+    assert rate > 0
+    assert 0.005 < rate < 0.015  # Reasonable range for JPY/USD
+    print(f"Live JPY/USD rate: {rate}")
+
+
+@pytest.mark.skip(reason="Live API test - run manually when needed")
+def test_live_fx_rate_cad_to_usd():
+    """Test fetching live CAD to USD rate from yfinance."""
+    client = FXClient(debug=True)
+    rate = client.get_rate('CAD', 'USD')
+    
+    # Rate should be a positive number (typically between 0.7 and 0.8)
+    assert rate is not None
+    assert rate > 0
+    assert 0.6 < rate < 0.9  # Reasonable range for CAD/USD
+    print(f"Live CAD/USD rate: {rate}")
+
+
+@pytest.mark.skip(reason="Live API test - run manually when needed")
 def test_live_fx_caching():
     """Test that caching works with live API."""
-    client = FXClient()
+    client = FXClient(debug=True)
     
     # First call
     rate1 = client.get_rate('EUR', 'USD')
@@ -48,6 +74,26 @@ def test_live_fx_caching():
     
     assert rate1 == rate2
     print(f"Cached rate matches: {rate1}")
+
+
+@pytest.mark.skip(reason="Live API test - run manually when needed")
+def test_live_fx_multiple_pairs():
+    """Test fetching multiple FX pairs."""
+    client = FXClient(debug=True)
+    
+    pairs = [
+        ('EUR', 'USD'),
+        ('GBP', 'USD'),
+        ('JPY', 'USD'),
+        ('CAD', 'USD'),
+        ('AUD', 'USD'),
+    ]
+    
+    for from_curr, to_curr in pairs:
+        rate = client.get_rate(from_curr, to_curr)
+        assert rate is not None
+        assert rate > 0
+        print(f"{from_curr}/{to_curr}: {rate}")
 
 
 if __name__ == '__main__':

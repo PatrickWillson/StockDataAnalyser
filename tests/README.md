@@ -79,8 +79,7 @@ tests/
 All tests use mocks - no network requests are made:
 
 - **EODHD API**: Mocked with `unittest.mock.patch`
-- **yfinance**: Mocked Ticker objects
-- **Frankfurter FX**: Mocked HTTP responses
+- **yfinance**: Mocked Ticker objects for both prices and FX rates
 
 ### ✅ Fast Execution
 
