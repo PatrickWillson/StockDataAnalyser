@@ -95,6 +95,9 @@ class MethodologySection:
         # P/E Ratio explanation
         self._add_pe_ratio_explanation(lines, unified_currency, most_recent_eps)
         
+        # Profitability Metrics explanation
+        self._add_profitability_metrics_explanation(lines)
+        
         # Graham Number explanation
         self._add_graham_number_explanation(lines, unified_currency)
         
@@ -148,6 +151,28 @@ class MethodologySection:
             lines.append(f"- **P/E Ratio ({pe_ratio:.2f})**: Current Price / Most Recent Annual EPS")
             lines.append(f"  - Calculated from audited financials, not API pre-calculated ratios")
             lines.append(f"  - EPS: {eps_display} (Net Income / Shares Outstanding)")
+    
+    def _add_profitability_metrics_explanation(self, lines: List[str]) -> None:
+        """Add profitability metrics calculation explanation.
+        
+        Args:
+            lines: List to append lines to
+        """
+        lines.append("- **Profitability Metrics (ROE, ROA, Profit Margin)**:")
+        lines.append("  - **ROE (Return on Equity)**: Net Income / Total Stockholder Equity")
+        lines.append("    - Calculated from most recent annual audited data")
+        lines.append("    - Measures how efficiently company uses shareholder equity to generate profit")
+        lines.append("  - **ROA (Return on Assets)**: Net Income / Total Assets")
+        lines.append("    - Calculated from most recent annual audited data")
+        lines.append("    - Measures how efficiently company uses all assets to generate profit")
+        lines.append("  - **Profit Margin**: Net Income / Revenue")
+        lines.append("    - Calculated from most recent annual audited data")
+        lines.append("    - Measures what percentage of revenue becomes profit")
+        lines.append("  - **Why Annual Data vs TTM:**")
+        lines.append("    - Annual data comes from audited financial statements (verified)")
+        lines.append("    - TTM data may include estimates and unaudited quarters")
+        lines.append("    - Consistency: All Graham metrics (P/E, P/B, BVPS, ROE, ROA, Margin) use same fiscal year")
+        lines.append("    - Comparability: Annual data allows year-over-year comparison of audited results")
     
     def _add_graham_number_explanation(self, lines: List[str], unified_currency: str) -> None:
         """Add Graham Number formula explanation.

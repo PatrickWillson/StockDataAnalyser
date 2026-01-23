@@ -436,12 +436,10 @@ class RiskFactorsSection(DossierSection):
             lines.append(f"- **Price Data**: Using {price_source} (primary source unavailable)")
             lines.append(f"  - May have timing differences or slight inaccuracies")
         
-        # Institutional ownership discrepancy
+        # Institutional ownership verification
         institutional = self.financial_data.get('institutional_ownership', 0)
         if institutional > 20:
             lines.append(f"- **Institutional Ownership**: {institutional:.1f}% (verify with regulatory filings)")
-            lines.append(f"  - Independent sources report significantly lower figures (~1.4%)")
-            lines.append(f"  - Discrepancy may reflect different definitions or reporting periods")
         
         # 52-week range staleness
         lines.append(f"- **52-Week Range**: Verify with live sources before trading")
@@ -773,9 +771,7 @@ class RiskFactorsSection(DossierSection):
         institutional = self.financial_data.get('institutional_ownership', 0)
         if institutional > 0:
             if institutional > 20:
-                lines.append(f"- **Institutional Ownership: {institutional:.2f}%**")
-                lines.append(f"  - ⚠️ Verify with regulatory filings - independent sources report significantly lower figures (~1.4%)")
-                lines.append(f"  - Discrepancy may reflect different definitions or reporting periods")
+                lines.append(f"- **Institutional Ownership: {institutional:.2f}%** - Verify with regulatory filings")
             else:
                 lines.append(f"- **Institutional Ownership: {institutional:.2f}%** - Verify with regulatory filings")
         

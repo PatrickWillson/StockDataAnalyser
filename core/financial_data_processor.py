@@ -227,6 +227,7 @@ class FinancialDataProcessor:
                     'current_liabilities': self.sanitize_value(year_data.get('totalCurrentLiabilities')),
                     'total_liabilities': self.sanitize_value(year_data.get('totalLiab')),
                     'long_term_debt': self.sanitize_value(year_data.get('longTermDebt')),
+                    'total_assets': self.sanitize_value(year_data.get('totalAssets')),
                 }
         except (KeyError, TypeError, AttributeError) as e:
             self._log(f"[DEBUG] Error parsing Balance Sheet: {e}")
@@ -547,6 +548,7 @@ class FinancialDataProcessor:
                 'current_liabilities': bs_data.get('current_liabilities', 0.0),
                 'total_liabilities': bs_data.get('total_liabilities', 0.0),
                 'long_term_debt': bs_data.get('long_term_debt', 0.0),
+                'total_assets': bs_data.get('total_assets', 0.0),
             }
         
         return result
@@ -592,3 +594,96 @@ class FinancialDataProcessor:
                         break
                 else:
                     gap_count = 0
+
+    @staticmethod
+    def calculate_profitability_metrics(
+        history: Dict[str, Dict[str, float]], 
+        debug: bool = False
+    ) -> tuple[float, float, float, Optional[str]]:
+        """
+        Calculate profitability metrics from most recent annual data.
+        
+        Uses the same "most recent year" logic as P/E, P/B, and BVPS calculations:
+        - Find most recent year with financial data (revenue > 0 OR net_income != 0 OR total_equity > 0)
+        - Extract net_income, total_equity, total_assets, revenue from that year
+        - Calculate ROE, ROA, Profit Margin
+        - Return 0.0 for any metric that cannot be calculated (missing data or zero denominator)
+        
+        Args:
+            history: Financial history dictionary (from merge_financial_data)
+            debug: Enable debug logging
+            
+        Returns:
+            Tuple of (roe, roa, profit_margin, calculation_year)
+            - roe: Return on Equity (0.0 to 1.0, or 0.0 if cannot calculate)
+            - roa: Return on Assets (0.0 to 1.0, or 0.0 if cannot calculate)
+            - profit_margin: Profit Margin (0.0 to 1.0, or 0.0 if cannot calculate)
+            - calculation_year: Fiscal year used (e.g., "2025-06-30"), or None if no data
+        """
+        if not history:
+            if debug:
+                logger.debug("No financial history available for profitability calculations")
+            return (0.0, 0.0, 0.0, None)
+        
+        # Find most recent year with financial data (same logic as P/B calculation)
+        sorted_years = sorted(history.keys(), reverse=True)
+        most_recent_year = None
+        
+        for year in sorted_years:
+            year_data = history[year]
+            revenue = year_data.get('revenue', 0.0)
+            net_income = year_data.get('net_income', 0.0)
+            total_equity = year_data.get('total_equity', 0.0)
+            
+            # Check if this year has any financial data
+            if revenue > 0 or net_income != 0 or total_equity > 0:
+                most_recent_year = year
+                break
+        
+        if not most_recent_year:
+            if debug:
+                logger.debug("No complete annual financial data available for profitability calculations")
+            return (0.0, 0.0, 0.0, None)
+        
+        # Extract values from most recent year
+        year_data = history[most_recent_year]
+        net_income = year_data.get('net_income', 0.0)
+        total_equity = year_data.get('total_equity', 0.0)
+        total_assets = year_data.get('total_assets', 0.0)
+        revenue = year_data.get('revenue', 0.0)
+        
+        # Calculate ROE with zero-division protection
+        if total_equity > 0:
+            roe = net_income / total_equity
+        else:
+            roe = 0.0
+            if debug:
+                logger.debug("ROE cannot be calculated - total_equity is 0")
+        
+        # Calculate ROA with zero-division protection
+        if total_assets > 0:
+            roa = net_income / total_assets
+        else:
+            roa = 0.0
+            if debug:
+                logger.debug("ROA cannot be calculated - total_assets is 0")
+        
+        # Calculate Profit Margin with zero-division protection
+        if revenue > 0:
+            profit_margin = net_income / revenue
+        else:
+            profit_margin = 0.0
+            if debug:
+                logger.debug("Profit Margin cannot be calculated - revenue is 0")
+        
+        if debug:
+            logger.debug(f"Calculated profitability metrics from {most_recent_year}:")
+            logger.debug(f"  Net Income: ${net_income:,.0f}")
+            logger.debug(f"  Total Equity: ${total_equity:,.0f}")
+            logger.debug(f"  Total Assets: ${total_assets:,.0f}")
+            logger.debug(f"  Revenue: ${revenue:,.0f}")
+            logger.debug(f"  ROE: {roe*100:.2f}%")
+            logger.debug(f"  ROA: {roa*100:.2f}%")
+            logger.debug(f"  Profit Margin: {profit_margin*100:.2f}%")
+        
+        return (roe, roa, profit_margin, most_recent_year)

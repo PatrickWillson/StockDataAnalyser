@@ -65,8 +65,6 @@
 
 ### Data Quality Risks:
 - **Institutional Ownership**: 49.2% (verify with regulatory filings)
-  - Independent sources report significantly lower figures (~1.4%)
-  - Discrepancy may reflect different definitions or reporting periods
 - **52-Week Range**: Verify with live sources before trading
   - API data may be stale or use different calculation periods
 
@@ -102,9 +100,7 @@
   - Current Price: 232.69 CAD
 
 ### Data Quality Risk:
-- **Institutional Ownership: 49.18%**
-  - ⚠️ Verify with regulatory filings - independent sources report significantly lower figures (~1.4%)
-  - Discrepancy may reflect different definitions or reporting periods
+- **Institutional Ownership: 49.18%** - Verify with regulatory filings
 
 **Graham's Principle on Risk**: *"The essence of investment management is the management of risks, not the management of returns. Returns are the reward for taking risk, but the risk must be measured and managed."*
 

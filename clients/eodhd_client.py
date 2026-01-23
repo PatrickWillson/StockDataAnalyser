@@ -204,7 +204,8 @@ class EODHDClient(BaseAPIClient):
         
         # Extract valuation data
         valuation = data.get('Valuation', {})
-        price_to_book = valuation.get('PriceBookMRQ', 0.0)
+        # Note: We calculate P/B ratio ourselves instead of using PriceBookMRQ
+        # API value is often stale and uses quarterly data vs our annual audited data
         enterprise_value = valuation.get('EnterpriseValue', 0.0)
         
         # Extract ownership data
@@ -393,12 +394,14 @@ class EODHDClient(BaseAPIClient):
                     forward_dividend_rate = converted_fwd_rate
         
         # Recalculate P/E ratio using converted price and most recent EPS
+        pe_ratio = 0.0  # Initialize to 0
         if most_recent_eps > 0:
             pe_ratio = price / most_recent_eps
             logger.info(f"Recalculated P/E ratio: {pe_ratio:.2f} (Price: {price:.2f} / EPS: {most_recent_eps:.2f})")
         
-        # Calculate BVPS from balance sheet for validation
+        # Calculate BVPS and P/B ratio from balance sheet
         calculated_bvps = 0.0
+        calculated_pb = 0.0
         if history:
             sorted_years = sorted(history.keys(), reverse=True)
             # Find most recent year with financial data
@@ -417,6 +420,31 @@ class EODHDClient(BaseAPIClient):
                 if year_shares > 0:
                     calculated_bvps = total_equity / year_shares
                     logger.info(f"Calculated BVPS: {calculated_bvps:.2f} (Equity: {total_equity:,.0f} / Shares: {year_shares:,.0f})")
+                    
+                    # Calculate P/B ratio using our calculated BVPS and converted price
+                    if calculated_bvps > 0 and price > 0:
+                        calculated_pb = price / calculated_bvps
+                        logger.info(f"Calculated P/B ratio: {calculated_pb:.2f} (Price: {price:.2f} / BVPS: {calculated_bvps:.2f})")
+        
+        # Use calculated P/B ratio (based on audited annual data)
+        price_to_book = calculated_pb
+        
+        # Calculate profitability metrics from annual data
+        calculated_roe, calculated_roa, calculated_profit_margin, calc_year = \
+            self.processor.calculate_profitability_metrics(history, debug=self.debug)
+        
+        if calc_year:
+            logger.info(f"Calculated profitability metrics from {calc_year}:")
+            logger.info(f"  ROE: {calculated_roe*100:.2f}% (Net Income / Total Equity)")
+            logger.info(f"  ROA: {calculated_roa*100:.2f}% (Net Income / Total Assets)")
+            logger.info(f"  Profit Margin: {calculated_profit_margin*100:.2f}% (Net Income / Revenue)")
+        else:
+            logger.warning("Could not calculate profitability metrics - no complete annual data")
+        
+        # Replace API TTM values with calculated annual values
+        roe = calculated_roe
+        roa = calculated_roa
+        profit_margin = calculated_profit_margin
         
         # Add consolidated currency conversion warning if any conversions were performed
         consolidated_warning = self.currency_converter.get_consolidated_warning()
@@ -425,7 +453,7 @@ class EODHDClient(BaseAPIClient):
         
         # Cross-validate calculated metrics against API values
         logger.info("Cross-validating metrics...")
-        validation_warnings = self._cross_validate_metrics(data, pe_ratio, calculated_bvps)
+        validation_warnings = self._cross_validate_metrics(data, pe_ratio, calculated_bvps, calculated_roe, calculated_roa, calculated_profit_margin)
         warnings.extend(validation_warnings)
         
         # Validate data quality
@@ -512,7 +540,8 @@ class EODHDClient(BaseAPIClient):
             'api_last_update': general.get('UpdatedAt', 'Unknown')
         }
 
-    def _cross_validate_metrics(self, data: Dict[str, Any], calculated_pe: float, calculated_bvps: float) -> List[str]:
+    def _cross_validate_metrics(self, data: Dict[str, Any], calculated_pe: float, calculated_bvps: float, 
+                                calculated_roe: float, calculated_roa: float, calculated_profit_margin: float) -> List[str]:
         """
         Cross-validate calculated metrics against API's pre-calculated values.
         Flag significant discrepancies for user review.
@@ -521,6 +550,9 @@ class EODHDClient(BaseAPIClient):
             data: Raw API response data
             calculated_pe: P/E ratio calculated from financials
             calculated_bvps: Book value per share calculated from balance sheet
+            calculated_roe: Return on Equity calculated from annual data
+            calculated_roa: Return on Assets calculated from annual data
+            calculated_profit_margin: Profit Margin calculated from annual data
         
         Returns:
             List of validation warnings
@@ -562,7 +594,13 @@ class EODHDClient(BaseAPIClient):
                 logger.info(f"Share count difference: Financial statements {outstanding_shares_annual:,.0f} vs Market data {shares_stats:,.0f}")
         
         # Check P/E ratio
-        api_pe = data.get('Highlights', {}).get('PERatio', 0)
+        api_pe = data.get('Highlights', {}).get('PERatio')
+        
+        # Handle None values - convert to 0 for comparison
+        if api_pe is None:
+            api_pe = 0
+        if calculated_pe is None:
+            calculated_pe = 0
         
         if api_pe > 0 and calculated_pe > 0:
             pe_diff_pct = abs(calculated_pe - api_pe) / api_pe * 100
@@ -592,11 +630,17 @@ class EODHDClient(BaseAPIClient):
         last_update = data.get('General', {}).get('UpdatedAt', '')
         if last_update:
             try:
-                from datetime import datetime, timedelta
+                from datetime import datetime, timedelta, timezone
                 # Handle ISO format with or without 'Z'
                 update_date_str = last_update.replace('Z', '+00:00')
                 update_date = datetime.fromisoformat(update_date_str)
-                days_old = (datetime.now(update_date.tzinfo) - update_date).days
+                
+                # Ensure both datetimes are timezone-aware for comparison
+                if update_date.tzinfo is None:
+                    update_date = update_date.replace(tzinfo=timezone.utc)
+                
+                now = datetime.now(timezone.utc)
+                days_old = (now - update_date).days
                 
                 if days_old > 7:
                     warnings.append(
@@ -606,5 +650,51 @@ class EODHDClient(BaseAPIClient):
                     logger.warning(f"API data is {days_old} days old")
             except Exception as e:
                 logger.debug(f"Could not parse UpdatedAt date: {e}")
+        
+        # Validate profitability metrics
+        api_roe = data.get('Highlights', {}).get('ReturnOnEquityTTM')
+        api_roa = data.get('Highlights', {}).get('ReturnOnAssetsTTM')
+        api_profit_margin = data.get('Highlights', {}).get('ProfitMargin')
+        
+        # Handle None values
+        if api_roe is None:
+            api_roe = 0
+        if api_roa is None:
+            api_roa = 0
+        if api_profit_margin is None:
+            api_profit_margin = 0
+        
+        # Validate ROE
+        if api_roe > 0 and calculated_roe > 0:
+            roe_diff_pct = abs(calculated_roe - api_roe) / api_roe * 100
+            if roe_diff_pct > 20:
+                warnings.append(
+                    f"[VALIDATION] ROE Difference: API shows {api_roe*100:.2f}% (TTM basis), "
+                    f"calculated {calculated_roe*100:.2f}% (annual basis) ({roe_diff_pct:.1f}% difference). "
+                    f"Using annual data from audited financials per Graham methodology."
+                )
+                logger.info(f"ROE difference: API {api_roe*100:.2f}% (TTM) vs Calculated {calculated_roe*100:.2f}% (Annual)")
+        
+        # Validate ROA
+        if api_roa > 0 and calculated_roa > 0:
+            roa_diff_pct = abs(calculated_roa - api_roa) / api_roa * 100
+            if roa_diff_pct > 20:
+                warnings.append(
+                    f"[VALIDATION] ROA Difference: API shows {api_roa*100:.2f}% (TTM basis), "
+                    f"calculated {calculated_roa*100:.2f}% (annual basis) ({roa_diff_pct:.1f}% difference). "
+                    f"Using annual data from audited financials per Graham methodology."
+                )
+                logger.info(f"ROA difference: API {api_roa*100:.2f}% (TTM) vs Calculated {calculated_roa*100:.2f}% (Annual)")
+        
+        # Validate Profit Margin
+        if api_profit_margin > 0 and calculated_profit_margin > 0:
+            margin_diff_pct = abs(calculated_profit_margin - api_profit_margin) / api_profit_margin * 100
+            if margin_diff_pct > 20:
+                warnings.append(
+                    f"[VALIDATION] Profit Margin Difference: API shows {api_profit_margin*100:.2f}% (TTM basis), "
+                    f"calculated {calculated_profit_margin*100:.2f}% (annual basis) ({margin_diff_pct:.1f}% difference). "
+                    f"Using annual data from audited financials per Graham methodology."
+                )
+                logger.info(f"Profit Margin difference: API {api_profit_margin*100:.2f}% (TTM) vs Calculated {calculated_profit_margin*100:.2f}% (Annual)")
         
         return warnings

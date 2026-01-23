@@ -225,7 +225,8 @@ class YFinanceClient:
             ticker_obj = yf.Ticker(yf_ticker)
             
             # Use fast_info for better performance
-            price = ticker_obj.fast_info.get('last_price')
+            # Note: yfinance 1.0+ uses 'lastPrice' (camelCase), older versions used 'last_price'
+            price = ticker_obj.fast_info.get('lastPrice') or ticker_obj.fast_info.get('last_price')
             
             if price is None:
                 if self.debug:

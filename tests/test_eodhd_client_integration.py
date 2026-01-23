@@ -145,8 +145,9 @@ def test_london_fix_integration():
         
         result = client.fetch_all_data('VOD.L')
         
-        # Price should be converted to USD (0.8 GBP * 1.3399 ≈ 1.07 USD)
-        assert abs(result['price'] - 1.07) < 0.01
+        # Price should be converted to USD (0.8 GBP * FX rate)
+        # Allow for FX rate fluctuations (0.8 GBP * 1.30-1.40 = 1.04-1.12 USD)
+        assert 1.04 <= result['price'] <= 1.12, f"Expected price between 1.04-1.12 USD, got {result['price']}"
         
         # Warning should be present (now in consolidated message)
         assert any('Currency Conversions' in w or 'London Fix' in w for w in result['warnings'])
