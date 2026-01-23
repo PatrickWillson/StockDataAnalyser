@@ -260,34 +260,49 @@ class TestExecutiveSummarySection:
         assert len(dividend_lines) == 1
         assert "Declared (Dividend API)" in dividend_lines[0]
     
-    def test_dividend_display_forward_rate_source(self):
-        """Test dividend display with forward rate source and warning."""
+    def test_dividend_display_forward_rate_only(self):
+        """Test dividend display when only forward rate is available (no historical data)."""
         financial_data = self.create_test_financial_data()
-        financial_data['dividend_sources'] = {'2023': 'forward_rate'}
+        financial_data['forward_dividend_rate'] = 1.00
+        # Remove historical dividend data to simulate no historical dividends
+        financial_data['history']['2023-12-31']['dividend'] = 0.0
+        financial_data['dividend_sources'] = {}
         
         metrics = self.create_test_metrics()
         
         section = ExecutiveSummarySection(financial_data, metrics)
         lines = section.generate()
         
-        dividend_lines = [line for line in lines if "Trailing Dividend:" in line]
-        assert len(dividend_lines) == 1
-        assert "Declared (Forward Rate)" in dividend_lines[0]
+        # Should show "Forward Annual Dividend" (not "Trailing") when no historical data
+        forward_lines = [line for line in lines if "Forward Annual Dividend:" in line]
+        assert len(forward_lines) == 1
         
-        # Check for warning
-        warning_lines = [line for line in lines if "⚠️" in line and "forward declared rate" in line]
+        # Check for warning about no historical data
+        warning_lines = [line for line in lines if "⚠️" in line and "No historical dividend data" in line]
         assert len(warning_lines) == 1
     
-    def test_dividend_display_incomplete_year(self):
-        """Test dividend display with incomplete year flag."""
+    def test_dividend_display_incomplete_year_skipped(self):
+        """Test that incomplete years are skipped and previous complete year is used for trailing dividend."""
         financial_data = self.create_test_financial_data()
-        financial_data['dividend_sources'] = {'2023': 'dividend_api'}
-        # Make year incomplete by removing financial data
+        financial_data['dividend_sources'] = {'2023': 'dividend_api', '2022': 'dividend_api'}
+        financial_data['forward_dividend_rate'] = 1.04
+        
+        # Make 2023 incomplete (has dividend but no financial data)
         financial_data['history']['2023-12-31'] = {
-            'dividend': 0.96,
+            'dividend': 0.50,  # Partial year dividend
             'revenue': 0.0,
             'net_income': 0.0,
-            'total_equity': 0.0
+            'total_equity': 0.0,
+            'eps': 0.0
+        }
+        
+        # 2022 is complete
+        financial_data['history']['2022-12-31'] = {
+            'dividend': 0.96,  # Full year dividend
+            'revenue': 100000000.0,
+            'net_income': 10000000.0,
+            'total_equity': 50000000.0,
+            'eps': 2.50
         }
         
         metrics = self.create_test_metrics()
@@ -295,9 +310,15 @@ class TestExecutiveSummarySection:
         section = ExecutiveSummarySection(financial_data, metrics)
         lines = section.generate()
         
+        # Should show trailing dividend from 2022 (complete year), not 2023 (incomplete)
         dividend_lines = [line for line in lines if "Trailing Dividend:" in line]
         assert len(dividend_lines) == 1
-        assert "[2023 - Incomplete Year]" in dividend_lines[0]
+        assert "[2022]" in dividend_lines[0]
+        assert "0.96" in dividend_lines[0]  # Should use 2022's dividend
+        
+        # Should also show forward rate
+        forward_lines = [line for line in lines if "Forward Rate:" in line]
+        assert len(forward_lines) == 1
     
     def test_dividend_display_both_sources(self):
         """Test dividend display when both cash flow and forward rate available."""
@@ -326,6 +347,9 @@ class TestExecutiveSummarySection:
         """Test dividend display when no dividend is paid."""
         financial_data = self.create_test_financial_data()
         financial_data['forward_dividend_rate'] = None
+        # Remove historical dividend to simulate no dividends
+        financial_data['history']['2023-12-31']['dividend'] = 0.0
+        financial_data['dividend_sources'] = {}
         
         metrics = self.create_test_metrics()
         
@@ -333,7 +357,7 @@ class TestExecutiveSummarySection:
         lines = section.generate()
         
         # Should not include dividend line
-        dividend_lines = [line for line in lines if "Trailing Dividend:" in line]
+        dividend_lines = [line for line in lines if "Trailing Dividend:" in line or "Forward Annual Dividend:" in line]
         assert len(dividend_lines) == 0
     
     def test_valuation_ratios_display(self):

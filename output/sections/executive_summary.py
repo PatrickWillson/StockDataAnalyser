@@ -224,69 +224,65 @@ class ExecutiveSummarySection(DossierSection):
         dividend_source = self.financial_data.get('dividend_source', 'Unknown')
         source_indicators = self.financial_data.get('dividend_sources', {})
         
-        # Get most recent year dividend information
+        # Get most recent COMPLETE year dividend information
+        # Trailing dividend should be from the last complete fiscal year, not an incomplete year
         history = self.financial_data.get('history', {})
-        most_recent_year = None
+        most_recent_complete_year = None
         most_recent_div_source = None
         most_recent_div_amount = None
-        most_recent_year_incomplete = False
         
         if history:
             sorted_years = sorted(history.keys(), reverse=True)
-            if sorted_years:
-                most_recent_year = sorted_years[0].split('-')[0]
-                most_recent_div_source = source_indicators.get(most_recent_year, 'unknown')
-                most_recent_div_amount = history[sorted_years[0]].get('dividend', 0.0)
-                
-                # Check if most recent year has complete financial data
-                year_data = history[sorted_years[0]]
+            
+            # Find the most recent year with complete financial data
+            for year_key in sorted_years:
+                year_data = history[year_key]
                 has_financial_data = (
                     year_data.get('revenue', 0.0) > 0 or 
                     year_data.get('net_income', 0.0) != 0 or 
                     year_data.get('total_equity', 0.0) > 0
                 )
-                most_recent_year_incomplete = not has_financial_data and most_recent_div_amount > 0
+                
+                if has_financial_data:
+                    # This is a complete year - use it for trailing dividend
+                    most_recent_complete_year = year_key.split('-')[0]
+                    most_recent_div_source = source_indicators.get(most_recent_complete_year, 'unknown')
+                    most_recent_div_amount = year_data.get('dividend', 0.0)
+                    break
         
-        # Requirement 2.7: Show both values when both are available for most recent year
+        # Requirement 2.7: Show both trailing (complete year) and forward rate when both available
         if most_recent_div_source in ['cash_flow', 'dividend_api'] and forward_div and forward_div > 0 and most_recent_div_amount > 0:
-            # Both actual dividend and forward rate available - show both
-            actual_yield_cf = (most_recent_div_amount / self.financial_data['price']) * 100
+            # Both actual dividend (from complete year) and forward rate available - show both
+            actual_yield_trailing = (most_recent_div_amount / self.financial_data['price']) * 100
             actual_yield_fwd = (forward_div / self.financial_data['price']) * 100
             
-            cf_display = format_price_display(most_recent_div_amount, unified_currency, unified_currency)
+            trailing_display = format_price_display(most_recent_div_amount, unified_currency, unified_currency)
             fwd_display = format_price_display(forward_div, unified_currency, unified_currency)
             
             # Determine label based on actual source
             if most_recent_div_source == 'dividend_api':
-                dividend_label = f"- Trailing Dividend: {cf_display} (Yield: {actual_yield_cf:.2f}%) - Declared (Dividend API)"
-                if most_recent_year_incomplete:
-                    dividend_label += f" [{most_recent_year} - Incomplete Year]"
-                lines.append(dividend_label)
+                lines.append(f"- Trailing Dividend: {trailing_display} (Yield: {actual_yield_trailing:.2f}%) - Declared (Dividend API) [{most_recent_complete_year}]")
             else:
-                lines.append(f"- Trailing Dividend: {cf_display} (Yield: {actual_yield_cf:.2f}%) - Paid (Cash Flow)")
+                lines.append(f"- Trailing Dividend: {trailing_display} (Yield: {actual_yield_trailing:.2f}%) - Paid (Cash Flow) [{most_recent_complete_year}]")
             lines.append(f"  - Forward Rate: {fwd_display} (Yield: {actual_yield_fwd:.2f}%)")
-        elif forward_div and forward_div > 0:
-            actual_yield = (forward_div / self.financial_data['price']) * 100
-            # Dividend is already in unified currency
-            div_display = format_price_display(forward_div, unified_currency, unified_currency)
+        elif most_recent_div_amount and most_recent_div_amount > 0:
+            # Have trailing dividend from complete year, but no forward rate
+            actual_yield = (most_recent_div_amount / self.financial_data['price']) * 100
+            div_display = format_price_display(most_recent_div_amount, unified_currency, unified_currency)
             
             # Determine label based on source (Requirements 2.6)
             if most_recent_div_source == 'dividend_api':
-                # Using Dividend API (declared dividends with exact dates)
-                dividend_label = f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%) - Declared (Dividend API)"
-                if most_recent_year_incomplete:
-                    dividend_label += f" [{most_recent_year} - Incomplete Year]"
-                lines.append(dividend_label)
+                lines.append(f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%) - Declared (Dividend API) [{most_recent_complete_year}]")
             elif most_recent_div_source == 'cash_flow':
-                # Using actual cash flow data
-                lines.append(f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%) - Paid (Cash Flow)")
-            elif most_recent_div_source == 'forward_rate':
-                # Using forward rate - add warning (Requirement 2.5)
-                lines.append(f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%) - Declared (Forward Rate)")
-                lines.append(f"  - ⚠️ {most_recent_year} dividend uses forward declared rate (cash flow data unavailable) - this is an estimate, not historical fact")
+                lines.append(f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%) - Paid (Cash Flow) [{most_recent_complete_year}]")
             else:
-                # Unknown source or mixed
-                lines.append(f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%)")
+                lines.append(f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%) [{most_recent_complete_year}]")
+        elif forward_div and forward_div > 0:
+            # No trailing dividend from complete year, only forward rate available
+            actual_yield = (forward_div / self.financial_data['price']) * 100
+            div_display = format_price_display(forward_div, unified_currency, unified_currency)
+            lines.append(f"- Forward Annual Dividend: {div_display} (Yield: {actual_yield:.2f}%)")
+            lines.append(f"  - ⚠️ No historical dividend data available - using forward declared rate")
     
     def _add_valuation_ratios(self, lines: List[str]) -> None:
         """Add valuation ratios (P/E, Price/Book).
