@@ -43,6 +43,13 @@ class FXClient:
             >>> rate = client.get_rate('EUR', 'USD')
             >>> print(f"1 EUR = {rate} USD")
         """
+        # Normalize GBX to GBP (GBX is pence, not a real currency code)
+        # yfinance doesn't recognize GBX, but GBX = GBP / 100
+        if from_currency == "GBX":
+            from_currency = "GBP"
+        if to_currency == "GBX":
+            to_currency = "GBP"
+        
         # Return 1.0 if same currency
         if from_currency == to_currency:
             return 1.0

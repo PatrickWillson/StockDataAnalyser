@@ -134,5 +134,59 @@ def test_debug_mode():
         assert rate == 1.10
 
 
+def test_gbx_normalization_to_gbp():
+    """Test that GBX is normalized to GBP before fetching rates."""
+    client = FXClient()
+    
+    with patch('yfinance.Ticker') as mock_ticker_class:
+        # Create mock ticker object
+        mock_ticker = MagicMock()
+        mock_ticker.fast_info = {'lastPrice': 1.30}
+        mock_ticker_class.return_value = mock_ticker
+        
+        # Request GBX to USD rate (should normalize to GBP/USD)
+        rate = client.get_rate('GBX', 'USD')
+        
+        # Verify yfinance.Ticker was called with GBP, not GBX
+        mock_ticker_class.assert_called_once_with('GBPUSD=X')
+        assert rate == 1.30
+
+
+def test_gbx_to_gbx_returns_one():
+    """Test that GBX to GBX conversion returns 1.0 (normalized to GBP)."""
+    client = FXClient()
+    
+    # GBX to GBX should normalize to GBP to GBP, which returns 1.0
+    rate = client.get_rate('GBX', 'GBX')
+    assert rate == 1.0
+
+
+def test_gbx_to_gbp_returns_one():
+    """Test that GBX to GBP conversion returns 1.0 (both normalize to GBP)."""
+    client = FXClient()
+    
+    # GBX to GBP should normalize to GBP to GBP, which returns 1.0
+    rate = client.get_rate('GBX', 'GBP')
+    assert rate == 1.0
+
+
+def test_usd_to_gbx_normalization():
+    """Test that USD to GBX normalizes to USD to GBP."""
+    client = FXClient()
+    
+    with patch('yfinance.Ticker') as mock_ticker_class:
+        # Create mock ticker object
+        mock_ticker = MagicMock()
+        mock_ticker.fast_info = {'lastPrice': 0.77}
+        mock_ticker_class.return_value = mock_ticker
+        
+        # Request USD to GBX rate (should normalize to USD/GBP)
+        rate = client.get_rate('USD', 'GBX')
+        
+        # Verify yfinance.Ticker was called with GBP, not GBX
+        mock_ticker_class.assert_called_once_with('USDGBP=X')
+        assert rate == 0.77
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
