@@ -22,9 +22,9 @@ class TestFormatDebt:
         # Should always return a string
         assert isinstance(result, str)
         
-        # Should contain currency symbol (unless N/A)
+        # Should contain B or M suffix (unless N/A)
         if value > 0:
-            assert "USD" in result
+            assert "B" in result or "M" in result
     
     def test_format_debt_zero(self):
         """Test that zero debt returns N/A."""
@@ -47,9 +47,9 @@ class TestFormatDebt:
     
     def test_format_debt_specific_values(self):
         """Test specific known values."""
-        assert FinancialHistorySection.format_debt(42_688_000_000, "USD") == "USD42.69B"
-        assert FinancialHistorySection.format_debt(500_000_000, "USD") == "USD500.00M"
-        assert FinancialHistorySection.format_debt(1_500_000_000, "GBP") == "GBP1.50B"
+        assert FinancialHistorySection.format_debt(42_688_000_000, "USD") == "42.69B"
+        assert FinancialHistorySection.format_debt(500_000_000, "USD") == "500.00M"
+        assert FinancialHistorySection.format_debt(1_500_000_000, "GBP") == "1.50B"
 
 
 class TestFormatShares:
@@ -110,9 +110,6 @@ class TestFormatPrice:
         # Should always return a string
         assert isinstance(result, str)
         
-        # Should contain currency symbol
-        assert "USD" in result
-        
         # Should have 2 decimal places
         assert "." in result
     
@@ -123,17 +120,17 @@ class TestFormatPrice:
     
     def test_format_price_specific_values(self):
         """Test specific known values."""
-        assert FinancialHistorySection.format_price(450.12, "USD") == "USD450.12"
-        assert FinancialHistorySection.format_price(16.50, "GBP") == "GBP16.50"
-        assert FinancialHistorySection.format_price(100.00, "EUR") == "EUR100.00"
+        assert FinancialHistorySection.format_price(450.12, "USD") == "450.12"
+        assert FinancialHistorySection.format_price(16.50, "GBP") == "16.50"
+        assert FinancialHistorySection.format_price(100.00, "EUR") == "100.00"
     
     def test_format_price_rounding(self):
         """Test that prices are rounded to 2 decimal places."""
         result = FinancialHistorySection.format_price(450.126, "USD")
-        assert result == "USD450.13"  # Rounded up
+        assert result == "450.13"  # Rounded up
         
         result = FinancialHistorySection.format_price(450.124, "USD")
-        assert result == "USD450.12"  # Rounded down
+        assert result == "450.12"  # Rounded down
 
 
 class TestCalculateHistoricalPE:
@@ -273,7 +270,7 @@ class TestEdgeCases:
         """Test formatting with very small values."""
         # Small debt (< 1M)
         result = FinancialHistorySection.format_debt(500_000, "USD")
-        assert result == "USD0.50M"
+        assert result == "0.50M"
         
         # Small shares (< 1M)
         result = FinancialHistorySection.format_shares(500_000)
@@ -283,7 +280,7 @@ class TestEdgeCases:
         """Test formatting with very large values."""
         # Large debt (trillions)
         result = FinancialHistorySection.format_debt(5_000_000_000_000, "USD")
-        assert result == "USD5000.00B"
+        assert result == "5000.00B"
         
         # Large shares (hundreds of billions)
         result = FinancialHistorySection.format_shares(500_000_000_000)

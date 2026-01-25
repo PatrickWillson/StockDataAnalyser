@@ -172,27 +172,57 @@ def main():
                 if stock_currency and financials_currency and stock_currency != financials_currency:
                     logger.debug(f"Converting historical prices from {stock_currency} to {financials_currency}")
                     
-                    # Use the same FX rate that was used for current price
-                    fx_rate = financial_data.get('fx_rate_used')
+                    # Get historical FX rates and current rate
+                    historical_fx_rates = financial_data.get('historical_fx_rates', {})
+                    current_fx_rate = financial_data.get('fx_rate_used')
                     
-                    if fx_rate and fx_rate > 0:
-                        # Convert all prices
+                    if current_fx_rate and current_fx_rate > 0:
+                        # Convert all prices using date-matched rates
                         converted_prices = {}
+                        fallback_years = []
+                        
                         for date_key, price_value in year_end_prices.items():
                             if price_value is not None:
+                                # Use historical rate if available, otherwise current rate
+                                fx_rate = historical_fx_rates.get(date_key)
+                                
+                                if fx_rate is None:
+                                    # No historical rate available, use current rate as fallback
+                                    fx_rate = current_fx_rate
+                                    year_only = date_key.split('-')[0]
+                                    fallback_years.append(year_only)
+                                
                                 converted_prices[date_key] = price_value * fx_rate
                             else:
                                 converted_prices[date_key] = None
                         
                         year_end_prices = converted_prices
                         
-                        # Add warning about currency conversion
-                        financial_data['warnings'].append(
-                            f"Historical prices converted from {stock_currency} to {financials_currency} "
-                            f"using current FX rate {fx_rate:.4f}. Note: Historical FX rates not used - "
-                            f"actual historical valuations may differ due to FX fluctuations."
-                        )
-                        logger.debug(f"Applied FX rate {fx_rate:.4f} to historical prices")
+                        # Add appropriate warning based on whether historical rates were used
+                        if historical_fx_rates and len(fallback_years) == 0:
+                            # All years used historical rates
+                            financial_data['warnings'].append(
+                                f"Historical prices converted from {stock_currency} to {financials_currency} "
+                                f"using date-matched historical FX rates. This ensures accurate historical P/E and P/B ratios."
+                            )
+                            logger.debug(f"Applied historical FX rates to {len(year_end_prices)} prices")
+                        elif historical_fx_rates and len(fallback_years) > 0:
+                            # Some years used fallback
+                            unique_years = sorted(set(fallback_years))
+                            financial_data['warnings'].append(
+                                f"Historical prices converted from {stock_currency} to {financials_currency} "
+                                f"using date-matched historical FX rates. Years {', '.join(unique_years)} used current rate "
+                                f"{current_fx_rate:.4f} as fallback (historical rate unavailable)."
+                            )
+                            logger.debug(f"Applied historical FX rates with {len(fallback_years)} fallbacks")
+                        else:
+                            # No historical rates available, all used current rate
+                            financial_data['warnings'].append(
+                                f"Historical prices converted from {stock_currency} to {financials_currency} "
+                                f"using current FX rate {current_fx_rate:.4f}. Note: Historical FX rates not used - "
+                                f"actual historical valuations may differ due to FX fluctuations."
+                            )
+                            logger.debug(f"Applied current FX rate {current_fx_rate:.4f} to historical prices (historical rates unavailable)")
                     else:
                         logger.warning("FX rate not available for historical price conversion")
                         financial_data['warnings'].append(

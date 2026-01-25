@@ -716,3 +716,83 @@ class FinancialDataProcessor:
             logger.debug(f"  Profit Margin: {profit_margin*100:.2f}%")
         
         return (roe, roa, profit_margin, most_recent_year)
+
+    @staticmethod
+    def apply_historical_fx_rates(
+        history: Dict[str, Dict[str, float]],
+        fx_rates_by_date: Dict[str, Optional[float]],
+        from_currency: str,
+        to_currency: str,
+        current_fx_rate: float
+    ) -> tuple[Dict[str, Dict[str, float]], List[str]]:
+        """
+        Apply historical FX rates to financial history data.
+        
+        Converts all monetary values in history dict using date-matched FX rates.
+        Falls back to current_fx_rate for dates without historical rates.
+        
+        Args:
+            history: Financial history dict (year → metrics)
+            fx_rates_by_date: Dict mapping fiscal year end dates to FX rates
+            from_currency: Source currency
+            to_currency: Target currency
+            current_fx_rate: Fallback rate for missing historical rates
+            
+        Returns:
+            Tuple of (converted_history, warnings)
+            - converted_history: History with all values converted
+            - warnings: List of warnings for fallback usage
+            
+        Example:
+            >>> history = {'2024-06-30': {'revenue': 1000, 'net_income': 100}}
+            >>> fx_rates = {'2024-06-30': 1.25}
+            >>> converted, warnings = apply_historical_fx_rates(
+            ...     history, fx_rates, 'GBP', 'USD', 1.30
+            ... )
+            >>> converted['2024-06-30']['revenue']
+            1250.0
+        """
+        # Define monetary fields that need conversion
+        MONETARY_FIELDS = [
+            'revenue', 'net_income', 'eps', 'dividend',
+            'total_equity', 'intangible_assets', 'goodwill',
+            'current_assets', 'current_liabilities', 'total_liabilities',
+            'long_term_debt', 'total_assets', 'total_debt',
+            'year_end_price'
+        ]
+        
+        converted_history = {}
+        warnings = []
+        fallback_years = []
+        
+        for year, data in history.items():
+            # Get FX rate for this year (use historical if available, otherwise current)
+            fx_rate = fx_rates_by_date.get(year)
+            
+            if fx_rate is None:
+                # No historical rate available, use current rate as fallback
+                fx_rate = current_fx_rate
+                year_only = year.split('-')[0] if '-' in year else year
+                fallback_years.append(year_only)
+            
+            # Convert all monetary fields
+            converted_data = {}
+            for field, value in data.items():
+                if field in MONETARY_FIELDS and value != 0 and value is not None:
+                    # Convert monetary value
+                    converted_data[field] = value * fx_rate
+                else:
+                    # Keep non-monetary fields unchanged
+                    converted_data[field] = value
+            
+            converted_history[year] = converted_data
+        
+        # Generate warnings for fallback usage
+        if fallback_years:
+            unique_years = sorted(set(fallback_years))
+            warnings.append(
+                f"Historical FX rates unavailable for years: {', '.join(unique_years)}. "
+                f"Used current rate {current_fx_rate:.4f} as fallback."
+            )
+        
+        return converted_history, warnings

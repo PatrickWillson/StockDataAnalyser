@@ -31,22 +31,26 @@ class FinancialHistorySection:
         self.financial_data = financial_data
     
     @staticmethod
-    def format_debt(value: float, currency: str) -> str:
+    def format_debt(value: float, currency: str = None) -> str:
         """
         Format debt in billions or millions.
         
         Args:
             value: Debt value
-            currency: Currency symbol
+            currency: Currency symbol (unused - kept for backward compatibility)
             
         Returns:
-            Formatted string (e.g., "$42.69B", "$500.00M", "N/A")
+            Formatted string (e.g., "42.69B", "500.00M", "N/A")
+            
+        Note:
+            Currency prefix removed for consistency with other columns.
+            Section header indicates unified currency for all values.
         """
         if value == 0:
             return "N/A"
         if value >= 1_000_000_000:
-            return f"{currency}{value / 1_000_000_000:.2f}B"
-        return f"{currency}{value / 1_000_000:.2f}M"
+            return f"{value / 1_000_000_000:.2f}B"
+        return f"{value / 1_000_000:.2f}M"
     
     @staticmethod
     def format_shares(value: float) -> str:
@@ -66,20 +70,24 @@ class FinancialHistorySection:
         return f"{value / 1_000_000:.2f}M"
     
     @staticmethod
-    def format_price(value: Optional[float], currency: str) -> str:
+    def format_price(value: Optional[float], currency: str = None) -> str:
         """
-        Format price with currency symbol.
+        Format price.
         
         Args:
             value: Price value (or None if unavailable)
-            currency: Currency symbol
+            currency: Currency symbol (unused - kept for backward compatibility)
             
         Returns:
-            Formatted string (e.g., "$450.12", "N/A")
+            Formatted string (e.g., "450.12", "N/A")
+            
+        Note:
+            Currency prefix removed for consistency with other columns.
+            Section header indicates unified currency for all values.
         """
         if value is None:
             return "N/A"
-        return f"{currency}{value:.2f}"
+        return f"{value:.2f}"
     
     @staticmethod
     def calculate_historical_pe(price: Optional[float], eps: float) -> str:
@@ -236,6 +244,14 @@ class FinancialHistorySection:
         lines.append("- **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates loss year (Graham's method: show losses explicitly).")
         lines.append("- **P/B**: Historical Price-to-Book ratio (Price ÷ BVPS). Shows how the market valued net assets over time.")
         lines.append("")
-        lines.append("*Note: Historical prices converted to unified currency using current FX rates. Historical FX rates not used - actual historical valuations may differ due to FX fluctuations.*")
+        
+        # Add note about FX rate methodology
+        historical_fx_rates = self.financial_data.get('historical_fx_rates', {})
+        if historical_fx_rates:
+            # Historical FX rates were used
+            lines.append("*Note: Historical prices converted to unified currency using date-matched historical FX rates from yfinance. This ensures accurate historical P/E and P/B ratios that reflect actual market conditions at the time.*")
+        else:
+            # Legacy behavior: current FX rate used for all years
+            lines.append("*Note: Historical prices converted to unified currency using current FX rates. Historical FX rates not used - actual historical valuations may differ due to FX fluctuations.*")
         
         return lines

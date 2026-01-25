@@ -347,6 +347,8 @@ class EODHDClient(BaseAPIClient):
         
         # Convert price to financials currency if they differ
         fx_rate_used = None
+        historical_fx_rates = {}  # NEW: Store historical FX rates
+        
         if price_currency != financials_currency:
             logger.info(f"Converting price from {price_currency} to {financials_currency}...")
             # Get the FX rate for historical price conversion
@@ -359,6 +361,39 @@ class EODHDClient(BaseAPIClient):
             else:
                 warnings.append(f"WARNING: Could not convert price from {price_currency} to {financials_currency} - FX rate unavailable")
                 logger.warning(f"Could not get FX rate for {price_currency}/{financials_currency}")
+            
+            # NEW: Fetch historical FX rates for historical data conversion
+            if history and fx_rate_used:
+                logger.info(f"Fetching historical FX rates for {price_currency}/{financials_currency}...")
+                
+                # Extract fiscal year end dates from history
+                fiscal_year_ends = list(history.keys())
+                
+                if fiscal_year_ends:
+                    # Get date range
+                    oldest_date = min(fiscal_year_ends)
+                    newest_date = max(fiscal_year_ends)
+                    
+                    logger.info(f"Date range: {oldest_date} to {newest_date}")
+                    
+                    # Fetch historical rates
+                    rate_data = self.fx_client.fetch_historical_rates(
+                        price_currency,
+                        financials_currency,
+                        oldest_date,
+                        newest_date
+                    )
+                    
+                    if rate_data:
+                        # Match rates to fiscal year ends
+                        historical_fx_rates = self.fx_client.match_fiscal_year_end_rates(
+                            rate_data,
+                            fiscal_year_ends
+                        )
+                        logger.info(f"Matched historical FX rates to {len(historical_fx_rates)} fiscal year ends")
+                    else:
+                        logger.warning(f"Could not fetch historical FX rates for {price_currency}/{financials_currency}")
+                        warnings.append(f"Historical FX rates unavailable - using current rate for all years")
         
         # Convert Highlights dividends and book value to financials currency
         # Note: For LSE stocks, DividendShare and BookValue in API are already in GBP, not GBX
@@ -512,6 +547,7 @@ class EODHDClient(BaseAPIClient):
             'price_source': price_source,  # NEW: Track price source for data quality assessment
             'dividend_source': dividend_source,  # NEW: Track dividend source for data quality assessment
             'fx_rate_used': fx_rate_used,  # NEW: FX rate used for price conversion (for historical prices)
+            'historical_fx_rates': historical_fx_rates,  # NEW: Historical FX rates for date-matched conversion
             'price_currency_before_fx': price_currency,  # NEW: Price currency before FX conversion (GBP for LSE after London Fix)
             'ceo_name': ceo_name,
             'sector': sector,
