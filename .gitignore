@@ -57,8 +57,8 @@ tests/api_responses/  # Captured API responses (for reference only)
 .env.*.local
 
 # Project specific
-data/*.md
-data/*.txt
+data/*
+!data/.gitkeep
 *.dossier.md
 *.dossier.txt
 
