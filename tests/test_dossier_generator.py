@@ -351,5 +351,6 @@ def test_financial_history_table_in_dossier(sample_financial_data, sample_metric
     
     # Verify financial history table is present
     assert '| Year | Revenue | Net Income | EPS | Div/Share | BVPS |' in dossier
-    assert '| 2023-12-31 |' in dossier
-    assert '| 2022-12-31 |' in dossier
+    # Year now displays as just year, not full date
+    assert '| 2023 |' in dossier
+    assert '| 2022 |' in dossier

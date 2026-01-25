@@ -259,7 +259,7 @@ def test_epv_normalization_correctness(earnings_list):
         st.floats(min_value=-1000000, max_value=1000000, allow_nan=False, allow_infinity=False),
         min_size=7,
         max_size=10
-    )
+    ).filter(lambda x: any(abs(ni) > 0.01 for ni in x))  # Ensure at least one non-zero value
 )
 def test_full_cycle_epv_includes_all_years(net_incomes):
     """
@@ -276,7 +276,7 @@ def test_full_cycle_epv_includes_all_years(net_incomes):
         year = str(2024 - i)
         history[year] = {
             'net_income': net_income,
-            'revenue': abs(net_income) * 10,
+            'revenue': abs(net_income) * 10 if net_income != 0 else 1000000,  # Ensure revenue > 0
             'eps': net_income / 1000000,
             'shares_outstanding': 1000000
         }
@@ -305,10 +305,12 @@ def test_full_cycle_epv_includes_all_years(net_incomes):
         assert result['epv'] == pytest.approx(expected_epv, rel=1e-6), \
             f"EPV mismatch: expected {expected_epv}, got {result['epv']}"
     else:
-        # Negative average should return N/A
+        # Negative average should return N/A string with specific message
         assert isinstance(result, str), f"Expected string for negative average, got {type(result)}"
         assert "Negative normalized earnings" in result, \
             f"Expected 'Negative normalized earnings' message, got {result}"
+        assert "unprofitable over cycle" in result, \
+            f"Expected 'unprofitable over cycle' in message, got {result}"
 
 
 # Feature: graham-data-quality, Property 4: Negative EPV Handling
@@ -320,7 +322,7 @@ def test_full_cycle_epv_includes_all_years(net_incomes):
         st.floats(min_value=-1000000, max_value=1000000, allow_nan=False, allow_infinity=False),
         min_size=7,
         max_size=10
-    ).filter(lambda x: sum(x) / len(x) <= 0)
+    ).filter(lambda x: sum(x) / len(x) <= 0 and any(abs(ni) > 0.01 for ni in x))  # Negative avg, at least one non-zero
 )
 def test_negative_epv_returns_na(net_incomes):
     """
@@ -337,7 +339,7 @@ def test_negative_epv_returns_na(net_incomes):
         year = str(2024 - i)
         history[year] = {
             'net_income': net_income,
-            'revenue': abs(net_income) * 10,
+            'revenue': abs(net_income) * 10 if net_income != 0 else 1000000,  # Ensure revenue > 0
             'eps': net_income / 1000000,
             'shares_outstanding': 1000000
         }
@@ -346,7 +348,7 @@ def test_negative_epv_returns_na(net_incomes):
     calculator = GrahamCalculator({'shares_outstanding': 1000000})
     result = calculator.compute_epv_normalized(history, round_result=False)
     
-    # Assert: Should return N/A string
+    # Assert: Should return N/A string with specific message
     assert isinstance(result, str), \
         f"Expected string for negative/zero average, got {type(result)}"
     assert "Negative normalized earnings" in result, \

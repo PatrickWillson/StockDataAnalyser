@@ -128,8 +128,8 @@ class TestFinancialHistorySection:
         # Check descending order
         assert years == sorted(years, reverse=True)
         
-        # Check most recent year is first
-        assert years[0] == "2023-12-31"
+        # Check most recent year is first (now displays just year, not full date)
+        assert years[0] == "2023"
     
     def test_data_formatting_complete_year(self):
         """Test data formatting for a complete year with all financial data."""
@@ -138,8 +138,8 @@ class TestFinancialHistorySection:
         section = FinancialHistorySection(financial_data)
         lines = section.generate()
         
-        # Find 2023 row
-        row_2023 = next(line for line in lines if line.startswith("| 2023-12-31"))
+        # Find 2023 row (now displays just year)
+        row_2023 = next(line for line in lines if line.startswith("| 2023 |"))
         
         # Check all values are present
         assert "383285000000.0" in row_2023  # Revenue
@@ -161,8 +161,8 @@ class TestFinancialHistorySection:
         section = FinancialHistorySection(financial_data)
         lines = section.generate()
         
-        # Find 2020 row
-        row_2020 = next(line for line in lines if line.startswith("| 2020-12-31"))
+        # Find 2020 row (now displays just year)
+        row_2020 = next(line for line in lines if line.startswith("| 2020 |"))
         
         # Check zero values show as N/A
         parts = row_2020.split("|")
@@ -187,8 +187,8 @@ class TestFinancialHistorySection:
         section = FinancialHistorySection(financial_data)
         lines = section.generate()
         
-        # Find 2024 row
-        row_2024 = next(line for line in lines if line.startswith("| 2024-12-31"))
+        # Find 2024 row (now displays just year)
+        row_2024 = next(line for line in lines if line.startswith("| 2024 |"))
         
         # Check incomplete year shows [Data Unavailable]
         assert "[Data Unavailable]" in row_2024
@@ -238,8 +238,8 @@ class TestFinancialHistorySection:
         section = FinancialHistorySection(financial_data)
         lines = section.generate()
         
-        # Find 2023 row
-        row_2023 = next(line for line in lines if line.startswith("| 2023-12-31"))
+        # Find 2023 row (now displays just year)
+        row_2023 = next(line for line in lines if line.startswith("| 2023 |"))
         
         # Calculate expected BVPS: 62146000000.0 / 15821900000.0 = 3.93
         assert "3.93" in row_2023
@@ -252,8 +252,8 @@ class TestFinancialHistorySection:
         section = FinancialHistorySection(financial_data)
         lines = section.generate()
         
-        # Find 2023 row
-        row_2023 = next(line for line in lines if line.startswith("| 2023-12-31"))
+        # Find 2023 row (now displays just year)
+        row_2023 = next(line for line in lines if line.startswith("| 2023 |"))
         
         # Check BVPS shows as N/A
         parts = row_2023.split("|")
@@ -267,8 +267,8 @@ class TestFinancialHistorySection:
         section = FinancialHistorySection(financial_data)
         lines = section.generate()
         
-        # Find 2023 row
-        row_2023 = next(line for line in lines if line.startswith("| 2023-12-31"))
+        # Find 2023 row (now displays just year)
+        row_2023 = next(line for line in lines if line.startswith("| 2023 |"))
         
         # Check BVPS shows as N/A
         parts = row_2023.split("|")
@@ -293,14 +293,14 @@ class TestFinancialHistorySection:
         lines = section.generate()
         
         # Count year rows
-        year_rows = [line for line in lines if line.startswith("| 20") and "-12-31" in line]
+        year_rows = [line for line in lines if line.startswith("| 20") and "-12-31" not in line]
         
         # Should have exactly 20 rows
         assert len(year_rows) == 20
         
-        # Check most recent years are included
-        assert any("2023-12-31" in row for row in year_rows)
-        assert any("2004-12-31" in row for row in year_rows)
+        # Check most recent years are included (now displays just year)
+        assert any("| 2023 |" in row for row in year_rows)
+        assert any("| 2004 |" in row for row in year_rows)
         
         # Check oldest years are excluded
         assert not any("2003-12-31" in row for row in year_rows)
@@ -386,8 +386,8 @@ class TestFinancialHistorySection:
         section = FinancialHistorySection(financial_data)
         lines = section.generate()
         
-        # Find 2020 row
-        row_2020 = next(line for line in lines if line.startswith("| 2020-12-31"))
+        # Find 2020 row (now displays just year)
+        row_2020 = next(line for line in lines if line.startswith("| 2020 |"))
         
         # Check negative values are shown
         assert "-5000000000.0" in row_2020
@@ -444,8 +444,8 @@ class TestFinancialHistorySection:
         section = FinancialHistorySection(financial_data)
         lines = section.generate()
         
-        # Find 2023 row
-        row_2023 = next(line for line in lines if line.startswith("| 2023-12-31"))
+        # Find 2023 row (now displays just year)
+        row_2023 = next(line for line in lines if line.startswith("| 2023 |"))
         
         # Check large number is shown (as string, no special formatting in table)
         assert "1234567890123.0" in row_2023
@@ -459,8 +459,8 @@ class TestFinancialHistorySection:
         section = FinancialHistorySection(financial_data)
         lines = section.generate()
         
-        # Find 2023 row
-        row_2023 = next(line for line in lines if line.startswith("| 2023-12-31"))
+        # Find 2023 row (now displays just year)
+        row_2023 = next(line for line in lines if line.startswith("| 2023 |"))
         
         # Check small number is shown
         assert "0.01" in row_2023

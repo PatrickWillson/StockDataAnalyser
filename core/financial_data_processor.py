@@ -563,6 +563,18 @@ class FinancialDataProcessor:
                 eps = net_income / year_shares
                 calculated_eps_count += 1
             
+            # Determine final shares with priority:
+            # 1. Year-specific shares from outstandingShares.annual (most accurate)
+            # 2. Balance sheet shares (if non-zero)
+            # 3. Fallback shares
+            bs_shares = bs_data.get('shares_outstanding', 0.0)
+            if outstanding_shares_by_year and year_only in outstanding_shares_by_year:
+                final_shares = outstanding_shares_by_year[year_only]
+            elif bs_shares > 0:
+                final_shares = bs_shares
+            else:
+                final_shares = shares_outstanding
+            
             result[year] = {
                 'revenue': is_data.get('revenue', 0.0),
                 'net_income': net_income,
@@ -571,7 +583,7 @@ class FinancialDataProcessor:
                 'total_equity': bs_data.get('total_equity', 0.0),
                 'intangible_assets': bs_data.get('intangible_assets', 0.0),
                 'goodwill': bs_data.get('goodwill', 0.0),
-                'shares_outstanding': bs_data.get('shares_outstanding', year_shares),  # Use balance sheet shares if available
+                'shares_outstanding': final_shares,
                 'current_assets': bs_data.get('current_assets', 0.0),
                 'current_liabilities': bs_data.get('current_liabilities', 0.0),
                 'total_liabilities': bs_data.get('total_liabilities', 0.0),

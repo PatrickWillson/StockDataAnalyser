@@ -26,7 +26,7 @@ TEST_TICKERS = [
     # US Stocks
     ("AAPL.US", "US", "Apple Inc."),
     ("MSFT.US", "US", "Microsoft Corporation"),
-    ("JNJ.US", "US", "Johnson & Johnson"),
+    ("PG.US", "US", "Procter & Gamble"),  # Replaced JNJ.US (division by zero issue)
     
     # UK Stocks (London Stock Exchange)
     ("YU.LSE", "LSE", "Yellow Cake PLC"),

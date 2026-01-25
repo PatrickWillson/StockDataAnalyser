@@ -302,7 +302,7 @@ class CalculationDetailsSection:
                 lines.append(f"  - Price divided by 100 when P/E ratio > 500 (indicates pence vs pounds mismatch)")
                 lines.append(f"  - Example: 1,650 GBX = 16.50 GBP")
             
-            if fx_rate > 0 and fx_rate != 1.0:
+            if fx_rate is not None and fx_rate > 0 and fx_rate != 1.0:
                 lines.append(f"- **FX Conversion Rate**: {fx_rate:.4f} ({original_stock_currency} → {unified_currency})")
                 lines.append(f"- **Source**: Live FX rates from Frankfurter API (ECB data)")
                 lines.append(f"- **What Was Converted**:")

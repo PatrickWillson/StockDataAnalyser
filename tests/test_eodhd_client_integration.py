@@ -28,6 +28,7 @@ def test_fetch_all_data_basic():
         },
         'Financials': {
             'Balance_Sheet': {
+                'currency_symbol': 'USD',
                 'yearly': {
                     '2023-09-30': {
                         'totalStockholderEquity': 62146000000,
@@ -62,6 +63,10 @@ def test_fetch_all_data_basic():
                         'eps': 6.15
                     }
                 }
+            },
+            'Cash_Flow': {
+                'currency_symbol': 'USD',
+                'yearly': {}
             }
         },
         'SplitsDividends': {
@@ -72,6 +77,12 @@ def test_fetch_all_data_basic():
         },
         'Highlights': {
             'SharePrice': 150.0
+        },
+        'outstandingShares': {
+            'annual': {
+                '0': {'date': 2023, 'shares': 16000000000},
+                '1': {'date': 2022, 'shares': 16000000000}
+            }
         }
     }
     

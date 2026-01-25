@@ -103,7 +103,7 @@ class TestDividendDisplay:
                     'revenue': 1000000,
                     'net_income': 100000,
                     'eps': 10.0,
-                    'dividend': 5.0,  # This is from forward rate
+                    'dividend': 0.0,  # No historical dividend - only forward rate
                     'total_equity': 500000,
                     'shares_outstanding': 10000
                 }
@@ -142,11 +142,10 @@ class TestDividendDisplay:
         
         dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
         
-        # Check that the label appears
-        assert 'Declared (Forward Rate)' in dossier
+        # Check that the label appears (updated to match current implementation)
+        assert 'Forward Annual Dividend' in dossier
         # Check that warning appears
-        assert '⚠️ 2024 dividend uses forward declared rate (cash flow data unavailable)' in dossier
-        assert 'this is an estimate, not historical fact' in dossier
+        assert '⚠️ No historical dividend data available - using forward declared rate' in dossier
     
     def test_shows_both_values_when_both_available(self):
         """

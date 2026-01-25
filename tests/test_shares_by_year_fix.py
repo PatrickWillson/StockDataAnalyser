@@ -127,11 +127,12 @@ def test_aep_eps_correction():
         content = f.read()
     
     # Check that 2024 EPS in the table is ~1.71 (not 1.744)
-    assert '| 2024-12-31 |' in content, "2024 data should be in the table"
+    # Note: Year format is now just "2024" not "2024-12-31"
+    assert '| 2024 |' in content, "2024 data should be in the table"
     
     # Extract the 2024 row
     for line in content.split('\n'):
-        if '| 2024-12-31 |' in line:
+        if '| 2024 |' in line:
             # Check that EPS column contains ~1.71
             assert '1.710' in line or '1.71' in line, \
                 f"EPS should be ~$1.71 after using year-specific shares, got: {line}"
