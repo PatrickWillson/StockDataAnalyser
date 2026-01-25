@@ -324,7 +324,7 @@ class EODHDClient(BaseAPIClient):
         # Determine if London Fix is needed BEFORE applying it
         price_currency = currency
         london_fix_needed = False
-        if exchange == "LSE" and most_recent_eps > 0 and price > 0:
+        if exchange == "LSE" and most_recent_eps and most_recent_eps > 0 and price > 0:
             pe_ratio = price / most_recent_eps
             if pe_ratio > 500:
                 london_fix_needed = True
@@ -339,7 +339,6 @@ class EODHDClient(BaseAPIClient):
             # Skip this if price is from MarketCap (already in GBP)
             price = price / 100
             price_currency = "GBP"
-            currency_conversion_details.append("Converted GBX → GBP")
             logger.info(f"Converted GBX to GBP: {price:.2f} GBP")
         elif exchange == "LSE" and is_from_market_cap:
             # Price from MarketCap is already in GBP
@@ -347,8 +346,11 @@ class EODHDClient(BaseAPIClient):
             logger.info(f"Price from MarketCap is in GBP: {price:.2f} GBP")
         
         # Convert price to financials currency if they differ
+        fx_rate_used = None
         if price_currency != financials_currency:
             logger.info(f"Converting price from {price_currency} to {financials_currency}...")
+            # Get the FX rate for historical price conversion
+            fx_rate_used = self.fx_client.get_rate(price_currency, financials_currency)
             converted_price, success = self.currency_converter.convert(price, price_currency, financials_currency)
             
             if success:
@@ -366,7 +368,7 @@ class EODHDClient(BaseAPIClient):
             # So we don't divide by 100 - just change the currency label
             highlights_dividend_currency = "GBP"
         
-        if dividend_per_share > 0 and highlights_dividend_currency != financials_currency:
+        if dividend_per_share and dividend_per_share > 0 and highlights_dividend_currency != financials_currency:
             converted_dividend, success = self.currency_converter.convert(
                 dividend_per_share, highlights_dividend_currency, financials_currency
             )
@@ -395,7 +397,7 @@ class EODHDClient(BaseAPIClient):
         
         # Recalculate P/E ratio using converted price and most recent EPS
         pe_ratio = 0.0  # Initialize to 0
-        if most_recent_eps > 0:
+        if most_recent_eps and most_recent_eps > 0:
             pe_ratio = price / most_recent_eps
             logger.info(f"Recalculated P/E ratio: {pe_ratio:.2f} (Price: {price:.2f} / EPS: {most_recent_eps:.2f})")
         
@@ -509,6 +511,8 @@ class EODHDClient(BaseAPIClient):
             'price': price,
             'price_source': price_source,  # NEW: Track price source for data quality assessment
             'dividend_source': dividend_source,  # NEW: Track dividend source for data quality assessment
+            'fx_rate_used': fx_rate_used,  # NEW: FX rate used for price conversion (for historical prices)
+            'price_currency_before_fx': price_currency,  # NEW: Price currency before FX conversion (GBP for LSE after London Fix)
             'ceo_name': ceo_name,
             'sector': sector,
             'industry': industry,

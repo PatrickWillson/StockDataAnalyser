@@ -121,6 +121,113 @@ def main():
             logger.error("="*80)
             sys.exit(1)
         
+        # 1.5. Fetch Historical Prices (for Historical P/E and P/B columns)
+        logger.info("[1.5/4] Fetching Historical Prices from yfinance...")
+        history_keys = list(financial_data.get('history', {}).keys())
+        if history_keys:
+            # Get date range from balance sheet fiscal year ends
+            oldest_date = min(history_keys)
+            newest_date = max(history_keys)
+            
+            logger.debug(f"Fetching historical prices from {oldest_date} to {newest_date}")
+            
+            # Fetch daily prices
+            daily_prices = yf_client.fetch_historical_prices(
+                ticker,
+                start_date=oldest_date,
+                end_date=newest_date
+            )
+            
+            if daily_prices:
+                logger.debug(f"Fetched {len(daily_prices)} days of historical price data")
+                
+                # Match to fiscal year ends
+                year_end_prices = yf_client.match_fiscal_year_end_prices(
+                    daily_prices,
+                    fiscal_year_ends=history_keys
+                )
+                
+                logger.debug(f"Matched prices to {len([p for p in year_end_prices.values() if p is not None])} fiscal year ends")
+                
+                # Convert currency if needed
+                stock_currency = financial_data.get('original_stock_currency', '')
+                financials_currency = financial_data.get('financials_currency', '')
+                exchange = financial_data.get('exchange', '')
+                
+                # For LSE stocks, yfinance returns prices in GBX (pence), not GBP
+                # We need to convert GBX → GBP first, then GBP → USD (if needed)
+                if exchange == "LSE" and stock_currency == "GBX":
+                    logger.debug("Converting historical prices from GBX (pence) to GBP (pounds)")
+                    gbp_prices = {}
+                    for date_key, price_value in year_end_prices.items():
+                        if price_value is not None:
+                            gbp_prices[date_key] = price_value / 100  # GBX → GBP
+                        else:
+                            gbp_prices[date_key] = None
+                    year_end_prices = gbp_prices
+                    # Update currency for next conversion step
+                    stock_currency = "GBP"
+                    logger.debug(f"Converted {len([p for p in gbp_prices.values() if p is not None])} prices from GBX to GBP")
+                
+                if stock_currency and financials_currency and stock_currency != financials_currency:
+                    logger.debug(f"Converting historical prices from {stock_currency} to {financials_currency}")
+                    
+                    # Use the same FX rate that was used for current price
+                    fx_rate = financial_data.get('fx_rate_used')
+                    
+                    if fx_rate and fx_rate > 0:
+                        # Convert all prices
+                        converted_prices = {}
+                        for date_key, price_value in year_end_prices.items():
+                            if price_value is not None:
+                                converted_prices[date_key] = price_value * fx_rate
+                            else:
+                                converted_prices[date_key] = None
+                        
+                        year_end_prices = converted_prices
+                        
+                        # Add warning about currency conversion
+                        financial_data['warnings'].append(
+                            f"Historical prices converted from {stock_currency} to {financials_currency} "
+                            f"using current FX rate {fx_rate:.4f}. Note: Historical FX rates not used - "
+                            f"actual historical valuations may differ due to FX fluctuations."
+                        )
+                        logger.debug(f"Applied FX rate {fx_rate:.4f} to historical prices")
+                    else:
+                        logger.warning("FX rate not available for historical price conversion")
+                        financial_data['warnings'].append(
+                            "Historical prices could not be converted to financials currency - "
+                            "FX rate unavailable. Historical P/E and P/B may be inaccurate."
+                        )
+                
+                # Merge into history
+                missing_price_count = 0
+                for date_key, price_value in year_end_prices.items():
+                    if date_key in financial_data['history']:
+                        financial_data['history'][date_key]['year_end_price'] = price_value
+                        if price_value is None:
+                            missing_price_count += 1
+                
+                if missing_price_count > 0:
+                    logger.debug(f"{missing_price_count} fiscal year ends have no price data within 7-day window")
+                    financial_data['warnings'].append(
+                        f"Historical prices unavailable for {missing_price_count} fiscal year ends "
+                        f"(no trading data within 7-day window). Historical P/E and P/B will show N/A for those years."
+                    )
+                
+                logger.info(f"Historical prices added to {len(year_end_prices) - missing_price_count} years")
+            else:
+                logger.warning("Historical prices unavailable from yfinance - price columns will show N/A")
+                financial_data['warnings'].append(
+                    "Historical prices unavailable from yfinance. Historical P/E and P/B columns will show N/A. "
+                    "This may be due to ticker format issues, delisted stock, or yfinance API unavailability."
+                )
+        else:
+            logger.warning("No financial history available - skipping historical price fetch")
+            financial_data['warnings'].append(
+                "No financial history data available - historical price columns will be empty."
+            )
+        
         # 2. Compute Metrics
         logger.info("[2/4] Calculating Graham Metrics (Strict Rules)...")
         calculator = GrahamCalculator(financial_data)

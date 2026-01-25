@@ -6,7 +6,8 @@ price source for the Stock Data Analyser application. It translates EODHD
 ticker formats to yfinance formats and fetches current prices from Yahoo Finance.
 """
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, List
+from datetime import datetime, timedelta
 import logging
 
 
@@ -249,3 +250,147 @@ class YFinanceClient:
             if self.debug:
                 self.logger.debug(f"Error fetching price for {ticker}: {type(e).__name__}: {str(e)}")
             return None
+
+    def fetch_historical_prices(
+        self, 
+        ticker: str, 
+        start_date: str, 
+        end_date: str
+    ) -> Optional[Dict[str, float]]:
+        """
+        Fetch historical daily closing prices from yfinance.
+        
+        This method fetches split-adjusted historical prices for Graham-style
+        trend analysis. Prices are adjusted for stock splits to ensure
+        comparability across time.
+        
+        Args:
+            ticker: Ticker in EODHD format (e.g., 'MSFT.US', 'VOD.LSE')
+            start_date: ISO date string (e.g., '2004-01-01')
+            end_date: ISO date string (e.g., '2024-12-31')
+            
+        Returns:
+            Dict mapping date strings (YYYY-MM-DD) to closing prices, or None if failed
+            Example: {'2024-06-30': 450.12, '2024-06-29': 449.50, ...}
+            
+        Note:
+            - Uses auto_adjust=True to handle stock splits automatically
+            - Historical prices are split-adjusted for comparability
+            - Returns None on any failure (network errors, invalid tickers, etc.)
+        """
+        try:
+            # Parse EODHD ticker
+            symbol, exchange = self._parse_ticker(ticker)
+            if not symbol or not exchange:
+                if self.debug:
+                    self.logger.debug(f"Failed to parse ticker: {ticker}")
+                return None
+            
+            # Translate to yfinance format
+            yf_ticker = self._translate_ticker(symbol, exchange)
+            if not yf_ticker:
+                if self.debug:
+                    self.logger.debug(f"Failed to translate ticker: {ticker}")
+                return None
+            
+            if self.debug:
+                self.logger.debug(f"Fetching historical prices for {yf_ticker} from {start_date} to {end_date}...")
+            
+            # Import yfinance
+            try:
+                import yfinance as yf
+            except ImportError:
+                self.logger.error("yfinance library not installed. Run: pip install yfinance")
+                return None
+            
+            # Fetch historical data with split adjustment
+            ticker_obj = yf.Ticker(yf_ticker)
+            hist = ticker_obj.history(start=start_date, end=end_date, auto_adjust=True)
+            
+            if hist.empty:
+                if self.debug:
+                    self.logger.debug(f"No historical data available for {yf_ticker}")
+                return None
+            
+            # Convert DataFrame to dict: date_string → close_price
+            price_dict = {}
+            for date_index, row in hist.iterrows():
+                date_str = date_index.strftime('%Y-%m-%d')
+                price_dict[date_str] = float(row['Close'])
+            
+            if self.debug:
+                self.logger.debug(f"Fetched {len(price_dict)} days of historical prices for {yf_ticker}")
+            
+            return price_dict
+            
+        except Exception as e:
+            if self.debug:
+                self.logger.debug(f"Error fetching historical prices for {ticker}: {type(e).__name__}: {str(e)}")
+            return None
+    
+    def match_fiscal_year_end_prices(
+        self,
+        price_data: Dict[str, float],
+        fiscal_year_ends: List[str]
+    ) -> Dict[str, Optional[float]]:
+        """
+        Match historical prices to fiscal year end dates.
+        
+        For each fiscal year end date, this method:
+        1. Tries to find an exact match in the price data
+        2. If no exact match, searches backwards up to 7 days for the last trading day
+        3. Returns None if no price found within the 7-day window
+        
+        This handles cases where fiscal year ends fall on weekends or holidays.
+        
+        Args:
+            price_data: Dict mapping date strings to prices
+                Example: {'2024-06-28': 450.12, '2024-06-29': 451.00, ...}
+            fiscal_year_ends: List of fiscal year end dates (ISO format)
+                Example: ['2024-06-30', '2023-06-30', '2022-06-30']
+                
+        Returns:
+            Dict mapping fiscal year end dates to prices (or None if not found)
+            Example: {'2024-06-30': 451.00, '2023-06-30': 340.50, '2022-06-30': None}
+            
+        Note:
+            - Searches backwards (not forwards) to get the last traded price before year end
+            - yfinance prices are split-adjusted, so no concern about crossing split boundaries
+            - Returns None for years with no data within 7-day window
+        """
+        result = {}
+        
+        for fiscal_end in fiscal_year_ends:
+            # Try exact match first
+            if fiscal_end in price_data:
+                result[fiscal_end] = price_data[fiscal_end]
+                if self.debug:
+                    self.logger.debug(f"{fiscal_end}: Exact match found - {price_data[fiscal_end]:.2f}")
+                continue
+            
+            # Search backwards up to 7 days for last trading day
+            try:
+                target = datetime.strptime(fiscal_end, '%Y-%m-%d')
+                found = False
+                
+                for days_back in range(1, 8):
+                    search_date = (target - timedelta(days=days_back)).strftime('%Y-%m-%d')
+                    if search_date in price_data:
+                        result[fiscal_end] = price_data[search_date]
+                        if self.debug:
+                            self.logger.debug(f"{fiscal_end}: Using price from {search_date} ({days_back} days prior) - {price_data[search_date]:.2f}")
+                        found = True
+                        break
+                
+                if not found:
+                    result[fiscal_end] = None
+                    if self.debug:
+                        self.logger.debug(f"{fiscal_end}: No price data within 7-day window")
+                        
+            except ValueError as e:
+                # Invalid date format
+                result[fiscal_end] = None
+                if self.debug:
+                    self.logger.debug(f"{fiscal_end}: Invalid date format - {e}")
+        
+        return result

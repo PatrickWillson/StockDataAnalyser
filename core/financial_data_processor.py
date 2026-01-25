@@ -219,6 +219,32 @@ class FinancialDataProcessor:
             
             for year in sorted_years:
                 year_data = yearly_data[year]
+                
+                # Extract debt components for total debt calculation
+                long_term_debt = self.sanitize_value(year_data.get('longTermDebt', 0))
+                short_term_debt = self.sanitize_value(year_data.get('shortTermDebt', 0))
+                total_debt_precalc = self.sanitize_value(year_data.get('shortLongTermDebtTotal', 0))
+                
+                # Calculate total debt (prefer components, fallback to precalculated)
+                # Graham emphasized tracking total debt to distinguish companies that grow
+                # through retained earnings vs leverage
+                if long_term_debt > 0 or short_term_debt > 0:
+                    total_debt = long_term_debt + short_term_debt
+                elif total_debt_precalc > 0:
+                    total_debt = total_debt_precalc
+                else:
+                    total_debt = 0
+                
+                # Extract shares outstanding with fallback chain
+                # EODHD sometimes uses different field names for share count
+                shares_outstanding = (
+                    year_data.get('commonStockSharesOutstanding') or
+                    year_data.get('weightedAverageShsOut') or
+                    year_data.get('weightedAverageShsOutDil') or
+                    0
+                )
+                shares_outstanding = self.sanitize_value(shares_outstanding)
+                
                 result[year] = {
                     'total_equity': self.sanitize_value(year_data.get('totalStockholderEquity')),
                     'intangible_assets': self.sanitize_value(year_data.get('intangibleAssets')),
@@ -226,8 +252,10 @@ class FinancialDataProcessor:
                     'current_assets': self.sanitize_value(year_data.get('totalCurrentAssets')),
                     'current_liabilities': self.sanitize_value(year_data.get('totalCurrentLiabilities')),
                     'total_liabilities': self.sanitize_value(year_data.get('totalLiab')),
-                    'long_term_debt': self.sanitize_value(year_data.get('longTermDebt')),
+                    'long_term_debt': long_term_debt,
                     'total_assets': self.sanitize_value(year_data.get('totalAssets')),
+                    'total_debt': total_debt,  # NEW: Total debt for Graham trend analysis
+                    'shares_outstanding': shares_outstanding,  # NEW: Track dilution/buybacks
                 }
         except (KeyError, TypeError, AttributeError) as e:
             self._log(f"[DEBUG] Error parsing Balance Sheet: {e}")
@@ -543,12 +571,13 @@ class FinancialDataProcessor:
                 'total_equity': bs_data.get('total_equity', 0.0),
                 'intangible_assets': bs_data.get('intangible_assets', 0.0),
                 'goodwill': bs_data.get('goodwill', 0.0),
-                'shares_outstanding': year_shares,  # Use year-specific shares
+                'shares_outstanding': bs_data.get('shares_outstanding', year_shares),  # Use balance sheet shares if available
                 'current_assets': bs_data.get('current_assets', 0.0),
                 'current_liabilities': bs_data.get('current_liabilities', 0.0),
                 'total_liabilities': bs_data.get('total_liabilities', 0.0),
                 'long_term_debt': bs_data.get('long_term_debt', 0.0),
                 'total_assets': bs_data.get('total_assets', 0.0),
+                'total_debt': bs_data.get('total_debt', 0.0),  # NEW: Total debt for Graham analysis
             }
         
         return result

@@ -11,8 +11,33 @@ The Stock Data Analyser fetches historical financial data from EODHD API, perfor
 - **Multi-Exchange Support**: Analyze stocks from US, UK, Canadian, European, and Asian markets
 - **Graham Methodology**: Calculate Graham Number, Net-Net Value, and Earnings Power Value (EPV)
 - **Defensive Investor Tests**: Evaluate stocks against Graham's seven criteria
+- **Historical Trend Analysis**: 20-year financial history with debt trends, dilution tracking, and historical valuations
 - **Anomaly Detection**: Statistical analysis using Z-Score to identify data quality issues
 - **Structured Output**: Generate Markdown dossiers optimized for LLM parsing
+
+### 20-Year Financial History Table
+
+The dossier includes an expanded financial history table with 11 columns designed for Graham-style trend analysis:
+
+**Core Financials:**
+- Revenue, Net Income, EPS, Dividend per Share, Book Value per Share
+
+**Graham Trend Analysis (New):**
+- **Total Debt** - Track debt trends to distinguish companies that grow through retained earnings vs leverage
+- **Shares Outstanding** - Detect shareholder dilution or buyback programs over time
+- **Year-End Price** - Historical stock prices at fiscal year end (from Yahoo Finance)
+- **Historical P/E** - How the market has valued earnings power over time (shows "Negative" for loss years)
+- **Historical P/B** - How the market has valued net assets over time
+
+**Example Output:**
+```markdown
+| Year | Revenue | Net Income | EPS | Div/Share | BVPS | Total Debt | Shares (B) | Price | P/E | P/B |
+|------|---------|------------|-----|-----------|------|------------|------------|-------|-----|-----|
+| 2025 | 281.7B | 101.8B | 13.64 | 3.40 | 46.01 | USD43.15B | 7.465B | USD495.67 | 36.3 | 10.8 |
+| 2024 | 245.1B | 88.1B | 11.80 | 3.08 | 35.95 | USD51.63B | 7.469B | USD441.99 | 37.5 | 12.3 |
+```
+
+**Graham's Reasoning**: Benjamin Graham didn't just look at current financials; he analyzed trends in financial strength. Rising debt may indicate financial stress, increasing shares signal dilution, and historical P/E ratios reveal if current valuations are historically cheap or expensive.
 
 ## Installation
 
@@ -136,7 +161,8 @@ The system generates a structured Markdown file (`[TICKER]_DOSSIER.md`) containi
 - Executive Summary with intrinsic values and margin of safety
 - Critical Alerts for data quality issues
 - Graham Defensive Tests results
-- 10-Year Financial History table
+- 20-Year Financial History table with 11 columns (including debt trends, dilution tracking, and historical valuations)
+- Comprehensive methodology documentation explaining all calculations
 
 ## Requirements
 

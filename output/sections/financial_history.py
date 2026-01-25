@@ -1,11 +1,11 @@
 """Financial History section generator for dossier.
 
 This module generates the 20-year financial history table section of the stock
-analysis dossier, showing revenue, net income, EPS, dividends, and book value
-per share over time.
+analysis dossier, showing revenue, net income, EPS, dividends, book value
+per share, total debt, shares outstanding, historical prices, and valuation ratios.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 class FinancialHistorySection:
@@ -14,6 +14,8 @@ class FinancialHistorySection:
     This section includes:
     - 20-year table of key financial metrics
     - Revenue, Net Income, EPS, Dividend, and BVPS columns
+    - Total Debt, Shares Outstanding, Year-End Price columns (Graham trend analysis)
+    - Historical P/E and P/B ratios
     - Handling of incomplete years (dividend data without financial statements)
     - Notes on data completeness and Graham's principles
     
@@ -28,6 +30,96 @@ class FinancialHistorySection:
         """
         self.financial_data = financial_data
     
+    @staticmethod
+    def format_debt(value: float, currency: str) -> str:
+        """
+        Format debt in billions or millions.
+        
+        Args:
+            value: Debt value
+            currency: Currency symbol
+            
+        Returns:
+            Formatted string (e.g., "$42.69B", "$500.00M", "N/A")
+        """
+        if value == 0:
+            return "N/A"
+        if value >= 1_000_000_000:
+            return f"{currency}{value / 1_000_000_000:.2f}B"
+        return f"{currency}{value / 1_000_000:.2f}M"
+    
+    @staticmethod
+    def format_shares(value: float) -> str:
+        """
+        Format shares in billions or millions.
+        
+        Args:
+            value: Share count
+            
+        Returns:
+            Formatted string (e.g., "7.469B", "500.00M", "N/A")
+        """
+        if value == 0:
+            return "N/A"
+        if value >= 1_000_000_000:
+            return f"{value / 1_000_000_000:.3f}B"
+        return f"{value / 1_000_000:.2f}M"
+    
+    @staticmethod
+    def format_price(value: Optional[float], currency: str) -> str:
+        """
+        Format price with currency symbol.
+        
+        Args:
+            value: Price value (or None if unavailable)
+            currency: Currency symbol
+            
+        Returns:
+            Formatted string (e.g., "$450.12", "N/A")
+        """
+        if value is None:
+            return "N/A"
+        return f"{currency}{value:.2f}"
+    
+    @staticmethod
+    def calculate_historical_pe(price: Optional[float], eps: float) -> str:
+        """
+        Calculate P/E ratio.
+        
+        Graham's method: Show losses explicitly, don't hide them as "N/A".
+        This signals earnings instability to the analyst.
+        
+        Args:
+            price: Year-end price (or None if unavailable)
+            eps: Earnings per share
+            
+        Returns:
+            Formatted P/E ratio or "Negative" for loss years or "N/A" for missing data
+        """
+        if price is None or eps is None:
+            return "N/A"
+        if eps < 0:
+            return "Negative"  # Explicitly shows loss year per Graham's methodology
+        if eps == 0:
+            return "N/A"
+        return f"{price / eps:.1f}"
+    
+    @staticmethod
+    def calculate_historical_pb(price: Optional[float], bvps: float) -> str:
+        """
+        Calculate P/B ratio.
+        
+        Args:
+            price: Year-end price (or None if unavailable)
+            bvps: Book value per share
+            
+        Returns:
+            Formatted P/B ratio or "N/A" for missing/invalid data
+        """
+        if price is None or bvps is None or bvps <= 0:
+            return "N/A"
+        return f"{price / bvps:.1f}"
+    
     def generate(self) -> List[str]:
         """Generate financial history section content.
         
@@ -38,6 +130,7 @@ class FinancialHistorySection:
         
         # Extract currency information
         unified_currency = self.financial_data.get('currency', 'USD')
+        currency_symbol = unified_currency  # Use full currency code as symbol
         
         # Section header
         lines.append("")
@@ -49,9 +142,9 @@ class FinancialHistorySection:
         is_dividend_amounts = self.financial_data.get('is_dividend_amounts', False)
         div_header = "Div/Share" if is_dividend_amounts else "Div Count"
         
-        # Table header
-        lines.append(f"| Year | Revenue | Net Income | EPS | {div_header} | BVPS |")
-        lines.append("|------|---------|------------|-----|-------------|------|")
+        # Table header with 11 columns
+        lines.append(f"| Year | Revenue | Net Income | EPS | {div_header} | BVPS | Total Debt | Shares (B) | Price | P/E | P/B |")
+        lines.append("|------|---------|------------|-----|-------------|------|------------|------------|-------|-----|-----|")
         
         # Get history and sort years descending (most recent first)
         history = self.financial_data.get('history', {})
@@ -67,6 +160,9 @@ class FinancialHistorySection:
             net_income = data.get('net_income', 0.0)
             eps = data.get('eps', 0.0)
             dividend = data.get('dividend', 0.0)
+            total_debt = data.get('total_debt', 0.0)
+            shares_outstanding = data.get('shares_outstanding', 0.0)
+            year_end_price = data.get('year_end_price')  # Can be None
             
             # Check if this year has actual financial data or just dividend data
             has_financial_data = revenue > 0 or net_income != 0 or eps != 0
@@ -79,6 +175,11 @@ class FinancialHistorySection:
                 eps_str = "[Data Unavailable]"
                 dividend_str = str(dividend)
                 bvps_str = "[Data Unavailable]"
+                debt_str = "[Data Unavailable]"
+                shares_str = "[Data Unavailable]"
+                price_str = "[Data Unavailable]"
+                pe_str = "[Data Unavailable]"
+                pb_str = "[Data Unavailable]"
                 
                 # Track incomplete year
                 year_only = year.split('-')[0]
@@ -93,10 +194,22 @@ class FinancialHistorySection:
                 # Calculate BVPS from balance sheet data
                 total_equity = data.get('total_equity', 0)
                 shares = data.get('shares_outstanding', 0)
-                bvps = round(total_equity / shares, 2) if shares > 0 and total_equity > 0 else 'N/A'
-                bvps_str = str(bvps)
+                bvps = round(total_equity / shares, 2) if shares > 0 and total_equity > 0 else 0
+                bvps_str = str(bvps) if bvps > 0 else 'N/A'
+                
+                # Format new columns using helper functions
+                debt_str = self.format_debt(total_debt, currency_symbol)
+                shares_str = self.format_shares(shares_outstanding)
+                price_str = self.format_price(year_end_price, currency_symbol)
+                
+                # Calculate historical ratios
+                pe_str = self.calculate_historical_pe(year_end_price, eps)
+                pb_str = self.calculate_historical_pb(year_end_price, bvps if bvps > 0 else None)
             
-            row = f"| {year} | {revenue_str} | {net_income_str} | {eps_str} | {dividend_str} | {bvps_str} |"
+            # Extract year display (e.g., '2024-06-30' → '2024')
+            year_display = year.split('-')[0]
+            
+            row = f"| {year_display} | {revenue_str} | {net_income_str} | {eps_str} | {dividend_str} | {bvps_str} | {debt_str} | {shares_str} | {price_str} | {pe_str} | {pb_str} |"
             lines.append(row)
         
         # Add notes on data completeness
@@ -113,5 +226,16 @@ class FinancialHistorySection:
         if not is_dividend_amounts:
             lines.append("")
             lines.append("*Note: Dividend column shows number of payments per year (actual amounts not available from data source)*")
+        
+        # Add note on new columns
+        lines.append("")
+        lines.append("**Graham Trend Analysis Columns:**")
+        lines.append("- **Total Debt**: Sum of long-term and short-term debt. Graham emphasized tracking debt trends to distinguish companies that grow through retained earnings vs leverage.")
+        lines.append("- **Shares (B)**: Common shares outstanding in billions. Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).")
+        lines.append("- **Price**: Year-end stock price on fiscal year end date (or last trading day within 7 days prior). Source: Yahoo Finance via yfinance.")
+        lines.append("- **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates loss year (Graham's method: show losses explicitly).")
+        lines.append("- **P/B**: Historical Price-to-Book ratio (Price ÷ BVPS). Shows how the market valued net assets over time.")
+        lines.append("")
+        lines.append("*Note: Historical prices converted to unified currency using current FX rates. Historical FX rates not used - actual historical valuations may differ due to FX fluctuations.*")
         
         return lines

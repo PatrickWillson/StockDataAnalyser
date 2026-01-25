@@ -107,6 +107,7 @@ def test_ticker_suffix_example():
                                 mock_create_eodhd.return_value = mock_client_instance
                                 
                                 mock_yf_instance = Mock()
+                                mock_yf_instance.fetch_historical_prices.return_value = None  # No historical prices
                                 mock_create_yf.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()
@@ -307,6 +308,7 @@ def test_fatal_error_when_both_sources_fail():
                         mock_create_eodhd.return_value = mock_client_instance
                         
                         mock_yf_instance = Mock()
+                        mock_yf_instance.fetch_historical_prices.return_value = None  # No historical prices
                         mock_create_yf.return_value = mock_yf_instance
                         
                         # Act & Assert: Run main and expect SystemExit
@@ -397,6 +399,7 @@ def test_system_continues_when_eodhd_has_price():
                                 mock_create_eodhd.return_value = mock_client_instance
                                 
                                 mock_yf_instance = Mock()
+                                mock_yf_instance.fetch_historical_prices.return_value = None  # No historical prices
                                 mock_create_yf.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()
@@ -483,6 +486,7 @@ def test_system_continues_when_yfinance_fallback_succeeds():
                                 mock_create_eodhd.return_value = mock_client_instance
                                 
                                 mock_yf_instance = Mock()
+                                mock_yf_instance.fetch_historical_prices.return_value = None  # No historical prices
                                 mock_create_yf.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()

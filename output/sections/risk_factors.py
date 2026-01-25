@@ -340,7 +340,7 @@ class RiskFactorsSection(DossierSection):
                     most_recent_eps = year_data.get('eps', 0)
                     break
             
-            if most_recent_eps > 0:
+            if most_recent_eps and most_recent_eps > 0:
                 payout_ratio = (forward_div / most_recent_eps) * 100
                 
                 if payout_ratio > 100:

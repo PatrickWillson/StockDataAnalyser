@@ -146,7 +146,7 @@ class MethodologySection:
         """
         pe_ratio = self.financial_data.get('pe_ratio', 0)
         
-        if pe_ratio > 0 and most_recent_eps > 0:
+        if pe_ratio > 0 and most_recent_eps and most_recent_eps > 0:
             eps_display = format_price_display(most_recent_eps, unified_currency, unified_currency)
             lines.append(f"- **P/E Ratio ({pe_ratio:.2f})**: Current Price / Most Recent Annual EPS")
             lines.append(f"  - Calculated from audited financials, not API pre-calculated ratios")
