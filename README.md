@@ -10,6 +10,7 @@ The Stock Data Analyser fetches historical financial data from EODHD API, perfor
 
 - **Multi-Exchange Support**: Analyze stocks from US, UK, Canadian, European, and Asian markets
 - **Graham Methodology**: Calculate Graham Number, Net-Net Value, and Earnings Power Value (EPV)
+- **TTM (Trailing Twelve Months) Analysis**: More current valuations using the most recent 12 months of periodic data
 - **Defensive Investor Tests**: Evaluate stocks against Graham's seven criteria
 - **Historical Trend Analysis**: 20-year financial history with debt trends, dilution tracking, and historical valuations
 - **Anomaly Detection**: Statistical analysis using Z-Score to identify data quality issues
@@ -38,6 +39,51 @@ The dossier includes an expanded financial history table with 11 columns designe
 ```
 
 **Graham's Reasoning**: Benjamin Graham didn't just look at current financials; he analyzed trends in financial strength. Rising debt may indicate financial stress, increasing shares signal dilution, and historical P/E ratios reveal if current valuations are historically cheap or expensive.
+
+### TTM (Trailing Twelve Months) Analysis
+
+The dossier includes a TTM analysis section that provides more current financial metrics than annual calculations. This is especially valuable when analyzing companies several months after their fiscal year end.
+
+**What is TTM?**
+TTM calculations use the most recent 12 months of periodic data (quarterly or semi-annual reports) to provide up-to-date financial metrics. For example, if analyzing a company in December 2025 whose fiscal year ends in June, annual calculations would be based on June 2025 data (6 months old), while TTM calculations would include data through September 2025 (only 3 months old).
+
+**Automatic Reporting Frequency Detection:**
+The system automatically detects whether a company reports quarterly (4 periods) or semi-annually (2 periods) by analyzing the intervals between reporting dates:
+- ~90 days (±15 days) → Quarterly reporter
+- ~180 days (±30 days) → Semi-annual reporter
+
+**TTM Metrics Calculated:**
+- TTM Graham Number
+- TTM Tangible Book Value Per Share (TBVPS)
+- TTM Net-Net Working Capital Value
+- TTM Margin of Safety
+- TTM P/E Ratio
+- TTM P/B Ratio
+
+**Example TTM Section Output:**
+```markdown
+## SECTION 1.5: TTM (TRAILING TWELVE MONTHS) ANALYSIS
+
+**Reporting Frequency Detected**: Quarterly (4 periods)
+**Date Range Covered**: Q4 2024 through Q3 2025
+
+**TTM Graham Calculations:**
+- TTM Graham Number: USD 285.43 (vs Annual: USD 267.89, +6.6%)
+- TTM TBVPS: USD 29.87 (vs Annual: USD 28.45, +5.0%)
+- TTM Net-Net Value: USD 15.23 (vs Annual: USD 14.67, +3.8%)
+- TTM Margin of Safety: 12.5% (vs Annual: 8.3%, +4.2pp)
+- TTM P/E Ratio: 28.5 (vs Annual: 23.4, +21.8%)
+- TTM P/B Ratio: 13.6 (vs Annual: 12.8, +6.3%)
+```
+
+**Key Differences from Annual Calculations:**
+- **Income Statement Items** (Revenue, Net Income, EPS): Summed over the selected periods
+- **EPS Calculation**: TTM EPS = Sum(Net Income) / Most Recent Shares Outstanding (not sum of EPS values)
+- **Balance Sheet Items** (Assets, Liabilities, Equity): Use the most recent period value only
+- **Currency Conversion**: Uses current FX rates (same as annual data)
+
+**Graceful Degradation:**
+If periodic data is unavailable or insufficient, the system continues with annual calculations only and adds a warning explaining why TTM analysis was skipped.
 
 ## Installation
 

@@ -534,6 +534,11 @@ class EODHDClient(BaseAPIClient):
             for warning in warnings:
                 logger.warning(f"  - {warning}")
         
+        # Parse quarterly data for TTM calculations
+        quarterly_balance_sheet = self.processor.parse_quarterly_balance_sheet(data)
+        quarterly_income_statement = self.processor.parse_quarterly_income_statement(data)
+        quarterly_data = self.processor.merge_quarterly_data(quarterly_balance_sheet, quarterly_income_statement)
+        
         logger.info(f"Data fetch complete for {ticker}")
         
         return {
@@ -577,7 +582,9 @@ class EODHDClient(BaseAPIClient):
             'week_52_high': week_52_high,
             'week_52_low': week_52_low,
             # Data quality metadata
-            'api_last_update': general.get('UpdatedAt', 'Unknown')
+            'api_last_update': general.get('UpdatedAt', 'Unknown'),
+            # TTM data
+            'quarterly_data': quarterly_data
         }
 
     def _cross_validate_metrics(self, data: Dict[str, Any], calculated_pe: float, calculated_bvps: float, 

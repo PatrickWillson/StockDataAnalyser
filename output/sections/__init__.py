@@ -13,5 +13,6 @@ __all__ = [
     'methodology',
     'calculation_details',
     'graham_tests',
-    'financial_history'
+    'financial_history',
+    'ttm_analysis'
 ]

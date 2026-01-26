@@ -5,14 +5,14 @@ These tests verify universal properties that should hold across all valid inputs
 Each test runs 100+ iterations with randomly generated data.
 """
 
-from hypothesis import given, strategies as st, settings, assume
+from hypothesis import given, strategies as st, settings, assume, HealthCheck
 import math
 from core.anomaly_detector import AnomalyDetector
 
 
 # Feature: stock-data-analyser, Property 9: Anomaly detection correctness
 # Validates: Requirements 7.3
-@settings(max_examples=100)
+@settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
 @given(
     # Generate a list of "normal" EPS values
     normal_eps=st.lists(

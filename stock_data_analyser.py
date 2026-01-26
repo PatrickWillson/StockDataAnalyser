@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from clients.factory import ClientFactory
 from core.graham_math import GrahamCalculator
 from core.anomaly_detector import AnomalyDetector
+from core.ttm_calculator import TTMCalculator
 from output.dossier_generator import DossierGenerator
 
 # Load Environment Variables
@@ -258,19 +259,59 @@ def main():
                 "No financial history data available - historical price columns will be empty."
             )
         
-        # 2. Compute Metrics
-        logger.info("[2/4] Calculating Graham Metrics (Strict Rules)...")
+        # 2. Parse Quarterly Data for TTM Calculations
+        logger.info("[2/5] Parsing Quarterly Data for TTM Analysis...")
+        quarterly_data = financial_data.get('quarterly_data', {'balance_sheet': {}, 'income_statement': {}})
+        
+        # 3. Compute Metrics
+        logger.info("[3/5] Calculating Graham Metrics (Strict Rules)...")
         calculator = GrahamCalculator(financial_data)
         metrics = calculator.compute_all()
         
-        # 3. Detect Anomalies (Statistical)
-        logger.info("[3/4] Scanning for Statistical Anomalies...")
+        # 4. Calculate TTM Metrics
+        logger.info("[4/5] Calculating TTM Metrics...")
+        ttm_metrics = None
+        if quarterly_data and (quarterly_data.get('balance_sheet') or quarterly_data.get('income_statement')):
+            try:
+                # Get currency information for TTM calculator
+                unified_currency = financial_data.get('currency', 'USD')
+                original_currency = financial_data.get('financials_currency', unified_currency)
+                fx_rate = financial_data.get('fx_rate_used')
+                exchange = financial_data.get('exchange', '')
+                
+                # Initialize TTM calculator
+                ttm_calculator = TTMCalculator(
+                    quarterly_data=quarterly_data,
+                    price=price,
+                    currency=unified_currency,
+                    original_currency=original_currency,
+                    fx_rate=fx_rate,
+                    exchange=exchange
+                )
+                
+                # Compute all TTM metrics (pass annual metrics for validation)
+                ttm_metrics = ttm_calculator.compute_all(annual_metrics=metrics)
+                
+                # Add TTM warnings to financial data warnings
+                if ttm_metrics.get('warnings'):
+                    financial_data['warnings'].extend(ttm_metrics['warnings'])
+                
+                logger.info(f"TTM Analysis: {ttm_metrics.get('reporting_frequency', 'N/A')} reporting detected")
+            except Exception as e:
+                logger.warning(f"TTM calculation failed: {str(e)}")
+                financial_data['warnings'].append(f"TTM Analysis: Calculation failed - {str(e)}")
+        else:
+            logger.info("TTM Analysis: Quarterly data not available")
+            financial_data['warnings'].append("TTM Analysis: Periodic data not available from API")
+        
+        # 5. Detect Anomalies (Statistical)
+        logger.info("[5/5] Scanning for Statistical Anomalies...")
         detector = AnomalyDetector(financial_data)
         anomalies = detector.scan()
         
-        # 4. Generate Output
-        logger.info("[4/4] Generating Dossier...")
-        generator = DossierGenerator(ticker, financial_data, metrics, anomalies)
+        # 6. Generate Output
+        logger.info("[6/5] Generating Dossier...")
+        generator = DossierGenerator(ticker, financial_data, metrics, anomalies, ttm_metrics=ttm_metrics)
         dossier_content = generator.generate()
         save_dossier(ticker, dossier_content)
 

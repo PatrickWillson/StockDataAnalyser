@@ -110,6 +110,9 @@ class MethodologySection:
         # Margin of Safety explanation
         self._add_margin_of_safety_explanation(lines)
         
+        # TTM methodology explanation
+        self._add_ttm_methodology_explanation(lines)
+        
         lines.append("")
         lines.append("---")
         
@@ -298,3 +301,55 @@ class MethodologySection:
             lines.append(f"- **Margin of Safety ({mos:.1f}%)**: (Graham Number - Price) / Graham Number × 100")
             lines.append(f"  - Percentage discount to intrinsic value")
             lines.append(f"  - Graham recommended minimum 20-30% for defensive investors")
+    
+    def _add_ttm_methodology_explanation(self, lines: List[str]) -> None:
+        """Add TTM (Trailing Twelve Months) methodology explanation.
+        
+        Requirements: 9.1, 9.2, 9.3, 9.4, 9.5, 9.6, 9.7
+        
+        Args:
+            lines: List to append lines to
+        """
+        lines.append("")
+        lines.append("### TTM (Trailing Twelve Months) Calculations:")
+        lines.append("")
+        lines.append("TTM calculations provide more current financial metrics by using the most recent 12 months of periodic data:")
+        lines.append("")
+        
+        lines.append("**Income Statement Items** (Revenue, Net Income, EPS):")
+        lines.append("- **Quarterly reporters**: Sum of last 4 quarters")
+        lines.append("- **Semi-annual reporters**: Sum of last 2 periods (H1 + H2)")
+        lines.append("- **EPS Calculation**: TTM EPS = Sum(Net Income) / Most Recent Shares Outstanding")
+        lines.append("  - **Important**: Do NOT sum EPS values directly (incorrect when share count changes)")
+        lines.append("  - Example: If shares increase from 50M to 55M during the year, summing EPS overstates earnings power")
+        lines.append("")
+        
+        lines.append("**Balance Sheet Items** (Assets, Liabilities, Equity):")
+        lines.append("- Use most recent period value (not summed)")
+        lines.append("- Balance sheet represents point-in-time snapshot, not cumulative")
+        lines.append("")
+        
+        lines.append("**Reporting Frequency Detection**:")
+        lines.append("- Average interval ~90 days (±15 days) → Quarterly")
+        lines.append("- Average interval ~180 days (±30 days) → Semi-annual")
+        lines.append("- Irregular intervals → Warning + attempt to use most recent continuous 12-month period")
+        lines.append("")
+        
+        lines.append("**TTM vs Annual**:")
+        lines.append("- **TTM**: More current (includes most recent quarter)")
+        lines.append("  - Reflects recent business performance")
+        lines.append("  - May include unaudited quarterly data")
+        lines.append("  - Better for fast-changing businesses")
+        lines.append("- **Annual**: More stable (full fiscal year, audited)")
+        lines.append("  - Verified by external auditors")
+        lines.append("  - Smooths out seasonal variations")
+        lines.append("  - Graham's preferred methodology")
+        lines.append("- Both are valuable for different reasons")
+        lines.append("")
+        
+        lines.append("**Limitations**:")
+        lines.append("- TTM data may be unaudited (quarterly reports)")
+        lines.append("- Seasonal businesses may show distortions")
+        lines.append("- Currency conversion uses current rate (not historical)")
+        lines.append("- Requires sufficient periodic data (4 quarters or 2 semi-annual periods)")
+        lines.append("- Data gaps or irregular reporting may prevent TTM calculation")

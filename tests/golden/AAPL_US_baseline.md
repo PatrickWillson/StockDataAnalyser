@@ -1,5 +1,5 @@
 # STOCK ANALYSIS DOSSIER: AAPL.US
-# DATE: 2026-01-25
+# DATE: 2026-01-26
 # SOURCE: EODHD (Tier 1 Data)
 # CEO: Mr. Timothy D. Cook
 # SECTOR: Technology | INDUSTRY: Consumer Electronics
@@ -16,13 +16,13 @@
 - Intrinsic Value (Graham): 28.73 USD
 - Intrinsic Value (EPV): 763,460,000,000.00 USD
 - Net-Net Value: -9.17 USD
-- Margin of Safety: -763.3
-- Current Price: 248.04 USD
+- Margin of Safety: -789.8
+- Current Price: 255.64 USD
 - 52-Week Range: 168.63 USD - 288.62 USD
-- Trailing Dividend: 1.03 USD (Yield: 0.42%) - Declared (Dividend API) [2025]
-  - Forward Rate: 1.04 USD (Yield: 0.42%)
-- P/E Ratio: 33.23
-- Price/Book: 50.48
+- Trailing Dividend: 1.03 USD (Yield: 0.40%) - Declared (Dividend API) [2025]
+  - Forward Rate: 1.04 USD (Yield: 0.41%)
+- P/E Ratio: 34.25
+- Price/Book: 52.02
 
 ---
 
@@ -63,10 +63,10 @@
   - Dividend coverage: 7.25x (adequate)
 
 ### Valuation Risk:
-- **Overvaluation Risk**: Margin of Safety -763.3%
+- **Overvaluation Risk**: Margin of Safety -789.8%
   - Trading above Graham intrinsic value
   - No margin for error if business deteriorates
-  - P/E Ratio 33.2x: High expectations priced in
+  - P/E Ratio 34.2x: High expectations priced in
   - Vulnerable to earnings disappointments
 
 ### Data Quality Risks:
@@ -102,11 +102,11 @@
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -763.3%** - Trading above intrinsic value
+- **Margin of Safety: -789.8%** - Trading above intrinsic value
   - Graham's Standard: 20-30% minimum for defensive investors
   - Assessment: **High valuation risk** - no margin for error
   - Intrinsic Value (Graham): 28.73 USD
-  - Current Price: 248.04 USD
+  - Current Price: 255.64 USD
 
 ### Data Quality Risk:
 - **Institutional Ownership: 64.81%** - Verify with regulatory filings
@@ -120,7 +120,7 @@
 *How key metrics are calculated*
 
 ### Valuation Metrics:
-- **P/E Ratio (33.23)**: Current Price / Most Recent Annual EPS
+- **P/E Ratio (34.25)**: Current Price / Most Recent Annual EPS
   - Calculated from audited financials, not API pre-calculated ratios
   - EPS: 7.46 USD (Net Income / Shares Outstanding)
 - **Profitability Metrics (ROE, ROA, Profit Margin)**:
@@ -160,9 +160,47 @@
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
   **Graham's Principle**: *"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle."*
-- **Margin of Safety (-763.3%)**: (Graham Number - Price) / Graham Number × 100
+- **Margin of Safety (-789.8%)**: (Graham Number - Price) / Graham Number × 100
   - Percentage discount to intrinsic value
   - Graham recommended minimum 20-30% for defensive investors
+
+### TTM (Trailing Twelve Months) Calculations:
+
+TTM calculations provide more current financial metrics by using the most recent 12 months of periodic data:
+
+**Income Statement Items** (Revenue, Net Income, EPS):
+- **Quarterly reporters**: Sum of last 4 quarters
+- **Semi-annual reporters**: Sum of last 2 periods (H1 + H2)
+- **EPS Calculation**: TTM EPS = Sum(Net Income) / Most Recent Shares Outstanding
+  - **Important**: Do NOT sum EPS values directly (incorrect when share count changes)
+  - Example: If shares increase from 50M to 55M during the year, summing EPS overstates earnings power
+
+**Balance Sheet Items** (Assets, Liabilities, Equity):
+- Use most recent period value (not summed)
+- Balance sheet represents point-in-time snapshot, not cumulative
+
+**Reporting Frequency Detection**:
+- Average interval ~90 days (±15 days) → Quarterly
+- Average interval ~180 days (±30 days) → Semi-annual
+- Irregular intervals → Warning + attempt to use most recent continuous 12-month period
+
+**TTM vs Annual**:
+- **TTM**: More current (includes most recent quarter)
+  - Reflects recent business performance
+  - May include unaudited quarterly data
+  - Better for fast-changing businesses
+- **Annual**: More stable (full fiscal year, audited)
+  - Verified by external auditors
+  - Smooths out seasonal variations
+  - Graham's preferred methodology
+- Both are valuable for different reasons
+
+**Limitations**:
+- TTM data may be unaudited (quarterly reports)
+- Seasonal businesses may show distortions
+- Currency conversion uses current rate (not historical)
+- Requires sufficient periodic data (4 quarters or 2 semi-annual periods)
+- Data gaps or irregular reporting may prevent TTM calculation
 
 ---
 
@@ -242,25 +280,25 @@
 | Year | Revenue | Net Income | EPS | Div/Share | BVPS | Total Debt | Shares (B) | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------------|------------|-------|-----|-----|
 | 2025 | 416161000000.0 | 112010000000.0 | 7.464995794316939 | 1.03 | 4.91 | 100.77B | 15.005B | N/A | N/A | N/A |
-| 2024 | 391035000000.0 | 93736000000.0 | 6.1868414773677936 | 0.99 | 3.7 | 108.26B | 15.408B | N/A | N/A | N/A |
-| 2023 | 383285000000.0 | 96995000000.0 | 6.226952267822055 | 0.95 | 3.93 | 111.09B | 15.813B | N/A | N/A | N/A |
-| 2022 | 394328000000.0 | 99803000000.0 | 6.254998991584083 | 0.91 | 3.1 | 120.07B | 16.326B | N/A | N/A | N/A |
-| 2021 | 365817000000.0 | 94680000000.0 | 5.731480848663541 | 0.865 | 3.74 | 124.72B | 16.865B | N/A | N/A | N/A |
-| 2020 | 274515000000.0 | 57411000000.0 | 3.3546831051261425 | 0.8074999999999999 | 3.73 | 112.44B | 17.528B | N/A | N/A | N/A |
-| 2019 | 260174000000.0 | 55256000000.0 | 3.1010612840108793 | 0.76 | 4.87 | 108.05B | 18.596B | N/A | N/A | N/A |
-| 2018 | 265595000000.0 | 59531000000.0 | 3.1179476801141024 | 0.705 | 5.36 | 114.48B | 20.000B | N/A | N/A | N/A |
-| 2017 | 229234000000.0 | 48351000000.0 | 2.3435923197293724 | 0.615 | 6.38 | 115.68B | 21.007B | N/A | N/A | N/A |
-| 2016 | 215639000000.0 | 45687000000.0 | 2.143723858599717 | 0.5574999999999999 | 5.83 | 87.03B | 22.001B | N/A | N/A | N/A |
-| 2015 | 233715000000.0 | 53394000000.0 | 2.3861632029448026 | 0.5075000000000001 | 5.15 | 64.46B | 23.172B | N/A | N/A | N/A |
-| 2014 | 182795000000.0 | 39510000000.0 | 1.67933200074875 | 0.46142999999999995 | 4.55 | 35.30B | 24.491B | N/A | N/A | N/A |
-| 2013 | 170910000000.0 | 37037000000.0 | 1.4673548896668929 | 0.42142999999999997 | 4.74 | 24.64B | 26.087B | N/A | N/A | N/A |
-| 2012 | 156508000000.0 | 41733000000.0 | 1.5735193579869087 | 0.18924000000000002 | 4.47 | 6.31B | 26.470B | N/A | N/A | N/A |
-| 2011 | 108249000000.0 | 25922000000.0 | 0.98323411729078 | N/A | 2.92 | 5.61B | 26.226B | N/A | N/A | N/A |
-| 2010 | 65225000000.0 | 14013000000.0 | 0.536314783748755 | N/A | 1.85 | 2.47B | 25.892B | N/A | N/A | N/A |
-| 2009 | 42905000000.0 | 8235000000.0 | 0.31975709798631075 | N/A | 1.1 | 1.95B | 25.396B | N/A | N/A | N/A |
-| 2008 | 32479000000.0 | 4834000000.0 | 0.1915074943847182 | N/A | 0.83 | 2.51B | 25.260B | N/A | N/A | N/A |
-| 2007 | 24006000000.0 | 3495000000.0 | 0.1386821552611605 | N/A | 0.58 | 1.80B | 24.900B | N/A | N/A | N/A |
-| 2006 | 19315000000.0 | 1989000000.0 | 0.08042109764407021 | N/A | 0.41 | 1.51B | 24.571B | N/A | N/A | N/A |
+| 2024 | 391035000000.0 | 93736000000.0 | 6.1868414773677936 | 0.99 | 3.76 | 108.26B | 15.151B | N/A | N/A | N/A |
+| 2023 | 383285000000.0 | 96995000000.0 | 6.226952267822055 | 0.95 | 3.99 | 111.09B | 15.577B | N/A | N/A | N/A |
+| 2022 | 394328000000.0 | 99803000000.0 | 6.254998991584083 | 0.91 | 3.18 | 120.07B | 15.956B | N/A | N/A | N/A |
+| 2021 | 365817000000.0 | 94680000000.0 | 5.731480848663541 | 0.865 | 3.82 | 124.72B | 16.519B | N/A | N/A | N/A |
+| 2020 | 274515000000.0 | 57411000000.0 | 3.3546831051261425 | 0.8074999999999999 | 3.82 | 112.44B | 17.114B | N/A | N/A | N/A |
+| 2019 | 260174000000.0 | 55256000000.0 | 3.1010612840108793 | 0.76 | 5.08 | 108.05B | 17.818B | N/A | N/A | N/A |
+| 2018 | 265595000000.0 | 59531000000.0 | 3.1179476801141024 | 0.705 | 5.61 | 114.48B | 19.093B | N/A | N/A | N/A |
+| 2017 | 229234000000.0 | 48351000000.0 | 2.3435923197293724 | 0.615 | 6.5 | 115.68B | 20.631B | N/A | N/A | N/A |
+| 2016 | 215639000000.0 | 45687000000.0 | 2.143723858599717 | 0.5574999999999999 | 6.02 | 87.03B | 21.312B | N/A | N/A | N/A |
+| 2015 | 233715000000.0 | 53394000000.0 | 2.3861632029448026 | 0.5075000000000001 | 5.33 | 64.46B | 22.377B | N/A | N/A | N/A |
+| 2014 | 182795000000.0 | 39510000000.0 | 1.67933200074875 | 0.46142999999999995 | 4.74 | 35.30B | 23.527B | N/A | N/A | N/A |
+| 2013 | 170910000000.0 | 37037000000.0 | 1.4673548896668929 | 0.42142999999999997 | 4.89 | 24.64B | 25.241B | N/A | N/A | N/A |
+| 2012 | 156508000000.0 | 41733000000.0 | 1.5735193579869087 | 0.18924000000000002 | 4.46 | 6.31B | 26.522B | N/A | N/A | N/A |
+| 2011 | 108249000000.0 | 25922000000.0 | 0.98323411729078 | N/A | 2.91 | 5.61B | 26.364B | N/A | N/A | N/A |
+| 2010 | 65225000000.0 | 14013000000.0 | 0.536314783748755 | N/A | 1.83 | 2.47B | 26.128B | N/A | N/A | N/A |
+| 2009 | 42905000000.0 | 8235000000.0 | 0.31975709798631075 | N/A | 1.08 | 1.95B | 25.754B | N/A | N/A | N/A |
+| 2008 | 32479000000.0 | 4834000000.0 | 0.1915074943847182 | N/A | 0.83 | 2.51B | 25.242B | N/A | N/A | N/A |
+| 2007 | 24006000000.0 | 3495000000.0 | 0.1386821552611605 | N/A | 0.58 | 1.80B | 25.202B | N/A | N/A | N/A |
+| 2006 | 19315000000.0 | 1989000000.0 | 0.08042109764407021 | N/A | 0.4 | 1.51B | 24.732B | N/A | N/A | N/A |
 
 **Note on Data Completeness:**
 

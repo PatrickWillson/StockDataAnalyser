@@ -312,6 +312,211 @@ class FinancialDataProcessor:
         
         return result
     
+    def parse_quarterly_balance_sheet(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
+        """
+        Parse quarterly balance sheet data from EODHD API.
+        
+        Extracts quarterly balance sheet data from Financials.Balance_Sheet.quarterly,
+        sorts periods by date descending (most recent first), and sanitizes all values.
+        
+        Args:
+            data: Full EODHD API response
+            
+        Returns:
+            Dictionary with date as key (e.g., '2025-09-30') and financial data as value.
+            Returns empty dict if quarterly data is not available.
+            
+        Example:
+            {
+                '2025-09-30': {
+                    'total_equity': 363076000000.0,
+                    'intangible_assets': 21236000000.0,
+                    'goodwill': 119497000000.0,
+                    'current_assets': 189066000000.0,
+                    'total_liabilities': 273275000000.0,
+                    'shares_outstanding': 7466000000.0,
+                    ...
+                },
+                '2025-06-30': { ... },
+                ...
+            }
+        """
+        result = {}
+        try:
+            quarterly_data = data.get('Financials', {}).get('Balance_Sheet', {}).get('quarterly', {})
+            
+            if not quarterly_data:
+                self._log("[DEBUG] No Balance Sheet quarterly data found in API response")
+                return result
+            
+            # Sort by date descending (most recent first)
+            sorted_periods = sorted(quarterly_data.keys(), reverse=True)
+            self._log(f"[DEBUG] Found {len(sorted_periods)} quarters of Balance Sheet data")
+            
+            for period in sorted_periods:
+                period_data = quarterly_data[period]
+                
+                # Extract debt components for total debt calculation
+                long_term_debt = self.sanitize_value(period_data.get('longTermDebt', 0))
+                short_term_debt = self.sanitize_value(period_data.get('shortTermDebt', 0))
+                total_debt_precalc = self.sanitize_value(period_data.get('shortLongTermDebtTotal', 0))
+                
+                # Calculate total debt (prefer components, fallback to precalculated)
+                if long_term_debt > 0 or short_term_debt > 0:
+                    total_debt = long_term_debt + short_term_debt
+                elif total_debt_precalc > 0:
+                    total_debt = total_debt_precalc
+                else:
+                    total_debt = 0
+                
+                # Extract shares outstanding with fallback chain
+                shares_outstanding = (
+                    period_data.get('commonStockSharesOutstanding') or
+                    period_data.get('weightedAverageShsOut') or
+                    period_data.get('weightedAverageShsOutDil') or
+                    0
+                )
+                shares_outstanding = self.sanitize_value(shares_outstanding)
+                
+                result[period] = {
+                    'total_equity': self.sanitize_value(period_data.get('totalStockholderEquity')),
+                    'intangible_assets': self.sanitize_value(period_data.get('intangibleAssets')),
+                    'goodwill': self.sanitize_value(period_data.get('goodWill')),
+                    'current_assets': self.sanitize_value(period_data.get('totalCurrentAssets')),
+                    'current_liabilities': self.sanitize_value(period_data.get('totalCurrentLiabilities')),
+                    'total_liabilities': self.sanitize_value(period_data.get('totalLiab')),
+                    'long_term_debt': long_term_debt,
+                    'total_assets': self.sanitize_value(period_data.get('totalAssets')),
+                    'total_debt': total_debt,
+                    'shares_outstanding': shares_outstanding,
+                }
+                
+                self._log(f"[DEBUG] Period {period}: Equity={result[period]['total_equity']:,.0f}, "
+                         f"Shares={result[period]['shares_outstanding']:,.0f}")
+        
+        except (KeyError, TypeError, AttributeError) as e:
+            self._log(f"[DEBUG] Error parsing quarterly Balance Sheet: {e}")
+        
+        return result
+    
+    def parse_quarterly_income_statement(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
+        """
+        Parse quarterly income statement data from EODHD API.
+        
+        Extracts quarterly income statement data from Financials.Income_Statement.quarterly,
+        sorts periods by date descending (most recent first), and sanitizes all values.
+        
+        Args:
+            data: Full EODHD API response
+            
+        Returns:
+            Dictionary with date as key (e.g., '2025-09-30') and financial data as value.
+            Returns empty dict if quarterly data is not available.
+            
+        Example:
+            {
+                '2025-09-30': {
+                    'revenue': 77673000000.0,
+                    'net_income': 27747000000.0,
+                    'eps': 3.72,
+                    ...
+                },
+                '2025-06-30': { ... },
+                ...
+            }
+        """
+        result = {}
+        try:
+            quarterly_data = data.get('Financials', {}).get('Income_Statement', {}).get('quarterly', {})
+            
+            if not quarterly_data:
+                self._log("[DEBUG] No Income Statement quarterly data found in API response")
+                return result
+            
+            # Sort by date descending (most recent first)
+            sorted_periods = sorted(quarterly_data.keys(), reverse=True)
+            self._log(f"[DEBUG] Found {len(sorted_periods)} quarters of Income Statement data")
+            
+            for period in sorted_periods:
+                period_data = quarterly_data[period]
+                
+                # Try to get EPS directly, or calculate from netIncome / shares
+                eps_value = period_data.get('eps')
+                if eps_value is None or eps_value == 'NA' or eps_value == '':
+                    # Try alternative field names
+                    eps_value = period_data.get('basicEPS') or period_data.get('epsBasic')
+                    if eps_value:
+                        self._log(f"[DEBUG] Period {period}: Using alternative EPS field")
+                
+                # Use netIncomeFromContinuingOps (Graham's preferred metric) with fallback to netIncome
+                # Graham focused on earning power from continuing operations, excluding discontinued ops
+                net_income_value = period_data.get('netIncomeFromContinuingOps')
+                if net_income_value is None or net_income_value == 'NA' or net_income_value == '':
+                    net_income_value = period_data.get('netIncome')
+                    if net_income_value:
+                        self._log(f"[DEBUG] Period {period}: Using netIncome (netIncomeFromContinuingOps not available)")
+                else:
+                    self._log(f"[DEBUG] Period {period}: Using netIncomeFromContinuingOps")
+                
+                result[period] = {
+                    'revenue': self.sanitize_value(period_data.get('totalRevenue')),
+                    'net_income': self.sanitize_value(net_income_value),
+                    'eps': self.sanitize_value(eps_value),
+                }
+                
+                self._log(f"[DEBUG] Period {period}: Revenue={result[period]['revenue']:,.0f}, "
+                         f"Net Income={result[period]['net_income']:,.0f}, "
+                         f"EPS={result[period]['eps']:.2f}")
+        
+        except (KeyError, TypeError, AttributeError) as e:
+            self._log(f"[DEBUG] Error parsing quarterly Income Statement: {e}")
+        
+        return result
+    
+    def merge_quarterly_data(self, balance_sheet: Dict[str, Dict[str, float]], 
+                            income_statement: Dict[str, Dict[str, float]]) -> Dict[str, Any]:
+        """
+        Merge quarterly balance sheet and income statement data.
+        
+        This method combines the outputs from parse_quarterly_balance_sheet and
+        parse_quarterly_income_statement into a single structure for the TTMCalculator.
+        
+        Args:
+            balance_sheet: Quarterly balance sheet data (from parse_quarterly_balance_sheet)
+            income_statement: Quarterly income statement data (from parse_quarterly_income_statement)
+            
+        Returns:
+            Dictionary with 'balance_sheet' and 'income_statement' keys.
+            Returns empty dicts if data is missing.
+            
+        Example:
+            {
+                'balance_sheet': {
+                    '2025-09-30': {'total_equity': 363076000000.0, ...},
+                    '2025-06-30': {'total_equity': 350000000000.0, ...},
+                    ...
+                },
+                'income_statement': {
+                    '2025-09-30': {'revenue': 77673000000.0, ...},
+                    '2025-06-30': {'revenue': 75000000000.0, ...},
+                    ...
+                }
+            }
+        """
+        # Handle missing data gracefully - return empty dicts
+        if balance_sheet is None:
+            balance_sheet = {}
+        if income_statement is None:
+            income_statement = {}
+        
+        self._log(f"[DEBUG] Merging quarterly data: {len(balance_sheet)} balance sheet periods, "
+                 f"{len(income_statement)} income statement periods")
+        
+        return {
+            'balance_sheet': balance_sheet,
+            'income_statement': income_statement
+        }
+    
     def parse_dividend_history(self, data: Dict[str, Any], dividend_api_data: Optional[List[Dict[str, Any]]] = None) -> tuple[Dict[str, float], Optional[float], bool, str, Dict[str, str]]:
         """
         Extract dividend history from EODHD Dividend API (primary) or Cash Flow statements (fallback).

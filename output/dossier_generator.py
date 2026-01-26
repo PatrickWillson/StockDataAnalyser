@@ -11,7 +11,7 @@ Requirements: 1.1, 1.2, 1.3
 """
 
 from datetime import datetime
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from output.sections.executive_summary import ExecutiveSummarySection
 from output.sections.key_metrics import KeyMetricsSection
 from output.sections.risk_factors import RiskFactorsSection
@@ -19,6 +19,7 @@ from output.sections.methodology import MethodologySection
 from output.sections.calculation_details import CalculationDetailsSection
 from output.sections.graham_tests import GrahamTestsSection
 from output.sections.financial_history import FinancialHistorySection
+from output.sections.ttm_analysis import TTMAnalysisSection
 
 
 class DossierGenerator:
@@ -57,7 +58,8 @@ class DossierGenerator:
     """
     
     def __init__(self, ticker: str, financial_data: Dict[str, Any], 
-                 metrics: Dict[str, Any], anomalies: List[str]):
+                 metrics: Dict[str, Any], anomalies: List[str],
+                 ttm_metrics: Optional[Dict[str, Any]] = None):
         """Initialize dossier generator with data and metrics.
         
         Args:
@@ -65,11 +67,13 @@ class DossierGenerator:
             financial_data: Dictionary containing financial data (FinancialData DTO)
             metrics: Dictionary containing Graham metrics (GrahamMetrics DTO)
             anomalies: List of anomaly detection results
+            ttm_metrics: Optional dictionary containing TTM metrics
         """
         self.ticker = ticker
         self.financial_data = financial_data
         self.metrics = metrics
         self.anomalies = anomalies
+        self.ttm_metrics = ttm_metrics
         
         # Initialize section generators
         self.executive_summary = ExecutiveSummarySection(financial_data, metrics)
@@ -79,6 +83,12 @@ class DossierGenerator:
         self.calculation_details = CalculationDetailsSection(financial_data, metrics)
         self.graham_tests = GrahamTestsSection(metrics)
         self.financial_history = FinancialHistorySection(financial_data)
+        
+        # Initialize TTM section if data available
+        if ttm_metrics and ttm_metrics.get('ttm_graham_number') != "N/A":
+            self.ttm_analysis = TTMAnalysisSection(ttm_metrics, metrics)
+        else:
+            self.ttm_analysis = None
     
     def generate(self) -> str:
         """Generate complete dossier content.
@@ -107,6 +117,10 @@ class DossierGenerator:
         
         # 2. Executive Summary
         lines.extend(self.executive_summary.generate())
+        
+        # 2.5. TTM Analysis (if data available)
+        if self.ttm_analysis:
+            lines.extend(self.ttm_analysis.generate())
         
         # 3. Key Metrics
         lines.extend(self.key_metrics.generate())
