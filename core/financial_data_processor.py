@@ -695,6 +695,71 @@ class FinancialDataProcessor:
         
         return result, forward_rate, is_amount_data, dividend_currency, source_indicators
     
+    def calculate_ttm_dividend(self, dividend_api_data: Optional[List[Dict[str, Any]]], 
+                              reference_date: Optional[str] = None) -> tuple[float, List[Dict[str, Any]], str]:
+        """
+        Calculate trailing twelve months (TTM) dividend from Dividend API payment dates.
+        
+        This provides the actual dividend income stream for investors buying today,
+        based on the sum of all dividend payments in the last 12 months.
+        
+        Args:
+            dividend_api_data: List of dividend records from EODHD Dividend API
+            reference_date: Reference date for TTM calculation (YYYY-MM-DD format)
+                          Defaults to today if not provided
+        
+        Returns:
+            Tuple of (ttm_total, ttm_payments, currency)
+            - ttm_total: Sum of dividends paid in last 12 months
+            - ttm_payments: List of payment records included in TTM
+            - currency: Currency of dividend payments
+        """
+        from datetime import datetime, timedelta
+        
+        if not dividend_api_data or len(dividend_api_data) == 0:
+            return 0.0, [], 'USD'
+        
+        # Determine reference date (default to today)
+        if reference_date:
+            try:
+                ref_date = datetime.strptime(reference_date, '%Y-%m-%d')
+            except ValueError:
+                ref_date = datetime.now()
+        else:
+            ref_date = datetime.now()
+        
+        # Calculate cutoff date (12 months ago)
+        cutoff_date = ref_date - timedelta(days=365)
+        cutoff_str = cutoff_date.strftime('%Y-%m-%d')
+        
+        # Extract currency from first record
+        currency = dividend_api_data[0].get('currency', 'USD')
+        
+        # Filter payments in last 12 months
+        ttm_total = 0.0
+        ttm_payments = []
+        
+        for div in dividend_api_data:
+            # Use payment date if available, otherwise ex-dividend date
+            payment_date_str = div.get('paymentDate') or div.get('date')
+            
+            if payment_date_str and payment_date_str >= cutoff_str:
+                value = self.sanitize_value(div.get('value', 0))
+                if value > 0:
+                    ttm_total += value
+                    ttm_payments.append({
+                        'date': payment_date_str,
+                        'value': value,
+                        'currency': div.get('currency', currency)
+                    })
+        
+        # Sort payments by date (most recent first)
+        ttm_payments.sort(key=lambda x: x['date'], reverse=True)
+        
+        self._log(f"[DEBUG] TTM Dividend: {ttm_total:.4f} {currency} from {len(ttm_payments)} payments in last 12 months")
+        
+        return ttm_total, ttm_payments, currency
+    
     @staticmethod
     def merge_financial_data(balance_sheet: Dict, income_statement: Dict, 
                             dividend_history: Dict, shares_outstanding: float,

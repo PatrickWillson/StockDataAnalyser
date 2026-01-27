@@ -255,6 +255,11 @@ class EODHDClient(BaseAPIClient):
         income_statement = self.processor.parse_income_statement(data)
         dividend_history, forward_dividend_rate, is_dividend_amounts, dividend_currency, dividend_sources = self.processor.parse_dividend_history(data, dividend_api_data=dividend_api_data)
         
+        # Calculate TTM dividend from Dividend API data
+        ttm_dividend, ttm_dividend_payments, ttm_dividend_currency = self.processor.calculate_ttm_dividend(dividend_api_data)
+        if ttm_dividend > 0:
+            logger.info(f"TTM Dividend: {ttm_dividend:.4f} {ttm_dividend_currency} from {len(ttm_dividend_payments)} payments")
+        
         # Convert dividend history to financials currency if needed
         # This is critical for Dividend API data which comes in the stock's trading currency
         if dividend_currency != financials_currency:
@@ -444,6 +449,23 @@ class EODHDClient(BaseAPIClient):
                 if success:
                     forward_dividend_rate = converted_fwd_rate
         
+        # Convert TTM dividend to financials currency
+        if ttm_dividend and ttm_dividend > 0:
+            # TTM dividend currency handling (same as forward rate)
+            ttm_div_currency = ttm_dividend_currency
+            if exchange == "LSE" and ttm_div_currency == "GBX":
+                # TTM dividend is already in GBP for LSE stocks
+                ttm_div_currency = "GBP"
+            
+            if ttm_div_currency != financials_currency:
+                converted_ttm_div, success = self.currency_converter.convert(
+                    ttm_dividend, ttm_div_currency, financials_currency
+                )
+                if success:
+                    ttm_dividend = converted_ttm_div
+                    ttm_dividend_currency = financials_currency
+                    logger.info(f"TTM dividend converted from {ttm_div_currency} to {financials_currency}: {ttm_dividend:.4f}")
+        
         # Recalculate P/E ratio using converted price and most recent EPS
         pe_ratio = 0.0  # Initialize to 0
         if most_recent_eps and most_recent_eps > 0:
@@ -577,6 +599,9 @@ class EODHDClient(BaseAPIClient):
             'forward_dividend_rate': forward_dividend_rate,
             'is_dividend_amounts': is_dividend_amounts,
             'dividend_sources': dividend_sources,  # NEW: Source indicators for each year
+            'ttm_dividend': ttm_dividend,  # NEW: TTM dividend (last 12 months)
+            'ttm_dividend_payments': ttm_dividend_payments,  # NEW: List of payments in TTM
+            'ttm_dividend_currency': ttm_dividend_currency,  # NEW: Currency of TTM dividend
             # Highlights
             'dividend_per_share': dividend_per_share,
             'dividend_yield': dividend_yield,

@@ -8,6 +8,17 @@ import pytest
 from output.sections.ttm_analysis import TTMAnalysisSection
 
 
+def create_minimal_financial_data():
+    """Create minimal financial_data dict for testing."""
+    return {
+        'currency': 'USD',
+        'price': 100.0,
+        'ttm_dividend': 0.0,
+        'ttm_dividend_payments': [],
+        'history': {}
+    }
+
+
 class TestTTMAnalysisSectionGeneration:
     """Test TTM section generation with various data scenarios."""
     
@@ -34,7 +45,7 @@ class TestTTMAnalysisSectionGeneration:
             'pb_ratio': 12.0
         }
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check header exists
@@ -52,7 +63,7 @@ class TestTTMAnalysisSectionGeneration:
         
         annual_metrics = {'graham_number': 250.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check frequency is displayed
@@ -69,7 +80,7 @@ class TestTTMAnalysisSectionGeneration:
         
         annual_metrics = {'graham_number': 250.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check frequency is displayed
@@ -86,7 +97,7 @@ class TestTTMAnalysisSectionGeneration:
         
         annual_metrics = {'graham_number': 250.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check date range is displayed
@@ -115,7 +126,7 @@ class TestTTMAnalysisSectionGeneration:
             'pb_ratio': 12.0
         }
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check all metrics are present
@@ -135,7 +146,7 @@ class TestPercentageDifferenceCalculation:
         ttm_metrics = {'ttm_graham_number': 300.00, 'currency': 'USD'}
         annual_metrics = {'graham_number': 250.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         diff = section._calculate_percentage_difference(300.00, 250.00)
         
         assert diff == "+20.0%"
@@ -145,7 +156,7 @@ class TestPercentageDifferenceCalculation:
         ttm_metrics = {'ttm_graham_number': 200.00, 'currency': 'USD'}
         annual_metrics = {'graham_number': 250.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         diff = section._calculate_percentage_difference(200.00, 250.00)
         
         assert diff == "-20.0%"
@@ -155,7 +166,7 @@ class TestPercentageDifferenceCalculation:
         ttm_metrics = {'ttm_graham_number': 250.00, 'currency': 'USD'}
         annual_metrics = {'graham_number': 250.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         diff = section._calculate_percentage_difference(250.00, 250.00)
         
         assert diff == "0.0%"
@@ -165,7 +176,7 @@ class TestPercentageDifferenceCalculation:
         ttm_metrics = {'ttm_graham_number': 'N/A', 'currency': 'USD'}
         annual_metrics = {'graham_number': 250.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         diff = section._calculate_percentage_difference('N/A', 250.00)
         
         assert diff == ""
@@ -175,7 +186,7 @@ class TestPercentageDifferenceCalculation:
         ttm_metrics = {'ttm_graham_number': 300.00, 'currency': 'USD'}
         annual_metrics = {'graham_number': 'N/A'}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         diff = section._calculate_percentage_difference(300.00, 'N/A')
         
         assert diff == ""
@@ -185,7 +196,7 @@ class TestPercentageDifferenceCalculation:
         ttm_metrics = {'ttm_graham_number': 300.00, 'currency': 'USD'}
         annual_metrics = {'graham_number': 0.0}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         diff = section._calculate_percentage_difference(300.00, 0.0)
         
         assert diff == ""
@@ -195,7 +206,7 @@ class TestPercentageDifferenceCalculation:
         ttm_metrics = {'ttm_graham_number': 500.00, 'currency': 'USD'}
         annual_metrics = {'graham_number': 100.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         diff = section._calculate_percentage_difference(500.00, 100.00)
         
         assert diff == "+400.0%"
@@ -209,7 +220,7 @@ class TestDateRangeFormatting:
         ttm_metrics = {'currency': 'USD'}
         annual_metrics = {}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         
         # Q4 2024 through Q3 2025
         periods = ['2025-09-30', '2025-06-30', '2025-03-31', '2024-12-31']
@@ -224,7 +235,7 @@ class TestDateRangeFormatting:
         ttm_metrics = {'currency': 'USD'}
         annual_metrics = {}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         
         # H2 2024 through H1 2025
         periods = ['2025-06-30', '2024-12-31']
@@ -238,7 +249,7 @@ class TestDateRangeFormatting:
         ttm_metrics = {'currency': 'USD'}
         annual_metrics = {}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         date_range = section._format_date_range([])
         
         assert date_range == "N/A"
@@ -248,7 +259,7 @@ class TestDateRangeFormatting:
         ttm_metrics = {'currency': 'USD'}
         annual_metrics = {}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         
         assert section._get_quarter(1) == "Q1"
         assert section._get_quarter(3) == "Q1"
@@ -264,7 +275,7 @@ class TestDateRangeFormatting:
         ttm_metrics = {'currency': 'USD'}
         annual_metrics = {}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         
         assert section._get_half(1) == "H1"
         assert section._get_half(6) == "H1"
@@ -287,7 +298,7 @@ class TestNAHandling:
         
         annual_metrics = {'graham_number': 250.00, 'tbvps': 28.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check N/A is displayed
@@ -316,7 +327,7 @@ class TestNAHandling:
             'pb_ratio': 12.0
         }
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check all metrics show N/A
@@ -346,7 +357,7 @@ class TestNAHandling:
             'pb_ratio': 12.0
         }
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check mix of values and N/A
@@ -368,7 +379,7 @@ class TestCurrencyFormatting:
         
         annual_metrics = {'graham_number': 250.00, 'tbvps': 28.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check USD is displayed
@@ -384,7 +395,7 @@ class TestCurrencyFormatting:
         
         annual_metrics = {'graham_number': 250.00, 'tbvps': 28.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check GBP is displayed
@@ -400,7 +411,7 @@ class TestCurrencyFormatting:
         
         annual_metrics = {'graham_number': 1250.00, 'tbvps': 1028.00}
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check comma formatting
@@ -424,7 +435,7 @@ class TestComparisonDisplay:
             'pe_ratio': 23.4
         }
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check comparison format includes Annual and Diff
@@ -441,7 +452,7 @@ class TestComparisonDisplay:
             'graham_number': 'N/A'
         }
         
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, create_minimal_financial_data())
         lines = section.generate()
         
         # Check no comparison shown

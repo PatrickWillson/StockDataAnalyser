@@ -86,7 +86,7 @@ class DossierGenerator:
         
         # Initialize TTM section if data available
         if ttm_metrics and ttm_metrics.get('ttm_graham_number') != "N/A":
-            self.ttm_analysis = TTMAnalysisSection(ttm_metrics, metrics)
+            self.ttm_analysis = TTMAnalysisSection(ttm_metrics, metrics, financial_data)
         else:
             self.ttm_analysis = None
     

@@ -84,7 +84,7 @@ class TestSemiAnnualDossierGeneration:
         }
         
         # Act: Generate TTM section
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, {"currency": "USD", "price": 100.0, "ttm_dividend": 0.0, "ttm_dividend_payments": [], "history": {}})
         lines = section.generate()
         dossier_content = '\n'.join(lines)
         
@@ -195,7 +195,7 @@ class TestSemiAnnualDossierGeneration:
         }
         
         # Act: Generate dossier section
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, {"currency": "USD", "price": 100.0, "ttm_dividend": 0.0, "ttm_dividend_payments": [], "history": {}})
         lines = section.generate()
         dossier_content = '\n'.join(lines)
         
@@ -248,7 +248,7 @@ class TestSemiAnnualDossierGeneration:
         }
         
         # Act: Generate dossier section
-        section = TTMAnalysisSection(ttm_metrics, annual_metrics)
+        section = TTMAnalysisSection(ttm_metrics, annual_metrics, {"currency": "USD", "price": 100.0, "ttm_dividend": 0.0, "ttm_dividend_payments": [], "history": {}})
         lines = section.generate()
         dossier_content = '\n'.join(lines)
         

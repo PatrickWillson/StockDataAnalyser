@@ -20,15 +20,17 @@ class TTMAnalysisSection(DossierSection):
     Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7
     """
     
-    def __init__(self, ttm_metrics: Dict[str, Any], annual_metrics: Dict[str, Any]):
+    def __init__(self, ttm_metrics: Dict[str, Any], annual_metrics: Dict[str, Any], financial_data: Dict[str, Any]):
         """Initialize TTM section generator.
         
         Args:
             ttm_metrics: TTM calculations from TTMCalculator
             annual_metrics: Annual calculations for comparison
+            financial_data: Full financial data dict (for TTM dividend)
         """
         self.ttm_metrics = ttm_metrics
         self.annual_metrics = annual_metrics
+        self.financial_data = financial_data
     
     def generate(self) -> List[str]:
         """Generate TTM section markdown lines.
@@ -59,6 +61,9 @@ class TTMAnalysisSection(DossierSection):
         
         # TTM Graham calculations with comparisons
         self._add_ttm_calculations(lines)
+        
+        # TTM Dividend (if available)
+        self._add_ttm_dividend(lines)
         
         lines.append("")
         lines.append("---")
@@ -306,3 +311,60 @@ class TTMAnalysisSection(DossierSection):
             return "H1"
         else:
             return "H2"
+    
+    def _add_ttm_dividend(self, lines: List[str]) -> None:
+        """Add TTM dividend information if available.
+        
+        Args:
+            lines: List to append lines to
+        """
+        ttm_dividend = self.financial_data.get('ttm_dividend', 0.0)
+        ttm_payments = self.financial_data.get('ttm_dividend_payments', [])
+        currency = self.financial_data.get('currency', 'USD')
+        price = self.financial_data.get('price', 0.0)
+        
+        if not ttm_dividend or ttm_dividend <= 0:
+            return
+        
+        # Calculate TTM yield
+        ttm_yield = 0.0
+        if price > 0:
+            ttm_yield = (ttm_dividend / price) * 100
+        
+        # Get fiscal year dividend for comparison (from history)
+        history = self.financial_data.get('history', {})
+        fiscal_year_dividend = 0.0
+        fiscal_year = None
+        
+        if history:
+            sorted_years = sorted(history.keys(), reverse=True)
+            # Find most recent complete fiscal year
+            for year_key in sorted_years:
+                year_data = history[year_key]
+                has_financial_data = (
+                    year_data.get('revenue', 0.0) > 0 or 
+                    year_data.get('net_income', 0.0) != 0 or 
+                    year_data.get('total_equity', 0.0) > 0
+                )
+                if has_financial_data:
+                    fiscal_year = year_key.split('-')[0]
+                    fiscal_year_dividend = year_data.get('dividend', 0.0)
+                    break
+        
+        lines.append("")
+        lines.append(f"- TTM Dividend (Last 12 Months): {ttm_dividend:.2f} {currency} (Yield: {ttm_yield:.2f}%)")
+        
+        # Show payment breakdown if available
+        if ttm_payments and len(ttm_payments) > 0:
+            lines.append(f"  - Based on {len(ttm_payments)} payment(s):")
+            for payment in ttm_payments:
+                payment_date = payment.get('date', 'N/A')
+                payment_value = payment.get('value', 0.0)
+                lines.append(f"    - {payment_date}: {payment_value:.4f} {currency}")
+        
+        # Compare with fiscal year dividend if available
+        if fiscal_year_dividend > 0 and fiscal_year:
+            fiscal_yield = (fiscal_year_dividend / price) * 100 if price > 0 else 0.0
+            pct_diff = ((ttm_dividend - fiscal_year_dividend) / fiscal_year_dividend) * 100
+            diff_sign = "+" if pct_diff > 0 else ""
+            lines.append(f"  - FY{fiscal_year} Dividend: {fiscal_year_dividend:.2f} {currency} (Yield: {fiscal_yield:.2f}%, Diff: {diff_sign}{pct_diff:.1f}%)")
