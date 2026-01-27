@@ -457,10 +457,43 @@ class GrahamCalculator:
         return self.run_investor_tests("defensive")
     
     def _test_earnings_stability(self, history: dict, years: list, min_years: int = 8, period: int = 10) -> str:
-        """Test if company has positive earnings in required number of years."""
-        test_years = years[:period]
-        positive_years = 0
+        """
+        Test if company has positive earnings in required number of years.
         
+        Filters out incomplete years (years with only dividend data but no financial statements)
+        to ensure accurate testing. This is consistent with other test methods that use
+        _get_latest_financial_year() to skip incomplete years.
+        
+        Args:
+            history: Financial history dictionary
+            years: List of years sorted in reverse chronological order
+            min_years: Minimum number of years with positive earnings required
+            period: Number of years to examine
+            
+        Returns:
+            'PASS' if positive_years >= min_years, 'FAIL' otherwise
+        """
+        # Filter out incomplete years (years with no financial data, only dividends)
+        # An incomplete year has revenue=0, net_income=0, and total_equity=0
+        complete_years = []
+        for year in years:
+            year_data = history[year]
+            has_financial_data = (
+                year_data.get('revenue', 0.0) > 0 or
+                year_data.get('net_income', 0.0) != 0 or  # Can be negative (loss)
+                year_data.get('total_equity', 0.0) > 0
+            )
+            if has_financial_data:
+                complete_years.append(year)
+        
+        # Take required period from complete years only
+        test_years = complete_years[:period]
+        
+        # Need enough complete years to test
+        if len(test_years) < min_years:
+            return 'FAIL'
+        
+        positive_years = 0
         for year in test_years:
             net_income = history[year].get('net_income', 0.0)
             if net_income > 0:
