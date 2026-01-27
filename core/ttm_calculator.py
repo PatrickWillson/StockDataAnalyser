@@ -11,8 +11,12 @@ Key Features:
 - Graceful degradation when data is unavailable
 """
 
+import logging
 from datetime import datetime
 from typing import Dict, Union, List, Any, Optional
+
+# Configure module-level logger
+logger = logging.getLogger(__name__)
 
 
 class TTMCalculator:
@@ -197,6 +201,7 @@ class TTMCalculator:
         
         Algorithm:
         - Calculate average interval between consecutive periods
+        - Uses only the most recent periods to detect current reporting pattern
         - ~90 days (±15 days) → Quarterly
         - ~180 days (±30 days) → Semi-annual
         - Otherwise → Irregular
@@ -204,44 +209,61 @@ class TTMCalculator:
         Returns:
             'quarterly', 'semi-annual', or 'irregular'
         """
+        logger.debug("Frequency detection starting")
+        
         # Get income statement periods (should match balance sheet)
         income_statement = self.quarterly_data.get('income_statement', {})
         
         if not income_statement:
+            logger.debug("Frequency detection: No periodic data available")
             self.warnings.append("TTM Analysis: No periodic data available")
             return 'irregular'
         
         # Get sorted dates (most recent first)
         dates = sorted(income_statement.keys(), reverse=True)
+        logger.debug(f"Frequency detection: {len(dates)} total periods available")
         
         if len(dates) < 2:
+            logger.debug("Frequency detection: Insufficient periods (< 2)")
             self.warnings.append("TTM Analysis: Insufficient periods to determine frequency")
             return 'irregular'
         
+        # Use only the most recent periods to detect current reporting pattern
+        # This handles companies that switched from quarterly to semi-annual (or vice versa)
+        # Use up to 5 most recent periods (4 intervals) for detection
+        recent_dates = dates[:min(5, len(dates))]
+        logger.debug(f"Frequency detection: Using {len(recent_dates)} most recent periods: {recent_dates}")
+        
         # Calculate intervals between consecutive periods
         intervals = []
-        for i in range(len(dates) - 1):
-            interval = self._calculate_interval_days(dates[i], dates[i + 1])
+        for i in range(len(recent_dates) - 1):
+            interval = self._calculate_interval_days(recent_dates[i], recent_dates[i + 1])
             if interval is not None:
                 intervals.append(interval)
+                logger.debug(f"Frequency detection: Interval {i+1}: {recent_dates[i]} to {recent_dates[i+1]} = {interval} days")
         
         if not intervals:
+            logger.debug("Frequency detection: Unable to calculate any intervals")
             self.warnings.append("TTM Analysis: Unable to calculate period intervals")
             return 'irregular'
         
         # Calculate average interval
         avg_interval = sum(intervals) / len(intervals)
+        logger.debug(f"Frequency detection: Average interval = {avg_interval:.1f} days (from {len(intervals)} intervals)")
         
         # Classify based on average interval
         # Quarterly: ~90 days (±15 days) → 75-105 days
         if 75 <= avg_interval <= 105:
+            logger.debug("Frequency detection: Classified as QUARTERLY (75-105 days)")
             return 'quarterly'
         
         # Semi-annual: ~180 days (±30 days) → 150-210 days
         if 150 <= avg_interval <= 210:
+            logger.debug("Frequency detection: Classified as SEMI-ANNUAL (150-210 days)")
             return 'semi-annual'
         
         # Irregular pattern
+        logger.debug(f"Frequency detection: Classified as IRREGULAR (avg {avg_interval:.1f} days outside valid ranges)")
         self.warnings.append(
             f"TTM Analysis: Irregular reporting pattern detected (avg interval: {avg_interval:.0f} days)"
         )
@@ -261,7 +283,11 @@ class TTMCalculator:
         Returns:
             True if gaps detected, False otherwise
         """
+        # Log method entry with parameters
+        logger.debug(f"Gap detection starting: frequency={frequency}, periods={periods}")
+        
         if len(periods) < 2:
+            logger.debug("Gap detection skipped: fewer than 2 periods")
             return False
         
         # Expected interval and tolerance based on frequency
@@ -272,27 +298,40 @@ class TTMCalculator:
             expected_interval = 180
             tolerance = 45  # Allow ±45 days for semi-annual
         
+        # Calculate and log threshold
+        threshold = expected_interval + tolerance
+        logger.debug(f"Gap detection thresholds: expected_interval={expected_interval}, tolerance={tolerance}, threshold={threshold}")
+        
         # Check each interval between consecutive periods
         missing_periods = []
         for i in range(len(periods) - 1):
             interval = self._calculate_interval_days(periods[i], periods[i + 1])
             if interval is None:
+                logger.warning(f"Gap detection: Unable to calculate interval between {periods[i]} and {periods[i+1]}")
                 continue
+            
+            # Log interval calculation with dates and days
+            logger.debug(f"Gap detection: Interval between {periods[i+1]} and {periods[i]} = {interval} days (threshold: {threshold})")
             
             # Check if interval is significantly larger than expected (indicating missing period)
             # If interval is ~2x expected, there's likely a missing period
-            if interval > expected_interval + tolerance:
+            if interval > threshold:
                 # Calculate how many periods might be missing
                 missing_count = round(interval / expected_interval) - 1
+                logger.debug(f"Gap detected: interval {interval} days > threshold {threshold} days, missing_count={missing_count}")
                 if missing_count > 0:
                     missing_periods.append(f"between {periods[i + 1]} and {periods[i]}")
+            else:
+                logger.debug(f"No gap: interval {interval} days <= threshold {threshold} days")
         
         if missing_periods:
-            self.warnings.append(
-                f"TTM Analysis: Periodic data has gaps - missing periods {', '.join(missing_periods)}"
-            )
+            warning_msg = f"TTM Analysis: Periodic data has gaps - missing periods {', '.join(missing_periods)}"
+            logger.warning(warning_msg)
+            self.warnings.append(warning_msg)
+            logger.debug(f"Gap detection complete: Gaps found - {missing_periods}")
             return True
         
+        logger.debug("Gap detection complete: No gaps found")
         return False
     
     def _select_periods_for_ttm(self, frequency: str) -> List[str]:
@@ -306,8 +345,12 @@ class TTMCalculator:
             List of selected period dates in descending order (most recent first)
             Returns empty list if insufficient periods or coverage gap
         """
+        # Log method entry with frequency parameter
+        logger.debug(f"Period selection starting: frequency={frequency}")
+        
         # Determine number of periods needed
         periods_needed = 4 if frequency == 'quarterly' else 2
+        logger.debug(f"Periods needed for {frequency} reporting: {periods_needed}")
         
         # Get sorted periods
         income_statement = self.quarterly_data.get('income_statement', {})
@@ -315,6 +358,9 @@ class TTMCalculator:
         
         income_dates = sorted(income_statement.keys(), reverse=True)
         balance_dates = sorted(balance_sheet.keys(), reverse=True)
+        
+        # Log number of available periods
+        logger.debug(f"Available periods: {len(income_dates)} income statement periods, {len(balance_dates)} balance sheet periods")
         
         # Check if we have enough periods
         if len(income_dates) < periods_needed:
@@ -344,6 +390,8 @@ class TTMCalculator:
         # - Semi-annual: 2 consecutive half-years = 1 interval of ~180 days = ~180 days span
         if len(selected_periods) >= 2:
             total_span = self._calculate_interval_days(selected_periods[0], selected_periods[-1])
+            logger.debug(f"Span validation: total_span={total_span} days (from {selected_periods[-1]} to {selected_periods[0]})")
+            
             if total_span is not None:
                 # Expected span depends on frequency:
                 # - Quarterly: 4 periods = 3 intervals of ~90 days = ~270 days
@@ -358,12 +406,19 @@ class TTMCalculator:
                     expected_min, expected_max = 150, 210
                     expected_desc = "~180 days (1 semi-annual interval)"
                 
+                logger.debug(f"Span validation: expected range {expected_min}-{expected_max} days ({expected_desc})")
+                
                 if not (expected_min <= total_span <= expected_max):
+                    logger.warning(f"Span validation FAILED: {total_span} days not in range {expected_min}-{expected_max}")
                     self.warnings.append(
                         f"TTM Analysis: Selected periods cover {total_span} days (expected {expected_desc})"
                     )
                     return []
+                else:
+                    logger.debug(f"Span validation PASSED: {total_span} days is within range {expected_min}-{expected_max}")
         
+        # Log exit with selected periods
+        logger.debug(f"Period selection complete: {len(selected_periods)} periods selected - {selected_periods}")
         return selected_periods
     
     def calculate_ttm_metrics(self) -> Dict[str, Any]:
@@ -451,7 +506,7 @@ class TTMCalculator:
         ttm_eps = ttm_net_income / shares_outstanding if shares_outstanding > 0 else 0.0
         
         # Format date range for display
-        date_range = self._format_date_range(selected_periods)
+        date_range = self._format_date_range(selected_periods, frequency)
         
         return {
             'ttm_revenue': ttm_revenue,
@@ -468,15 +523,17 @@ class TTMCalculator:
             'date_range': date_range
         }
     
-    def _format_date_range(self, periods: List[str]) -> str:
+    def _format_date_range(self, periods: List[str], frequency: str) -> str:
         """
         Format date range for display.
         
         Args:
             periods: List of period dates (e.g., ['2025-09-30', '2025-06-30', ...])
+            frequency: Reporting frequency ('quarterly' or 'semi-annual')
             
         Returns:
-            Formatted string like "Q4 2024 through Q3 2025"
+            Formatted string like "Q4 2024 through Q3 2025" for quarterly
+            or "H2 2024 through H1 2025" for semi-annual
         """
         if not periods:
             return "N/A"
@@ -492,11 +549,36 @@ class TTMCalculator:
         if oldest_date is None or newest_date is None:
             return f"{oldest} through {newest}"
         
-        # Format as "Q4 2024 through Q3 2025"
-        oldest_quarter = self._get_quarter_label(oldest_date)
-        newest_quarter = self._get_quarter_label(newest_date)
+        # Format based on frequency
+        if frequency == 'semi-annual':
+            # Use H1/H2 labels for semi-annual
+            oldest_label = self._get_half_label(oldest_date)
+            newest_label = self._get_half_label(newest_date)
+        else:
+            # Use Q1/Q2/Q3/Q4 labels for quarterly
+            oldest_label = self._get_quarter_label(oldest_date)
+            newest_label = self._get_quarter_label(newest_date)
         
-        return f"{oldest_quarter} through {newest_quarter}"
+        return f"{oldest_label} through {newest_label}"
+    
+    def _get_half_label(self, date: datetime) -> str:
+        """
+        Get half-year label for a date.
+        
+        Args:
+            date: datetime object
+            
+        Returns:
+            String like "H1 2025" or "H2 2025"
+        """
+        month = date.month
+        year = date.year
+        
+        # Determine half based on month
+        if month <= 6:
+            return f"H1 {year}"
+        else:
+            return f"H2 {year}"
     
     def _get_quarter_label(self, date: datetime) -> str:
         """

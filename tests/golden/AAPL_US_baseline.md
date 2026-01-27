@@ -1,5 +1,5 @@
 # STOCK ANALYSIS DOSSIER: AAPL.US
-# DATE: 2026-01-26
+# DATE: 2026-01-27
 # SOURCE: EODHD (Tier 1 Data)
 # CEO: Mr. Timothy D. Cook
 # SECTOR: Technology | INDUSTRY: Consumer Electronics
@@ -16,13 +16,13 @@
 - Intrinsic Value (Graham): 28.73 USD
 - Intrinsic Value (EPV): 763,460,000,000.00 USD
 - Net-Net Value: -9.17 USD
-- Margin of Safety: -789.8
-- Current Price: 255.64 USD
+- Margin of Safety: -808.6
+- Current Price: 261.03 USD
 - 52-Week Range: 168.63 USD - 288.62 USD
-- Trailing Dividend: 1.03 USD (Yield: 0.40%) - Declared (Dividend API) [2025]
-  - Forward Rate: 1.04 USD (Yield: 0.41%)
-- P/E Ratio: 34.25
-- Price/Book: 52.02
+- Trailing Dividend: 1.03 USD (Yield: 0.39%) - Declared (Dividend API) [2025]
+  - Forward Rate: 1.04 USD (Yield: 0.40%)
+- P/E Ratio: 34.97
+- Price/Book: 53.12
 
 ---
 
@@ -63,10 +63,10 @@
   - Dividend coverage: 7.25x (adequate)
 
 ### Valuation Risk:
-- **Overvaluation Risk**: Margin of Safety -789.8%
+- **Overvaluation Risk**: Margin of Safety -808.6%
   - Trading above Graham intrinsic value
   - No margin for error if business deteriorates
-  - P/E Ratio 34.2x: High expectations priced in
+  - P/E Ratio 35.0x: High expectations priced in
   - Vulnerable to earnings disappointments
 
 ### Data Quality Risks:
@@ -102,11 +102,11 @@
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -789.8%** - Trading above intrinsic value
+- **Margin of Safety: -808.6%** - Trading above intrinsic value
   - Graham's Standard: 20-30% minimum for defensive investors
   - Assessment: **High valuation risk** - no margin for error
   - Intrinsic Value (Graham): 28.73 USD
-  - Current Price: 255.64 USD
+  - Current Price: 261.03 USD
 
 ### Data Quality Risk:
 - **Institutional Ownership: 64.81%** - Verify with regulatory filings
@@ -120,7 +120,7 @@
 *How key metrics are calculated*
 
 ### Valuation Metrics:
-- **P/E Ratio (34.25)**: Current Price / Most Recent Annual EPS
+- **P/E Ratio (34.97)**: Current Price / Most Recent Annual EPS
   - Calculated from audited financials, not API pre-calculated ratios
   - EPS: 7.46 USD (Net Income / Shares Outstanding)
 - **Profitability Metrics (ROE, ROA, Profit Margin)**:
@@ -160,7 +160,7 @@
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
   **Graham's Principle**: *"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle."*
-- **Margin of Safety (-789.8%)**: (Graham Number - Price) / Graham Number × 100
+- **Margin of Safety (-808.6%)**: (Graham Number - Price) / Graham Number × 100
   - Percentage discount to intrinsic value
   - Graham recommended minimum 20-30% for defensive investors
 

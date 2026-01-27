@@ -1,5 +1,5 @@
 # STOCK ANALYSIS DOSSIER: YU.LSE
-# DATE: 2026-01-26
+# DATE: 2026-01-27
 # SOURCE: EODHD (Tier 1 Data)
 # CEO: Mr. Baljit Bobby Kalar
 # SECTOR: Utilities | INDUSTRY: Utilities - Diversified
@@ -16,13 +16,13 @@
 - Intrinsic Value (Graham): 12.54 GBP
 - Intrinsic Value (EPV): 60,924,571.00 GBP
 - Net-Net Value: 2.14 GBP
-- Margin of Safety: -33.6
-- Current Price: 16.75 GBP (1,675 pence)
+- Margin of Safety: -34.0
+- Current Price: 16.80 GBP (1,680 pence)
 - 52-Week Range: 1,234.71 GBX (12.35 GBP) - 1,783.80 GBX (17.84 GBP)
-- Trailing Dividend: 0.56 GBP (Yield: 3.34%) - Declared (Dividend API) [2024]
-  - Forward Rate: 0.63 GBP (Yield: 3.76%)
-- P/E Ratio: 8.99
-- Price/Book: 4.28
+- Trailing Dividend: 0.56 GBP (Yield: 3.33%) - Declared (Dividend API) [2024]
+  - Forward Rate: 0.63 GBP (Yield: 3.75%)
+- P/E Ratio: 9.01
+- Price/Book: 4.29
 
 ---
 
@@ -61,7 +61,7 @@
   - Dividend coverage: 3.33x (adequate)
 
 ### Valuation Risk:
-- **Overvaluation Risk**: Margin of Safety -33.6%
+- **Overvaluation Risk**: Margin of Safety -34.0%
   - Trading above Graham intrinsic value
   - No margin for error if business deteriorates
 
@@ -98,11 +98,11 @@
 - **Dividend History: 6 of 10 years** - ⚠️ Inconsistent payment history
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -33.6%** - Trading above intrinsic value
+- **Margin of Safety: -34.0%** - Trading above intrinsic value
   - Graham's Standard: 20-30% minimum for defensive investors
   - Assessment: **High valuation risk** - no margin for error
   - Intrinsic Value (Graham): 12.54 GBP
-  - Current Price: 16.75 GBP
+  - Current Price: 16.80 GBP
 
 ### Data Quality Risk:
 - **Institutional Ownership: 13.64%** - Verify with regulatory filings
@@ -116,7 +116,7 @@
 *How key metrics are calculated*
 
 ### Valuation Metrics:
-- **P/E Ratio (8.99)**: Current Price / Most Recent Annual EPS
+- **P/E Ratio (9.01)**: Current Price / Most Recent Annual EPS
   - Calculated from audited financials, not API pre-calculated ratios
   - EPS: 1.86 GBP (Net Income / Shares Outstanding)
 - **Profitability Metrics (ROE, ROA, Profit Margin)**:
@@ -159,7 +159,7 @@
 - **Net-Net Value (2.14 GBP)**: (Current Assets - Total Liabilities) / Shares
   - Conservative liquidation value estimate
   - Graham's 'cigar butt' valuation for distressed situations
-- **Margin of Safety (-33.6%)**: (Graham Number - Price) / Graham Number × 100
+- **Margin of Safety (-34.0%)**: (Graham Number - Price) / Graham Number × 100
   - Percentage discount to intrinsic value
   - Graham recommended minimum 20-30% for defensive investors
 

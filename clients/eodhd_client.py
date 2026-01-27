@@ -334,12 +334,26 @@ class EODHDClient(BaseAPIClient):
             price, fix_applied = self.currency_converter.apply_london_fix(price, most_recent_eps, exchange)
             if fix_applied:
                 price_currency = "GBP"  # After London Fix, price is in GBP
+                # Also apply London Fix to 52-week high/low
+                if week_52_high > 0:
+                    week_52_high = week_52_high / 100
+                    logger.info(f"London Fix applied to 52-week high: {week_52_high:.2f} GBP")
+                if week_52_low > 0:
+                    week_52_low = week_52_low / 100
+                    logger.info(f"London Fix applied to 52-week low: {week_52_low:.2f} GBP")
         elif exchange == "LSE" and currency == "GBX" and not is_from_market_cap:
             # No London Fix needed, but currency is GBX, so convert to GBP
             # Skip this if price is from MarketCap (already in GBP)
             price = price / 100
             price_currency = "GBP"
             logger.info(f"Converted GBX to GBP: {price:.2f} GBP")
+            # Also convert 52-week high/low from GBX to GBP
+            if week_52_high > 0:
+                week_52_high = week_52_high / 100
+                logger.info(f"Converted 52-week high from GBX to GBP: {week_52_high:.2f} GBP")
+            if week_52_low > 0:
+                week_52_low = week_52_low / 100
+                logger.info(f"Converted 52-week low from GBX to GBP: {week_52_low:.2f} GBP")
         elif exchange == "LSE" and is_from_market_cap:
             # Price from MarketCap is already in GBP
             price_currency = "GBP"

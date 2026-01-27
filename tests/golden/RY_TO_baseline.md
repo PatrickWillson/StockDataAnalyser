@@ -1,5 +1,5 @@
 # STOCK ANALYSIS DOSSIER: RY.TO
-# DATE: 2026-01-26
+# DATE: 2026-01-27
 # SOURCE: EODHD (Tier 1 Data)
 # CEO: Mr. David I. McKay
 # SECTOR: Financial Services | INDUSTRY: Banks - Diversified
@@ -17,11 +17,11 @@
 - Intrinsic Value (EPV): 141,998,000,000.00 CAD
 - Net-Net Value: -1,406.09 CAD
 - Margin of Safety: -42.1
-- Current Price: 228.92 CAD
+- Current Price: 229.03 CAD
 - 52-Week Range: 147.51 CAD - 240.34 CAD
 - Trailing Dividend: 6.04 CAD (Yield: 2.64%) - Declared (Dividend API) [2025]
-  - Forward Rate: 6.56 CAD (Yield: 2.87%)
-- P/E Ratio: 15.82
+  - Forward Rate: 6.56 CAD (Yield: 2.86%)
+- P/E Ratio: 15.83
 - Price/Book: 2.32
 
 ---
@@ -102,7 +102,7 @@
   - Graham's Standard: 20-30% minimum for defensive investors
   - Assessment: **High valuation risk** - no margin for error
   - Intrinsic Value (Graham): 161.15 CAD
-  - Current Price: 228.92 CAD
+  - Current Price: 229.03 CAD
 
 ### Data Quality Risk:
 - **Institutional Ownership: 49.14%** - Verify with regulatory filings
@@ -116,7 +116,7 @@
 *How key metrics are calculated*
 
 ### Valuation Metrics:
-- **P/E Ratio (15.82)**: Current Price / Most Recent Annual EPS
+- **P/E Ratio (15.83)**: Current Price / Most Recent Annual EPS
   - Calculated from audited financials, not API pre-calculated ratios
   - EPS: 14.47 CAD (Net Income / Shares Outstanding)
 - **Profitability Metrics (ROE, ROA, Profit Margin)**:

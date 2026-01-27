@@ -181,32 +181,39 @@ class ExecutiveSummarySection(DossierSection):
         """
         week_52_high = self.financial_data.get('week_52_high', 0)
         week_52_low = self.financial_data.get('week_52_low', 0)
+        exchange = self.financial_data.get('exchange', '')
         
         if week_52_high > 0 and week_52_low > 0:
+            # For LSE stocks, the 52-week values have already been converted from GBX to GBP
+            # in the EODHD client (London Fix), so we need to use GBP as the trading currency
+            trading_currency = original_stock_currency
+            if exchange == "LSE" and original_stock_currency == "GBX":
+                trading_currency = "GBP"  # Values are already in GBP after London Fix
+            
             # Convert to unified currency if needed
-            if original_stock_currency != unified_currency:
+            if trading_currency != unified_currency:
                 # Use CurrencyConverter for proper GBX/GBP handling
                 from core.currency_converter import CurrencyConverter
                 converter = CurrencyConverter()
                 
-                high_converted, high_success = converter.convert(week_52_high, original_stock_currency, unified_currency)
-                low_converted, low_success = converter.convert(week_52_low, original_stock_currency, unified_currency)
+                high_converted, high_success = converter.convert(week_52_high, trading_currency, unified_currency)
+                low_converted, low_success = converter.convert(week_52_low, trading_currency, unified_currency)
                 
                 if high_success and low_success:
-                    high_display = format_price_display(week_52_high, original_stock_currency, 
+                    high_display = format_price_display(week_52_high, trading_currency, 
                                                        unified_currency, high_converted)
-                    low_display = format_price_display(week_52_low, original_stock_currency, 
+                    low_display = format_price_display(week_52_low, trading_currency, 
                                                       unified_currency, low_converted)
                 else:
                     # Fallback if conversion unavailable
-                    high_display = format_price_display(week_52_high, original_stock_currency, 
+                    high_display = format_price_display(week_52_high, trading_currency, 
                                                        unified_currency)
-                    low_display = format_price_display(week_52_low, original_stock_currency, 
+                    low_display = format_price_display(week_52_low, trading_currency, 
                                                       unified_currency)
             else:
-                high_display = format_price_display(week_52_high, original_stock_currency, 
+                high_display = format_price_display(week_52_high, trading_currency, 
                                                    unified_currency)
-                low_display = format_price_display(week_52_low, original_stock_currency, 
+                low_display = format_price_display(week_52_low, trading_currency, 
                                                   unified_currency)
             
             lines.append(f"- 52-Week Range: {low_display} - {high_display}")
