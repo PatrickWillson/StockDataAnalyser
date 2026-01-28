@@ -1,5 +1,5 @@
 # STOCK ANALYSIS DOSSIER: RY.TO
-# DATE: 2026-01-27
+# DATE: 2026-01-28
 # SOURCE: EODHD (Tier 1 Data)
 # CEO: Mr. David I. McKay
 # SECTOR: Financial Services | INDUSTRY: Banks - Diversified
@@ -16,13 +16,13 @@
 - Intrinsic Value (Graham): 161.15 CAD
 - Intrinsic Value (EPV): 141,998,000,000.00 CAD
 - Net-Net Value: -1,406.09 CAD
-- Margin of Safety: -42.1
-- Current Price: 229.03 CAD
-- 52-Week Range: 147.51 CAD - 240.34 CAD
-- Trailing Dividend: 6.04 CAD (Yield: 2.64%) - Declared (Dividend API) [2025]
-  - Forward Rate: 6.56 CAD (Yield: 2.86%)
-- P/E Ratio: 15.83
-- Price/Book: 2.32
+- Margin of Safety: -39.8
+- Current Price: 225.29 CAD
+- 52-Week Range: 146.47 CAD - 238.65 CAD
+- Trailing Dividend: 6.04 CAD (Yield: 2.68%) - Declared (Dividend API) [2025]
+  - Forward Rate: 6.56 CAD (Yield: 2.91%)
+- P/E Ratio: 15.57
+- Price/Book: 2.28
 
 ---
 
@@ -52,7 +52,7 @@
 - **Low Debt**: Debt only 0.6% of assets (conservative)
 
 ### Operational Stability Risks:
-- **Earnings Volatility**: Moderate (±6.6% std dev)
+- **Earnings Volatility**: Moderate (±7.1% std dev)
 
 ### Dividend Risk:
 - **Conservative Payout**: 45.3% of earnings
@@ -60,10 +60,10 @@
   - Dividend coverage: 2.40x (adequate)
 
 ### Valuation Risk:
-- **Overvaluation Risk**: Margin of Safety -42.1%
+- **Overvaluation Risk**: Margin of Safety -39.8%
   - Trading above Graham intrinsic value
   - No margin for error if business deteriorates
-  - P/E Ratio 15.8x: Above Graham's 15x defensive limit
+  - P/E Ratio 15.6x: Above Graham's 15x defensive limit
 
 ### Data Quality Risks:
 - **Price Data**: Using yfinance (primary source unavailable)
@@ -88,7 +88,7 @@
 - **Debt: $14,192,000,000 CAD** (0.6% of assets) - Conservative
 
 ### Operational Stability Risk:
-- **Profit Margin Stability: 28.3% average, 5.0% std dev** over 10 years
+- **Profit Margin Stability: 28.3% average, 5.3% std dev** over 9 years
   - Moderate volatility
 - **Loss Years: 0 of 10** - Consistent profitability (excellent)
 - **Return on Equity: 14.6%** - Adequate returns
@@ -98,11 +98,11 @@
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -42.1%** - Trading above intrinsic value
+- **Margin of Safety: -39.8%** - Trading above intrinsic value
   - Graham's Standard: 20-30% minimum for defensive investors
   - Assessment: **High valuation risk** - no margin for error
   - Intrinsic Value (Graham): 161.15 CAD
-  - Current Price: 229.03 CAD
+  - Current Price: 225.29 CAD
 
 ### Data Quality Risk:
 - **Institutional Ownership: 49.14%** - Verify with regulatory filings
@@ -116,7 +116,7 @@
 *How key metrics are calculated*
 
 ### Valuation Metrics:
-- **P/E Ratio (15.83)**: Current Price / Most Recent Annual EPS
+- **P/E Ratio (15.57)**: Current Price / Most Recent Annual EPS
   - Calculated from audited financials, not API pre-calculated ratios
   - EPS: 14.47 CAD (Net Income / Shares Outstanding)
 - **Profitability Metrics (ROE, ROA, Profit Margin)**:
@@ -156,7 +156,7 @@
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
   **Graham's Principle**: *"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle."*
-- **Margin of Safety (-42.1%)**: (Graham Number - Price) / Graham Number × 100
+- **Margin of Safety (-39.8%)**: (Graham Number - Price) / Graham Number × 100
   - Percentage discount to intrinsic value
   - Graham recommended minimum 20-30% for defensive investors
 
@@ -275,6 +275,7 @@ TTM calculations provide more current financial metrics by using the most recent
 
 | Year | Revenue | Net Income | EPS | Div/Share | BVPS | Total Debt | Shares (B) | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------------|------------|-------|-----|-----|
+| 2026 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 1.64 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2025 | 137357000000.0 | 20369000000.0 | 14.469568726011623 | 6.04 | 98.81 | 490.75B | 1.408B | N/A | N/A | N/A |
 | 2024 | 54112000000.0 | 16240000000.0 | 11.4677198515128 | 5.6 | 89.74 | 775.56B | 1.416B | N/A | N/A | N/A |
 | 2023 | 48996000000.0 | 14866000000.0 | 10.613342841030386 | 5.34 | 84.0 | 776.68B | 1.401B | N/A | N/A | N/A |
@@ -294,9 +295,11 @@ TTM calculations provide more current financial metrics by using the most recent
 | 2009 | 26441000000.0 | 3858000000.0 | 2.6937973535430975 | 2.0 | 25.77 | 41.36B | 1.432B | N/A | N/A | N/A |
 | 2008 | 21582492000.0 | 4555000000.0 | 3.3026607627224944 | 2.0 | 22.3 | 5.40B | 1.379B | N/A | N/A | N/A |
 | 2007 | 22136000000.0 | 5492384826.0 | 4.234210055605961 | 1.82 | 18.84 | 3.78B | 1.297B | N/A | N/A | N/A |
-| 2006 | 20637000000.0 | 4727925502.0 | 3.65631455163427 | 1.44 | 17.34 | 3.93B | 1.293B | N/A | N/A | N/A |
 
 **Note on Data Completeness:**
+- Years marked '[Data Unavailable]' (2026) show declared dividends but lack complete audited annual financial statements
+- **Graham's Principle**: Analysis and valuations use only complete annual data from audited financial statements
+- Declared dividends are shown for income investors but excluded from historical calculations
 
 **Graham Trend Analysis Columns:**
 - **Total Debt**: Sum of long-term and short-term debt. Graham emphasized tracking debt trends to distinguish companies that grow through retained earnings vs leverage.
@@ -312,6 +315,7 @@ TTM calculations provide more current financial metrics by using the most recent
 ### Data Quality & Limitations:
 - Price Source: yfinance (primary source)
 - [VALIDATION] Profit Margin Difference: API shows 32.71% (TTM basis), calculated 14.83% (annual basis) (54.7% difference). Using annual data from audited financials per Graham methodology.
+- Year 2026-10-31: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Year 1992-10-31: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Year 1991-10-31: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Year 1990-10-31: Incomplete data (missing: revenue, net_income, eps, total_equity)
@@ -320,6 +324,6 @@ TTM calculations provide more current financial metrics by using the most recent
 ### Statistical Anomalies (Z-Score Analysis):
 *Metrics that deviate significantly from historical patterns*
 
-- Year 1994-10-31: EPS growth Z-Score = 5.35 (Outlier)
+- Year 1994-10-31: EPS growth Z-Score = 5.19 (Outlier)
 
 ---

@@ -23,7 +23,7 @@ class TestEarningsStabilityIncompleteYears:
         
         Scenario: Company has 10 years of positive earnings, but year 2025
         has only dividend declared (no financials yet). Should still PASS
-        defensive test (requires 8 of 10 years positive).
+        defensive test (requires ALL 10 complete years positive - strict Graham).
         """
         # Create history with 10 complete years (all positive) + 1 incomplete future year
         history = {}
@@ -56,11 +56,11 @@ class TestEarningsStabilityIncompleteYears:
         
         calculator = GrahamCalculator(financial_data)
         
-        # Test defensive investor (requires 8 of 10 years positive)
+        # Test defensive investor (requires ALL 10 years positive - strict Graham)
         result = calculator._test_earnings_stability(
             history, 
             sorted(history.keys(), reverse=True),
-            min_years=8,
+            min_years=10,  # Changed from 8 to 10
             period=10
         )
         

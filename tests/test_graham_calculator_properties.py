@@ -370,7 +370,10 @@ def test_negative_epv_returns_na(net_incomes):
 def test_earnings_stability_test_correctness(earnings_list):
     """
     Property: For any earnings history, the earnings stability test should pass 
-    if and only if at least 8 of the last 10 years have positive earnings.
+    if and only if ALL 10 years have positive earnings (strict Graham interpretation).
+    
+    Graham's quote: "Some earnings for the common stock in EACH of the past 10 years"
+    This means zero loss years - ALL 10 years must be positive.
     
     This test verifies the earnings stability test logic is correctly implemented.
     """
@@ -402,12 +405,12 @@ def test_earnings_stability_test_correctness(earnings_list):
     calculator = GrahamCalculator(financial_data)
     results = calculator.run_defensive_tests()
     
-    # Assert: Verify earnings stability test correctness
+    # Assert: Verify earnings stability test correctness (strict Graham: ALL 10 years positive)
     positive_years = sum(1 for e in earnings_list if e > 0)
-    expected_result = 'PASS' if positive_years >= 8 else 'FAIL'
+    expected_result = 'PASS' if positive_years == 10 else 'FAIL'  # Changed from >= 8 to == 10
     
     assert results['earnings_stability'] == expected_result, \
-        f"Earnings stability test mismatch: expected {expected_result}, got {results['earnings_stability']} (positive years: {positive_years})"
+        f"Earnings stability test mismatch: expected {expected_result}, got {results['earnings_stability']} (positive years: {positive_years}/10)"
 
 
 # Feature: stock-data-analyser, Property 8: Current ratio test correctness

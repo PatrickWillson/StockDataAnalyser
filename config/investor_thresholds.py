@@ -24,13 +24,13 @@ class DefensiveThresholds:
     
     Attributes:
         MIN_CURRENT_RATIO: Minimum current assets to current liabilities ratio (2.0)
-        MIN_EARNINGS_YEARS: Minimum years of positive earnings required (8 years)
+        MIN_EARNINGS_YEARS: Minimum years of positive earnings required (10 years - strict Graham)
         MAX_PE_RATIO: Maximum acceptable Price-to-Earnings ratio (15.0)
         MAX_PB_RATIO: Maximum acceptable Price-to-Book ratio (1.5)
         MIN_EARNINGS_GROWTH: Minimum earnings growth over 10 years (1.33 = 33%)
     """
     MIN_CURRENT_RATIO: float = 2.0
-    MIN_EARNINGS_YEARS: int = 8
+    MIN_EARNINGS_YEARS: int = 10  # Graham: "Some earnings in EACH of the past 10 years"
     MAX_PE_RATIO: float = 15.0
     MAX_PB_RATIO: float = 1.5
     MIN_EARNINGS_GROWTH: float = 1.33  # 33% over 10 years

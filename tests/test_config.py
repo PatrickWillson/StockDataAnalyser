@@ -47,7 +47,7 @@ class TestDefensiveThresholds:
         """Test DefensiveThresholds has correct default values."""
         thresholds = DefensiveThresholds()
         assert thresholds.MIN_CURRENT_RATIO == 2.0
-        assert thresholds.MIN_EARNINGS_YEARS == 8
+        assert thresholds.MIN_EARNINGS_YEARS == 10  # Strict Graham: ALL 10 years
         assert thresholds.MAX_PE_RATIO == 15.0
         assert thresholds.MAX_PB_RATIO == 1.5
         assert thresholds.MIN_EARNINGS_GROWTH == 1.33
@@ -61,7 +61,7 @@ class TestDefensiveThresholds:
     def test_singleton_instance(self):
         """Test DEFENSIVE singleton has correct values."""
         assert DEFENSIVE.MIN_CURRENT_RATIO == 2.0
-        assert DEFENSIVE.MIN_EARNINGS_YEARS == 8
+        assert DEFENSIVE.MIN_EARNINGS_YEARS == 10  # Strict Graham: ALL 10 years
         assert DEFENSIVE.MAX_PE_RATIO == 15.0
         assert DEFENSIVE.MAX_PB_RATIO == 1.5
         assert DEFENSIVE.MIN_EARNINGS_GROWTH == 1.33

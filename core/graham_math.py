@@ -386,7 +386,7 @@ class GrahamCalculator:
     
     def _run_defensive_tests(self, history: dict, years: list, num_years: int, price: float) -> dict:
         """Run all 7 Graham Defensive Investor tests."""
-        # Test 1: Earnings stability - positive earnings in >= 8 of last 10 years
+        # Test 1: Earnings stability - positive earnings in ALL of last 10 years (strict Graham)
         earnings_stability = self._test_earnings_stability(history, years, min_years=DEFENSIVE.MIN_EARNINGS_YEARS, period=10)
         
         # Test 2: Current ratio >= 2.0
