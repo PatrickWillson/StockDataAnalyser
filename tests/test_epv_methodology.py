@@ -57,8 +57,8 @@ def test_epv_methodology_includes_full_cycle_explanation():
     # Act
     dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
     
-    # Assert: Check for full-cycle explanation
-    assert "Graham's Full-Cycle Method:" in dossier
+    # Assert: Check for methodology explanation
+    assert "**Methodology:**" in dossier
     assert "Uses 7-10 year average of net income" in dossier
     assert "Includes ALL years" in dossier
     assert "profitable and unprofitable" in dossier

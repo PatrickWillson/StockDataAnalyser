@@ -131,7 +131,8 @@ class EPVDetails:
     """
     Earnings Power Value calculation details.
     
-    EPV uses Graham's full-cycle methodology with 7-10 years of earnings data.
+    EPV uses simplified earnings capitalization with 7-10 years of earnings data.
+    Inspired by Graham's emphasis on full-cycle earnings.
     
     Attributes:
         epv: Enterprise Earnings Power Value

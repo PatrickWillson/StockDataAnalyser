@@ -185,12 +185,12 @@ class TestMethodologySection:
         lines = section.generate()
         
         # Check for EPV header
-        epv_header_lines = [line for line in lines if "EPV - Earnings Power Value" in line]
+        epv_header_lines = [line for line in lines if "EPV - Simplified Earnings Power Estimate" in line]
         assert len(epv_header_lines) >= 1
         
-        # Check for Graham's Full-Cycle Method
-        full_cycle_lines = [line for line in lines if "Graham's Full-Cycle Method" in line]
-        assert len(full_cycle_lines) >= 1
+        # Check for Methodology section
+        methodology_lines = [line for line in lines if "**Methodology:**" in line]
+        assert len(methodology_lines) >= 1
         
         # Check for key methodology points
         assert any("7-10 year average" in line for line in lines)
@@ -308,7 +308,7 @@ class TestMethodologySection:
         lines = section.generate()
         
         # Should not include EPV explanation
-        epv_lines = [line for line in lines if "EPV - Earnings Power Value" in line]
+        epv_lines = [line for line in lines if "EPV - Simplified Earnings Power Estimate" in line]
         assert len(epv_lines) == 0
     
     def test_net_net_explanation(self):

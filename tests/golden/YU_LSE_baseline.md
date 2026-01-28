@@ -144,13 +144,17 @@
 - **Graham Number (12.54 GBP)**: √(22.5 × EPS × BVPS)
   - Conservative intrinsic value estimate
   - Based on Benjamin Graham's formula from 'The Intelligent Investor'
-- **EPV - Earnings Power Value**
+- **EPV - Simplified Earnings Power Estimate**
 
-  **Graham's Full-Cycle Method:**
+  **Methodology:**
   - Uses 7-10 year average of net income
   - **Includes ALL years** (profitable and unprofitable)
   - Loss years reduce the average (real value destruction)
-  - Only extraordinary one-time events should be adjusted
+  - Capitalizes earnings at 10% discount rate
+  - Inspired by Graham's emphasis on full-cycle earnings
+
+  **Important**: This is a simplified approach, not Graham's original methodology.
+  Graham emphasized earnings power conceptually but didn't prescribe this exact formula.
 
   **Calculation for YU:**
   - Years Used: 10
@@ -327,21 +331,29 @@ TTM calculations provide more current financial metrics by using the most recent
   - Allows accurate comparison of price to intrinsic value
 
 ### EPV Methodology Clarification:
-- **Approach Used**: Graham's EPV (from 'The Intelligent Investor', 1949)
-- **Cost of Capital**: 10% (Graham's standard)
+- **Approach Used**: Simplified Earnings Capitalization
 - **Formula**: Average Net Income (7-10 years) / 10%
+- **Inspiration**: Graham's emphasis on full-cycle earnings (not a direct Graham formula)
+- **Cost of Capital**: 10% (conservative fixed rate for simplicity)
 - **Includes Loss Years**: Yes (full business cycle)
 
+**This Differs From Graham's Original Work**:
+- Graham discussed 'earning power' conceptually but didn't provide this specific formula
+- Graham Number (√(22.5 × EPS × BVPS)) is Graham's actual intrinsic value formula
+- Our EPV is a simplified interpretation of Graham's principles
+
 **This Differs From Modern EPV (Greenwald, 2001)**:
-- Modern EPV uses company-specific WACC (typically 8-12%)
 - Modern EPV uses normalized EBIT, not net income
 - Modern EPV subtracts maintenance CapEx
+- Modern EPV uses company-specific WACC (typically 8-12%)
+- Modern EPV is more precise but requires more estimation
 
-**Why We Use Graham's Approach**:
-- Simpler and more deterministic (no WACC estimation required)
-- Consistent with other Graham metrics in this analysis
-- 10% is a reasonable conservative discount rate for most businesses
-- Documented in Graham's original work, not a modern interpretation
+**Why We Use This Simplified Approach**:
+- Deterministic (no WACC estimation required)
+- Conservative (uses net income, not EBIT)
+- Consistent with other Graham-inspired metrics
+- Transparent and auditable
+- Provides reasonable valuation estimate for comparison
 
 ---
 

@@ -656,7 +656,7 @@ def test_yu_lse_complete_flow_with_yfinance_fallback():
     assert 'Data Quality & Limitations' in dossier_content, "Should have Data Quality & Limitations subsection"
     assert 'SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS' in dossier_content, "Should have Defensive Investor Tests section"
     assert 'SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS' in dossier_content, "Should have Enterprising Investor Tests section"
-    assert 'EPV - Earnings Power Value' in dossier_content, "Should have EPV methodology section"
+    assert 'EPV - Simplified Earnings Power Estimate' in dossier_content, "Should have EPV methodology section"
     
     # Assert: Verify data quality section mentions yfinance
     assert 'yfinance' in dossier_content or 'EODHD' in dossier_content, \

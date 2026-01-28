@@ -606,15 +606,22 @@ class GrahamCalculator:
     def compute_epv_normalized(self, history: Dict[str, Dict[str, float]], 
                               round_result: bool = True) -> Union[Dict[str, any], str]:
         """
-        Calculate Earnings Power Value using Graham's full-cycle methodology.
+        Calculate Earnings Power Value using simplified earnings capitalization.
         
-        Graham's Method:
+        This method uses a simplified approach inspired by Graham's emphasis on
+        full-cycle earnings, but is not a direct Graham formula. It capitalizes
+        the average of 7-10 years of net income at a 10% discount rate.
+        
+        Methodology:
         - Use 7-10 years of earnings data
         - Include ALL years (profitable and unprofitable)
         - Loss years reduce the average (they're real value destruction)
         - Only exclude truly extraordinary one-time events (not cyclical losses)
         
-        Formula: Average Net Income (7-10 years) / Cost of Capital
+        Formula: Average Net Income (7-10 years) / 10%
+        
+        Note: This differs from both Graham's original work and Greenwald's
+        modern EPV methodology. See dossier for detailed disclaimers.
         
         Args:
             history: Financial history data

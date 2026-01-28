@@ -430,9 +430,13 @@ class TestCalculationDetailsSection:
         # Check for EPV methodology header
         assert "### EPV Methodology Clarification:" in lines
         
-        # Check for approach used
-        approach_lines = [line for line in lines if "Approach Used" in line and "Graham's EPV" in line and "1949" in line]
+        # Check for approach used (updated to new labeling)
+        approach_lines = [line for line in lines if "Approach Used" in line and "Simplified Earnings Capitalization" in line]
         assert len(approach_lines) >= 1
+        
+        # Check for inspiration (not direct Graham formula)
+        inspiration_lines = [line for line in lines if "Inspiration" in line and "Graham's emphasis on full-cycle earnings" in line]
+        assert len(inspiration_lines) >= 1
         
         # Check for cost of capital
         cost_lines = [line for line in lines if "Cost of Capital" in line and "10%" in line]
@@ -446,6 +450,11 @@ class TestCalculationDetailsSection:
         loss_lines = [line for line in lines if "Includes Loss Years" in line and "Yes" in line]
         assert len(loss_lines) >= 1
         
+        # Check for Graham's original work disclaimer
+        graham_disclaimer_lines = [line for line in lines if "This Differs From Graham's Original Work" in line]
+        assert len(graham_disclaimer_lines) >= 1
+        assert any("Graham discussed 'earning power' conceptually" in line for line in lines)
+        
         # Check for modern EPV differences
         modern_lines = [line for line in lines if "This Differs From Modern EPV" in line and "Greenwald, 2001" in line]
         assert len(modern_lines) >= 1
@@ -453,12 +462,12 @@ class TestCalculationDetailsSection:
         assert any("normalized EBIT" in line for line in lines)
         assert any("maintenance CapEx" in line for line in lines)
         
-        # Check for why we use Graham's approach
-        why_lines = [line for line in lines if "Why We Use Graham's Approach" in line]
+        # Check for why we use this simplified approach (updated from "Graham's Approach")
+        why_lines = [line for line in lines if "Why We Use This Simplified Approach" in line]
         assert len(why_lines) >= 1
-        assert any("Simpler and more deterministic" in line for line in lines)
-        assert any("Consistent with other Graham metrics" in line for line in lines)
-        assert any("10% is a reasonable conservative discount rate" in line for line in lines)
+        assert any("Deterministic" in line for line in lines)
+        assert any("Conservative" in line for line in lines)
+        assert any("Transparent and auditable" in line for line in lines)
     
     def test_epv_methodology_not_shown_when_epv_zero(self):
         """Test EPV methodology clarification not shown when EPV is zero."""

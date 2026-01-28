@@ -49,7 +49,7 @@ class MethodologySection:
     This section explains how key valuation metrics are calculated:
     - P/E Ratio calculation methodology
     - Graham Number formula and explanation
-    - EPV (Earnings Power Value) with Graham's full-cycle method
+    - EPV (Simplified Earnings Power Estimate) with full-cycle earnings
     - Net-Net Value calculation
     - Margin of Safety explanation
     
@@ -215,13 +215,17 @@ class MethodologySection:
             years_included = epv_details.get('years_included', [])
             net_incomes = epv_details.get('net_incomes', [])
             
-            lines.append(f"- **EPV - Earnings Power Value**")
+            lines.append(f"- **EPV - Simplified Earnings Power Estimate**")
             lines.append(f"")
-            lines.append(f"  **Graham's Full-Cycle Method:**")
+            lines.append(f"  **Methodology:**")
             lines.append(f"  - Uses 7-10 year average of net income")
             lines.append(f"  - **Includes ALL years** (profitable and unprofitable)")
             lines.append(f"  - Loss years reduce the average (real value destruction)")
-            lines.append(f"  - Only extraordinary one-time events should be adjusted")
+            lines.append(f"  - Capitalizes earnings at 10% discount rate")
+            lines.append(f"  - Inspired by Graham's emphasis on full-cycle earnings")
+            lines.append(f"")
+            lines.append(f"  **Important**: This is a simplified approach, not Graham's original methodology.")
+            lines.append(f"  Graham emphasized earnings power conceptually but didn't prescribe this exact formula.")
             lines.append(f"")
             lines.append(f"  **Calculation for {ticker}:**")
             lines.append(f"  - Years Used: {years_used}")

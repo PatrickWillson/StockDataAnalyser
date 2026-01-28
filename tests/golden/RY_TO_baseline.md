@@ -16,14 +16,14 @@
 - Intrinsic Value (Graham): 161.15 CAD
 - Intrinsic Value (EPV): 141,998,000,000.00 CAD
 - Net-Net Value: -1,406.09 CAD
-- Margin of Safety: -40.2
-- Current Price: 226.00 CAD
+- Margin of Safety: -40.0
+- Current Price: 225.61 CAD
 - 52-Week Range: 146.47 CAD - 238.65 CAD
-- Trailing Dividend: 6.04 CAD (Yield: 2.67%) - Declared (Dividend API) [2025]
-  - Forward Rate: 6.56 CAD (Yield: 2.90%)
-- P/E Ratio (Current Year): 15.62
-- P/E Ratio (3-Year Avg): 18.55 (based on avg EPS of 12.18 from 2023-2025)
-- Price/Book: 2.29
+- Trailing Dividend: 6.04 CAD (Yield: 2.68%) - Declared (Dividend API) [2025]
+  - Forward Rate: 6.56 CAD (Yield: 2.91%)
+- P/E Ratio (Current Year): 15.59
+- P/E Ratio (3-Year Avg): 18.52 (based on avg EPS of 12.18 from 2023-2025)
+- Price/Book: 2.28
 
 ---
 
@@ -65,7 +65,7 @@
   - Dividend coverage: 2.40x (adequate)
 
 ### Valuation Risk:
-- **Overvaluation Risk**: Margin of Safety -40.2%
+- **Overvaluation Risk**: Margin of Safety -40.0%
   - Trading above Graham intrinsic value
   - No margin for error if business deteriorates
   - P/E Ratio 15.6x: Above Graham's 15x defensive limit
@@ -105,11 +105,11 @@
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -40.2%** - Trading above intrinsic value
+- **Margin of Safety: -40.0%** - Trading above intrinsic value
   - Graham's Standard: 20-30% minimum for defensive investors
   - Assessment: **High valuation risk** - no margin for error
   - Intrinsic Value (Graham): 161.15 CAD
-  - Current Price: 226.00 CAD
+  - Current Price: 225.61 CAD
 
 ### Data Quality Risk:
 - **Institutional Ownership: 49.14%** - Verify with regulatory filings
@@ -123,7 +123,7 @@
 *How key metrics are calculated*
 
 ### Valuation Metrics:
-- **P/E Ratio (15.62)**: Current Price / Most Recent Annual EPS
+- **P/E Ratio (15.59)**: Current Price / Most Recent Annual EPS
   - Calculated from audited financials, not API pre-calculated ratios
   - EPS: 14.47 CAD (Net Income / Shares Outstanding)
 - **Profitability Metrics (ROE, ROA, Profit Margin)**:
@@ -144,13 +144,17 @@
 - **Graham Number (161.15 CAD)**: √(22.5 × EPS × BVPS)
   - Conservative intrinsic value estimate
   - Based on Benjamin Graham's formula from 'The Intelligent Investor'
-- **EPV - Earnings Power Value**
+- **EPV - Simplified Earnings Power Estimate**
 
-  **Graham's Full-Cycle Method:**
+  **Methodology:**
   - Uses 7-10 year average of net income
   - **Includes ALL years** (profitable and unprofitable)
   - Loss years reduce the average (real value destruction)
-  - Only extraordinary one-time events should be adjusted
+  - Capitalizes earnings at 10% discount rate
+  - Inspired by Graham's emphasis on full-cycle earnings
+
+  **Important**: This is a simplified approach, not Graham's original methodology.
+  Graham emphasized earnings power conceptually but didn't prescribe this exact formula.
 
   **Calculation for RY:**
   - Years Used: 10
@@ -163,7 +167,7 @@
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
   **Graham's Principle**: *"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle."*
-- **Margin of Safety (-40.2%)**: (Graham Number - Price) / Graham Number × 100
+- **Margin of Safety (-40.0%)**: (Graham Number - Price) / Graham Number × 100
   - Percentage discount to intrinsic value
   - Graham recommended minimum 20-30% for defensive investors
 
@@ -294,21 +298,29 @@ TTM calculations provide more current financial metrics by using the most recent
 - **Note**: Uses unrounded intermediate values for precision
 
 ### EPV Methodology Clarification:
-- **Approach Used**: Graham's EPV (from 'The Intelligent Investor', 1949)
-- **Cost of Capital**: 10% (Graham's standard)
+- **Approach Used**: Simplified Earnings Capitalization
 - **Formula**: Average Net Income (7-10 years) / 10%
+- **Inspiration**: Graham's emphasis on full-cycle earnings (not a direct Graham formula)
+- **Cost of Capital**: 10% (conservative fixed rate for simplicity)
 - **Includes Loss Years**: Yes (full business cycle)
 
+**This Differs From Graham's Original Work**:
+- Graham discussed 'earning power' conceptually but didn't provide this specific formula
+- Graham Number (√(22.5 × EPS × BVPS)) is Graham's actual intrinsic value formula
+- Our EPV is a simplified interpretation of Graham's principles
+
 **This Differs From Modern EPV (Greenwald, 2001)**:
-- Modern EPV uses company-specific WACC (typically 8-12%)
 - Modern EPV uses normalized EBIT, not net income
 - Modern EPV subtracts maintenance CapEx
+- Modern EPV uses company-specific WACC (typically 8-12%)
+- Modern EPV is more precise but requires more estimation
 
-**Why We Use Graham's Approach**:
-- Simpler and more deterministic (no WACC estimation required)
-- Consistent with other Graham metrics in this analysis
-- 10% is a reasonable conservative discount rate for most businesses
-- Documented in Graham's original work, not a modern interpretation
+**Why We Use This Simplified Approach**:
+- Deterministic (no WACC estimation required)
+- Conservative (uses net income, not EBIT)
+- Consistent with other Graham-inspired metrics
+- Transparent and auditable
+- Provides reasonable valuation estimate for comparison
 
 ---
 
@@ -329,9 +341,9 @@ TTM calculations provide more current financial metrics by using the most recent
 7. **P/B Ratio**: FAIL
    - Criterion: Price/Book Ratio < 1.5
 8. **Combined P/E × P/B Test**: FAIL
-   - P/E Ratio: 15.62
-   - P/B Ratio: 2.29
-   - Product: 35.77 (must be ≤ 22.5)
+   - P/E Ratio: 15.59
+   - P/B Ratio: 2.28
+   - Product: 35.55 (must be ≤ 22.5)
    - *Graham specified that P/E × P/B should not exceed 22.5. This provides flexibility: a company can have a higher P/E if it has a low P/B, or vice versa.*
 
 ---
