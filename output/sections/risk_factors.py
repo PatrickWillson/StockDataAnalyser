@@ -223,18 +223,24 @@ class RiskFactorsSection(DossierSection):
         
         # Debt risk
         long_term_debt = latest_data_risk.get('long_term_debt', 0.0)
+        total_debt = latest_data_risk.get('total_debt', 0.0)
         total_assets = latest_data_risk.get('total_assets', 0.0)
         total_equity = latest_data_risk.get('total_equity', 0.0)
         
         if total_assets > 0:
             debt_to_assets = long_term_debt / total_assets
             if debt_to_assets > 0.50:
-                lines.append(f"- **High Debt Risk**: Debt {debt_to_assets*100:.1f}% of assets")
+                lines.append(f"- **High Debt Risk**: Long-term debt {debt_to_assets*100:.1f}% of assets")
                 lines.append(f"  - High leverage increases financial risk during downturns")
             elif debt_to_assets > 0.30:
-                lines.append(f"- **Moderate Debt**: Debt {debt_to_assets*100:.1f}% of assets")
+                lines.append(f"- **Moderate Debt**: Long-term debt {debt_to_assets*100:.1f}% of assets")
             else:
-                lines.append(f"- **Low Debt**: Debt only {debt_to_assets*100:.1f}% of assets (conservative)")
+                lines.append(f"- **Low Debt**: Long-term debt only {debt_to_assets*100:.1f}% of assets (conservative)")
+            
+            # Show total debt if different
+            if total_debt > long_term_debt:
+                total_debt_to_assets = total_debt / total_assets
+                lines.append(f"  - Total debt (including short-term): {total_debt_to_assets*100:.1f}% of assets")
         
         if total_equity > 0 and long_term_debt > 0:
             debt_to_equity = long_term_debt / total_equity
@@ -571,22 +577,36 @@ class RiskFactorsSection(DossierSection):
         
         # Debt levels
         long_term_debt = latest_data.get('long_term_debt', 0.0)
+        total_debt = latest_data.get('total_debt', 0.0)
+        short_term_debt = total_debt - long_term_debt if total_debt > long_term_debt else 0.0
         total_assets = latest_data.get('total_assets', 0.0)
         net_current_assets = current_assets - current_liabilities
         
-        if total_assets > 0:
-            debt_to_assets = (long_term_debt / total_assets) * 100
-            if long_term_debt == 0:
-                lines.append(f"- **Debt: ${long_term_debt:,.0f} {unified_currency}** - Debt-free (excellent)")
-            elif debt_to_assets < 10:
-                lines.append(f"- **Debt: ${long_term_debt:,.0f} {unified_currency}** ({debt_to_assets:.1f}% of assets) - Conservative")
-            elif debt_to_assets < 30:
-                lines.append(f"- **Debt: ${long_term_debt:,.0f} {unified_currency}** ({debt_to_assets:.1f}% of assets) - Moderate")
+        if total_assets > 0 and long_term_debt > 0:
+            lt_debt_to_assets = (long_term_debt / total_assets) * 100
+            total_debt_to_assets = (total_debt / total_assets) * 100
+            
+            # Determine assessment based on long-term debt
+            if lt_debt_to_assets < 10:
+                assessment = "Conservative"
+            elif lt_debt_to_assets < 30:
+                assessment = "Moderate"
             else:
-                lines.append(f"- **Debt: ${long_term_debt:,.0f} {unified_currency}** ({debt_to_assets:.1f}% of assets) - ⚠️ High leverage")
+                assessment = "⚠️ High leverage"
+            
+            # Show long-term debt with breakdown
+            lines.append(f"- **Long-Term Debt: ${long_term_debt:,.0f} {unified_currency}** ({lt_debt_to_assets:.1f}% of assets) - {assessment}")
+            if short_term_debt > 0:
+                lines.append(f"  - Short-term debt: ${short_term_debt:,.0f} {unified_currency}")
+                lines.append(f"  - Total debt: ${total_debt:,.0f} {unified_currency} ({total_debt_to_assets:.1f}% of assets)")
+        elif total_assets > 0 and long_term_debt == 0:
+            lines.append(f"- **Long-Term Debt: ${long_term_debt:,.0f} {unified_currency}** - Debt-free (excellent)")
+            if short_term_debt > 0:
+                total_debt_to_assets = (total_debt / total_assets) * 100
+                lines.append(f"  - Short-term debt: ${short_term_debt:,.0f} {unified_currency} ({total_debt_to_assets:.1f}% of assets)")
         
         # Graham's defensive test: Long-term debt < Net Current Assets
-        if net_current_assets > 0:
+        if net_current_assets > 0 and long_term_debt > 0:
             if long_term_debt < net_current_assets:
                 lines.append(f"- **Debt Coverage: ✓** Long-term debt < Net Current Assets (passes Graham's defensive test)")
             else:
