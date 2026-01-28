@@ -31,11 +31,11 @@ def test_defensive_tests_display_all_tests():
         'defensive_tests': {
             'earnings_stability': 'PASS',
             'current_ratio': 'FAIL',
-            'debt_to_equity': 'PASS',
+            'debt_to_assets': 'PASS',  # Fixed: was debt_to_equity
             'dividend_record': 'N/A',
             'earnings_growth': 'PASS',
             'pe_ratio': 'PASS',
-            'price_to_book': 'PASS'
+            'pb_ratio': 'PASS'  # Fixed: was price_to_book
         },
         'enterprising_tests': {}
     }
@@ -44,14 +44,14 @@ def test_defensive_tests_display_all_tests():
     lines = section.generate()
     content = '\n'.join(lines)
     
-    # Check that all tests are present
-    assert "Earnings Stability: PASS" in content
-    assert "Current Ratio: FAIL" in content
-    assert "Debt To Equity: PASS" in content
-    assert "Dividend Record: N/A" in content
-    assert "Earnings Growth: PASS" in content
-    assert "Pe Ratio: PASS" in content
-    assert "Price To Book: PASS" in content
+    # Check that all tests are present (with bold markdown formatting)
+    assert "**Earnings Stability**: PASS" in content
+    assert "**Current Ratio**: FAIL" in content
+    assert "**Debt to Assets**: PASS" in content
+    assert "**Dividend Record**: N/A" in content
+    assert "**Earnings Growth**: PASS" in content
+    assert "**P/E Ratio**: PASS" in content
+    assert "**P/B Ratio**: PASS" in content
 
 
 def test_defensive_tests_pass_fail_formatting():
@@ -69,10 +69,10 @@ def test_defensive_tests_pass_fail_formatting():
     lines = section.generate()
     content = '\n'.join(lines)
     
-    # Check formatting
-    assert "- Earnings Stability: PASS" in content
-    assert "- Current Ratio: FAIL" in content
-    assert "- Debt To Equity: N/A" in content
+    # Check formatting (numbered list with bold markdown)
+    assert "**Earnings Stability**: PASS" in content
+    assert "**Current Ratio**: FAIL" in content
+    assert "**Debt to Assets**: N/A" in content
 
 
 def test_enterprising_tests_section_header():
@@ -101,8 +101,7 @@ def test_enterprising_tests_display_all_tests():
             'current_ratio': 'PASS',
             'debt_to_assets': 'FAIL',
             'dividend_record': 'PASS',
-            'pe_ratio': 'PASS',
-            'price_to_book': 'PASS'
+            'price_test': 'PASS'  # Fixed: enterprising uses price_test, not pe_ratio/price_to_book
         }
     }
     
@@ -110,13 +109,12 @@ def test_enterprising_tests_display_all_tests():
     lines = section.generate()
     content = '\n'.join(lines)
     
-    # Check that all tests are present
-    assert "Earnings Stability: PASS" in content
-    assert "Current Ratio: PASS" in content
-    assert "Debt To Assets: FAIL" in content
-    assert "Dividend Record: PASS" in content
-    assert "Pe Ratio: PASS" in content
-    assert "Price To Book: PASS" in content
+    # Check that all tests are present (with bold markdown formatting)
+    assert "**Earnings Stability**: PASS" in content
+    assert "**Current Ratio**: PASS" in content
+    assert "**Debt to Assets**: FAIL" in content
+    assert "**Dividend Record**: PASS" in content
+    assert "**Price Test**: PASS" in content  # Fixed: check for Price Test instead
 
 
 def test_enterprising_tests_includes_growth_note():
@@ -216,11 +214,11 @@ def test_test_name_formatting():
     lines = section.generate()
     content = '\n'.join(lines)
     
-    # Check that snake_case is converted to Title Case
-    assert "Earnings Stability:" in content
-    assert "Current Ratio:" in content
-    assert "Debt To Equity:" in content
-    assert "Dividend Record:" in content
-    assert "Earnings Growth:" in content
-    assert "Pe Ratio:" in content
-    assert "Price To Book:" in content
+    # Check that snake_case is converted to Title Case (with bold markdown)
+    assert "**Earnings Stability**:" in content
+    assert "**Current Ratio**:" in content
+    assert "**Debt to Assets**:" in content
+    assert "**Dividend Record**:" in content
+    assert "**Earnings Growth**:" in content
+    assert "**P/E Ratio**:" in content
+    assert "**P/B Ratio**:" in content

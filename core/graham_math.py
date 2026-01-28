@@ -11,6 +11,7 @@ This module implements strict Graham formulas for value investing analysis:
 """
 
 import math
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Union, List, Any
 
 from config.graham_constants import GRAHAM_MULTIPLIER, COST_OF_CAPITAL
@@ -195,6 +196,390 @@ class GrahamCalculator:
         net_net = (current_assets - total_liabilities) / shares_outstanding
         
         return round(net_net, 2) if round_result else net_net
+    
+    def compute_nca_details(self) -> Dict[str, Union[float, str]]:
+        """
+        Calculate Net Current Assets with detailed breakdown.
+        
+        NCA represents the company's liquid net worth after paying all liabilities.
+        Graham's defensive investor test requires long-term debt < NCA.
+        
+        Formula: NCA = Current Assets - Total Liabilities
+        Debt Coverage Ratio = Long-term Debt / NCA
+        
+        Returns:
+            Dictionary with:
+                - current_assets: float
+                - total_liabilities: float
+                - nca: float
+                - long_term_debt: float
+                - debt_coverage_ratio: Union[float, str] (or "N/A")
+                - debt_coverage_pct: str ("X.XX%" or "N/A")
+                - warnings: List[str]
+        """
+        history = self.data.get('history', {})
+        if not history:
+            return {
+                'current_assets': "N/A",
+                'total_liabilities': "N/A",
+                'nca': "N/A",
+                'long_term_debt': "N/A",
+                'debt_coverage_ratio': "N/A",
+                'debt_coverage_pct': "N/A",
+                'warnings': ["No financial history available"]
+            }
+        
+        # Get most recent fiscal year with financial data
+        years = sorted(history.keys(), reverse=True)
+        if not years:
+            return {
+                'current_assets': "N/A",
+                'total_liabilities': "N/A",
+                'nca': "N/A",
+                'long_term_debt': "N/A",
+                'debt_coverage_ratio': "N/A",
+                'debt_coverage_pct': "N/A",
+                'warnings': ["No financial years available"]
+            }
+        
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return {
+                'current_assets': "N/A",
+                'total_liabilities': "N/A",
+                'nca': "N/A",
+                'long_term_debt': "N/A",
+                'debt_coverage_ratio': "N/A",
+                'debt_coverage_pct': "N/A",
+                'warnings': ["No financial data available"]
+            }
+        
+        year_data = history[latest_year]
+        warnings = []
+        
+        # Extract required fields
+        current_assets = year_data.get('current_assets')
+        total_liabilities = year_data.get('total_liabilities')
+        long_term_debt = year_data.get('long_term_debt', 0.0)
+        
+        # Handle missing balance sheet data
+        if current_assets is None or total_liabilities is None:
+            return {
+                'current_assets': "N/A",
+                'total_liabilities': "N/A",
+                'nca': "N/A",
+                'long_term_debt': "N/A",
+                'debt_coverage_ratio': "N/A",
+                'debt_coverage_pct': "N/A",
+                'warnings': ["Balance sheet data unavailable"]
+            }
+        
+        # Convert to Decimal for precise calculation
+        current_assets_dec = Decimal(str(current_assets))
+        total_liabilities_dec = Decimal(str(total_liabilities))
+        long_term_debt_dec = Decimal(str(long_term_debt))
+        
+        # Calculate NCA
+        nca_dec = current_assets_dec - total_liabilities_dec
+        
+        # Check for sector-specific warnings
+        sector = self.data.get('sector', '').lower()
+        if 'financial' in sector or 'bank' in sector:
+            warnings.append("NCA analysis may not be applicable for Financial companies due to balance sheet structure")
+        elif 'utility' in sector or 'utilities' in sector:
+            warnings.append("NCA analysis may not be applicable for Utility companies due to balance sheet structure")
+        
+        # Calculate debt coverage ratio
+        debt_coverage_ratio = "N/A"
+        debt_coverage_pct = "N/A"
+        
+        if nca_dec <= 0:
+            warnings.append("NCA is zero or negative - cannot calculate debt coverage ratio")
+            debt_coverage_ratio = "N/A"
+            debt_coverage_pct = "N/A"
+        else:
+            # Calculate ratio: Long-term Debt / NCA
+            ratio_dec = long_term_debt_dec / nca_dec
+            debt_coverage_ratio = float(ratio_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            
+            # Format as percentage
+            pct_dec = ratio_dec * 100
+            debt_coverage_pct = f"{float(pct_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))}%"
+        
+        # Round NCA for display
+        nca_rounded = float(nca_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        
+        return {
+            'current_assets': current_assets,
+            'total_liabilities': total_liabilities,
+            'nca': nca_rounded,
+            'long_term_debt': long_term_debt,
+            'debt_coverage_ratio': debt_coverage_ratio,
+            'debt_coverage_pct': debt_coverage_pct,
+            'warnings': warnings
+        }
+    
+    def compute_quick_ratio(self) -> Union[float, str]:
+        """
+        Calculate Quick Ratio (Acid Test).
+        
+        The Quick Ratio is a more stringent liquidity test than the Current Ratio.
+        It excludes inventory from current assets, as inventory may not be quickly
+        convertible to cash.
+        
+        Formula: (Current Assets - Inventory) / Current Liabilities
+        
+        Returns:
+            float: Quick Ratio rounded to 2 decimals, or "N/A" if cannot calculate
+        """
+        history = self.data.get('history', {})
+        if not history:
+            return "N/A"
+        
+        # Get most recent fiscal year with financial data
+        years = sorted(history.keys(), reverse=True)
+        if not years:
+            return "N/A"
+        
+        latest_year = self._get_latest_financial_year(history, years)
+        if not latest_year:
+            return "N/A"
+        
+        year_data = history[latest_year]
+        
+        # Extract required fields
+        current_assets = year_data.get('current_assets')
+        inventory = year_data.get('inventory')
+        current_liabilities = year_data.get('current_liabilities')
+        
+        # Handle missing current assets or current liabilities
+        if current_assets is None or current_liabilities is None:
+            return "N/A"
+        
+        # Handle zero current liabilities
+        if current_liabilities == 0:
+            self.warnings.append("Quick Ratio: Cannot calculate - current liabilities is zero")
+            return "N/A"
+        
+        # Handle missing inventory based on sector
+        sector = self.data.get('sector', '').lower()
+        is_low_inventory_sector = 'service' in sector or 'technology' in sector or 'software' in sector
+        
+        if inventory is None:
+            if is_low_inventory_sector:
+                # Services and Technology companies typically have minimal inventory
+                # Use current assets directly (equivalent to current ratio)
+                self.warnings.append(f"Quick Ratio: Inventory data unavailable - using Current Assets ({self.data.get('sector', 'Unknown')} sector)")
+                inventory = 0.0
+            else:
+                # Conservative approach: cannot calculate without inventory for other sectors
+                self.warnings.append(f"Quick Ratio: Cannot calculate - inventory data unavailable for {self.data.get('sector', 'Unknown')} sector")
+                return "N/A"
+        
+        # Convert to Decimal for precise calculation
+        current_assets_dec = Decimal(str(current_assets))
+        inventory_dec = Decimal(str(inventory))
+        current_liabilities_dec = Decimal(str(current_liabilities))
+        
+        # Calculate Quick Ratio
+        quick_ratio_dec = (current_assets_dec - inventory_dec) / current_liabilities_dec
+        
+        # Round to 2 decimal places
+        quick_ratio_rounded = quick_ratio_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        
+        # Convert back to float for return
+        return float(quick_ratio_rounded)
+    
+    def compute_three_year_avg_pe(self) -> Dict[str, Union[float, str]]:
+        """
+        Calculate P/E ratio based on 3-year average earnings.
+        
+        Graham's Defensive Criterion #6: "Price should not exceed 15 times 
+        average earnings of the past three years"
+        
+        This method calculates the average EPS over the most recent three years,
+        including loss years (negative EPS), which reduces the average and reflects
+        the company's historical volatility.
+        
+        Returns:
+            Dictionary with:
+                - three_year_avg_eps: Union[float, str] - Average EPS or "N/A"
+                - pe_on_avg: Union[float, str] - P/E ratio or "N/A"
+                - years_used: List[str] - Years included in average
+        """
+        history = self.data.get('history', {})
+        if not history:
+            return {
+                'three_year_avg_eps': "N/A",
+                'pe_on_avg': "N/A",
+                'years_used': []
+            }
+        
+        # Get sorted years (most recent first)
+        sorted_years = sorted(history.keys(), reverse=True)
+        
+        # Filter out incomplete years (years with no financial data, only dividends)
+        complete_years = []
+        for year in sorted_years:
+            year_data = history[year]
+            has_financial_data = (
+                year_data.get('revenue', 0.0) > 0 or
+                year_data.get('net_income', 0.0) != 0 or  # Can be negative (loss)
+                year_data.get('total_equity', 0.0) > 0
+            )
+            if has_financial_data:
+                complete_years.append(year)
+        
+        # Need at least 3 years of data
+        if len(complete_years) < 3:
+            self.warnings.append(f"Three-Year Average P/E: Insufficient data - need 3 years, have {len(complete_years)}")
+            return {
+                'three_year_avg_eps': "N/A",
+                'pe_on_avg': "N/A",
+                'years_used': complete_years
+            }
+        
+        # Get most recent 3 years with financial data
+        years_to_use = complete_years[:3]
+        
+        # Extract EPS for each year (including negative values for losses)
+        eps_values = []
+        for year in years_to_use:
+            eps = history[year].get('eps', 0.0)
+            eps_values.append(eps)
+        
+        # Convert to Decimal for precise calculation
+        eps_decimals = [Decimal(str(eps)) for eps in eps_values]
+        
+        # Calculate average: sum(eps_values) / 3
+        # Include loss years (negative EPS) per Graham's methodology
+        avg_eps_dec = sum(eps_decimals) / Decimal('3')
+        
+        # Round average EPS to 2 decimal places
+        avg_eps_rounded = avg_eps_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        avg_eps = float(avg_eps_rounded)
+        
+        # Calculate P/E ratio
+        price = self.data.get('price', 0.0)
+        
+        if avg_eps <= 0:
+            # Cannot calculate meaningful P/E with zero or negative average earnings
+            return {
+                'three_year_avg_eps': avg_eps,
+                'pe_on_avg': "N/A",
+                'years_used': years_to_use
+            }
+        
+        # Calculate P/E = Current Price / Three-Year Average EPS
+        price_dec = Decimal(str(price))
+        pe_ratio_dec = price_dec / avg_eps_dec
+        
+        # Round P/E to 2 decimal places
+        pe_ratio_rounded = pe_ratio_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        pe_ratio = float(pe_ratio_rounded)
+        
+        return {
+            'three_year_avg_eps': avg_eps,
+            'pe_on_avg': pe_ratio,
+            'years_used': years_to_use
+        }
+    
+    def compute_combined_pe_pb_test(self) -> Dict[str, Union[float, str]]:
+        """
+        Calculate combined P/E × P/B test.
+        
+        Graham's Rule: P/E × P/B should not exceed 22.5
+        
+        This test provides flexibility in valuation:
+        - A company with P/E of 15 can have P/B up to 1.5 (15 × 1.5 = 22.5)
+        - A company with P/E of 10 can have P/B up to 2.25 (10 × 2.25 = 22.5)
+        - A company with P/B of 0.5 can have P/E up to 45 (45 × 0.5 = 22.5)
+        
+        Returns:
+            Dictionary with:
+                - pe_ratio: Union[float, str] - P/E ratio or "N/A"
+                - pb_ratio: Union[float, str] - P/B ratio or "N/A"
+                - product: Union[float, str] - P/E × P/B or "N/A"
+                - result: str - "PASS", "FAIL", or "N/A"
+        """
+        history = self.data.get('history', {})
+        price = self.data.get('price', 0.0)
+        
+        if not history or price == 0:
+            return {
+                'pe_ratio': "N/A",
+                'pb_ratio': "N/A",
+                'product': "N/A",
+                'result': "N/A"
+            }
+        
+        # Get sorted years (most recent first)
+        sorted_years = sorted(history.keys(), reverse=True)
+        if not sorted_years:
+            return {
+                'pe_ratio': "N/A",
+                'pb_ratio': "N/A",
+                'product': "N/A",
+                'result': "N/A"
+            }
+        
+        # Get most recent year with financial data
+        latest_year = self._get_latest_financial_year(history, sorted_years)
+        if not latest_year:
+            return {
+                'pe_ratio': "N/A",
+                'pb_ratio': "N/A",
+                'product': "N/A",
+                'result': "N/A"
+            }
+        
+        year_data = history[latest_year]
+        
+        # Calculate P/E ratio
+        eps = year_data.get('eps', 0.0)
+        if eps <= 0:
+            pe_ratio = "N/A"
+        else:
+            price_dec = Decimal(str(price))
+            eps_dec = Decimal(str(eps))
+            pe_ratio_dec = price_dec / eps_dec
+            pe_ratio = float(pe_ratio_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        
+        # Calculate P/B ratio
+        total_equity = year_data.get('total_equity', 0.0)
+        shares_outstanding = year_data.get('shares_outstanding', 0.0)
+        
+        if shares_outstanding == 0 or total_equity <= 0:
+            pb_ratio = "N/A"
+        else:
+            total_equity_dec = Decimal(str(total_equity))
+            shares_dec = Decimal(str(shares_outstanding))
+            price_dec = Decimal(str(price))
+            
+            book_value_per_share_dec = total_equity_dec / shares_dec
+            pb_ratio_dec = price_dec / book_value_per_share_dec
+            pb_ratio = float(pb_ratio_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+        
+        # Calculate product and determine result
+        if pe_ratio == "N/A" or pb_ratio == "N/A":
+            product = "N/A"
+            result = "N/A"
+        else:
+            pe_dec = Decimal(str(pe_ratio))
+            pb_dec = Decimal(str(pb_ratio))
+            product_dec = pe_dec * pb_dec
+            product = float(product_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            
+            # Compare to Graham's threshold of 22.5
+            threshold = Decimal('22.5')
+            result = "PASS" if product_dec <= threshold else "FAIL"
+        
+        return {
+            'pe_ratio': pe_ratio,
+            'pb_ratio': pb_ratio,
+            'product': product,
+            'result': result
+        }
     
     def compute_margin_of_safety(self, graham_number: Union[float, str], price: float) -> Union[float, str]:
         """
@@ -460,6 +845,10 @@ class GrahamCalculator:
         """
         Test if company has positive earnings in required number of years.
         
+        Graham's Earnings Stability Criteria:
+        - Defensive Investor: Positive earnings in each of the past 10 years
+        - Enterprising Investor: Profitability in most recent year and 5 of past 7 years
+        
         Filters out incomplete years (years with only dividend data but no financial statements)
         to ensure accurate testing. This is consistent with other test methods that use
         _get_latest_financial_year() to skip incomplete years.
@@ -468,7 +857,9 @@ class GrahamCalculator:
             history: Financial history dictionary
             years: List of years sorted in reverse chronological order
             min_years: Minimum number of years with positive earnings required
+                      (10 for defensive, 5 for enterprising)
             period: Number of years to examine
+                   (10 for defensive, 7 for enterprising)
             
         Returns:
             'PASS' if positive_years >= min_years, 'FAIL' otherwise
@@ -691,6 +1082,10 @@ class GrahamCalculator:
         net_net_value = self.compute_net_net()  # Rounded for display
         net_net_value_raw = self.compute_net_net(round_result=False)  # Unrounded for comparison
         epv_data = self.compute_epv()  # Now returns dict
+        nca_details = self.compute_nca_details()
+        quick_ratio = self.compute_quick_ratio()
+        three_year_avg_pe = self.compute_three_year_avg_pe()
+        combined_pe_pb_test = self.compute_combined_pe_pb_test()
         
         price = self.data.get('price', 0.0)
         margin_of_safety = self.compute_margin_of_safety(graham_number, price)
@@ -718,6 +1113,10 @@ class GrahamCalculator:
             'epv_details': epv_data,  # Add detailed breakdown
             'net_net_value': net_net_value,
             'margin_of_safety': margin_of_safety,
+            'nca_details': nca_details,
+            'quick_ratio': quick_ratio,
+            'three_year_avg_pe': three_year_avg_pe,
+            'combined_pe_pb_test': combined_pe_pb_test,
             'verdict': verdict,
             'defensive_tests': defensive_tests,
             'enterprising_tests': enterprising_tests,

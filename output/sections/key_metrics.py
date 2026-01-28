@@ -44,19 +44,23 @@ class KeyMetricsSection(DossierSection):
     This section includes:
     - Profitability metrics (ROE, ROA, Profit Margin)
     - Book Value Per Share
+    - Liquidity metrics (Current Ratio, Quick Ratio)
+    - Net Current Assets (NCA) Analysis
     - Ownership metrics (Insider, Institutional)
     - Risk metrics (Beta)
     
     Requirements: 2.2
     """
     
-    def __init__(self, financial_data: Dict[str, Any]):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any] = None):
         """Initialize key metrics section.
         
         Args:
             financial_data: Dictionary containing financial data (FinancialData DTO)
+            metrics: Dictionary containing Graham metrics (GrahamMetrics DTO) - optional for backward compatibility
         """
         self.financial_data = financial_data
+        self.metrics = metrics or {}
     
     def generate(self) -> List[str]:
         """Generate key metrics section content.
@@ -78,6 +82,9 @@ class KeyMetricsSection(DossierSection):
         
         # Book value per share
         self._add_book_value(lines, unified_currency)
+        
+        # Liquidity Analysis (Current Ratio, Quick Ratio, NCA)
+        self._add_liquidity_analysis(lines, unified_currency)
         
         # Ownership metrics
         self._add_ownership_metrics(lines)
@@ -132,6 +139,68 @@ class KeyMetricsSection(DossierSection):
                         bvps_display = format_price_display(book_value, unified_currency, unified_currency)
                         lines.append(f"- Book Value Per Share: {bvps_display}")
                     break
+    
+    def _add_liquidity_analysis(self, lines: List[str], unified_currency: str) -> None:
+        """Add liquidity analysis including Current Ratio, Quick Ratio, and NCA details.
+        
+        Args:
+            lines: List to append lines to
+            unified_currency: Currency for display
+        """
+        lines.append("")
+        lines.append("### Liquidity Analysis")
+        lines.append("")
+        
+        # Current Ratio (from financial_data if available)
+        current_ratio = self.financial_data.get('current_ratio', 0)
+        if current_ratio > 0:
+            lines.append(f"- **Current Ratio**: {current_ratio:.2f} (Current Assets / Current Liabilities)")
+        
+        # Quick Ratio (from metrics if available)
+        quick_ratio = self.metrics.get('quick_ratio')
+        if quick_ratio and quick_ratio != 'N/A':
+            lines.append(f"- **Quick Ratio**: {quick_ratio:.2f} (Acid Test - excludes inventory)")
+        elif quick_ratio == 'N/A':
+            lines.append(f"- **Quick Ratio**: N/A")
+        
+        # NCA Details (from metrics if available)
+        nca_details = self.metrics.get('nca_details', {})
+        if nca_details and isinstance(nca_details, dict):
+            lines.append("")
+            lines.append("### Net Current Assets (NCA) Analysis")
+            lines.append("")
+            
+            current_assets = nca_details.get('current_assets')
+            total_liabilities = nca_details.get('total_liabilities')
+            nca = nca_details.get('nca')
+            long_term_debt = nca_details.get('long_term_debt')
+            debt_coverage_ratio = nca_details.get('debt_coverage_ratio')
+            debt_coverage_pct = nca_details.get('debt_coverage_pct')
+            
+            # Display values
+            if current_assets is not None and current_assets != 'N/A':
+                ca_display = format_price_display(current_assets, unified_currency, unified_currency)
+                lines.append(f"- **Current Assets**: {ca_display}")
+            
+            if total_liabilities is not None and total_liabilities != 'N/A':
+                tl_display = format_price_display(total_liabilities, unified_currency, unified_currency)
+                lines.append(f"- **Total Liabilities**: {tl_display}")
+            
+            if nca is not None and nca != 'N/A':
+                nca_display = format_price_display(nca, unified_currency, unified_currency)
+                lines.append(f"- **Net Current Assets**: {nca_display}")
+            
+            if long_term_debt is not None and long_term_debt != 'N/A':
+                ltd_display = format_price_display(long_term_debt, unified_currency, unified_currency)
+                lines.append(f"- **Long-term Debt**: {ltd_display}")
+            
+            if debt_coverage_ratio is not None and debt_coverage_ratio != 'N/A':
+                lines.append(f"- **Debt Coverage Ratio**: {debt_coverage_ratio:.2f} ({debt_coverage_pct}) - Long-term Debt / NCA")
+                lines.append("")
+                lines.append("*Graham's defensive test requires long-term debt < NCA (ratio < 1.0). This ensures the company could theoretically pay off all long-term debt using only its liquid assets.*")
+            elif debt_coverage_ratio == 'N/A':
+                lines.append(f"- **Debt Coverage Ratio**: N/A")
+
     
     def _add_ownership_metrics(self, lines: List[str]) -> None:
         """Add ownership metrics (Insider, Institutional).

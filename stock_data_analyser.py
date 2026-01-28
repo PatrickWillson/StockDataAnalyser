@@ -101,7 +101,7 @@ def main():
 
     try:
         # 1. Fetch Data
-        logger.info("[1/4] Fetching Fundamentals from EODHD...")
+        logger.info("[1/6] Fetching Fundamentals from EODHD...")
         client = ClientFactory.create_eodhd_client(API_KEY, debug=args.debug)
         yf_client = ClientFactory.create_yfinance_client(debug=args.debug)
         financial_data = client.fetch_all_data(ticker, yf_client=yf_client)
@@ -123,7 +123,7 @@ def main():
             sys.exit(1)
         
         # 1.5. Fetch Historical Prices (for Historical P/E and P/B columns)
-        logger.info("[1.5/4] Fetching Historical Prices from yfinance...")
+        logger.info("[2/6] Fetching Historical Prices from yfinance...")
         history_keys = list(financial_data.get('history', {}).keys())
         if history_keys:
             # Get date range from balance sheet fiscal year ends
@@ -260,16 +260,16 @@ def main():
             )
         
         # 2. Parse Quarterly Data for TTM Calculations
-        logger.info("[2/5] Parsing Quarterly Data for TTM Analysis...")
+        logger.info("[3/6] Parsing Quarterly Data for TTM Analysis...")
         quarterly_data = financial_data.get('quarterly_data', {'balance_sheet': {}, 'income_statement': {}})
         
         # 3. Compute Metrics
-        logger.info("[3/5] Calculating Graham Metrics (Strict Rules)...")
+        logger.info("[4/6] Calculating Graham Metrics (Strict Rules)...")
         calculator = GrahamCalculator(financial_data)
         metrics = calculator.compute_all()
         
         # 4. Calculate TTM Metrics
-        logger.info("[4/5] Calculating TTM Metrics...")
+        logger.info("[5/6] Calculating TTM Metrics...")
         ttm_metrics = None
         if quarterly_data and (quarterly_data.get('balance_sheet') or quarterly_data.get('income_statement')):
             try:
@@ -305,12 +305,12 @@ def main():
             financial_data['warnings'].append("TTM Analysis: Periodic data not available from API")
         
         # 5. Detect Anomalies (Statistical)
-        logger.info("[5/5] Scanning for Statistical Anomalies...")
+        logger.info("[6/6] Scanning for Statistical Anomalies...")
         detector = AnomalyDetector(financial_data)
         anomalies = detector.scan()
         
         # 6. Generate Output
-        logger.info("[6/5] Generating Dossier...")
+        logger.info("[7/7] Generating Dossier...")
         generator = DossierGenerator(ticker, financial_data, metrics, anomalies, ttm_metrics=ttm_metrics)
         dossier_content = generator.generate()
         save_dossier(ticker, dossier_content)

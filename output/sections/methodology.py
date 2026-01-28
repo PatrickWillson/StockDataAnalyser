@@ -110,6 +110,9 @@ class MethodologySection:
         # Margin of Safety explanation
         self._add_margin_of_safety_explanation(lines)
         
+        # New metrics explanations
+        self._add_new_metrics_explanations(lines)
+        
         # TTM methodology explanation
         self._add_ttm_methodology_explanation(lines)
         
@@ -301,6 +304,101 @@ class MethodologySection:
             lines.append(f"- **Margin of Safety ({mos:.1f}%)**: (Graham Number - Price) / Graham Number × 100")
             lines.append(f"  - Percentage discount to intrinsic value")
             lines.append(f"  - Graham recommended minimum 20-30% for defensive investors")
+    
+    def _add_new_metrics_explanations(self, lines: List[str]) -> None:
+        """Add explanations for new Graham metrics.
+        
+        Args:
+            lines: List to append lines to
+        """
+        unified_currency = self.financial_data.get('currency', 'USD')
+        
+        # Three-Year Average P/E
+        three_year_pe = self.metrics.get('three_year_avg_pe', {})
+        if three_year_pe and isinstance(three_year_pe, dict):
+            lines.append("")
+            lines.append("### P/E Ratio (3-Year Average)")
+            lines.append("")
+            lines.append("**Graham's Defensive Criterion #6** states: *\"Price should not exceed 15 times average earnings of the past three years.\"*")
+            lines.append("")
+            lines.append("We calculate the 3-year average EPS by taking the arithmetic mean of the most recent three years of annual EPS data, **including loss years (negative EPS)**. This provides a more stable valuation metric that smooths out cyclical fluctuations.")
+            lines.append("")
+            lines.append("**Formula**: P/E (3-Year Avg) = Current Price / ((EPS_Y1 + EPS_Y2 + EPS_Y3) / 3)")
+            lines.append("")
+            lines.append("**Note**: Loss years are included in the average as negative values, which reduces the average EPS and increases the P/E ratio, reflecting the company's historical volatility.")
+        
+        # Quick Ratio
+        quick_ratio = self.metrics.get('quick_ratio')
+        if quick_ratio is not None:
+            lines.append("")
+            lines.append("### Quick Ratio (Acid Test)")
+            lines.append("")
+            lines.append("The Quick Ratio is a more stringent liquidity test than the Current Ratio. It excludes inventory from current assets, as inventory may not be quickly convertible to cash.")
+            lines.append("")
+            lines.append("**Formula**: Quick Ratio = (Current Assets - Inventory) / Current Liabilities")
+            lines.append("")
+            lines.append("A Quick Ratio > 1.0 indicates the company can meet short-term obligations without relying on inventory sales. Graham preferred companies with strong liquidity positions.")
+            lines.append("")
+            lines.append("**Note**: For Services and Technology companies with minimal inventory, if inventory data is unavailable, we use Current Assets directly (equivalent to Current Ratio).")
+        
+        # NCA and Debt Coverage
+        nca_details = self.metrics.get('nca_details', {})
+        if nca_details and isinstance(nca_details, dict):
+            lines.append("")
+            lines.append("### Net Current Assets (NCA) and Debt Coverage")
+            lines.append("")
+            lines.append("Net Current Assets represents the company's liquid net worth after paying all liabilities.")
+            lines.append("")
+            lines.append("**Formula**: NCA = Current Assets - Total Liabilities")
+            lines.append("")
+            lines.append("**Debt Coverage Ratio** = Long-term Debt / NCA")
+            lines.append("")
+            lines.append("Graham's defensive investor test requires long-term debt to be less than NCA (ratio < 1.0). This ensures the company could theoretically pay off all long-term debt using only its liquid assets.")
+            lines.append("")
+            lines.append("**Note**: For Financial and Utility companies, NCA analysis may not be applicable due to their unique balance sheet structures (high leverage is normal for these sectors).")
+        
+        # Combined P/E × P/B Test
+        combined_test = self.metrics.get('combined_pe_pb_test', {})
+        if combined_test and isinstance(combined_test, dict):
+            lines.append("")
+            lines.append("### Combined P/E × P/B Test")
+            lines.append("")
+            lines.append("Graham specified that for defensive investors, the product of P/E and P/B ratios should not exceed 22.5. This rule provides flexibility in valuation:")
+            lines.append("")
+            lines.append("- A company with P/E of 15 can have P/B up to 1.5 (15 × 1.5 = 22.5)")
+            lines.append("- A company with P/E of 10 can have P/B up to 2.25 (10 × 2.25 = 22.5)")
+            lines.append("- A company with P/B of 0.5 can have P/E up to 45 (45 × 0.5 = 22.5)")
+            lines.append("")
+            lines.append("**Formula**: Combined Test = P/E Ratio × P/B Ratio ≤ 22.5")
+            lines.append("")
+            lines.append("This test recognizes that a low price relative to book value can compensate for higher earnings multiples, and vice versa.")
+        
+        # WCPS and Payout Ratio (from financial history)
+        history = self.financial_data.get('history', {})
+        if history:
+            # Check if any year has WCPS or payout_ratio
+            has_wcps = any(year_data.get('wcps') is not None for year_data in history.values())
+            has_payout = any(year_data.get('payout_ratio') is not None for year_data in history.values())
+            
+            if has_wcps or has_payout:
+                lines.append("")
+                lines.append("### Historical Trend Metrics")
+                lines.append("")
+                
+                if has_wcps:
+                    lines.append("**Working Capital Per Share (WCPS)**: (Current Assets - Current Liabilities) / Shares Outstanding")
+                    lines.append("- Measures the company's liquid net worth per share")
+                    lines.append("- Positive values indicate financial strength; negative values indicate liquidity concerns")
+                    lines.append("- Trend analysis: Increasing WCPS shows improving financial strength over time")
+                    lines.append("")
+                
+                if has_payout:
+                    lines.append("**Payout Ratio**: (Dividend / EPS) × 100")
+                    lines.append("- Percentage of earnings paid as dividends")
+                    lines.append("- Values > 100% indicate unsustainable dividends (paying more than earned)")
+                    lines.append("- Values < 50% indicate conservative dividend policy with room for growth")
+                    lines.append("- 'N/A' shown for years with zero or negative earnings (cannot assess sustainability against losses)")
+                    lines.append("")
     
     def _add_ttm_methodology_explanation(self, lines: List[str]) -> None:
         """Add TTM (Trailing Twelve Months) methodology explanation.

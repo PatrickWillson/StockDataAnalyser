@@ -76,14 +76,14 @@ def test_verdict_shows_all_passed_tests():
     
     dossier = DossierGenerator('TEST.US', financial_data, metrics, {}).generate()
     
-    # Should list all passed tests (actual format without checkmarks)
-    assert "Earnings Stability: PASS" in dossier
-    assert "Current Ratio: PASS" in dossier
-    assert "Debt To Assets: PASS" in dossier
-    assert "Dividend Record: PASS" in dossier
-    assert "Earnings Growth: PASS" in dossier
-    assert "Pe Ratio: PASS" in dossier
-    assert "Pb Ratio: PASS" in dossier
+    # Should list all passed tests (with bold markdown formatting)
+    assert "**Earnings Stability**: PASS" in dossier
+    assert "**Current Ratio**: PASS" in dossier
+    assert "**Debt to Assets**: PASS" in dossier
+    assert "**Dividend Record**: PASS" in dossier
+    assert "**Earnings Growth**: PASS" in dossier
+    assert "**P/E Ratio**: PASS" in dossier
+    assert "**P/B Ratio**: PASS" in dossier
 
 
 def test_verdict_recommendation_varies_by_failure_count():
@@ -144,8 +144,8 @@ def test_verdict_recommendation_varies_by_failure_count():
     }
     
     dossier_one = DossierGenerator('TEST.US', financial_data, metrics_one_fail, {}).generate()
-    # Verify the test results are shown (actual format)
-    assert "Pe Ratio: FAIL" in dossier_one
+    # Verify the test results are shown (with bold markdown formatting)
+    assert "**P/E Ratio**: FAIL" in dossier_one
     assert "SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS" in dossier_one
     
     # Test with multiple failures (2-3)
@@ -183,10 +183,10 @@ def test_verdict_recommendation_varies_by_failure_count():
     }
     
     dossier_multi = DossierGenerator('TEST.US', financial_data, metrics_multi_fail, {}).generate()
-    # Verify multiple failures are shown
-    assert "Earnings Stability: FAIL" in dossier_multi
-    assert "Current Ratio: FAIL" in dossier_multi
-    assert "Pe Ratio: FAIL" in dossier_multi
+    # Verify multiple failures are shown (with bold markdown formatting)
+    assert "**Earnings Stability**: FAIL" in dossier_multi
+    assert "**Current Ratio**: FAIL" in dossier_multi
+    assert "**P/E Ratio**: FAIL" in dossier_multi
     
     # Test with many failures (>3)
     metrics_many_fail = {
@@ -223,12 +223,12 @@ def test_verdict_recommendation_varies_by_failure_count():
     }
     
     dossier_many = DossierGenerator('TEST.US', financial_data, metrics_many_fail, {}).generate()
-    # Verify many failures are shown
-    assert "Earnings Stability: FAIL" in dossier_many
-    assert "Current Ratio: FAIL" in dossier_many
-    assert "Debt To Assets: FAIL" in dossier_many
-    assert "Dividend Record: FAIL" in dossier_many
-    assert "Earnings Growth: FAIL" in dossier_many
+    # Verify many failures are shown (with bold markdown formatting)
+    assert "**Earnings Stability**: FAIL" in dossier_many
+    assert "**Current Ratio**: FAIL" in dossier_many
+    assert "**Debt to Assets**: FAIL" in dossier_many
+    assert "**Dividend Record**: FAIL" in dossier_many
+    assert "**Earnings Growth**: FAIL" in dossier_many
 
 
 def test_verdict_graham_quote_present():
@@ -290,9 +290,9 @@ def test_verdict_graham_quote_present():
     
     dossier_pass = DossierGenerator('TEST.US', financial_data, metrics_pass, {}).generate()
     
-    # Verify defensive tests section is present
+    # Verify defensive tests section is present (with bold markdown formatting)
     assert "SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS" in dossier_pass
-    assert "Earnings Stability: PASS" in dossier_pass
+    assert "**Earnings Stability**: PASS" in dossier_pass
     
     # Test with failing
     metrics_fail = metrics_pass.copy()
@@ -308,6 +308,6 @@ def test_verdict_graham_quote_present():
     
     dossier_fail = DossierGenerator('TEST.US', financial_data, metrics_fail, {}).generate()
     
-    # Section should be present in both cases
+    # Section should be present in both cases (with bold markdown formatting)
     assert "SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS" in dossier_fail
-    assert "Earnings Stability: FAIL" in dossier_fail
+    assert "**Earnings Stability**: FAIL" in dossier_fail

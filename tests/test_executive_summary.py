@@ -368,10 +368,13 @@ class TestExecutiveSummarySection:
         section = ExecutiveSummarySection(financial_data, metrics)
         lines = section.generate()
         
-        # Check P/E ratio
-        pe_lines = [line for line in lines if "P/E Ratio:" in line]
-        assert len(pe_lines) == 1
-        assert "24.55" in pe_lines[0]
+        # Check P/E ratio (Current Year)
+        pe_lines = [line for line in lines if "P/E Ratio" in line]
+        assert len(pe_lines) >= 1, "Should have at least one P/E ratio line"
+        # Check that current year P/E is present
+        current_pe_lines = [line for line in lines if "P/E Ratio (Current Year)" in line]
+        assert len(current_pe_lines) == 1
+        assert "24.55" in current_pe_lines[0]
         
         # Check Price/Book
         pb_lines = [line for line in lines if "Price/Book:" in line]

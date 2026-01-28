@@ -301,6 +301,25 @@ class ExecutiveSummarySection(DossierSection):
         price_to_book = self.financial_data.get('price_to_book', 0)
         
         if pe_ratio > 0:
-            lines.append(f"- P/E Ratio: {pe_ratio:.2f}")
+            lines.append(f"- P/E Ratio (Current Year): {pe_ratio:.2f}")
+        
+        # Add three-year average P/E if available
+        three_year_pe = self.metrics.get('three_year_avg_pe', {})
+        if isinstance(three_year_pe, dict):
+            pe_on_avg = three_year_pe.get('pe_on_avg')
+            avg_eps = three_year_pe.get('three_year_avg_eps')
+            years_used = three_year_pe.get('years_used', [])
+            
+            if pe_on_avg != 'N/A' and avg_eps != 'N/A' and years_used:
+                # Format years range
+                if len(years_used) >= 2:
+                    first_year = years_used[-1].split('-')[0]  # Oldest year
+                    last_year = years_used[0].split('-')[0]    # Most recent year
+                    years_str = f"{first_year}-{last_year}"
+                else:
+                    years_str = "recent years"
+                
+                lines.append(f"- P/E Ratio (3-Year Avg): {pe_on_avg:.2f} (based on avg EPS of {avg_eps:.2f} from {years_str})")
+        
         if price_to_book > 0:
             lines.append(f"- Price/Book: {price_to_book:.2f}")

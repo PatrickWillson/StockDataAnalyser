@@ -150,9 +150,9 @@ class FinancialHistorySection:
         is_dividend_amounts = self.financial_data.get('is_dividend_amounts', False)
         div_header = "Div/Share" if is_dividend_amounts else "Div Count"
         
-        # Table header with 11 columns
-        lines.append(f"| Year | Revenue | Net Income | EPS | {div_header} | BVPS | Total Debt | Shares (B) | Price | P/E | P/B |")
-        lines.append("|------|---------|------------|-----|-------------|------|------------|------------|-------|-----|-----|")
+        # Table header with 13 columns (added WCPS and Payout Ratio)
+        lines.append(f"| Year | Revenue | Net Income | EPS | {div_header} | BVPS | WCPS | Payout Ratio | Total Debt | Shares (B) | Price | P/E | P/B |")
+        lines.append("|------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|")
         
         # Get history and sort years descending (most recent first)
         history = self.financial_data.get('history', {})
@@ -183,6 +183,8 @@ class FinancialHistorySection:
                 eps_str = "[Data Unavailable]"
                 dividend_str = str(dividend)
                 bvps_str = "[Data Unavailable]"
+                wcps_str = "[Data Unavailable]"
+                payout_ratio_str = "[Data Unavailable]"
                 debt_str = "[Data Unavailable]"
                 shares_str = "[Data Unavailable]"
                 price_str = "[Data Unavailable]"
@@ -205,6 +207,23 @@ class FinancialHistorySection:
                 bvps = round(total_equity / shares, 2) if shares > 0 and total_equity > 0 else 0
                 bvps_str = str(bvps) if bvps > 0 else 'N/A'
                 
+                # Get WCPS (already calculated in financial_data_processor)
+                wcps = data.get('wcps')
+                if wcps == 'N/A' or wcps is None:
+                    wcps_str = 'N/A'
+                elif isinstance(wcps, (int, float)):
+                    # Add warning indicator for negative WCPS
+                    if wcps < 0:
+                        wcps_str = f"⚠️ {wcps:.2f}"
+                    else:
+                        wcps_str = f"{wcps:.2f}"
+                else:
+                    wcps_str = str(wcps)
+                
+                # Get Payout Ratio (already calculated in financial_data_processor)
+                payout_ratio = data.get('payout_ratio', 'N/A')
+                payout_ratio_str = str(payout_ratio)
+                
                 # Format new columns using helper functions
                 debt_str = self.format_debt(total_debt, currency_symbol)
                 shares_str = self.format_shares(shares_outstanding)
@@ -217,7 +236,7 @@ class FinancialHistorySection:
             # Extract year display (e.g., '2024-06-30' → '2024')
             year_display = year.split('-')[0]
             
-            row = f"| {year_display} | {revenue_str} | {net_income_str} | {eps_str} | {dividend_str} | {bvps_str} | {debt_str} | {shares_str} | {price_str} | {pe_str} | {pb_str} |"
+            row = f"| {year_display} | {revenue_str} | {net_income_str} | {eps_str} | {dividend_str} | {bvps_str} | {wcps_str} | {payout_ratio_str} | {debt_str} | {shares_str} | {price_str} | {pe_str} | {pb_str} |"
             lines.append(row)
         
         # Add notes on data completeness
@@ -238,6 +257,16 @@ class FinancialHistorySection:
         # Add note on new columns
         lines.append("")
         lines.append("**Graham Trend Analysis Columns:**")
+        lines.append("- **WCPS (Working Capital Per Share)**: (Current Assets - Current Liabilities) / Shares Outstanding")
+        lines.append("  - Measures the company's liquid net worth per share")
+        lines.append("  - Positive values indicate financial strength")
+        lines.append("  - ⚠️ Negative values indicate current liabilities exceed current assets (liquidity concern)")
+        lines.append("  - Trend analysis: Increasing WCPS shows improving financial strength")
+        lines.append("- **Payout Ratio**: (Dividend / EPS) × 100")
+        lines.append("  - Percentage of earnings paid as dividends")
+        lines.append("  - Values > 100% indicate unsustainable dividends (paying more than earned)")
+        lines.append("  - Values < 50% indicate conservative dividend policy with room for growth")
+        lines.append("  - 'N/A' shown for years with zero or negative earnings")
         lines.append("- **Total Debt**: Sum of long-term and short-term debt. Graham emphasized tracking debt trends to distinguish companies that grow through retained earnings vs leverage.")
         lines.append("- **Shares (B)**: Common shares outstanding in billions. Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).")
         lines.append("- **Price**: Year-end stock price on fiscal year end date (or last trading day within 7 days prior). Source: Yahoo Finance via yfinance.")

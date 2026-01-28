@@ -26,9 +26,10 @@ API_KEY = os.getenv("EODHD_API_KEY")
 @pytest.mark.live
 def test_expanded_table_has_11_columns():
     """
-    Test that the financial history table has 11 columns.
+    Test that the financial history table has 13 columns.
     
     Verifies the table header includes all expected columns in correct order.
+    Updated to reflect WCPS and Payout Ratio columns added in graham-metrics-enhancement.
     """
     if not API_KEY:
         pytest.skip("EODHD_API_KEY not available")
@@ -77,11 +78,11 @@ def test_expanded_table_has_11_columns():
     print(f"\nTable columns found: {len(columns)}")
     print(f"Columns: {columns}")
     
-    assert len(columns) == 11, f"Expected 11 columns, found {len(columns)}"
+    assert len(columns) == 13, f"Expected 13 columns, found {len(columns)}"
     
-    # Verify column order
+    # Verify column order (updated with WCPS and Payout Ratio)
     expected_columns = ['Year', 'Revenue', 'Net Income', 'EPS', 'Div/Share', 'BVPS', 
-                       'Total Debt', 'Shares (B)', 'Price', 'P/E', 'P/B']
+                       'WCPS', 'Payout Ratio', 'Total Debt', 'Shares (B)', 'Price', 'P/E', 'P/B']
     assert columns == expected_columns, f"Column order mismatch. Expected {expected_columns}, got {columns}"
 
 
@@ -90,7 +91,7 @@ def test_expanded_table_columns_populated():
     """
     Test that all new columns are populated with data.
     
-    Verifies that Total Debt, Shares, Price, P/E, and P/B columns contain
+    Verifies that WCPS, Payout Ratio, Total Debt, Shares, Price, P/E, and P/B columns contain
     actual values (not all N/A or empty).
     """
     if not API_KEY:
@@ -140,7 +141,9 @@ def test_expanded_table_columns_populated():
     
     assert len(table_rows) > 0, "No table rows found"
     
-    # Check that new columns have data
+    # Check that new columns have data (updated column indices for 13 columns)
+    wcps_values = []
+    payout_ratio_values = []
     debt_values = []
     shares_values = []
     price_values = []
@@ -149,19 +152,31 @@ def test_expanded_table_columns_populated():
     
     for row in table_rows:
         cols = [col.strip() for col in row.split('|') if col.strip()]
-        if len(cols) >= 11:
-            debt_values.append(cols[6])  # Total Debt
-            shares_values.append(cols[7])  # Shares (B)
-            price_values.append(cols[8])  # Price
-            pe_values.append(cols[9])  # P/E
-            pb_values.append(cols[10])  # P/B
+        if len(cols) >= 13:
+            wcps_values.append(cols[6])  # WCPS
+            payout_ratio_values.append(cols[7])  # Payout Ratio
+            debt_values.append(cols[8])  # Total Debt
+            shares_values.append(cols[9])  # Shares (B)
+            price_values.append(cols[10])  # Price
+            pe_values.append(cols[11])  # P/E
+            pb_values.append(cols[12])  # P/B
     
     print(f"\nRows analyzed: {len(table_rows)}")
+    print(f"Sample WCPS values: {wcps_values[:3]}")
+    print(f"Sample payout ratio values: {payout_ratio_values[:3]}")
     print(f"Sample debt values: {debt_values[:3]}")
     print(f"Sample shares values: {shares_values[:3]}")
     print(f"Sample price values: {price_values[:3]}")
     print(f"Sample P/E values: {pe_values[:3]}")
     print(f"Sample P/B values: {pb_values[:3]}")
+    
+    # At least 80% of rows should have WCPS data
+    wcps_populated = sum(1 for v in wcps_values if v not in ['N/A', '[Data Unavailable]'])
+    assert wcps_populated / len(wcps_values) >= 0.8, f"Only {wcps_populated}/{len(wcps_values)} rows have WCPS data"
+    
+    # At least 80% of rows should have payout ratio data
+    payout_populated = sum(1 for v in payout_ratio_values if v not in ['N/A', '[Data Unavailable]'])
+    assert payout_populated / len(payout_ratio_values) >= 0.8, f"Only {payout_populated}/{len(payout_ratio_values)} rows have payout ratio data"
     
     # At least 80% of rows should have debt data (not N/A or [Data Unavailable])
     debt_populated = sum(1 for v in debt_values if v not in ['N/A', '[Data Unavailable]'])

@@ -37,22 +37,22 @@ def test_graham_tests_section_integration():
     
     # Verify defensive tests section
     assert "## SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS" in content
-    assert "- Earnings Stability: FAIL" in content
-    assert "- Current Ratio: FAIL" in content
-    assert "- Debt To Assets: FAIL" in content
-    assert "- Dividend Record: PASS" in content
-    assert "- Earnings Growth: PASS" in content
-    assert "- Pe Ratio: FAIL" in content
-    assert "- Pb Ratio: FAIL" in content
+    assert "1. **Earnings Stability**: FAIL" in content
+    assert "2. **Current Ratio**: FAIL" in content
+    assert "3. **Debt to Assets**: FAIL" in content
+    assert "4. **Dividend Record**: PASS" in content
+    assert "5. **Earnings Growth**: PASS" in content
+    assert "6. **P/E Ratio**: FAIL" in content
+    assert "7. **P/B Ratio**: FAIL" in content
     
     # Verify enterprising tests section
     assert "## SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS" in content
-    assert "- Earnings Stability: FAIL" in content
-    assert "- Current Ratio: FAIL" in content
-    assert "- Debt To Assets: FAIL" in content
-    assert "- Dividend Record: PASS" in content
-    assert "- Earnings Growth: N/A - Not Required" in content
-    assert "- Price Test: FAIL" in content
+    assert "1. **Earnings Stability**: FAIL" in content
+    assert "2. **Current Ratio**: FAIL" in content
+    assert "3. **Debt to Assets**: FAIL" in content
+    assert "4. **Dividend Record**: PASS" in content
+    assert "5. **Earnings Growth**: N/A - Not Required" in content
+    assert "6. **Price Test**: FAIL" in content
     
     # Verify note is present
     assert "**Note on Earnings Growth:**" in content

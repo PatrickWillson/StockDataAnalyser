@@ -845,6 +845,56 @@ class FinancialDataProcessor:
             else:
                 final_shares = shares_outstanding
             
+            # Calculate Working Capital Per Share (WCPS)
+            # Formula: (Current Assets - Current Liabilities) / Shares Outstanding
+            current_assets = bs_data.get('current_assets', 0.0)
+            current_liabilities = bs_data.get('current_liabilities', 0.0)
+            
+            # Use Decimal for precise calculation
+            from decimal import Decimal, ROUND_HALF_UP
+            
+            if final_shares > 0:
+                # Convert to Decimal via string to avoid float artifacts
+                ca_dec = Decimal(str(current_assets))
+                cl_dec = Decimal(str(current_liabilities))
+                shares_dec = Decimal(str(final_shares))
+                
+                # Calculate working capital
+                working_capital = ca_dec - cl_dec
+                
+                # Calculate WCPS
+                wcps_dec = working_capital / shares_dec
+                
+                # Round to 2 decimal places
+                wcps_rounded = wcps_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                wcps = float(wcps_rounded)
+            else:
+                # Cannot calculate WCPS without shares outstanding
+                wcps = "N/A"
+            
+            # Calculate Payout Ratio
+            # Formula: (Dividend / EPS) × 100
+            # Return "N/A" if EPS ≤ 0, "0.0%" if dividend = 0
+            if eps <= 0:
+                # Cannot calculate meaningful payout ratio with negative/zero earnings
+                # Even if dividend is 0, the ratio is undefined against a loss
+                payout_ratio = "N/A"
+            elif div_amount == 0:
+                # No dividend paid, but earnings are positive
+                payout_ratio = "0.0%"
+            else:
+                # Normal case: positive earnings and dividend
+                # Convert to Decimal for precise calculation
+                div_dec = Decimal(str(div_amount))
+                eps_dec = Decimal(str(eps))
+                
+                # Calculate payout ratio as percentage
+                payout_ratio_dec = (div_dec / eps_dec) * Decimal('100')
+                
+                # Round to 1 decimal place
+                payout_ratio_rounded = payout_ratio_dec.quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)
+                payout_ratio = f"{float(payout_ratio_rounded):.1f}%"
+            
             result[year] = {
                 'revenue': is_data.get('revenue', 0.0),
                 'net_income': net_income,
@@ -854,12 +904,14 @@ class FinancialDataProcessor:
                 'intangible_assets': bs_data.get('intangible_assets', 0.0),
                 'goodwill': bs_data.get('goodwill', 0.0),
                 'shares_outstanding': final_shares,
-                'current_assets': bs_data.get('current_assets', 0.0),
-                'current_liabilities': bs_data.get('current_liabilities', 0.0),
+                'current_assets': current_assets,
+                'current_liabilities': current_liabilities,
                 'total_liabilities': bs_data.get('total_liabilities', 0.0),
                 'long_term_debt': bs_data.get('long_term_debt', 0.0),
                 'total_assets': bs_data.get('total_assets', 0.0),
                 'total_debt': bs_data.get('total_debt', 0.0),  # NEW: Total debt for Graham analysis
+                'wcps': wcps,  # NEW: Working Capital Per Share
+                'payout_ratio': payout_ratio,  # NEW: Payout Ratio
             }
         
         return result

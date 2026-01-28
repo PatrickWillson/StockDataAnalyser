@@ -21,7 +21,8 @@
 - 52-Week Range: 12.35 GBP - 17.84 GBP
 - Trailing Dividend: 0.56 GBP (Yield: 3.32%) - Declared (Dividend API) [2024]
   - Forward Rate: 0.63 GBP (Yield: 3.74%)
-- P/E Ratio: 9.04
+- P/E Ratio (Current Year): 9.04
+- P/E Ratio (3-Year Avg): 13.26 (based on avg EPS of 1.27 from 2022-2024)
 - Price/Book: 4.31
 
 ---
@@ -31,6 +32,9 @@
 - Return on Assets (ROA): 15.62%
 - Profit Margin: 5.19%
 - Book Value Per Share: 3.91 GBP
+
+### Liquidity Analysis
+
 - Insider Ownership: 64.81%
 - Institutional Ownership: 13.64%
 - Beta (Volatility): 0.668
@@ -48,7 +52,8 @@
 ### Financial Strength Risks:
 - **Working Capital Risk**: Current ratio 1.34x (below Graham's 1.5x minimum)
   - Limited cushion for short-term obligations
-- **Low Debt**: Debt only 2.2% of assets (conservative)
+- **Low Debt**: Long-term debt only 2.2% of assets (conservative)
+  - Total debt (including short-term): 2.7% of assets
 
 ### Operational Stability Risks:
 - **Earnings Stability**: Low volatility (±2.0% std dev)
@@ -84,7 +89,9 @@
 
 ### Financial Strength Risk:
 - **Current Ratio: 1.34x** - ⚠️ Below Graham's standards (defensive requires 2.0x)
-- **Debt: $4,745,000 GBP** (2.2% of assets) - Conservative
+- **Long-Term Debt: $4,745,000 GBP** (2.2% of assets) - Conservative
+  - Short-term debt: $1,116,000 GBP
+  - Total debt: $5,861,000 GBP (2.7% of assets)
 - **Debt Coverage: ✓** Long-term debt < Net Current Assets (passes Graham's defensive test)
 
 ### Operational Stability Risk:
@@ -162,6 +169,64 @@
 - **Margin of Safety (-34.4%)**: (Graham Number - Price) / Graham Number × 100
   - Percentage discount to intrinsic value
   - Graham recommended minimum 20-30% for defensive investors
+
+### P/E Ratio (3-Year Average)
+
+**Graham's Defensive Criterion #6** states: *"Price should not exceed 15 times average earnings of the past three years."*
+
+We calculate the 3-year average EPS by taking the arithmetic mean of the most recent three years of annual EPS data, **including loss years (negative EPS)**. This provides a more stable valuation metric that smooths out cyclical fluctuations.
+
+**Formula**: P/E (3-Year Avg) = Current Price / ((EPS_Y1 + EPS_Y2 + EPS_Y3) / 3)
+
+**Note**: Loss years are included in the average as negative values, which reduces the average EPS and increases the P/E ratio, reflecting the company's historical volatility.
+
+### Quick Ratio (Acid Test)
+
+The Quick Ratio is a more stringent liquidity test than the Current Ratio. It excludes inventory from current assets, as inventory may not be quickly convertible to cash.
+
+**Formula**: Quick Ratio = (Current Assets - Inventory) / Current Liabilities
+
+A Quick Ratio > 1.0 indicates the company can meet short-term obligations without relying on inventory sales. Graham preferred companies with strong liquidity positions.
+
+**Note**: For Services and Technology companies with minimal inventory, if inventory data is unavailable, we use Current Assets directly (equivalent to Current Ratio).
+
+### Net Current Assets (NCA) and Debt Coverage
+
+Net Current Assets represents the company's liquid net worth after paying all liabilities.
+
+**Formula**: NCA = Current Assets - Total Liabilities
+
+**Debt Coverage Ratio** = Long-term Debt / NCA
+
+Graham's defensive investor test requires long-term debt to be less than NCA (ratio < 1.0). This ensures the company could theoretically pay off all long-term debt using only its liquid assets.
+
+**Note**: For Financial and Utility companies, NCA analysis may not be applicable due to their unique balance sheet structures (high leverage is normal for these sectors).
+
+### Combined P/E × P/B Test
+
+Graham specified that for defensive investors, the product of P/E and P/B ratios should not exceed 22.5. This rule provides flexibility in valuation:
+
+- A company with P/E of 15 can have P/B up to 1.5 (15 × 1.5 = 22.5)
+- A company with P/E of 10 can have P/B up to 2.25 (10 × 2.25 = 22.5)
+- A company with P/B of 0.5 can have P/E up to 45 (45 × 0.5 = 22.5)
+
+**Formula**: Combined Test = P/E Ratio × P/B Ratio ≤ 22.5
+
+This test recognizes that a low price relative to book value can compensate for higher earnings multiples, and vice versa.
+
+### Historical Trend Metrics
+
+**Working Capital Per Share (WCPS)**: (Current Assets - Current Liabilities) / Shares Outstanding
+- Measures the company's liquid net worth per share
+- Positive values indicate financial strength; negative values indicate liquidity concerns
+- Trend analysis: Increasing WCPS shows improving financial strength over time
+
+**Payout Ratio**: (Dividend / EPS) × 100
+- Percentage of earnings paid as dividends
+- Values > 100% indicate unsustainable dividends (paying more than earned)
+- Values < 50% indicate conservative dividend policy with room for growth
+- 'N/A' shown for years with zero or negative earnings (cannot assess sustainability against losses)
+
 
 ### TTM (Trailing Twelve Months) Calculations:
 
@@ -281,23 +346,42 @@ TTM calculations provide more current financial metrics by using the most recent
 ---
 
 ## SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS
-- Earnings Stability: FAIL
-- Current Ratio: FAIL
-- Debt To Assets: PASS
-- Dividend Record: FAIL
-- Earnings Growth: FAIL
-- Pe Ratio: PASS
-- Pb Ratio: FAIL
+
+1. **Earnings Stability**: FAIL
+   - Criterion: Positive earnings in each of the past 10 years
+2. **Current Ratio**: FAIL
+   - Criterion: Current Ratio ≥ 2.0
+3. **Debt to Assets**: PASS
+   - Criterion: Long-term Debt < Net Current Assets
+4. **Dividend Record**: FAIL
+   - Criterion: Uninterrupted dividend payments for at least 20 years
+5. **Earnings Growth**: FAIL
+   - Criterion: Earnings growth ≥ 33% over 10 years
+6. **P/E Ratio**: PASS
+   - Criterion: P/E Ratio < 15
+7. **P/B Ratio**: FAIL
+   - Criterion: Price/Book Ratio < 1.5
+8. **Combined P/E × P/B Test**: FAIL
+   - P/E Ratio: 9.04
+   - P/B Ratio: 4.31
+   - Product: 38.96 (must be ≤ 22.5)
+   - *Graham specified that P/E × P/B should not exceed 22.5. This provides flexibility: a company can have a higher P/E if it has a low P/B, or vice versa.*
 
 ---
 
 ## SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS
-- Earnings Stability: FAIL
-- Current Ratio: FAIL
-- Debt To Assets: PASS
-- Dividend Record: PASS
-- Earnings Growth: N/A - Not Required
-- Price Test: PASS
+
+1. **Earnings Stability**: FAIL
+   - Criterion: Profitability in most recent year and 5 of past 7 years
+2. **Current Ratio**: FAIL
+   - Criterion: Current Ratio > 1.5
+3. **Debt to Assets**: PASS
+   - Criterion: Debt < 110% of Net Current Assets
+4. **Dividend Record**: PASS
+   - Criterion: Currently pays a dividend (last year > 0)
+5. **Earnings Growth**: N/A - Not Required
+6. **Price Test**: PASS
+   - Criterion: P/E < 10 OR Price < 120% of Net Tangible Assets
 
 **Note on Earnings Growth:** Earnings growth is intentionally not required for Enterprising Investors per Graham's methodology. Unlike Defensive Investors (who require 7 tests including ≥33% earnings growth over 10 years), Enterprising Investors require only 6 tests focused on current financial strength and price. Graham's logic: Enterprising investors actively seek bargains, turnarounds, or cyclical companies trading below intrinsic value—situations where historical growth may be absent but current fundamentals and price create opportunity.
 
@@ -306,21 +390,21 @@ TTM calculations provide more current financial metrics by using the most recent
 ## SECTION 6: 20-YEAR FINANCIALS (STANDARDIZED)
 *All values in GBP*
 
-| Year | Revenue | Net Income | EPS | Div/Share | BVPS | Total Debt | Shares (B) | Price | P/E | P/B |
-|------|---------|------------|-----|-------------|------|------------|------------|-------|-----|-----|
-| 2025 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.63 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2024 | 645456000.0 | 33499000.0 | 1.8640691339888376 | 0.56 | 3.91 | 5.86M | 17.97M | N/A | N/A | N/A |
-| 2023 | 460001000.0 | 30860000.0 | 1.6992082108207518 | 0.06 | 2.58 | 0.71M | 18.16M | N/A | N/A | N/A |
-| 2022 | 278587000.0 | 4769000.0 | 0.2484734176687577 | N/A | 0.77 | 0.11M | 19.19M | N/A | N/A | N/A |
-| 2021 | 155423000.0 | 4451000.0 | 0.2585761175821303 | N/A | 0.54 | 0.11M | 17.21M | N/A | N/A | N/A |
-| 2020 | 101527000.0 | -1165000.0 | -0.06422023405932516 | N/A | 0.25 | 0.10M | 18.14M | N/A | N/A | N/A |
-| 2019 | 111613000.0 | -4968000.0 | -0.3051390876537826 | 0.012 | 0.33 | 0.15M | 16.28M | N/A | N/A | N/A |
-| 2018 | 80635000.0 | -6267000.0 | -0.4354563015050237 | 0.03 | 0.73 | N/A | 14.39M | N/A | N/A | N/A |
-| 2017 | 45631000.0 | 1804000.0 | 0.11976524948880686 | 0.0225 | 0.42 | N/A | 15.06M | N/A | N/A | N/A |
-| 2016 | 16264000.0 | -1359000.0 | -0.09647945818158585 | N/A | 0.38 | N/A | 14.09M | N/A | N/A | N/A |
-| 2015 | 3325715.0 | -699429.0 | -0.0699429 | N/A | N/A | 0.25M | 10.00M | N/A | N/A | N/A |
-| 2014 | 495692.0 | -132000.0 | -0.0078596284646448 | N/A | N/A | 0.25M | 12.03M | N/A | N/A | N/A |
-| 2013 | 12923.0 | -24923.0 | -0.0017733615101642936 | N/A | N/A | 0.06M | 14.05M | N/A | N/A | N/A |
+| Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares (B) | Price | P/E | P/B |
+|------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
+| 2025 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.63 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2024 | 645456000.0 | 33499000.0 | 1.8640691339888376 | 0.56 | 3.91 | 2.57 | 30.0% | 5.86M | 17.97M | N/A | N/A | N/A |
+| 2023 | 460001000.0 | 30860000.0 | 1.6992082108207518 | 0.06 | 2.58 | 1.78 | 3.5% | 0.71M | 18.16M | N/A | N/A | N/A |
+| 2022 | 278587000.0 | 4769000.0 | 0.2484734176687577 | N/A | 0.77 | 0.07 | 0.0% | 0.11M | 19.19M | N/A | N/A | N/A |
+| 2021 | 155423000.0 | 4451000.0 | 0.2585761175821303 | N/A | 0.54 | ⚠️ -0.13 | 0.0% | 0.11M | 17.21M | N/A | N/A | N/A |
+| 2020 | 101527000.0 | -1165000.0 | -0.06422023405932516 | N/A | 0.25 | ⚠️ -0.08 | N/A | 0.10M | 18.14M | N/A | N/A | N/A |
+| 2019 | 111613000.0 | -4968000.0 | -0.3051390876537826 | 0.012 | 0.33 | 0.01 | N/A | 0.15M | 16.28M | N/A | N/A | N/A |
+| 2018 | 80635000.0 | -6267000.0 | -0.4354563015050237 | 0.03 | 0.73 | 0.46 | N/A | N/A | 14.39M | N/A | N/A | N/A |
+| 2017 | 45631000.0 | 1804000.0 | 0.11976524948880686 | 0.0225 | 0.42 | 0.30 | 18.8% | N/A | 15.06M | N/A | N/A | N/A |
+| 2016 | 16264000.0 | -1359000.0 | -0.09647945818158585 | N/A | 0.38 | 0.34 | N/A | N/A | 14.09M | N/A | N/A | N/A |
+| 2015 | 3325715.0 | -699429.0 | -0.0699429 | N/A | N/A | ⚠️ -0.14 | N/A | 0.25M | 10.00M | N/A | N/A | N/A |
+| 2014 | 495692.0 | -132000.0 | -0.0078596284646448 | N/A | N/A | ⚠️ -0.03 | N/A | 0.25M | 12.03M | N/A | N/A | N/A |
+| 2013 | 12923.0 | -24923.0 | -0.0017733615101642936 | N/A | N/A | -0.00 | N/A | 0.06M | 14.05M | N/A | N/A | N/A |
 
 **Note on Data Completeness:**
 - Years marked '[Data Unavailable]' (2025) show declared dividends but lack complete audited annual financial statements
@@ -328,6 +412,16 @@ TTM calculations provide more current financial metrics by using the most recent
 - Declared dividends are shown for income investors but excluded from historical calculations
 
 **Graham Trend Analysis Columns:**
+- **WCPS (Working Capital Per Share)**: (Current Assets - Current Liabilities) / Shares Outstanding
+  - Measures the company's liquid net worth per share
+  - Positive values indicate financial strength
+  - ⚠️ Negative values indicate current liabilities exceed current assets (liquidity concern)
+  - Trend analysis: Increasing WCPS shows improving financial strength
+- **Payout Ratio**: (Dividend / EPS) × 100
+  - Percentage of earnings paid as dividends
+  - Values > 100% indicate unsustainable dividends (paying more than earned)
+  - Values < 50% indicate conservative dividend policy with room for growth
+  - 'N/A' shown for years with zero or negative earnings
 - **Total Debt**: Sum of long-term and short-term debt. Graham emphasized tracking debt trends to distinguish companies that grow through retained earnings vs leverage.
 - **Shares (B)**: Common shares outstanding in billions. Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).
 - **Price**: Year-end stock price on fiscal year end date (or last trading day within 7 days prior). Source: Yahoo Finance via yfinance.
@@ -345,5 +439,6 @@ TTM calculations provide more current financial metrics by using the most recent
 - [VALIDATION] Book Value Discrepancy: API shows $4.82, calculated $3.91 (18.8% difference). Calculated value subtracts intangibles/goodwill per Graham methodology. API may use different share count or accounting treatment.
 - [VALIDATION] ROA Difference: API shows 12.50% (TTM basis), calculated 15.62% (annual basis) (25.0% difference). Using annual data from audited financials per Graham methodology.
 - Year 2025-12-31: Incomplete data (missing: revenue, net_income, eps, total_equity)
+- Quick Ratio: Cannot calculate - inventory data unavailable for Utilities sector
 
 ---

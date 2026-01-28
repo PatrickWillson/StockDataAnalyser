@@ -100,16 +100,16 @@ def sample_metrics():
         'defensive_tests': {
             'earnings_stability': 'PASS',
             'current_ratio': 'PASS',
-            'debt_test': 'PASS',
+            'debt_to_assets': 'PASS',  # Fixed: was debt_test
             'dividend_record': 'PASS',
             'earnings_growth': 'PASS',
             'pe_ratio': 'PASS',
-            'price_to_book': 'PASS'
+            'pb_ratio': 'PASS'  # Fixed: was price_to_book
         },
         'enterprising_tests': {
             'earnings_stability': 'PASS',
             'current_ratio': 'PASS',
-            'debt_test': 'PASS',
+            'debt_to_assets': 'PASS',  # Fixed: was debt_test
             'dividend_record': 'PASS',
             'price_test': 'PASS'
         },
@@ -332,13 +332,13 @@ def test_graham_tests_in_dossier(sample_financial_data, sample_metrics, sample_a
     generator = DossierGenerator('TEST.US', sample_financial_data, sample_metrics, sample_anomalies)
     dossier = generator.generate()
     
-    # Verify defensive tests are present
-    assert 'Earnings Stability: PASS' in dossier
-    assert 'Current Ratio: PASS' in dossier
-    assert 'Debt Test: PASS' in dossier
+    # Verify defensive tests are present (with bold markdown formatting)
+    assert "**Earnings Stability**: PASS" in dossier
+    assert "**Current Ratio**: PASS" in dossier
+    assert "**Debt to Assets**: PASS" in dossier
     
     # Verify enterprising tests are present
-    assert 'Price Test: PASS' in dossier
+    assert "**Price Test**: PASS" in dossier
 
 
 def test_financial_history_table_in_dossier(sample_financial_data, sample_metrics, sample_anomalies):
