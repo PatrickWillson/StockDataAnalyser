@@ -77,21 +77,18 @@ def create_test_metrics():
 
 
 def test_risk_factors_section_generates_both_sections():
-    """Test that risk factors section generates both risk assessment sections."""
+    """Test that risk factors section generates risk assessment."""
     financial_data = create_test_financial_data()
     metrics = create_test_metrics()
     
     section = RiskFactorsSection(financial_data, metrics)
     lines = section.generate()
     
-    # Should have both risk factors sections
+    # Should have one risk factors section
     risk_headers = [line for line in lines if line == "## RISK FACTORS"]
-    assert len(risk_headers) == 2, "Should generate two RISK FACTORS sections"
+    assert len(risk_headers) == 1, "Should generate one RISK FACTORS section"
     
-    # First section subtitle
-    assert "*Quantifiable risks based on financial data*" in lines
-    
-    # Second section subtitle
+    # Section subtitle
     assert "*Quantifiable risks based on Graham's investment criteria*" in lines
 
 
@@ -243,9 +240,9 @@ def test_grahams_principle_included():
     section = RiskFactorsSection(financial_data, metrics)
     lines = section.generate()
     
-    # Check for Graham's principle quotes
+    # Check for Graham's principle quote
     graham_quotes = [line for line in lines if "Graham's Principle" in line]
-    assert len(graham_quotes) >= 2, "Should include Graham's principle quotes in both sections"
+    assert len(graham_quotes) >= 1, "Should include Graham's principle quote"
 
 
 def test_section_ends_with_separator():
@@ -269,10 +266,10 @@ def test_handles_missing_history_data():
     section = RiskFactorsSection(financial_data, metrics)
     lines = section.generate()
     
-    # Should still generate sections with appropriate messages
+    # Should still generate section with appropriate message
     assert "## RISK FACTORS" in lines
     insufficient_data_lines = [line for line in lines if 'Insufficient' in line]
-    assert len(insufficient_data_lines) >= 2, "Should indicate insufficient data in both sections"
+    assert len(insufficient_data_lines) >= 1, "Should indicate insufficient data"
 
 
 def test_handles_incomplete_year_data():

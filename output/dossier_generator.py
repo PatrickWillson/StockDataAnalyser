@@ -100,7 +100,7 @@ class DossierGenerator:
         1. Header (metadata)
         2. Executive Summary
         3. Key Metrics
-        4. Risk Factors (two sections)
+        4. Risk Factors
         5. Methodology Notes
         6. Calculation Details
         7. Graham Tests (defensive and enterprising)
@@ -125,7 +125,7 @@ class DossierGenerator:
         # 3. Key Metrics
         lines.extend(self.key_metrics.generate())
         
-        # 4. Risk Factors (generates two sections internally)
+        # 4. Risk Factors
         lines.extend(self.risk_factors.generate())
         
         # 5. Methodology Notes

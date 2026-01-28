@@ -42,22 +42,14 @@ def format_price_display(price: float, trading_currency: str, financials_currenc
 class RiskFactorsSection(DossierSection):
     """Generates the risk factors section of the dossier.
     
-    This section includes two risk assessments:
-    1. First assessment: Quantifiable risks based on financial data
-       - Market & Liquidity Risks
-       - Financial Strength Risks
-       - Operational Stability Risks
-       - Dividend Risk
-       - Valuation Risk
-       - Data Quality Risks
-    
-    2. Second assessment: Risks based on Graham's investment criteria
-       - Market & Liquidity Risk
-       - Financial Strength Risk
-       - Operational Stability Risk
-       - Dividend Sustainability Risk
-       - Valuation Risk (Margin of Safety)
-       - Data Quality Risk
+    This section provides a comprehensive risk assessment based on Graham's
+    investment criteria:
+    - Market & Liquidity Risk
+    - Financial Strength Risk
+    - Operational Stability Risk
+    - Dividend Sustainability Risk
+    - Valuation Risk (Margin of Safety)
+    - Data Quality Risk
     
     Requirements: 2.3
     """
@@ -80,10 +72,7 @@ class RiskFactorsSection(DossierSection):
         """
         lines = []
         
-        # First risk factors section
-        lines.extend(self._generate_first_risk_section())
-        
-        # Second risk factors section
+        # Generate single comprehensive risk factors section
         lines.extend(self._generate_second_risk_section())
         
         return lines
