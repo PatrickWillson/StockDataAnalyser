@@ -152,6 +152,65 @@ class GrahamCalculator:
         
         return round(graham_number, 2)
     
+    def compute_normalized_graham_number(self, round_result: bool = True) -> Union[float, str]:
+        """
+        Calculate normalized Graham Number using 3-year average EPS.
+        
+        This method uses 3-year average EPS instead of single-year EPS to smooth
+        cyclical volatility and prevent "bull traps" where one peak year makes
+        a cyclical company appear undervalued.
+        
+        Formula: √(22.5 × EPS_3yr_avg × TBVPS)
+        
+        Args:
+            round_result: If True, round to 2 decimals. If False, return raw value.
+        
+        Returns:
+            float: Normalized Graham Number rounded to 2 decimals
+            str: "N/A" if insufficient data or negative average EPS
+        """
+        from core.financial_data_processor import FinancialDataProcessor
+        
+        # Get TBVPS (unrounded for calculation accuracy)
+        tbvps = self.compute_tbvps(round_result=False)
+        if tbvps == "N/A":
+            return "N/A"
+        
+        # Get financial history
+        history = self.data.get('history', {})
+        if not history:
+            self.warnings.append("Normalized Graham Number: No financial history available")
+            return "N/A"
+        
+        # Extract 3-year EPS data
+        eps_data = FinancialDataProcessor.extract_3year_eps_data(history)
+        
+        # Check if extraction was successful
+        if not eps_data['valid']:
+            # Add warning from extraction
+            if eps_data['warning']:
+                self.warnings.append(f"Normalized Graham Number: {eps_data['warning']}")
+            return "N/A"
+        
+        # Calculate arithmetic mean of 3-year EPS
+        eps_values = eps_data['eps_values']
+        eps_3yr_avg = sum(eps_values) / 3
+        
+        # Store individual EPS values and years for audit trail
+        self.eps_3year_values = eps_values
+        self.eps_3year_years = eps_data['years']
+        self.eps_3year_avg = eps_3yr_avg
+        
+        # Handle negative or zero average EPS
+        if eps_3yr_avg <= 0:
+            self.warnings.append(f"Negative 3-year average EPS ({eps_3yr_avg:.2f}) - Company unsuitable for Graham methodology")
+            return "N/A"
+        
+        # Calculate normalized Graham Number
+        normalized_graham_number = math.sqrt(GRAHAM_MULTIPLIER * eps_3yr_avg * tbvps)
+        
+        return round(normalized_graham_number, 2) if round_result else normalized_graham_number
+    
     def compute_net_net(self, round_result: bool = True) -> Union[float, str]:
         """
         Calculate Net-Net Working Capital Value.
@@ -581,27 +640,80 @@ class GrahamCalculator:
             'result': result
         }
     
-    def compute_margin_of_safety(self, graham_number: Union[float, str], price: float) -> Union[float, str]:
+    def compute_margin_of_safety(self, current_price: float) -> Dict[str, Union[float, str]]:
         """
-        Calculate Margin of Safety.
+        Calculate Margin of Safety using conservative dual-anchor approach.
         
-        Formula: ((Graham Number - Price) / Graham Number) × 100
+        This method uses the lower of normalized Graham Number and EPV per share
+        as the intrinsic value, following Graham's conservative principles.
+        
+        Formula: ((intrinsic_value - current_price) / intrinsic_value) × 100
         
         Args:
-            graham_number: Graham Number or "N/A"
-            price: Current stock price
+            current_price: Current stock price
         
         Returns:
-            float: Margin of Safety as percentage rounded to 1 decimal, or "N/A" if Graham Number is "N/A"
+            dict: {
+                'mos_percentage': float or "N/A" - Margin of Safety percentage
+                'intrinsic_value_used': float or "N/A" - The intrinsic value used
+                'limiting_factor': str - Which metric was lower ("Normalized Graham Number", "EPV", or "N/A")
+                'normalized_graham_number': float or "N/A" - Normalized Graham Number value
+                'epv_per_share': float or "N/A" - EPV per share value
+            }
         """
-        # Handle "N/A" Graham Number
-        if graham_number == "N/A":
-            return "N/A"
+        # Get normalized Graham Number
+        normalized_gn = self.compute_normalized_graham_number()
+        
+        # Get EPV per share
+        epv_data = self.compute_epv()
+        epv_per_share = epv_data.get('epv_per_share', 0.0)
+        
+        # Determine which values are valid
+        # CRITICAL: Distinguish EPV = 0.00 (valid value destroyer) from EPV = "N/A" (missing data)
+        normalized_gn_valid = isinstance(normalized_gn, (int, float))
+        epv_valid = isinstance(epv_per_share, (int, float))
+        
+        # Determine intrinsic value and limiting factor
+        intrinsic_value = "N/A"
+        limiting_factor = "N/A"
+        
+        if normalized_gn_valid and epv_valid:
+            # Both are numeric (including EPV = 0.00) - use the lower value
+            intrinsic_value = min(normalized_gn, epv_per_share)
+            if intrinsic_value == normalized_gn:
+                limiting_factor = "Normalized Graham Number"
+            else:
+                limiting_factor = "EPV"
+        elif normalized_gn_valid:
+            # Only normalized Graham Number is valid
+            intrinsic_value = normalized_gn
+            limiting_factor = "Normalized Graham Number"
+        elif epv_valid:
+            # Only EPV is valid (including 0.00)
+            intrinsic_value = epv_per_share
+            limiting_factor = "EPV"
+        else:
+            # Both are "N/A"
+            self.warnings.append("Unable to calculate Margin of Safety: Both normalized Graham Number and EPV are unavailable")
         
         # Calculate Margin of Safety
-        margin_of_safety = ((graham_number - price) / graham_number) * 100
+        mos_percentage = "N/A"
         
-        return round(margin_of_safety, 1)
+        if intrinsic_value != "N/A":
+            # Special case: intrinsic_value = 0.00 (cannot divide by zero)
+            if intrinsic_value == 0.00:
+                mos_percentage = "N/A"
+            else:
+                mos_percentage = ((intrinsic_value - current_price) / intrinsic_value) * 100
+                mos_percentage = round(mos_percentage, 1)
+        
+        return {
+            'mos_percentage': mos_percentage,
+            'intrinsic_value_used': intrinsic_value,
+            'limiting_factor': limiting_factor,
+            'normalized_graham_number': normalized_gn,
+            'epv_per_share': epv_per_share
+        }
     
     def compute_epv_normalized(self, history: Dict[str, Dict[str, float]], 
                               round_result: bool = True) -> Union[Dict[str, any], str]:
@@ -1085,7 +1197,8 @@ class GrahamCalculator:
             Dictionary containing all calculated metrics and test results
         """
         # Calculate all metrics
-        graham_number = self.compute_graham_number()
+        graham_number = self.compute_graham_number()  # Legacy single-year
+        normalized_graham_number = self.compute_normalized_graham_number()  # New 3-year average
         net_net_value = self.compute_net_net()  # Rounded for display
         net_net_value_raw = self.compute_net_net(round_result=False)  # Unrounded for comparison
         epv_data = self.compute_epv()  # Now returns dict
@@ -1095,7 +1208,7 @@ class GrahamCalculator:
         combined_pe_pb_test = self.compute_combined_pe_pb_test()
         
         price = self.data.get('price', 0.0)
-        margin_of_safety = self.compute_margin_of_safety(graham_number, price)
+        margin_of_safety_data = self.compute_margin_of_safety(price)
         
         # Check for deep value opportunity (use unrounded value for accurate comparison)
         # Use a small tolerance to avoid flagging when price and net-net are approximately equal
@@ -1110,16 +1223,18 @@ class GrahamCalculator:
         defensive_tests = self.run_investor_tests("defensive")
         enterprising_tests = self.run_investor_tests("enterprising")
         
-        # Determine verdict (pass EPV value for backward compatibility)
-        verdict = self._determine_verdict(graham_number, margin_of_safety, epv_data['epv'], 
+        # Determine verdict (use new MoS structure)
+        verdict = self._determine_verdict(graham_number, margin_of_safety_data['mos_percentage'], epv_data['epv'], 
                                          defensive_tests, enterprising_tests)
         
         metrics = {
-            'graham_number': graham_number,
+            'graham_number': graham_number,  # Legacy single-year
+            'normalized_graham_number': normalized_graham_number,  # New 3-year average
             'epv': epv_data['epv'],  # Keep backward compatibility
             'epv_details': epv_data,  # Add detailed breakdown
             'net_net_value': net_net_value,
-            'margin_of_safety': margin_of_safety,
+            'margin_of_safety': margin_of_safety_data['mos_percentage'],  # For backward compatibility
+            'margin_of_safety_details': margin_of_safety_data,  # Full details
             'nca_details': nca_details,
             'quick_ratio': quick_ratio,
             'three_year_avg_pe': three_year_avg_pe,

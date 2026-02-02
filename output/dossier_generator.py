@@ -214,6 +214,7 @@ class DossierGenerator:
         - Currency conversion details
         - Validation discrepancies
         - Statistical anomalies (Z-Score outliers)
+        - Data requirements for normalized calculations
         
         Returns:
             List[str]: List of markdown lines for critical alerts section
@@ -235,6 +236,14 @@ class DossierGenerator:
             for warning in all_warnings:
                 lines.append(f"- {warning}")
             lines.append("")
+        
+        # Add normalized Graham Number data requirements
+        lines.append("### Normalized Graham Number Requirements:")
+        lines.append("- **3-Year Data Requirement**: Normalized Graham Number calculation requires 3 consecutive years of annual EPS data")
+        lines.append("- **Fallback Strategy**: When insufficient data is available, the system falls back to EPV (Earnings Power Value) for Margin of Safety calculation")
+        lines.append("- **Staleness Detection**: Annual reports older than 9 months trigger a data staleness warning")
+        lines.append("- **Data Quality**: All 3 years must have non-null, numeric EPS values for normalized calculation to proceed")
+        lines.append("")
         
         # Display anomalies
         if self.anomalies:

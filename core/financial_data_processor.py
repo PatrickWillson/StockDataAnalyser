@@ -1052,6 +1052,177 @@ class FinancialDataProcessor:
         return (roe, roa, profit_margin, most_recent_year)
 
     @staticmethod
+    def extract_3year_eps_data(history: Dict[str, Dict]) -> Dict[str, Any]:
+        """
+        Extract 3 most recent consecutive fiscal years of EPS data with validation.
+        
+        This function is used for normalized Graham Number calculations that require
+        3-year average EPS to smooth cyclical volatility and prevent bull traps.
+        
+        Args:
+            history: Financial history dictionary (from merge_financial_data)
+                    Keys are fiscal year end dates (e.g., '2024-12-31')
+                    Values are dicts containing 'eps' and other financial metrics
+        
+        Returns:
+            Dictionary with the following structure:
+            {
+                'eps_values': [float, float, float],  # Most recent to oldest
+                'years': [str, str, str],             # ISO dates (e.g., '2024-12-31')
+                'valid': bool,                         # True if all 3 years present and non-null
+                'warning': str or None                 # Explanation if invalid
+            }
+        
+        Edge Cases:
+            - Fewer than 3 years: valid=False, warning explains insufficient data
+            - Null EPS values: valid=False, warning specifies which years
+            - "NA" strings: valid=False, warning specifies which years
+            - Non-numeric EPS: valid=False, warning specifies which years
+        
+        Example:
+            >>> history = {
+            ...     '2024-12-31': {'eps': 4.85},
+            ...     '2023-12-31': {'eps': 25.51},
+            ...     '2022-12-31': {'eps': 14.40}
+            ... }
+            >>> result = extract_3year_eps_data(history)
+            >>> result['valid']
+            True
+            >>> result['eps_values']
+            [4.85, 25.51, 14.40]
+        """
+        # Initialize result structure
+        result = {
+            'eps_values': [],
+            'years': [],
+            'valid': False,
+            'warning': None
+        }
+        
+        # Check if history exists
+        if not history:
+            result['warning'] = "No financial history available"
+            return result
+        
+        # Sort years in descending order (most recent first)
+        sorted_years = sorted(history.keys(), reverse=True)
+        
+        # Check if we have at least 3 years
+        if len(sorted_years) < 3:
+            result['warning'] = f"Insufficient data: Only {len(sorted_years)} years available, need 3 for normalized calculation"
+            return result
+        
+        # Extract first 3 years
+        three_years = sorted_years[:3]
+        eps_values = []
+        missing_years = []
+        
+        # Validate each year has valid EPS
+        for year in three_years:
+            year_data = history[year]
+            eps = year_data.get('eps')
+            
+            # Check for null, "NA" strings, or non-numeric values
+            if eps is None or eps == "" or eps == "NA" or eps == "N/A":
+                missing_years.append(year)
+                eps_values.append(None)
+            else:
+                # Try to convert to float
+                try:
+                    eps_float = float(eps)
+                    eps_values.append(eps_float)
+                except (ValueError, TypeError):
+                    missing_years.append(year)
+                    eps_values.append(None)
+        
+        # Check if all 3 years have valid EPS
+        if missing_years:
+            result['warning'] = f"Missing EPS data for years: {', '.join(missing_years)}"
+            result['eps_values'] = eps_values
+            result['years'] = three_years
+            return result
+        
+        # All validations passed
+        result['eps_values'] = eps_values
+        result['years'] = three_years
+        result['valid'] = True
+        
+        return result
+
+    @staticmethod
+    def check_data_staleness(history: Dict[str, Dict], current_date: Optional[Any] = None) -> Optional[str]:
+        """
+        Check if most recent annual report is stale (>9 months old).
+        
+        This function detects if financial data is outdated by comparing the most recent
+        fiscal year end date to the current date. Graham methodology emphasizes using
+        audited annual data, but data older than 9 months may be too stale for reliable
+        valuation decisions.
+        
+        Args:
+            history: Financial history dictionary (from merge_financial_data)
+                    Keys are fiscal year end dates (e.g., '2024-12-31')
+            current_date: Reference date for staleness check (datetime object)
+                         Defaults to datetime.now() if not provided
+        
+        Returns:
+            str: Warning message if data is stale (>9 months old), None otherwise
+            
+        Edge Cases:
+            - Empty history: Returns warning "No financial history available"
+            - Invalid date format: Logs error, returns None (graceful degradation)
+            - Future date (clock skew): Returns warning "Data date is in the future"
+        
+        Example:
+            >>> from datetime import datetime
+            >>> history = {'2024-12-31': {'eps': 4.85}}
+            >>> current = datetime(2025, 10, 1)  # 9+ months later
+            >>> warning = check_data_staleness(history, current)
+            >>> "Potentially Stale Data" in warning
+            True
+        """
+        from datetime import datetime
+        
+        # Handle empty history
+        if not history:
+            return "No financial history available"
+        
+        # Get current date if not provided
+        if current_date is None:
+            current_date = datetime.now()
+        
+        # Get most recent year from history
+        sorted_years = sorted(history.keys(), reverse=True)
+        most_recent_year = sorted_years[0]
+        
+        # Parse year as ISO date (YYYY-MM-DD format)
+        try:
+            report_date = datetime.strptime(most_recent_year, '%Y-%m-%d')
+        except ValueError:
+            # Invalid date format - log error and return None (graceful degradation)
+            logger.error(f"Invalid date format in financial history: {most_recent_year}")
+            return None
+        
+        # Check for future date (clock skew)
+        if report_date > current_date:
+            return f"Data date is in the future: Most recent annual report is dated {most_recent_year}"
+        
+        # Calculate months difference
+        # Using 30.44 days per month (365.25 / 12) for accurate calculation
+        days_diff = (current_date - report_date).days
+        months_diff = days_diff / 30.44
+        
+        # Check if data is stale (>9 months old)
+        if months_diff > 9:
+            return (
+                f"Potentially Stale Data: Most recent annual report is from {most_recent_year} "
+                f"({int(months_diff)} months old)"
+            )
+        
+        # Data is fresh
+        return None
+
+    @staticmethod
     def apply_historical_fx_rates(
         history: Dict[str, Dict[str, float]],
         fx_rates_by_date: Dict[str, Optional[float]],

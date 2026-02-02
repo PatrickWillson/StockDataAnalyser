@@ -1,5 +1,5 @@
 # STOCK ANALYSIS DOSSIER: YU.LSE
-# DATE: 2026-01-28
+# DATE: 2026-02-02
 # SOURCE: EODHD (Tier 1 Data)
 # CEO: Mr. Baljit Bobby Kalar
 # SECTOR: Utilities | INDUSTRY: Utilities - Diversified
@@ -13,17 +13,20 @@
 *Current metrics (P/E, Price) reflect most recent available data*
 
 - Verdict: **OVERVALUED**
-- Intrinsic Value (Graham): 12.54 GBP
+- Graham Number (Single-Year EPS): 12.54 GBP
+- Graham Number (3-Year Avg EPS): 10.01 GBP
+  - ⚠️ Note: 3-year average (20% lower) reveals earnings peaked in recent year
 - Intrinsic Value (EPV): 60,924,571.00 GBP
 - Net-Net Value: 2.14 GBP
-- Margin of Safety: -34.4
-- Current Price: 16.85 GBP (1,685 pence)
+- Margin of Safety: -413.3% (Capped by EPV)
+  - Conservative Intrinsic Value: 3.39 GBP
+- Current Price: 17.40 GBP (1,740 pence)
 - 52-Week Range: 12.35 GBP - 17.84 GBP
-- Trailing Dividend: 0.56 GBP (Yield: 3.32%) - Declared (Dividend API) [2024]
-  - Forward Rate: 0.63 GBP (Yield: 3.74%)
-- P/E Ratio (Current Year): 9.04
-- P/E Ratio (3-Year Avg): 13.26 (based on avg EPS of 1.27 from 2022-2024)
-- Price/Book: 4.31
+- Trailing Dividend: 0.56 GBP (Yield: 3.22%) - Declared (Dividend API) [2024]
+  - Forward Rate: 0.63 GBP (Yield: 3.62%)
+- P/E Ratio (Current Year): 9.33
+- P/E Ratio (3-Year Avg): 13.69 (based on avg EPS of 1.27 from 2022-2024)
+- Price/Book: 4.45
 
 ---
 
@@ -36,48 +39,8 @@
 ### Liquidity Analysis
 
 - Insider Ownership: 64.81%
-- Institutional Ownership: 13.64%
+- Institutional Ownership: 13.93%
 - Beta (Volatility): 0.668
-
----
-
-## RISK FACTORS
-*Quantifiable risks based on financial data*
-
-**Graham's Principle**: *"The essence of investment management is the management of risks, not the management of returns."*
-
-### Market & Liquidity Risks:
-- **Volatility (Beta: 0.668)**: Below-market volatility (defensive)
-
-### Financial Strength Risks:
-- **Working Capital Risk**: Current ratio 1.34x (below Graham's 1.5x minimum)
-  - Limited cushion for short-term obligations
-- **Low Debt**: Long-term debt only 2.2% of assets (conservative)
-  - Total debt (including short-term): 2.7% of assets
-
-### Operational Stability Risks:
-- **Earnings Stability**: Low volatility (±2.0% std dev)
-  - Consistent profit margins indicate stable operations
-- **Return on Equity**: 47.6% (strong)
-
-### Dividend Risk:
-- **Conservative Payout**: 33.8% of earnings
-  - Sustainable with room for growth
-  - Dividend coverage: 3.33x (adequate)
-
-### Valuation Risk:
-- **Overvaluation Risk**: Margin of Safety -34.4%
-  - Trading above Graham intrinsic value
-  - No margin for error if business deteriorates
-
-### Data Quality Risks:
-- **Price Data**: Using yfinance (primary source unavailable)
-  - May have timing differences or slight inaccuracies
-- **52-Week Range**: Verify with live sources before trading
-  - API data may be stale or use different calculation periods
-
-
-**Risk Assessment Summary**: This analysis identifies quantifiable risks based on financial data. All investments carry risk. Graham emphasized that the margin of safety is the primary defense against adverse outcomes.
 
 ---
 
@@ -105,14 +68,14 @@
 - **Dividend History: 6 of 10 years** - ⚠️ Inconsistent payment history
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -34.4%** - Trading above intrinsic value
+- **Margin of Safety: -413.3%** - Trading above intrinsic value
   - Graham's Standard: 20-30% minimum for defensive investors
   - Assessment: **High valuation risk** - no margin for error
   - Intrinsic Value (Graham): 12.54 GBP
-  - Current Price: 16.85 GBP
+  - Current Price: 17.40 GBP
 
 ### Data Quality Risk:
-- **Institutional Ownership: 13.64%** - Verify with regulatory filings
+- **Institutional Ownership: 13.93%** - Verify with regulatory filings
 - **Price Source: yfinance** - ⚠️ Using fallback source (EODHD unavailable)
 
 **Graham's Principle on Risk**: *"The essence of investment management is the management of risks, not the management of returns. Returns are the reward for taking risk, but the risk must be measured and managed."*
@@ -123,7 +86,7 @@
 *How key metrics are calculated*
 
 ### Valuation Metrics:
-- **P/E Ratio (9.04)**: Current Price / Most Recent Annual EPS
+- **P/E Ratio (9.33)**: Current Price / Most Recent Annual EPS
   - Calculated from audited financials, not API pre-calculated ratios
   - EPS: 1.86 GBP (Net Income / Shares Outstanding)
 - **Profitability Metrics (ROE, ROA, Profit Margin)**:
@@ -141,9 +104,21 @@
     - TTM data may include estimates and unaudited quarters
     - Consistency: All Graham metrics (P/E, P/B, BVPS, ROE, ROA, Margin) use same fiscal year
     - Comparability: Annual data allows year-over-year comparison of audited results
-- **Graham Number (12.54 GBP)**: √(22.5 × EPS × BVPS)
+- **Graham Number - Single-Year EPS (12.54 GBP)**: √(22.5 × EPS × TBVPS)
   - Conservative intrinsic value estimate
   - Based on Benjamin Graham's formula from 'The Intelligent Investor'
+  - Uses most recent annual EPS
+
+- **Graham Number - 3-Year Average EPS (Normalized)**:
+  - **Value**: 10.01 GBP
+  - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)
+
+  **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year
+  makes a cyclical company appear undervalued despite being a value destroyer over the
+  full business cycle. This aligns with Graham's actual criterion: *"Price should not exceed"*
+  *"15 times average earnings of the past three years."*
+
+  **3-Year EPS**: [2025: 0.00 GBP, 2024: 1.86 GBP, 2023: 1.70 GBP] → Avg: 1.19 GBP
 - **EPV - Simplified Earnings Power Estimate**
 
   **Methodology:**
@@ -170,9 +145,36 @@
 - **Net-Net Value (2.14 GBP)**: (Current Assets - Total Liabilities) / Shares
   - Conservative liquidation value estimate
   - Graham's 'cigar butt' valuation for distressed situations
-- **Margin of Safety (-34.4%)**: (Graham Number - Price) / Graham Number × 100
-  - Percentage discount to intrinsic value
-  - Graham recommended minimum 20-30% for defensive investors
+
+- **Margin of Safety - Conservative Dual-Anchor Approach**:
+  - **Value**: -413.3%
+  - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
+
+  **Conservative Dual-Anchor Methodology**:
+
+  This system uses the **lower** of two valuation methods as the intrinsic value:
+  1. **Normalized Graham Number** (3-year average EPS)
+  2. **EPV per share** (7-10 year normalized earnings)
+
+  **Why This Is Conservative** (Graham's Philosophy):
+  - Graham emphasized buying with a margin of safety
+  - Using the lower value ensures we don't overpay
+  - If a company looks cheap on assets (Graham Number) but has poor earnings
+    power (EPV), the EPV reveals the true value
+  - If a company has strong earnings (EPV) but trades above asset value
+    (Graham Number), we use the more conservative asset-based valuation
+
+  **For This Stock**:
+  - Normalized Graham Number: 10.01 GBP
+  - EPV per share: 3.39 GBP
+  - **Intrinsic Value Used**: 3.39 GBP (Capped by EPV)
+
+  **Interpretation**: EPV is lower than Normalized Graham Number, indicating
+  that long-term earnings power is weaker than asset-based valuation suggests.
+  This is a red flag - the company may be destroying value over the full cycle.
+
+  **Graham's Principle**: *"The margin of safety is always dependent on the price paid."*
+  Graham recommended a minimum 20-30% margin of safety for defensive investors.
 
 ### P/E Ratio (3-Year Average)
 
@@ -374,9 +376,9 @@ TTM calculations provide more current financial metrics by using the most recent
 7. **P/B Ratio**: FAIL
    - Criterion: Price/Book Ratio < 1.5
 8. **Combined P/E × P/B Test**: FAIL
-   - P/E Ratio: 9.04
-   - P/B Ratio: 4.31
-   - Product: 38.96 (must be ≤ 22.5)
+   - P/E Ratio: 9.33
+   - P/B Ratio: 4.45
+   - Product: 41.52 (must be ≤ 22.5)
    - *Graham specified that P/E × P/B should not exceed 22.5. This provides flexibility: a company can have a higher P/E if it has a low P/B, or vice versa.*
 
 ---
@@ -452,5 +454,11 @@ TTM calculations provide more current financial metrics by using the most recent
 - [VALIDATION] ROA Difference: API shows 12.50% (TTM basis), calculated 15.62% (annual basis) (25.0% difference). Using annual data from audited financials per Graham methodology.
 - Year 2025-12-31: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Quick Ratio: Cannot calculate - inventory data unavailable for Utilities sector
+
+### Normalized Graham Number Requirements:
+- **3-Year Data Requirement**: Normalized Graham Number calculation requires 3 consecutive years of annual EPS data
+- **Fallback Strategy**: When insufficient data is available, the system falls back to EPV (Earnings Power Value) for Margin of Safety calculation
+- **Staleness Detection**: Annual reports older than 9 months trigger a data staleness warning
+- **Data Quality**: All 3 years must have non-null, numeric EPS values for normalized calculation to proceed
 
 ---

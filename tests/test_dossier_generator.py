@@ -354,3 +354,37 @@ def test_financial_history_table_in_dossier(sample_financial_data, sample_metric
     # Year now displays as just year, not full date
     assert '| 2023 |' in dossier
     assert '| 2022 |' in dossier
+
+
+def test_normalized_graham_requirements_in_limitations(sample_financial_data, sample_metrics, sample_anomalies):
+    """Test that normalized Graham Number requirements appear in DATA QUALITY & LIMITATIONS.
+    
+    This test validates Example 10 from the design document:
+    - 3-year data requirement is mentioned
+    - Fallback to EPV is explained
+    - Staleness detection threshold is documented
+    
+    Requirements: 10.5
+    """
+    generator = DossierGenerator('TEST.US', sample_financial_data, sample_metrics, sample_anomalies)
+    dossier = generator.generate()
+    
+    # Verify normalized Graham Number requirements section is present
+    assert '### Normalized Graham Number Requirements:' in dossier
+    
+    # Verify 3-year data requirement is mentioned
+    assert '3-Year Data Requirement' in dossier
+    assert '3 consecutive years of annual EPS data' in dossier
+    
+    # Verify fallback strategy is explained
+    assert 'Fallback Strategy' in dossier
+    assert 'falls back to EPV' in dossier
+    
+    # Verify staleness detection is documented
+    assert 'Staleness Detection' in dossier
+    assert '9 months' in dossier
+    
+    # Verify data quality requirement is mentioned
+    assert 'Data Quality' in dossier
+    assert 'non-null, numeric EPS values' in dossier
+

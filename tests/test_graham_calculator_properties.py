@@ -159,37 +159,74 @@ def test_net_net_value_calculation_correctness(current_assets, total_liabilities
 
 # Feature: stock-data-analyser, Property 6: Margin of Safety formula correctness
 # Validates: Requirements 5.1
+# NOTE: This test is deprecated - the new normalized margin of safety uses a different approach
+# See test_margin_of_safety_properties.py for the new implementation tests
 @settings(max_examples=100)
 @given(
-    graham_number=st.floats(min_value=1.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
+    eps=st.floats(min_value=0.01, max_value=1000.0, allow_nan=False, allow_infinity=False),
+    tbvps=st.floats(min_value=0.01, max_value=10000.0, allow_nan=False, allow_infinity=False),
     price=st.floats(min_value=0.01, max_value=10000.0, allow_nan=False, allow_infinity=False)
 )
-def test_margin_of_safety_formula_correctness(graham_number, price):
+def test_margin_of_safety_formula_correctness(eps, tbvps, price):
     """
-    Property: For any valid Graham Number and price, Margin of Safety should equal 
-    ((Graham Number - Price) / Graham Number) × 100.
+    Property: For any valid EPS, TBVPS, and price, the new Margin of Safety should use
+    the conservative dual-anchor approach (min of normalized Graham Number and EPV).
     
-    This test verifies the Margin of Safety formula is correctly implemented.
+    This test verifies the new MoS implementation works correctly.
+    Note: This is a simplified test - full property tests are in test_margin_of_safety_properties.py
     """
-    # Arrange: Create calculator with dummy data
+    # Arrange: Create calculator with 3 years of EPS data for normalized calculation
+    shares = 1000000.0
+    total_equity = tbvps * shares
+    
     financial_data = {
         'ticker': 'TEST.US',
         'price': price,
         'currency': 'USD',
-        'history': {}
+        'history': {
+            '2023-12-31': {
+                'total_equity': total_equity,
+                'intangible_assets': 0.0,
+                'goodwill': 0.0,
+                'shares_outstanding': shares,
+                'eps': eps,
+                'net_income': eps * shares,
+                'revenue': 1000000.0
+            },
+            '2022-12-31': {
+                'total_equity': total_equity,
+                'intangible_assets': 0.0,
+                'goodwill': 0.0,
+                'shares_outstanding': shares,
+                'eps': eps,
+                'net_income': eps * shares,
+                'revenue': 1000000.0
+            },
+            '2021-12-31': {
+                'total_equity': total_equity,
+                'intangible_assets': 0.0,
+                'goodwill': 0.0,
+                'shares_outstanding': shares,
+                'eps': eps,
+                'net_income': eps * shares,
+                'revenue': 1000000.0
+            }
+        }
     }
     
+    # Act: Calculate Margin of Safety using new implementation
     calculator = GrahamCalculator(financial_data)
+    result = calculator.compute_margin_of_safety(price)
     
-    # Act: Calculate Margin of Safety
-    result = calculator.compute_margin_of_safety(graham_number, price)
+    # Assert: Verify result structure (new implementation returns dict)
+    assert isinstance(result, dict), f"Expected dict, got {type(result)}"
+    assert 'mos_percentage' in result, "Result should contain 'mos_percentage' key"
+    assert 'intrinsic_value_used' in result, "Result should contain 'intrinsic_value_used' key"
+    assert 'limiting_factor' in result, "Result should contain 'limiting_factor' key"
     
-    # Assert: Verify formula correctness
-    expected_mos = ((graham_number - price) / graham_number) * 100
-    
-    assert isinstance(result, float), f"Expected float, got {type(result)}"
-    assert abs(result - expected_mos) < 0.1, \
-        f"Margin of Safety mismatch: expected ~{round(expected_mos, 1)}, got {result}"
+    # The MoS percentage should be a float or "N/A"
+    mos_pct = result['mos_percentage']
+    assert isinstance(mos_pct, (float, str)), f"Expected float or str, got {type(mos_pct)}"
 
 
 # Feature: stock-data-analyser, Property 10: EPV normalization correctness

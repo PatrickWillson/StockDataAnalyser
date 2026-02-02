@@ -1,9 +1,9 @@
 # STOCK ANALYSIS DOSSIER: AAPL.US
-# DATE: 2026-01-28
+# DATE: 2026-02-02
 # SOURCE: EODHD (Tier 1 Data)
 # CEO: Mr. Timothy D. Cook
 # SECTOR: Technology | INDUSTRY: Consumer Electronics
-# EMPLOYEES: 166,000
+# EMPLOYEES: 150,000
 # MOST RECENT ANNUAL DATA: 2025
 # CURRENCY: USD
 
@@ -13,17 +13,20 @@
 *Current metrics (P/E, Price) reflect most recent available data*
 
 - Verdict: **OVERVALUED**
-- Intrinsic Value (Graham): 28.73 USD
+- Graham Number (Single-Year EPS): 29.11 USD
+- Graham Number (3-Year Avg EPS): 22.66 USD
+  - ⚠️ Note: 3-year average (22% lower) reveals earnings peaked in recent year
 - Intrinsic Value (EPV): 763,460,000,000.00 USD
-- Net-Net Value: -9.17 USD
-- Margin of Safety: -792.1
-- Current Price: 256.31 USD
+- Net-Net Value: -9.29 USD
+- Margin of Safety: -1089.3% (Capped by Normalized Graham Number)
+  - Conservative Intrinsic Value: 22.66 USD
+- Current Price: 269.50 USD
 - 52-Week Range: 168.63 USD - 288.62 USD
-- Trailing Dividend: 1.03 USD (Yield: 0.40%) - Declared (Dividend API) [2025]
-  - Forward Rate: 1.04 USD (Yield: 0.41%)
-- P/E Ratio (Current Year): 34.33
-- P/E Ratio (3-Year Avg): 38.68 (based on avg EPS of 6.63 from 2023-2025)
-- Price/Book: 52.16
+- Trailing Dividend: 1.03 USD (Yield: 0.38%) - Declared (Dividend API) [2025]
+  - Forward Rate: 1.04 USD (Yield: 0.39%)
+- P/E Ratio (Current Year): 35.63
+- P/E Ratio (3-Year Avg): 40.47 (based on avg EPS of 6.66 from 2023-2025)
+- Price/Book: 54.13
 
 ---
 
@@ -31,58 +34,13 @@
 - Return on Equity (ROE): 151.91%
 - Return on Assets (ROA): 31.18%
 - Profit Margin: 26.92%
-- Book Value Per Share: 4.91 USD
+- Book Value Per Share: 4.98 USD
 
 ### Liquidity Analysis
 
 - Insider Ownership: 1.70%
-- Institutional Ownership: 64.82%
+- Institutional Ownership: 64.93%
 - Beta (Volatility): 1.093
-
----
-
-## RISK FACTORS
-*Quantifiable risks based on financial data*
-
-**Graham's Principle**: *"The essence of investment management is the management of risks, not the management of returns."*
-
-### Market & Liquidity Risks:
-- **Volatility (Beta: 1.093)**: Above-market volatility
-
-### Financial Strength Risks:
-- **Liquidity Crisis Risk**: Current ratio 0.89x (below 1.0x)
-  - Current assets insufficient to cover current liabilities
-  - May face difficulty meeting short-term obligations
-- **Low Debt**: Long-term debt only 21.8% of assets (conservative)
-  - Total debt (including short-term): 28.1% of assets
-  - Debt-to-Equity: 1.06x (debt exceeds equity)
-
-### Operational Stability Risks:
-- **Earnings Stability**: Low volatility (±1.0% std dev)
-  - Consistent profit margins indicate stable operations
-- **Return on Equity**: 151.9% (strong)
-
-### Dividend Risk:
-- **Conservative Payout**: 13.9% of earnings
-  - Sustainable with room for growth
-  - Dividend coverage: 7.25x (adequate)
-
-### Valuation Risk:
-- **Overvaluation Risk**: Margin of Safety -792.1%
-  - Trading above Graham intrinsic value
-  - No margin for error if business deteriorates
-  - P/E Ratio 34.3x: High expectations priced in
-  - Vulnerable to earnings disappointments
-
-### Data Quality Risks:
-- **Price Data**: Using yfinance (primary source unavailable)
-  - May have timing differences or slight inaccuracies
-- **Institutional Ownership**: 64.8% (verify with regulatory filings)
-- **52-Week Range**: Verify with live sources before trading
-  - API data may be stale or use different calculation periods
-
-
-**Risk Assessment Summary**: This analysis identifies quantifiable risks based on financial data. All investments carry risk. Graham emphasized that the margin of safety is the primary defense against adverse outcomes.
 
 ---
 
@@ -99,24 +57,24 @@
   - Total debt: $100,774,000,000 USD (28.1% of assets)
 
 ### Operational Stability Risk:
-- **Profit Margin Stability: 23.4% average, 2.3% std dev** over 10 years
+- **Profit Margin Stability: 23.7% average, 2.3% std dev** over 9 years
   - Low volatility indicates stable operations
 - **Loss Years: 0 of 10** - Consistent profitability (excellent)
 - **Return on Equity: 151.9%** - Strong capital efficiency
 
 ### Dividend Sustainability Risk:
-- **Payout Ratio: 13.9%** - Conservative (sustainable)
+- **Payout Ratio: 13.8%** - Conservative (sustainable)
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -792.1%** - Trading above intrinsic value
+- **Margin of Safety: -1089.3%** - Trading above intrinsic value
   - Graham's Standard: 20-30% minimum for defensive investors
   - Assessment: **High valuation risk** - no margin for error
-  - Intrinsic Value (Graham): 28.73 USD
-  - Current Price: 256.31 USD
+  - Intrinsic Value (Graham): 29.11 USD
+  - Current Price: 269.50 USD
 
 ### Data Quality Risk:
-- **Institutional Ownership: 64.82%** - Verify with regulatory filings
+- **Institutional Ownership: 64.93%** - Verify with regulatory filings
 - **Price Source: yfinance** - ⚠️ Using fallback source (EODHD unavailable)
 
 **Graham's Principle on Risk**: *"The essence of investment management is the management of risks, not the management of returns. Returns are the reward for taking risk, but the risk must be measured and managed."*
@@ -127,9 +85,9 @@
 *How key metrics are calculated*
 
 ### Valuation Metrics:
-- **P/E Ratio (34.33)**: Current Price / Most Recent Annual EPS
+- **P/E Ratio (35.63)**: Current Price / Most Recent Annual EPS
   - Calculated from audited financials, not API pre-calculated ratios
-  - EPS: 7.46 USD (Net Income / Shares Outstanding)
+  - EPS: 7.56 USD (Net Income / Shares Outstanding)
 - **Profitability Metrics (ROE, ROA, Profit Margin)**:
   - **ROE (Return on Equity)**: Net Income / Total Stockholder Equity
     - Calculated from most recent annual audited data
@@ -145,9 +103,21 @@
     - TTM data may include estimates and unaudited quarters
     - Consistency: All Graham metrics (P/E, P/B, BVPS, ROE, ROA, Margin) use same fiscal year
     - Comparability: Annual data allows year-over-year comparison of audited results
-- **Graham Number (28.73 USD)**: √(22.5 × EPS × BVPS)
+- **Graham Number - Single-Year EPS (29.11 USD)**: √(22.5 × EPS × TBVPS)
   - Conservative intrinsic value estimate
   - Based on Benjamin Graham's formula from 'The Intelligent Investor'
+  - Uses most recent annual EPS
+
+- **Graham Number - 3-Year Average EPS (Normalized)**:
+  - **Value**: 22.66 USD
+  - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)
+
+  **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year
+  makes a cyclical company appear undervalued despite being a value destroyer over the
+  full business cycle. This aligns with Graham's actual criterion: *"Price should not exceed"*
+  *"15 times average earnings of the past three years."*
+
+  **3-Year EPS**: [2026: 0.00 USD, 2025: 7.56 USD, 2024: 6.19 USD] → Avg: 4.58 USD
 - **EPV - Simplified Earnings Power Estimate**
 
   **Methodology:**
@@ -166,14 +136,41 @@
   - Net Incomes: USD112,010,000,000, USD93,736,000,000, USD96,995,000,000, USD99,803,000,000, USD94,680,000,000, USD57,411,000,000, USD55,256,000,000, USD59,531,000,000, USD48,351,000,000, USD45,687,000,000
   - Normalized Earnings: USD76,346,000,000 (average including losses)
   - EPV: USD763,460,000,000 (USD76,346,000,000 / 10%)
-  - EPV Per Share: 50.88 USD
+  - EPV Per Share: 51.55 USD
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
   **Graham's Principle**: *"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle."*
-- **Margin of Safety (-792.1%)**: (Graham Number - Price) / Graham Number × 100
-  - Percentage discount to intrinsic value
-  - Graham recommended minimum 20-30% for defensive investors
+
+- **Margin of Safety - Conservative Dual-Anchor Approach**:
+  - **Value**: -1089.3%
+  - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
+
+  **Conservative Dual-Anchor Methodology**:
+
+  This system uses the **lower** of two valuation methods as the intrinsic value:
+  1. **Normalized Graham Number** (3-year average EPS)
+  2. **EPV per share** (7-10 year normalized earnings)
+
+  **Why This Is Conservative** (Graham's Philosophy):
+  - Graham emphasized buying with a margin of safety
+  - Using the lower value ensures we don't overpay
+  - If a company looks cheap on assets (Graham Number) but has poor earnings
+    power (EPV), the EPV reveals the true value
+  - If a company has strong earnings (EPV) but trades above asset value
+    (Graham Number), we use the more conservative asset-based valuation
+
+  **For This Stock**:
+  - Normalized Graham Number: 22.66 USD
+  - EPV per share: 51.55 USD
+  - **Intrinsic Value Used**: 22.66 USD (Capped by Normalized Graham Number)
+
+  **Interpretation**: Normalized Graham Number is lower than EPV, indicating
+  the stock trades at a premium to its asset value despite strong earnings power.
+  Graham would prefer to buy at a discount to both metrics.
+
+  **Graham's Principle**: *"The margin of safety is always dependent on the price paid."*
+  Graham recommended a minimum 20-30% margin of safety for defensive investors.
 
 ### P/E Ratio (3-Year Average)
 
@@ -277,7 +274,7 @@ TTM calculations provide more current financial metrics by using the most recent
 *Detailed breakdown of key calculations for transparency and verification*
 
 ### Share Count Used:
-- **Shares Outstanding**: 15,004,697,000 shares
+- **Shares Outstanding**: 14,810,356,000 shares
 - **Source**: Financial statements (outstandingShares.annual for 2025)
 - **Note**: This is the year-specific share count from audited financials, used for accurate per-share calculations
 - **Why This Matters**: Market data sources may show different share counts (e.g., public float vs. total issued shares)
@@ -289,16 +286,22 @@ TTM calculations provide more current financial metrics by using the most recent
 - **Less: Intangible Assets**: USD0
 - **Less: Goodwill**: USD0
 - **Tangible Book Value**: USD73,733,000,000
-- **Divided by Shares**: 15,004,697,000
-- **Tangible Book Value Per Share (TBVPS)**: USD4.91
-- **Book Value Per Share (BVPS)**: USD4.91 (without subtracting intangibles)
+- **Divided by Shares**: 14,810,356,000
+- **Tangible Book Value Per Share (TBVPS)**: USD4.98
+- **Book Value Per Share (BVPS)**: USD4.98 (without subtracting intangibles)
+- **API Book Value**: USD6.00 (17.0% difference)
+  - **Explanation**: Differences may be due to:
+    - Different share count (API may use basic vs. diluted)
+    - Different accounting treatment of intangibles
+    - Timing differences (API may use more recent data)
+    - Our calculation uses audited financial statement data per Graham methodology
 
 ### Graham Number Calculation:
 - **Formula**: √(22.5 × EPS × TBVPS)
-- **EPS**: USD7.46
-- **TBVPS**: USD4.91
-- **Calculation**: √(22.5 × 7.46 × 4.91) = √(825.37)
-- **Graham Number**: USD28.73
+- **EPS**: USD7.56
+- **TBVPS**: USD4.98
+- **Calculation**: √(22.5 × 7.56 × 4.98) = √(847.17)
+- **Graham Number**: USD29.11
 - **Note**: Uses unrounded intermediate values for precision
 
 ### EPV Methodology Clarification:
@@ -345,9 +348,9 @@ TTM calculations provide more current financial metrics by using the most recent
 7. **P/B Ratio**: FAIL
    - Criterion: Price/Book Ratio < 1.5
 8. **Combined P/E × P/B Test**: FAIL
-   - P/E Ratio: 34.33
-   - P/B Ratio: 52.16
-   - Product: 1790.65 (must be ≤ 22.5)
+   - P/E Ratio: 35.63
+   - P/B Ratio: 54.13
+   - Product: 1928.65 (must be ≤ 22.5)
    - *Graham specified that P/E × P/B should not exceed 22.5. This provides flexibility: a company can have a higher P/E if it has a low P/B, or vice versa.*
 
 ---
@@ -375,7 +378,8 @@ TTM calculations provide more current financial metrics by using the most recent
 
 | Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares (B) | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
-| 2025 | 416161000000.0 | 112010000000.0 | 7.464995794316939 | 1.03 | 4.91 | ⚠️ -1.18 | 13.8% | 100.77B | 15.005B | N/A | N/A | N/A |
+| 2026 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.26 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2025 | 416161000000.0 | 112010000000.0 | 7.562951221429113 | 1.03 | 4.98 | ⚠️ -1.19 | 13.6% | 100.77B | 14.810B | N/A | N/A | N/A |
 | 2024 | 391035000000.0 | 93736000000.0 | 6.1868414773677936 | 0.99 | 3.76 | ⚠️ -1.54 | 16.0% | 108.26B | 15.151B | N/A | N/A | N/A |
 | 2023 | 383285000000.0 | 96995000000.0 | 6.226952267822055 | 0.95 | 3.99 | ⚠️ -0.11 | 15.3% | 111.09B | 15.577B | N/A | N/A | N/A |
 | 2022 | 394328000000.0 | 99803000000.0 | 6.254998991584083 | 0.91 | 3.18 | ⚠️ -1.16 | 14.5% | 120.07B | 15.956B | N/A | N/A | N/A |
@@ -394,9 +398,11 @@ TTM calculations provide more current financial metrics by using the most recent
 | 2009 | 42905000000.0 | 8235000000.0 | 0.31975709798631075 | N/A | 1.08 | 0.66 | 0.0% | 1.95B | 25.754B | N/A | N/A | N/A |
 | 2008 | 32479000000.0 | 4834000000.0 | 0.1915074943847182 | N/A | 0.83 | 0.82 | 0.0% | 2.51B | 25.242B | N/A | N/A | N/A |
 | 2007 | 24006000000.0 | 3495000000.0 | 0.1386821552611605 | N/A | 0.58 | 0.50 | 0.0% | 1.80B | 25.202B | N/A | N/A | N/A |
-| 2006 | 19315000000.0 | 1989000000.0 | 0.08042109764407021 | N/A | 0.4 | 0.32 | 0.0% | 1.51B | 24.732B | N/A | N/A | N/A |
 
 **Note on Data Completeness:**
+- Years marked '[Data Unavailable]' (2026) show declared dividends but lack complete audited annual financial statements
+- **Graham's Principle**: Analysis and valuations use only complete annual data from audited financial statements
+- Declared dividends are shown for income investors but excluded from historical calculations
 
 **Graham Trend Analysis Columns:**
 - **WCPS (Working Capital Per Share)**: (Current Assets - Current Liabilities) / Shares Outstanding
@@ -421,13 +427,21 @@ TTM calculations provide more current financial metrics by using the most recent
 
 ### Data Quality & Limitations:
 - Price Source: yfinance (primary source)
-- [VALIDATION] ROA Difference: API shows 22.96% (TTM basis), calculated 31.18% (annual basis) (35.8% difference). Using annual data from audited financials per Graham methodology.
+- [VALIDATION] Book Value Discrepancy: API shows $6.00, calculated $4.98 (17.0% difference). Calculated value subtracts intangibles/goodwill per Graham methodology. API may use different share count or accounting treatment.
+- [VALIDATION] ROA Difference: API shows 24.38% (TTM basis), calculated 31.18% (annual basis) (27.9% difference). Using annual data from audited financials per Graham methodology.
+- Year 2026-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Quick Ratio: Inventory data unavailable - using Current Assets (Technology sector)
+
+### Normalized Graham Number Requirements:
+- **3-Year Data Requirement**: Normalized Graham Number calculation requires 3 consecutive years of annual EPS data
+- **Fallback Strategy**: When insufficient data is available, the system falls back to EPV (Earnings Power Value) for Margin of Safety calculation
+- **Staleness Detection**: Annual reports older than 9 months trigger a data staleness warning
+- **Data Quality**: All 3 years must have non-null, numeric EPS values for normalized calculation to proceed
 
 ### Statistical Anomalies (Z-Score Analysis):
 *Metrics that deviate significantly from historical patterns*
 
 - Year 2005-09-30: EPS growth Z-Score = 3.31 (Outlier)
-- Year 1996-09-30: EPS growth Z-Score = -3.24 (Outlier)
+- Year 1996-09-30: EPS growth Z-Score = -3.17 (Outlier)
 
 ---

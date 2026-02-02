@@ -91,8 +91,26 @@ class ExecutiveSummarySection(DossierSection):
         # Intrinsic values
         self._add_intrinsic_values(lines, unified_currency)
         
-        # Margin of Safety
-        lines.append(f"- Margin of Safety: {self.metrics['margin_of_safety']}")
+        # Margin of Safety - Requirement 10.1
+        # Display normalized MoS as primary value with limiting factor
+        mos_details = self.metrics.get('margin_of_safety_details', {})
+        mos_percentage = mos_details.get('mos_percentage', self.metrics.get('margin_of_safety', 'N/A'))
+        limiting_factor = mos_details.get('limiting_factor', 'N/A')
+        intrinsic_value_used = mos_details.get('intrinsic_value_used', 'N/A')
+        
+        if mos_percentage != 'N/A':
+            # Format the MoS display with limiting factor
+            if limiting_factor != 'N/A':
+                lines.append(f"- Margin of Safety: {mos_percentage:.1f}% (Capped by {limiting_factor})")
+                
+                # Add explanatory note about which intrinsic value was used
+                if intrinsic_value_used != 'N/A':
+                    iv_display = format_price_display(float(intrinsic_value_used), unified_currency, unified_currency)
+                    lines.append(f"  - Conservative Intrinsic Value: {iv_display}")
+            else:
+                lines.append(f"- Margin of Safety: {mos_percentage:.1f}%")
+        else:
+            lines.append(f"- Margin of Safety: {mos_percentage}")
         
         # Current price
         self._add_current_price(lines, unified_currency, original_stock_currency)
@@ -114,20 +132,45 @@ class ExecutiveSummarySection(DossierSection):
     def _add_intrinsic_values(self, lines: List[str], unified_currency: str) -> None:
         """Add intrinsic value lines (Graham, EPV, Net-Net).
         
+        Requirements 3.3, 3.4, 3.5:
+        - Display both single-year and normalized Graham Numbers with clear labels
+        - Label legacy as "Graham Number (Single-Year EPS)"
+        - Label normalized as "Graham Number (3-Year Avg EPS)"
+        
         Args:
             lines: List to append lines to
             unified_currency: Currency for display
         """
         graham_str = self.metrics['graham_number']
+        normalized_graham_str = self.metrics.get('normalized_graham_number', 'N/A')
         epv_str = self.metrics['epv']
         net_net_str = self.metrics.get('net_net_value', 'N/A')
         
-        # Graham Number
+        # Legacy Graham Number (Single-Year EPS) - Requirement 3.4
         if graham_str != 'N/A':
             graham_display = format_price_display(float(graham_str), unified_currency, unified_currency)
-            lines.append(f"- Intrinsic Value (Graham): {graham_display}")
+            lines.append(f"- Graham Number (Single-Year EPS): {graham_display}")
         else:
-            lines.append(f"- Intrinsic Value (Graham): {graham_str}")
+            lines.append(f"- Graham Number (Single-Year EPS): {graham_str}")
+        
+        # Normalized Graham Number (3-Year Avg EPS) - Requirement 3.5
+        if normalized_graham_str != 'N/A':
+            normalized_display = format_price_display(float(normalized_graham_str), unified_currency, unified_currency)
+            lines.append(f"- Graham Number (3-Year Avg EPS): {normalized_display}")
+        else:
+            lines.append(f"- Graham Number (3-Year Avg EPS): {normalized_graham_str}")
+        
+        # Add note if values diverge significantly (>20% difference)
+        if graham_str != 'N/A' and normalized_graham_str != 'N/A':
+            single_year = float(graham_str)
+            normalized = float(normalized_graham_str)
+            pct_diff = abs(normalized - single_year) / single_year * 100
+            
+            if pct_diff > 20:
+                if normalized > single_year:
+                    lines.append(f"  - ⚠️ Note: 3-year average ({pct_diff:.0f}% higher) smooths recent earnings decline")
+                else:
+                    lines.append(f"  - ⚠️ Note: 3-year average ({pct_diff:.0f}% lower) reveals earnings peaked in recent year")
         
         # EPV
         if epv_str != 'N/A':
