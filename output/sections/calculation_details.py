@@ -201,6 +201,8 @@ class CalculationDetailsSection:
             
             # Compare to API if available
             api_bvps = self.financial_data.get('book_value_per_share', 0)
+            if api_bvps is None:
+                api_bvps = 0
             if api_bvps > 0:
                 diff_pct = abs(bvps - api_bvps) / api_bvps * 100
                 if diff_pct > 15:

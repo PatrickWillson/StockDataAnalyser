@@ -223,5 +223,7 @@ class KeyMetricsSection(DossierSection):
             lines: List to append lines to
         """
         beta = self.financial_data.get('beta', 0)
+        if beta is None:
+            beta = 0
         if beta > 0:
             lines.append(f"- Beta (Volatility): {beta:.3f}")

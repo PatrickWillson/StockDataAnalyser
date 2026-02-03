@@ -164,13 +164,16 @@ class ExecutiveSummarySection(DossierSection):
         if graham_str != 'N/A' and normalized_graham_str != 'N/A':
             single_year = float(graham_str)
             normalized = float(normalized_graham_str)
-            pct_diff = abs(normalized - single_year) / single_year * 100
             
-            if pct_diff > 20:
-                if normalized > single_year:
-                    lines.append(f"  - ⚠️ Note: 3-year average ({pct_diff:.0f}% higher) smooths recent earnings decline")
-                else:
-                    lines.append(f"  - ⚠️ Note: 3-year average ({pct_diff:.0f}% lower) reveals earnings peaked in recent year")
+            # Only calculate percentage difference if single_year is not zero
+            if single_year > 0:
+                pct_diff = abs(normalized - single_year) / single_year * 100
+                
+                if pct_diff > 20:
+                    if normalized > single_year:
+                        lines.append(f"  - ⚠️ Note: 3-year average ({pct_diff:.0f}% higher) smooths recent earnings decline")
+                    else:
+                        lines.append(f"  - ⚠️ Note: 3-year average ({pct_diff:.0f}% lower) reveals earnings peaked in recent year")
         
         # EPV
         if epv_str != 'N/A':

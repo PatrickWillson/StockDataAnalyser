@@ -647,6 +647,8 @@ class EODHDClient(BaseAPIClient):
         
         # Check Share Count Consistency
         shares_stats = data.get('SharesStats', {}).get('SharesOutstanding', 0)
+        if shares_stats is None:
+            shares_stats = 0
         
         # Get balance sheet shares from most recent year
         balance_sheet_shares = 0
@@ -701,6 +703,12 @@ class EODHDClient(BaseAPIClient):
         # Check Book Value
         api_bvps = data.get('Highlights', {}).get('BookValue', 0)
         
+        # Handle None values - convert to 0 for comparison
+        if api_bvps is None:
+            api_bvps = 0
+        if calculated_bvps is None:
+            calculated_bvps = 0
+        
         if api_bvps > 0 and calculated_bvps > 0:
             bvps_diff_pct = abs(calculated_bvps - api_bvps) / api_bvps * 100
             if bvps_diff_pct > 15:  # More than 15% difference
@@ -742,13 +750,21 @@ class EODHDClient(BaseAPIClient):
         api_roa = data.get('Highlights', {}).get('ReturnOnAssetsTTM')
         api_profit_margin = data.get('Highlights', {}).get('ProfitMargin')
         
-        # Handle None values
+        # Handle None values for API metrics
         if api_roe is None:
             api_roe = 0
         if api_roa is None:
             api_roa = 0
         if api_profit_margin is None:
             api_profit_margin = 0
+        
+        # Handle None values for calculated metrics
+        if calculated_roe is None:
+            calculated_roe = 0
+        if calculated_roa is None:
+            calculated_roa = 0
+        if calculated_profit_margin is None:
+            calculated_profit_margin = 0
         
         # Validate ROE
         if api_roe > 0 and calculated_roe > 0:

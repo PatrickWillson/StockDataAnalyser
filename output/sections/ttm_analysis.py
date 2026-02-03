@@ -225,6 +225,10 @@ class TTMAnalysisSection(DossierSection):
                 return ""
             
             # Calculate percentage difference
+            # Avoid division by zero
+            if abs(annual_float) == 0:
+                return ""
+            
             pct_diff = ((ttm_float - annual_float) / abs(annual_float)) * 100
             
             # Format with sign
@@ -365,6 +369,8 @@ class TTMAnalysisSection(DossierSection):
         # Compare with fiscal year dividend if available
         if fiscal_year_dividend > 0 and fiscal_year:
             fiscal_yield = (fiscal_year_dividend / price) * 100 if price > 0 else 0.0
-            pct_diff = ((ttm_dividend - fiscal_year_dividend) / fiscal_year_dividend) * 100
-            diff_sign = "+" if pct_diff > 0 else ""
-            lines.append(f"  - FY{fiscal_year} Dividend: {fiscal_year_dividend:.2f} {currency} (Yield: {fiscal_yield:.2f}%, Diff: {diff_sign}{pct_diff:.1f}%)")
+            # Avoid division by zero
+            if fiscal_year_dividend > 0:
+                pct_diff = ((ttm_dividend - fiscal_year_dividend) / fiscal_year_dividend) * 100
+                diff_sign = "+" if pct_diff > 0 else ""
+                lines.append(f"  - FY{fiscal_year} Dividend: {fiscal_year_dividend:.2f} {currency} (Yield: {fiscal_yield:.2f}%, Diff: {diff_sign}{pct_diff:.1f}%)")

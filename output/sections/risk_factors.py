@@ -151,6 +151,8 @@ class RiskFactorsSection(DossierSection):
         
         # Beta risk
         beta = self.financial_data.get('beta', 0)
+        if beta is None:
+            beta = 0
         if beta > 0:
             if beta < 0.5:
                 lines.append(f"- **Volatility (Beta: {beta:.3f})**: Low market correlation")
@@ -512,6 +514,8 @@ class RiskFactorsSection(DossierSection):
         """
         lines.append("### Market & Liquidity Risk:")
         beta = self.financial_data.get('beta', 0)
+        if beta is None:
+            beta = 0
         if beta > 0:
             if beta < 0.5:
                 lines.append(f"- **Beta: {beta:.3f}** - Low volatility relative to market")
