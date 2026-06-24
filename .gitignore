@@ -62,6 +62,10 @@ data/*
 *.dossier.md
 *.dossier.txt
 
+# Agent-generated markdown scratch files
+claude-output/*
+!claude-output/.gitkeep
+
 # Jupyter Notebook
 .ipynb_checkpoints
 
