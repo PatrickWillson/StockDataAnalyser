@@ -1,0 +1,226 @@
+{
+  "anomalies": [],
+  "financial_data": {
+    "api_last_update": "2024-01-15",
+    "beta": 1.29,
+    "book_value_per_share": 3.951,
+    "ceo_name": "Mr. Timothy D. Cook",
+    "currency": "USD",
+    "dividend_currency": "USD",
+    "dividend_per_share": 0.96,
+    "dividend_source": "Cash Flow",
+    "dividend_sources": {
+      "2021": "cash_flow",
+      "2022": "cash_flow",
+      "2023": "cash_flow"
+    },
+    "dividend_yield": 0.0051,
+    "employees": 164000,
+    "enterprise_value": 2965000000000,
+    "exchange": "NASDAQ",
+    "financials_currency": "USD",
+    "forward_dividend_rate": 0.96,
+    "fx_rate_used": null,
+    "historical_fx_rates": {},
+    "history": {
+      "2021-09-25": {
+        "current_assets": 134836000000.0,
+        "current_liabilities": 125481000000.0,
+        "dividend": 0.8806957124783874,
+        "eps": 5.763756829850952,
+        "goodwill": 0.0,
+        "intangible_assets": 0.0,
+        "long_term_debt": 109106000000.0,
+        "net_income": 94680000000.0,
+        "payout_ratio": "15.3%",
+        "revenue": 365817000000.0,
+        "shares_outstanding": 16426786000.0,
+        "total_assets": 351002000000.0,
+        "total_debt": 109106000000.0,
+        "total_equity": 63090000000.0,
+        "total_liabilities": 287912000000.0,
+        "wcps": 0.57,
+        "year_end_price": 158.6577
+      },
+      "2021-09-30": {
+        "current_assets": 0.0,
+        "current_liabilities": 0.0,
+        "dividend": 0.8806957124783874,
+        "eps": 0.0,
+        "goodwill": 0.0,
+        "intangible_assets": 0.0,
+        "long_term_debt": 0.0,
+        "net_income": 0.0,
+        "payout_ratio": "N/A",
+        "revenue": 0.0,
+        "shares_outstanding": 16426786000.0,
+        "total_assets": 0.0,
+        "total_debt": 0.0,
+        "total_equity": 0.0,
+        "total_liabilities": 0.0,
+        "wcps": 0.0,
+        "year_end_price": 158.6577
+      },
+      "2022-09-24": {
+        "current_assets": 135405000000.0,
+        "current_liabilities": 153982000000.0,
+        "dividend": 0.927843295904111,
+        "eps": 6.259821838783072,
+        "goodwill": 0.0,
+        "intangible_assets": 0.0,
+        "long_term_debt": 98959000000.0,
+        "net_income": 99803000000.0,
+        "payout_ratio": "14.8%",
+        "revenue": 394328000000.0,
+        "shares_outstanding": 15943425000.0,
+        "total_assets": 352583000000.0,
+        "total_debt": 98959000000.0,
+        "total_equity": 50672000000.0,
+        "total_liabilities": 302083000000.0,
+        "wcps": -1.17,
+        "year_end_price": 172.454
+      },
+      "2022-09-30": {
+        "current_assets": 0.0,
+        "current_liabilities": 0.0,
+        "dividend": 0.927843295904111,
+        "eps": 0.0,
+        "goodwill": 0.0,
+        "intangible_assets": 0.0,
+        "long_term_debt": 0.0,
+        "net_income": 0.0,
+        "payout_ratio": "N/A",
+        "revenue": 0.0,
+        "shares_outstanding": 15943425000.0,
+        "total_assets": 0.0,
+        "total_debt": 0.0,
+        "total_equity": 0.0,
+        "total_liabilities": 0.0,
+        "wcps": 0.0,
+        "year_end_price": 172.454
+      },
+      "2023-09-30": {
+        "current_assets": 143566000000.0,
+        "current_liabilities": 145308000000.0,
+        "dividend": 0.9544014007404859,
+        "eps": 6.237596109751595,
+        "goodwill": 0.0,
+        "intangible_assets": 0.0,
+        "long_term_debt": 106000000000.0,
+        "net_income": 96995000000.0,
+        "payout_ratio": "15.3%",
+        "revenue": 383285000000.0,
+        "shares_outstanding": 15550061000.0,
+        "total_assets": 352755000000.0,
+        "total_debt": 106015000000.0,
+        "total_equity": 62146000000.0,
+        "total_liabilities": 290437000000.0,
+        "wcps": -0.11,
+        "year_end_price": 187.45
+      }
+    },
+    "industry": "Consumer Electronics",
+    "insider_ownership": 0.071,
+    "institutional_ownership": 61.44,
+    "is_dividend_amounts": true,
+    "original_stock_currency": "USD",
+    "pe_ratio": 30.05164116140007,
+    "price": 187.45,
+    "price_currency_before_fx": "USD",
+    "price_source": "yfinance",
+    "price_to_book": 46.903403830495925,
+    "profit_margin": 0.2530623426432028,
+    "quarterly_data": {
+      "balance_sheet": {},
+      "income_statement": {}
+    },
+    "roa": 0.2749642102875934,
+    "roe": 1.5607601454639075,
+    "sector": "Technology",
+    "ticker": "AAPL",
+    "ttm_dividend": 0.0,
+    "ttm_dividend_currency": "USD",
+    "ttm_dividend_payments": [],
+    "warnings": [
+      "Price Source: yfinance (primary source)",
+      "[VALIDATION] API data is 46 days old (last update: 2024-01-15). Price and market data may be stale.",
+      "[VALIDATION] ROA Difference: API shows 22.40% (TTM basis), calculated 27.50% (annual basis) (22.8% difference). Using annual data from audited financials per Graham methodology.",
+      "Insufficient History Warning: Only 5 years of data available (minimum 10 recommended)",
+      "Year 2022-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)",
+      "Year 2021-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)",
+      "TTM Analysis: Periodic data not available from API"
+    ],
+    "week_52_high": 199.62,
+    "week_52_low": 124.17
+  },
+  "metrics": {
+    "combined_pe_pb_test": {
+      "pb_ratio": 46.9,
+      "pe_ratio": 30.05,
+      "product": 1409.35,
+      "result": "FAIL"
+    },
+    "defensive_tests": {
+      "current_ratio": "FAIL",
+      "debt_to_assets": "FAIL",
+      "dividend_record": "PASS",
+      "earnings_growth": "N/A (Too Young)",
+      "earnings_stability": "FAIL",
+      "pb_ratio": "FAIL",
+      "pe_ratio": "FAIL"
+    },
+    "enterprising_tests": {
+      "current_ratio": "FAIL",
+      "debt_to_assets": "FAIL",
+      "dividend_record": "PASS",
+      "earnings_growth": "N/A - Not Required",
+      "earnings_stability": "FAIL",
+      "price_test": "FAIL"
+    },
+    "epv": 0.0,
+    "epv_details": {
+      "cost_of_capital": 0.1,
+      "epv": 0.0,
+      "epv_per_share": 0.0,
+      "normalized_earnings": 0.0,
+      "years_used": 0
+    },
+    "graham_number": 23.68,
+    "margin_of_safety": "N/A",
+    "margin_of_safety_details": {
+      "epv_per_share": 0.0,
+      "intrinsic_value_used": 0.0,
+      "limiting_factor": "EPV",
+      "mos_percentage": "N/A",
+      "normalized_graham_number": 19.35
+    },
+    "nca_details": {
+      "current_assets": 143566000000.0,
+      "debt_coverage_pct": "N/A",
+      "debt_coverage_ratio": "N/A",
+      "long_term_debt": 106000000000.0,
+      "nca": -146871000000.0,
+      "total_liabilities": 290437000000.0,
+      "warnings": [
+        "NCA is zero or negative - cannot calculate debt coverage ratio"
+      ]
+    },
+    "net_net_value": -9.45,
+    "normalized_graham_number": 19.35,
+    "quick_ratio": 0.99,
+    "three_year_avg_pe": {
+      "pe_on_avg": 30.79,
+      "three_year_avg_eps": 6.09,
+      "years_used": [
+        "2023-09-30",
+        "2022-09-24",
+        "2021-09-25"
+      ]
+    },
+    "verdict": "PENDING",
+    "warnings": [
+      "Quick Ratio: Inventory data unavailable - using Current Assets (Technology sector)"
+    ]
+  },
+  "ttm_metrics": null
+}
