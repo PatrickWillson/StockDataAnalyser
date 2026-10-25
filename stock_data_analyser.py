@@ -12,6 +12,7 @@ from core.graham_math import GrahamCalculator
 from core.anomaly_detector import AnomalyDetector
 from core.ttm_calculator import TTMCalculator
 from output.dossier_generator import DossierGenerator
+from logging_utils import install_secret_redaction
 
 # Load Environment Variables
 load_dotenv()
@@ -66,21 +67,27 @@ def save_dossier(ticker, content):
     logger.info(f"Dossier generated: {filename}")
     logger.info("Action: Upload this file to Perplexity Deep Research.")
 
-def configure_logging(debug: bool = False):
+def configure_logging(debug: bool = False, secrets=()):
     """
     Configure logging with proper format and level.
-    
+
     Args:
         debug: If True, set level to DEBUG; otherwise INFO
+        secrets: Secret values (e.g. API keys) to redact from all log output
     """
     level = logging.DEBUG if debug else logging.INFO
-    
+
     # Configure root logger
     logging.basicConfig(
         level=level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+
+    # urllib3 logs full request URLs (including api_token) at DEBUG
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+    install_secret_redaction(secrets)
 
 def main():
     parser = argparse.ArgumentParser(description="Stock Data Analyser - Financial Analysis Engine")
@@ -91,7 +98,7 @@ def main():
     ticker = args.ticker.upper()
     
     # Configure logging based on debug flag
-    configure_logging(debug=args.debug)
+    configure_logging(debug=args.debug, secrets=[API_KEY])
 
     if not API_KEY:
         logger.error("EODHD_API_KEY not found in .env file.")

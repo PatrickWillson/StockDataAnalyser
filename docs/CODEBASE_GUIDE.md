@@ -17,6 +17,8 @@ python stock_data_analyser.py AAPL.US [--debug]
 
 Requires `EODHD_API_KEY` in `.env`. `--debug` sets DEBUG logging and dumps raw EODHD JSON to `data/{ticker}_raw_api_response.json`.
 
+**Secrets in logs:** the EODHD key travels as the `api_token` query parameter. `configure_logging` keeps urllib3 at WARNING (its DEBUG output prints full request URLs) and attaches `logging_utils.SecretRedactingFilter` to every root handler, which replaces `api_token=…` values and the literal key with `***` in messages and tracebacks. Guarded by `tests/test_log_redaction.py`. Handlers added to the root logger *after* `configure_logging` do not get the filter.
+
 ---
 
 ## 2. Pipeline (what `main()` does, in order)
@@ -24,7 +26,7 @@ Requires `EODHD_API_KEY` in `.env`. `--debug` sets DEBUG logging and dumps raw E
 | Step | Code | What happens |
 |---|---|---|
 | 0 | `stock_data_analyser.py` import time | `load_dotenv()`; `API_KEY` read into a module global |
-| 1 | `main()` | argparse (`ticker` upper-cased, `--debug`); `configure_logging`; exit 1 if no key |
+| 1 | `main()` | argparse (`ticker` upper-cased, `--debug`); `configure_logging(debug, secrets=[API_KEY])` (urllib3 logger pinned to WARNING; `SecretRedactingFilter` on root handlers); exit 1 if no key |
 | 2 | `ClientFactory` | builds `EODHDClient(api_key, FXClient())` and `YFinanceClient` |
 | 3 | `EODHDClient.fetch_all_data(ticker, yf_client)` | fetch + parse + currency-normalise + some calculations → `financial_data` dict (§4.1) |
 | 4 | CLI lines ~125–260 | historical year-end prices from yfinance, matched to fiscal year-ends, GBX÷100, historical FX applied → writes `history[date]['year_end_price']` + warnings |
@@ -42,6 +44,7 @@ Error handling: everything after the key check is in one `try/except Exception` 
 
 ```
 stock_data_analyser.py      CLI + orchestration (+ historical price/FX block)
+logging_utils.py            redact(), SecretRedactingFilter, install_secret_redaction — keeps API keys out of logs
 clients/
   base_client.py            BaseAPIClient: requests.Session, urllib3 Retry(3, backoff 1.0, 5xx, GET)
   eodhd_client.py           EODHDClient: fundamentals + dividend endpoint; fetch_all_data (the big one)
