@@ -233,7 +233,7 @@ Dossier format is **fixed** and optimized for LLM parsing:
 - **`.kiro/steering/`**: `stock-data-analyser-architecture.md` (detailed architecture guide)
 - **`.kiro/documentation/`**: Generated reports, investigation summaries, fix documentation
   - Example: `TTM_IMPLEMENTATION_SUMMARY.md`, `CURRENCY_UNIFICATION_VERIFICATION.md`
-- **`claude-output/`**: **All agent-written markdown goes here** — scratch notes, research summaries, investigation logs, planning docs, or any `.md` file an agent produces during a session. This directory is gitignored. Do not write agent-generated markdown to the repo root or any other directory.
+- **`claude-output/`**: **All agent-written markdown goes here** — scratch notes, research summaries, investigation logs, planning docs, or any `.md` file an agent produces during a session. This directory is gitignored. Do not write agent-generated markdown to the repo root or any other directory. **Sole exception:** `docs/CODEBASE_GUIDE.md` (version-controlled codebase reference, see below).
 - **Tests**: Serve as executable documentation of expected behavior
 
 ## File Organization Quick Reference
@@ -251,6 +251,21 @@ Dossier format is **fixed** and optimized for LLM parsing:
 | `output/sections/*.py` | Individual dossier sections |
 | `config/graham_constants.py` | Immutable Graham methodology constants |
 | `claude-output/` | Agent-generated markdown scratch files (gitignored) |
+| `docs/CODEBASE_GUIDE.md` | Living codebase reference (version-controlled) |
+
+## Codebase Guide Maintenance
+
+`docs/CODEBASE_GUIDE.md` is the version-controlled living reference for how the code currently works (pipeline, module responsibilities, data shapes, formulas, currency handling, dossier sections, tests). **Read it first** instead of re-exploring the codebase.
+
+**Always update it in the same change** whenever you:
+- add, remove, rename or move a module, class or public function
+- add, remove or rename a key in `financial_data`, a `history` row, `metrics` or `ttm_metrics`
+- add or change a formula, threshold, investor test or verdict rule
+- change currency/FX/London Fix behaviour or the exchange mapping
+- add, remove or reorder a dossier section, or change a pipeline step in `main()`
+- change test infrastructure (fixtures, golden baselines, markers)
+
+Update the "Last full audit" line only after a full re-audit. Keep the guide describing the code as it *is*, not as planned; known bugs and refactor plans belong in `claude-output/CODEBASE_DEEP_DIVE_*.md` (local, gitignored).
 
 ## Error Handling Philosophy
 
@@ -288,7 +303,7 @@ See `README.md` for complete list.
 - ❌ **Never hardcode API keys** - Use `.env` file
 - ❌ **Never modify dossier section order** - Structure is optimized for LLM parsing
 - ❌ **Never use TTM for Graham tests** - Graham used annual audited data
-- ❌ **Never write agent-generated markdown to the repo root** - Use `claude-output/` for all scratch notes, research docs, investigation summaries, and planning files
+- ❌ **Never write agent-generated markdown to the repo root** - Use `claude-output/` for all scratch notes, research docs, investigation summaries, and planning files (only exception: `docs/CODEBASE_GUIDE.md`)
 
 ## Performance Notes
 
