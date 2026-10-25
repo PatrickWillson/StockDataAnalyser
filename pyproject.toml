@@ -1,0 +1,52 @@
+# Tool configuration. Dependencies live in requirements.txt / requirements-dev.txt.
+
+# ---------------------------------------------------------------------------
+# import-linter: architectural rules, checked by tests/test_architecture.py
+# (or manually with: lint-imports)
+#
+# ignore_imports lists KNOWN violations that the refactor will remove.
+# Never add to these lists; delete entries as the code is fixed.
+# ---------------------------------------------------------------------------
+# Only packages can be analysed: the top-level modules stock_data_analyser.py (CLI, top
+# layer, may import anything) and logging_utils.py (imported only by the CLI) are not listed.
+[tool.importlinter]
+root_packages = [
+    "clients",
+    "core",
+    "output",
+    "config",
+]
+include_external_packages = false
+
+[[tool.importlinter.contracts]]
+name = "Layers: output | clients > core > config"
+type = "layers"
+layers = [
+    "output | clients",
+    "core",
+    "config",
+]
+ignore_imports = [
+    # Known violation: core calls the FX network client (removed in M3)
+    "core.currency_converter -> clients.fx_client",
+]
+
+[[tool.importlinter.contracts]]
+name = "Core does not depend on clients (no network/I/O in business logic)"
+type = "forbidden"
+source_modules = ["core"]
+forbidden_modules = ["clients"]
+ignore_imports = [
+    # Known violation: core calls the FX network client (removed in M3)
+    "core.currency_converter -> clients.fx_client",
+]
+
+[[tool.importlinter.contracts]]
+name = "Output does not depend on clients, directly or indirectly"
+type = "forbidden"
+source_modules = ["output"]
+forbidden_modules = ["clients"]
+ignore_imports = [
+    # Known violation: executive_summary -> core.currency_converter -> clients.fx_client (removed in M3)
+    "core.currency_converter -> clients.fx_client",
+]
