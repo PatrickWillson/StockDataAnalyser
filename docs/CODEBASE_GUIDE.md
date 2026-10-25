@@ -121,6 +121,23 @@ The early-exit (insufficient/irregular data) dict omits some of these.
 
 ## 5. Calculations
 
+### 5.0 Data-source principle
+Calculations use only **raw** EODHD statement line items (revenue, net income, equity, liabilities, share counts, dividends paid) plus market prices and FX rates. Every ratio and per-share value is derived here from annual audited data. EODHD pre-computed values are opaque (forward vs trailing, quarterly vs annual) and may only be shown as clearly labelled comparisons or display-only market data.
+
+Where EODHD pre-computed values are used today:
+
+| EODHD value | Current use | Complies? |
+|---|---|---|
+| `PERatio`, `ReturnOnEquityTTM`, `ReturnOnAssetsTTM`, `ProfitMargin` | Read, then overwritten by our own calculations; API values only in cross-validation warnings | Yes |
+| `Highlights.BookValue` | Shown only as "API BVPS" comparison in Calculation Details | Yes (labelled comparison) |
+| `Beta`, `52WeekHigh/Low`, `PercentInsiders/Institutions` | Display; Beta also drives a Risk Factors band | Display-only market data |
+| `DividendShare`, `DividendYield`, `EnterpriseValue` | Read, never used | Unused |
+| `ForwardAnnualDividendRate` (estimate) | **Inserted into `history` as the latest year's dividend when the cash-flow figure is missing**; used for Risk Factors payout/coverage and Executive Summary "Forward Rate" yield | **No** — known exception |
+| `NumberDividendsByYear` (payment counts) | **Used as dividend amounts** when nothing else exists | **No** — known exception |
+| `MarketCapitalization` / `SharesOutstanding` | **Fallback current price** when yfinance fails | **No** — known exception |
+
+`SharesStats.SharesOutstanding` (a raw current share count) is the last-resort share count for years without an annual figure.
+
 ### 5.1 Graham (`core/graham_math.py`, `GrahamCalculator`)
 "Latest financial year" = first year (newest first) with `revenue>0 or net_income≠0 or total_equity>0` (variants exist; several methods inline their own predicate).
 

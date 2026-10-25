@@ -77,6 +77,7 @@ claude-output/ (Agent-generated markdown notes - gitignored)
 - **Graceful degradation** - Missing data triggers warnings, never crashes
 - **Transparency over perfection** - Explain all assumptions and conversions
 - **Graham methodology is immutable** - Constants in `config/graham_constants.py` are never modified
+- **Raw data in, our own calculations out** - Calculations use only raw EODHD statement line items (revenue, net income, equity, liabilities, share counts, dividends paid) and market prices/FX. Every ratio (P/E, P/B, ROE, yields, payout, per-share values) is derived by this code from annual audited data, as Graham would. EODHD pre-computed values (e.g. `PERatio`, `ReturnOnEquityTTM`, `BookValue`, `ForwardAnnualDividendRate`, `NumberDividendsByYear`, market-cap-derived prices) are opaque (forward or trailing? quarterly or annual?) and may appear only as clearly labelled comparisons or display-only market data
 
 ## Data Flow & Currency Handling
 
@@ -307,6 +308,7 @@ See `README.md` for complete list.
 - ❌ **Never hardcode API keys** - Use `.env` file
 - ❌ **Never modify dossier section order** - Structure is optimized for LLM parsing
 - ❌ **Never use TTM for Graham tests** - Graham used annual audited data
+- ❌ **Never use EODHD pre-computed ratios or estimates in calculations** - Derive them from raw annual statement data; API-derived values only as labelled comparisons/display (see `docs/CODEBASE_GUIDE.md` §5 for known current exceptions)
 - ❌ **Never write agent-generated markdown to the repo root** - Use `claude-output/` for all scratch notes, research docs, investigation summaries, and planning files (only exception: `docs/CODEBASE_GUIDE.md`)
 
 ## Performance Notes
