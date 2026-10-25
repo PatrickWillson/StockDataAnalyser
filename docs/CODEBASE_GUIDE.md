@@ -67,10 +67,12 @@ output/
   dossier_generator.py      DossierGenerator: header, section assembly, Critical Alerts
   sections/base.py          DossierSection ABC (generate() -> List[str])
   sections/*.py             one module per dossier section (§6)
-tests/                      ~112 test files, pytest + Hypothesis; golden baselines in tests/golden/
+tests/                      ~115 test files, pytest + Hypothesis; syrupy snapshots in tests/__snapshots__/
 data/                       generated dossiers (gitignored)
 claude-output/              agent-written markdown (gitignored)
 ```
+
+**Enforced layer rules** (import-linter, `pyproject.toml`, checked by `tests/test_architecture.py` on every test run): layers `output | clients` > `core` > `config` (a lower layer may not import a higher one; `output` and `clients` may not import each other); `core` must not import `clients`; `output` must not import `clients`, even indirectly. The only allowed exception is the known violation `core.currency_converter -> clients.fx_client` (listed under `ignore_imports`; to be removed in M3 — never add entries). The CLI (`stock_data_analyser.py`) and `logging_utils.py` are top-level modules and are not analysed.
 
 **Actual dependency directions** (not the idealised ones): `clients → core` (eodhd_client & factory import core), `core → clients` (currency_converter imports fx_client; processor calls yfinance), `output → core/clients` (methodology imports FinancialDataProcessor; executive_summary builds a CurrencyConverter → live FX call).
 
@@ -200,11 +202,10 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 
 ## 9. Tests
 
-- Install dev deps: `pip install -r requirements-dev.txt` (adds time-machine, syrupy).
+- Install dev deps: `pip install -r requirements-dev.txt` (adds time-machine, syrupy, import-linter).
 - Run: `pytest tests/ -v` (live API tests marked `@pytest.mark.live`, deselected by `pytest.ini`).
 - Mostly property-based (Hypothesis, 100+ examples) per calculation; section tests build inline dicts; `tests/fixtures_graham_metrics.py` builds processed `financial_data`; `tests/fixtures.py` holds raw API payloads (barely used).
-- Golden baselines `tests/golden/{AAPL_US,YU_LSE,RY_TO}_baseline.md` + `test_golden_baseline.py`: the verify test is **live** and not deterministic (date header, live data) — not an offline regression guard.
-- Markers (`pytest.ini`): `live` (deselected by default), `golden`, `slow`.
+- Markers (`pytest.ini`): `live` (deselected by default), `slow`.
 - **Time:** output depends on the current date in 5 places — dossier `# DATE:` header, EODHD "API data is N days old" warning, TTM dividend 365-day window, `check_data_staleness` default, TTM future-date limit. Tests pin it with **time-machine** (`requirements-dev.txt`): `@pytest.mark.time_machine(datetime(..., tzinfo=timezone.utc), tick=False)` or the `time_machine` fixture's `move_to(..., tick=False)`. Use aware UTC times at noon so local timezone can't shift the date. Covered by `tests/test_time_dependence.py`.
 - `tests/conftest.py` puts the project root on `sys.path`.
 - **Snapshot (characterisation) tests** — `tests/test_dossier_snapshots.py`: runs the real `stock_data_analyser.main()` offline for 9 scenarios (`tests/snapshot_scenarios.py`: US mature/quarterly, US young company, LSE GBX London Fix semi-annual, LSE GBX low P/E, LSE GBP-labelled pence price, TSX CAD, XETRA EUR→USD financials, negative tangible equity, dividend counts only). Scenarios are built by deterministically varying `tests/fixtures.py` payloads (`extend_years`, `add_periodic`, `set_currencies`). Fakes replace only the outer boundaries (`tests/snapshot_fakes.py`): `FakeEODHDSession` inside the real `EODHDClient`, and `FakeYFinanceModule` in `sys.modules['yfinance']` for prices and FX. Date pinned to 2024-03-01. Per scenario, syrupy stores the dossier (`.md`) and the `financial_data` / `metrics` / `ttm_metrics` / `anomalies` passed to `DossierGenerator` (`[data].json`) under `tests/__snapshots__/test_dossier_snapshots/`. Snapshots record current behaviour **including known bugs**; after an intended output change, review the diff and run `pytest tests/test_dossier_snapshots.py --snapshot-update`.

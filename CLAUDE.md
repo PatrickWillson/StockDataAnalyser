@@ -122,7 +122,7 @@ All core calculations use property-based tests with 100+ random iterations:
 - `test_*_properties.py` - Property-based tests for all calculations
 - `test_*_integration.py` - Live API tests (marked `@pytest.mark.live`)
 - `test_end_to_end.py` - Full workflow from fetch to dossier
-- `test_golden.py` - Baseline tests for refactoring validation
+- `test_dossier_snapshots.py` - Offline end-to-end snapshot tests (syrupy) for refactoring validation; refresh intended output changes with `--snapshot-update`
 
 **When adding new calculations:**
 1. Write property-based test first
@@ -263,7 +263,7 @@ Dossier format is **fixed** and optimized for LLM parsing:
 - add or change a formula, threshold, investor test or verdict rule
 - change currency/FX/London Fix behaviour or the exchange mapping
 - add, remove or reorder a dossier section, or change a pipeline step in `main()`
-- change test infrastructure (fixtures, golden baselines, markers)
+- change test infrastructure (fixtures, snapshots, markers)
 
 Update the "Last full audit" line only after a full re-audit. Keep the guide describing the code as it *is*, not as planned; known bugs and refactor plans belong in `claude-output/CODEBASE_DEEP_DIVE_*.md` (local, gitignored).
 
