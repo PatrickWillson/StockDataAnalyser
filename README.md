@@ -93,6 +93,14 @@ If periodic data is unavailable or insufficient, the system continues with annua
 pip install -r requirements.txt
 ```
 
+For development (tests, coverage, linting):
+```bash
+pip install -r requirements-dev.txt
+pytest                 # full test suite (live API tests excluded)
+pytest --cov           # with coverage report (fails below the configured floor)
+python3 -m ruff check . # lint report
+```
+
 3. Configure your EODHD API key in `.env`:
 ```
 EODHD_API_KEY=your_api_key_here
@@ -212,7 +220,7 @@ The system generates a structured Markdown file (`[TICKER]_DOSSIER.md`) containi
 
 ## Requirements
 
-- Python 3.9+
+- Python 3.10+
 - EODHD API key with Fundamentals Package (get one at [https://eodhd.com?via=patrick](https://eodhd.com?via=patrick))
   - **Required**: Fundamentals Package
   - **Optional**: EOD Historical Data - All World Package (for enhanced dividend history)

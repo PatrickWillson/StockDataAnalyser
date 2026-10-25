@@ -1,5 +1,5 @@
+# Runtime dependencies. Requires Python 3.10+.
+# Test/dev tools are in requirements-dev.txt.
 requests>=2.31.0
 python-dotenv>=1.0.0
-yfinance
-hypothesis>=6.92.0
-pytest>=7.4.0
+yfinance==1.0

@@ -202,8 +202,10 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 
 ## 9. Tests
 
-- Install dev deps: `pip install -r requirements-dev.txt` (adds time-machine, syrupy, import-linter).
-- Run: `pytest tests/ -v` (live API tests marked `@pytest.mark.live`, deselected by `pytest.ini`).
+- **Python 3.10+.** `requirements.txt` = runtime only (yfinance pinned to 1.0); `requirements-dev.txt` = runtime + pytest, hypothesis, time-machine, syrupy, import-linter, pytest-cov, coverage, ruff (all pinned).
+- Run: `pytest` — live API tests (`@pytest.mark.live`) are excluded by default (`addopts = -m "not live"` in `pytest.ini`); run them with `pytest -m live`.
+- Coverage: `pytest --cov` (opt-in, ~50% slower). Config in `pyproject.toml` (`[tool.coverage.*]`), branch coverage, **fails below `fail_under = 80`** — raise it as coverage improves, never lower it.
+- Lint: `python3 -m ruff check .` (pyflakes + syntax errors, `[tool.ruff]` in `pyproject.toml`). Report-only for now: ~350 existing findings (unused imports/variables, f-strings without placeholders), to be cleaned up in M2 and then enforced.
 - Mostly property-based (Hypothesis, 100+ examples) per calculation; section tests build inline dicts; `tests/fixtures_graham_metrics.py` builds processed `financial_data`; `tests/fixtures.py` holds raw API payloads (barely used).
 - Markers (`pytest.ini`): `live` (deselected by default), `slow`.
 - **Time:** output depends on the current date in 5 places — dossier `# DATE:` header, EODHD "API data is N days old" warning, TTM dividend 365-day window, `check_data_staleness` default, TTM future-date limit. Tests pin it with **time-machine** (`requirements-dev.txt`): `@pytest.mark.time_machine(datetime(..., tzinfo=timezone.utc), tick=False)` or the `time_machine` fixture's `move_to(..., tick=False)`. Use aware UTC times at noon so local timezone can't shift the date. Covered by `tests/test_time_dependence.py`.
@@ -212,7 +214,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising `_test_*` method and `_determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1169 pass / 20 skip as of 2026-10-25); ~78% branch coverage at last audit; weakest: CLI, yfinance_client, risk_factors.
+- Status: all non-live tests pass (1169 pass / 20 skip as of 2026-10-25); 84% branch coverage; weakest: base_client, yfinance_client, risk_factors (dead code).
 
 ---
 

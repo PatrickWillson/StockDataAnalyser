@@ -11,16 +11,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Quick Start Commands
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
+# Install dependencies (Python 3.10+; requirements.txt alone = runtime only)
+pip install -r requirements-dev.txt   # runtime + test/dev tools
 
 # Run analysis on a single ticker
 python stock_data_analyser.py AAPL.US
 python stock_data_analyser.py YU.LSE  # UK stock (London Stock Exchange)
 python stock_data_analyser.py RY.TO   # Canadian stock (Toronto)
 
-# Run tests (excludes live API tests)
+# Run tests (live API tests excluded by default via pytest.ini; run them with -m live)
 pytest tests/ -v
+
+# Coverage (fails below the floor in pyproject.toml) and lint report
+pytest --cov
+python3 -m ruff check .
 
 # Run only property-based tests
 pytest tests/test_*_properties.py -v

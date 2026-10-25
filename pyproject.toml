@@ -50,3 +50,29 @@ ignore_imports = [
     # Known violation: executive_summary -> core.currency_converter -> clients.fx_client (removed in M3)
     "core.currency_converter -> clients.fx_client",
 ]
+
+# ---------------------------------------------------------------------------
+# Coverage (opt-in, slower): pytest --cov
+# Fails below fail_under; raise it as coverage improves, never lower it.
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+source = ["clients", "core", "output", "config", "stock_data_analyser", "logging_utils"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+skip_covered = true
+
+# ---------------------------------------------------------------------------
+# ruff: report-only for now (python3 -m ruff check .). Existing findings are
+# cleaned up in M2, after which ruff will be enforced in the test suite.
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py310"
+line-length = 120
+extend-exclude = ["claude-output", "data", ".kiro", ".idea"]
+
+[tool.ruff.lint]
+# F = pyflakes (unused imports/variables, undefined names, ...), E9 = syntax errors
+select = ["F", "E9"]
