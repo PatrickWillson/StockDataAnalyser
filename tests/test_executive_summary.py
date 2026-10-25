@@ -74,6 +74,7 @@ class TestExecutiveSummarySection:
             'verdict': 'UNDERVALUED',
             'graham_number': 28.73,
             'epv': 497224000000.00,
+            'epv_details': {'epv': 497224000000.00, 'epv_per_share': 31.42, 'years_used': 10},
             'net_net_value': -9.17,
             'margin_of_safety': 25.5
         }
@@ -140,10 +141,11 @@ class TestExecutiveSummarySection:
         assert len(graham_lines) == 1
         assert "28.73 USD" in graham_lines[0]
         
-        # Check EPV
-        epv_lines = [line for line in lines if "Intrinsic Value (EPV):" in line]
+        # Check EPV: per-share value with the number of years averaged (not the whole-company EPV)
+        epv_lines = [line for line in lines if "Intrinsic Value (EPV per share):" in line]
         assert len(epv_lines) == 1
-        assert "497,224,000,000.00 USD" in epv_lines[0]
+        assert "31.42 USD (10-year average earnings)" in epv_lines[0]
+        assert "497,224,000,000" not in epv_lines[0]
         
         # Check Net-Net (negative value)
         net_net_lines = [line for line in lines if "Net-Net Value:" in line]
@@ -157,6 +159,7 @@ class TestExecutiveSummarySection:
         metrics = self.create_test_metrics()
         metrics['graham_number'] = 'N/A'
         metrics['epv'] = 'N/A'
+        metrics['epv_details'] = {'epv': 0.0, 'epv_per_share': 0.0, 'years_used': 0}
         metrics['net_net_value'] = 'N/A'
         
         section = ExecutiveSummarySection(financial_data, metrics)
@@ -166,12 +169,37 @@ class TestExecutiveSummarySection:
         graham_lines = [line for line in lines if "Graham Number (Single-Year EPS):" in line]
         assert "N/A" in graham_lines[0]
         
-        epv_lines = [line for line in lines if "Intrinsic Value (EPV):" in line]
+        epv_lines = [line for line in lines if "Intrinsic Value (EPV per share):" in line]
         assert "N/A" in epv_lines[0]
         
         net_net_lines = [line for line in lines if "Net-Net Value:" in line]
         assert "N/A" in net_net_lines[0]
     
+    def test_epv_shows_number_of_years_averaged(self):
+        financial_data = self.create_test_financial_data()
+        metrics = self.create_test_metrics()
+        metrics['epv_details'] = {'epv': 1000.0, 'epv_per_share': 41.2, 'years_used': 7}
+
+        lines = ExecutiveSummarySection(financial_data, metrics).generate()
+
+        assert "- Intrinsic Value (EPV per share): 41.20 USD (7-year average earnings)" in lines
+
+    @pytest.mark.parametrize("epv_details", [
+        {'epv': 0.0, 'epv_per_share': 0.0, 'years_used': 0},       # how core reports unavailable EPV
+        {'epv': 1000.0, 'epv_per_share': 0.0, 'years_used': 10},   # share count unavailable
+        None,                                                      # no details at all
+    ])
+    def test_unavailable_epv_shows_na_with_reason_not_zero(self, epv_details):
+        financial_data = self.create_test_financial_data()
+        metrics = self.create_test_metrics()
+        metrics['epv_details'] = epv_details
+
+        lines = ExecutiveSummarySection(financial_data, metrics).generate()
+
+        epv_lines = [line for line in lines if "Intrinsic Value (EPV per share):" in line]
+        assert epv_lines == [
+            "- Intrinsic Value (EPV per share): N/A (requires 7+ years of annual earnings with a positive average)"]
+
     def test_price_display_single_currency(self):
         """Test current price display with single currency."""
         financial_data = self.create_test_financial_data()

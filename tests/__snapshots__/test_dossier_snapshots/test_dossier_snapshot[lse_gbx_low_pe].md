@@ -16,7 +16,7 @@
 - Graham Number (Single-Year EPS): 12.78 GBP
 - Graham Number (3-Year Avg EPS): 8.42 GBP
   - ⚠️ Note: 3-year average (34% lower) reveals earnings peaked in recent year
-- Intrinsic Value (EPV): 66,126,810.00 GBP
+- Intrinsic Value (EPV per share): 3.67 GBP (10-year average earnings)
 - Net-Net Value: 0.06 GBP
 - Margin of Safety: 59.1% (Capped by EPV)
   - Conservative Intrinsic Value: 3.67 GBP

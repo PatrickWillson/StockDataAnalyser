@@ -143,7 +143,7 @@ class ExecutiveSummarySection(DossierSection):
         """
         graham_str = self.metrics['graham_number']
         normalized_graham_str = self.metrics.get('normalized_graham_number', 'N/A')
-        epv_str = self.metrics['epv']
+        epv_details = self.metrics.get('epv_details') or {}
         net_net_str = self.metrics.get('net_net_value', 'N/A')
         
         # Legacy Graham Number (Single-Year EPS) - Requirement 3.4
@@ -175,12 +175,15 @@ class ExecutiveSummarySection(DossierSection):
                     else:
                         lines.append(f"  - ⚠️ Note: 3-year average ({pct_diff:.0f}% lower) reveals earnings peaked in recent year")
         
-        # EPV
-        if epv_str != 'N/A':
-            epv_display = format_price_display(float(epv_str), unified_currency, unified_currency)
-            lines.append(f"- Intrinsic Value (EPV): {epv_display}")
+        # EPV per share (metrics['epv'] is the whole-company value)
+        # Core reports an unavailable EPV as years_used == 0 (too little history or negative average earnings)
+        epv_per_share = epv_details.get('epv_per_share')
+        epv_years = epv_details.get('years_used', 0)
+        if isinstance(epv_per_share, (int, float)) and epv_per_share > 0 and epv_years:
+            epv_display = format_price_display(float(epv_per_share), unified_currency, unified_currency)
+            lines.append(f"- Intrinsic Value (EPV per share): {epv_display} ({epv_years}-year average earnings)")
         else:
-            lines.append(f"- Intrinsic Value (EPV): {epv_str}")
+            lines.append("- Intrinsic Value (EPV per share): N/A (requires 7+ years of annual earnings with a positive average)")
         
         # Net-Net Value
         if net_net_str != 'N/A':

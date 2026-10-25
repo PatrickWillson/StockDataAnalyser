@@ -15,7 +15,7 @@
 - Verdict: **PENDING**
 - Graham Number (Single-Year EPS): 23.68 USD
 - Graham Number (3-Year Avg EPS): 19.35 USD
-- Intrinsic Value (EPV): 0.00 USD
+- Intrinsic Value (EPV per share): N/A (requires 7+ years of annual earnings with a positive average)
 - Net-Net Value: -9.45 USD
 - Margin of Safety: N/A
 - Current Price: 187.45 USD

@@ -15,7 +15,7 @@
 - Verdict: **OVERVALUED**
 - Graham Number (Single-Year EPS): 23.68 CAD
 - Graham Number (3-Year Avg EPS): 19.35 CAD
-- Intrinsic Value (EPV): 834,145,071,310.00 CAD
+- Intrinsic Value (EPV per share): 53.64 CAD (10-year average earnings)
 - Net-Net Value: -9.45 CAD
 - Margin of Safety: -1218.3% (Capped by Normalized Graham Number)
   - Conservative Intrinsic Value: 19.35 CAD

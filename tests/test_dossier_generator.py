@@ -323,7 +323,7 @@ def test_intrinsic_values_in_dossier(sample_financial_data, sample_metrics, samp
     
     # Verify intrinsic values are present
     assert 'Intrinsic Value (Graham)' in dossier
-    assert 'Intrinsic Value (EPV)' in dossier
+    assert 'Intrinsic Value (EPV per share)' in dossier
     assert 'Net-Net Value' in dossier
 
 
