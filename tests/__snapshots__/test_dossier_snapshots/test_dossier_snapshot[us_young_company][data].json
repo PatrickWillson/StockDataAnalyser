@@ -192,7 +192,7 @@
       "intrinsic_value_used": 0.0,
       "limiting_factor": "EPV",
       "mos_percentage": "N/A",
-      "normalized_graham_number": 19.35
+      "normalized_graham_number": 23.4
     },
     "nca_details": {
       "current_assets": 143566000000.0,
@@ -206,7 +206,7 @@
       ]
     },
     "net_net_value": -9.45,
-    "normalized_graham_number": 19.35,
+    "normalized_graham_number": 23.4,
     "quick_ratio": 0.99,
     "three_year_avg_pe": {
       "pe_on_avg": 30.79,

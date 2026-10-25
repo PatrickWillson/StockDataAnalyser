@@ -14,11 +14,11 @@
 
 - Verdict: **OVERVALUED**
 - Graham Number (Single-Year EPS): 23.68 USD
-- Graham Number (3-Year Avg EPS): 19.35 USD
+- Graham Number (3-Year Avg EPS): 23.40 USD
 - Intrinsic Value (EPV per share): 53.64 USD (10-year average earnings)
 - Net-Net Value: -9.45 USD
-- Margin of Safety: -868.7% (Capped by Normalized Graham Number)
-  - Conservative Intrinsic Value: 19.35 USD
+- Margin of Safety: -701.1% (Capped by Normalized Graham Number)
+  - Conservative Intrinsic Value: 23.40 USD
 - Current Price: 187.45 USD
 - 52-Week Range: 124.17 USD - 199.62 USD
 - Trailing Dividend: 0.24 USD (Yield: 0.13%) - Declared (Dividend API) [2023]
@@ -38,7 +38,7 @@
 - TTM Graham Number: 23.69 USD (Annual: 23.68 USD, Diff: +0.0%)
 - TTM Tangible Book Value Per Share: 4.00 USD
 - TTM Net-Net Value: -9.45 USD (Annual: -9.45 USD, Diff: 0.0%)
-- TTM Margin of Safety: -691.3% (Annual: -868.7%, Diff: +20.4%)
+- TTM Margin of Safety: -691.3% (Annual: -701.1%, Diff: +1.4%)
 - TTM P/E Ratio: 30.05
 - TTM P/B Ratio: 46.90
 
@@ -89,7 +89,7 @@
 - **Dividend History: 2 of 10 years** - ⚠️ Inconsistent payment history
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -868.7%** - Trading above intrinsic value
+- **Margin of Safety: -701.1%** - Trading above intrinsic value
   - Graham's Standard: 20-30% minimum for defensive investors
   - Assessment: **High valuation risk** - no margin for error
   - Intrinsic Value (Graham): 23.68 USD
@@ -131,7 +131,7 @@
   - Uses most recent annual EPS
 
 - **Graham Number - 3-Year Average EPS (Normalized)**:
-  - **Value**: 19.35 USD
+  - **Value**: 23.40 USD
   - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)
 
   **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year
@@ -139,7 +139,7 @@
   full business cycle. This aligns with Graham's actual criterion: *"Price should not exceed"*
   *"15 times average earnings of the past three years."*
 
-  **3-Year EPS**: [2024: 0.00 USD, 2023: 6.24 USD, 2022: 6.26 USD] → Avg: 4.17 USD
+  **3-Year EPS**: [2023: 6.24 USD, 2022: 6.26 USD, 2021: 5.76 USD] → Avg: 6.09 USD
 - **EPV - Simplified Earnings Power Estimate**
 
   **Methodology:**
@@ -165,7 +165,7 @@
   **Graham's Principle**: *"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle."*
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
-  - **Value**: -868.7%
+  - **Value**: -701.1%
   - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
 
   **Conservative Dual-Anchor Methodology**:
@@ -183,9 +183,9 @@
     (Graham Number), we use the more conservative asset-based valuation
 
   **For This Stock**:
-  - Normalized Graham Number: 19.35 USD
+  - Normalized Graham Number: 23.40 USD
   - EPV per share: 53.64 USD
-  - **Intrinsic Value Used**: 19.35 USD (Capped by Normalized Graham Number)
+  - **Intrinsic Value Used**: 23.40 USD (Capped by Normalized Graham Number)
 
   **Interpretation**: Normalized Graham Number is lower than EPV, indicating
   the stock trades at a premium to its asset value despite strong earnings power.

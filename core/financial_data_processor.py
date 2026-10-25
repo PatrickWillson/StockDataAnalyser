@@ -1104,9 +1104,18 @@ class FinancialDataProcessor:
             result['warning'] = "No financial history available"
             return result
         
-        # Sort years in descending order (most recent first)
-        sorted_years = sorted(history.keys(), reverse=True)
-        
+        # Sort years in descending order (most recent first), skipping years with no
+        # statement data: dividend-only years added by merge_financial_data have revenue,
+        # net income and equity all present and 0.0, and EPS 0.0. A break-even year still
+        # has revenue or equity, so it is kept.
+        def has_no_statement_data(year_data: Dict[str, Any]) -> bool:
+            statement_fields = ('revenue', 'net_income', 'total_equity')
+            return (all(field in year_data and year_data[field] in (0, 0.0) for field in statement_fields)
+                    and year_data.get('eps') in (None, 0, 0.0))
+
+        sorted_years = [year for year in sorted(history.keys(), reverse=True)
+                        if not has_no_statement_data(history[year])]
+
         # Check if we have at least 3 years
         if len(sorted_years) < 3:
             result['warning'] = f"Insufficient data: Only {len(sorted_years)} years available, need 3 for normalized calculation"

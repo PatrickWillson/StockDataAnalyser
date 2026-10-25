@@ -384,13 +384,13 @@
       "years_used": 10
     },
     "graham_number": 23.68,
-    "margin_of_safety": -868.7,
+    "margin_of_safety": -701.1,
     "margin_of_safety_details": {
       "epv_per_share": 53.64,
-      "intrinsic_value_used": 19.35,
+      "intrinsic_value_used": 23.4,
       "limiting_factor": "Normalized Graham Number",
-      "mos_percentage": -868.7,
-      "normalized_graham_number": 19.35
+      "mos_percentage": -701.1,
+      "normalized_graham_number": 23.4
     },
     "nca_details": {
       "current_assets": 143566000000.0,
@@ -404,7 +404,7 @@
       ]
     },
     "net_net_value": -9.45,
-    "normalized_graham_number": 19.35,
+    "normalized_graham_number": 23.4,
     "quick_ratio": 0.99,
     "three_year_avg_pe": {
       "pe_on_avg": 30.79,

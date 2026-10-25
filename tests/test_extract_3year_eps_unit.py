@@ -310,5 +310,77 @@ class TestExtract3YearEPSData:
         assert avg_eps == pytest.approx(0.67, abs=0.01)
 
 
+class TestDividendOnlyYearsAreSkipped:
+    """
+    merge_financial_data adds dividend-only years (dividend data but no statements) with
+    revenue, net income, equity and EPS all 0.0. They must not count as one of the 3 EPS years.
+    """
+
+    @staticmethod
+    def _year(eps, revenue=1000.0, net_income=100.0, total_equity=500.0):
+        return {'eps': eps, 'revenue': revenue, 'net_income': net_income, 'total_equity': total_equity}
+
+    DIVIDEND_ONLY = {'eps': 0.0, 'revenue': 0.0, 'net_income': 0.0, 'total_equity': 0.0, 'dividend': 0.96}
+
+    def test_dividend_only_year_is_skipped(self):
+        history = {
+            '2024-09-30': self.DIVIDEND_ONLY,
+            '2023-09-30': self._year(6.24),
+            '2022-09-30': self.DIVIDEND_ONLY,
+            '2022-09-24': self._year(6.26),
+            '2021-09-25': self._year(5.76),
+        }
+
+        result = FinancialDataProcessor.extract_3year_eps_data(history)
+
+        assert result['valid'] is True
+        assert result['years'] == ['2023-09-30', '2022-09-24', '2021-09-25']
+        assert result['eps_values'] == [6.24, 6.26, 5.76]
+
+    def test_fewer_than_three_statement_years_is_insufficient(self):
+        history = {'2024-09-30': self.DIVIDEND_ONLY, '2023-09-30': self._year(6.24),
+                   '2022-09-24': self._year(6.26)}
+
+        result = FinancialDataProcessor.extract_3year_eps_data(history)
+
+        assert result['valid'] is False
+        assert result['warning'] == "Insufficient data: Only 2 years available, need 3 for normalized calculation"
+
+    def test_break_even_year_with_revenue_is_kept(self):
+        history = {'2023-12-31': self._year(5.0),
+                   '2022-12-31': self._year(0.0, net_income=0.0),
+                   '2021-12-31': self._year(4.0)}
+
+        result = FinancialDataProcessor.extract_3year_eps_data(history)
+
+        assert result['valid'] is True
+        assert result['eps_values'] == [5.0, 0.0, 4.0]
+
+    def test_loss_year_is_kept(self):
+        history = {'2023-12-31': self._year(5.0),
+                   '2022-12-31': self._year(-2.0, net_income=-40.0),
+                   '2021-12-31': self._year(4.0)}
+
+        result = FinancialDataProcessor.extract_3year_eps_data(history)
+
+        assert result['eps_values'] == [5.0, -2.0, 4.0]
+
+    def test_uses_same_years_as_three_year_average_pe(self):
+        from core.graham_math import GrahamCalculator
+        history = {
+            '2024-09-30': self.DIVIDEND_ONLY,
+            '2023-09-30': self._year(6.24),
+            '2022-09-30': self.DIVIDEND_ONLY,
+            '2022-09-24': self._year(6.26),
+            '2021-09-25': self._year(5.76),
+            '2020-09-26': self._year(3.28),
+        }
+
+        eps_years = FinancialDataProcessor.extract_3year_eps_data(history)['years']
+        pe_years = GrahamCalculator({'history': history, 'price': 150.0}).compute_three_year_avg_pe()['years_used']
+
+        assert eps_years == pe_years
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

@@ -145,7 +145,7 @@ Where EODHD pre-computed values are used today:
 |---|---|
 | TBVPS | (Equity − \|Intangibles\| − \|Goodwill\|) / Shares; negative → "N/A" + warning |
 | Graham Number | √(22.5 × EPS_latest × TBVPS); EPS ≤ 0 → "N/A" |
-| Normalized Graham Number | √(22.5 × mean(EPS of 3 most recent history keys) × TBVPS) — uses `FinancialDataProcessor.extract_3year_eps_data` |
+| Normalized Graham Number | √(22.5 × mean(EPS of the 3 most recent years with statement data) × TBVPS) — uses `FinancialDataProcessor.extract_3year_eps_data`, which skips dividend-only years (revenue, net income, equity all 0.0 and EPS 0); same years as the 3-yr avg P/E |
 | Net-Net (NCAV/share) | (Current Assets − Total Liabilities) / Shares |
 | NCA details | NCA = CA − Total Liabilities; debt coverage = LTD / NCA |
 | Quick ratio | (CA − Inventory) / CL — inventory is never parsed, so sector fallback applies |

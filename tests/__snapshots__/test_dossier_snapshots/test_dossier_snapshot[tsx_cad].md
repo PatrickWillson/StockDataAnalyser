@@ -14,11 +14,11 @@
 
 - Verdict: **OVERVALUED**
 - Graham Number (Single-Year EPS): 23.68 CAD
-- Graham Number (3-Year Avg EPS): 19.35 CAD
+- Graham Number (3-Year Avg EPS): 23.40 CAD
 - Intrinsic Value (EPV per share): 53.64 CAD (10-year average earnings)
 - Net-Net Value: -9.45 CAD
-- Margin of Safety: -1218.3% (Capped by Normalized Graham Number)
-  - Conservative Intrinsic Value: 19.35 CAD
+- Margin of Safety: -990.2% (Capped by Normalized Graham Number)
+  - Conservative Intrinsic Value: 23.40 CAD
 - Current Price: 255.10 CAD
 - 52-Week Range: 124.17 CAD - 199.62 CAD
 - Trailing Dividend: 0.95 CAD (Yield: 0.37%) - Paid (Cash Flow) [2023]
@@ -66,7 +66,7 @@
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -1218.3%** - Trading above intrinsic value
+- **Margin of Safety: -990.2%** - Trading above intrinsic value
   - Graham's Standard: 20-30% minimum for defensive investors
   - Assessment: **High valuation risk** - no margin for error
   - Intrinsic Value (Graham): 23.68 CAD
@@ -108,7 +108,7 @@
   - Uses most recent annual EPS
 
 - **Graham Number - 3-Year Average EPS (Normalized)**:
-  - **Value**: 19.35 CAD
+  - **Value**: 23.40 CAD
   - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)
 
   **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year
@@ -116,7 +116,7 @@
   full business cycle. This aligns with Graham's actual criterion: *"Price should not exceed"*
   *"15 times average earnings of the past three years."*
 
-  **3-Year EPS**: [2023: 6.24 CAD, 2022: 0.00 CAD, 2022: 6.26 CAD] → Avg: 4.17 CAD
+  **3-Year EPS**: [2023: 6.24 CAD, 2022: 6.26 CAD, 2021: 5.76 CAD] → Avg: 6.09 CAD
 - **EPV - Simplified Earnings Power Estimate**
 
   **Methodology:**
@@ -142,7 +142,7 @@
   **Graham's Principle**: *"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle."*
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
-  - **Value**: -1218.3%
+  - **Value**: -990.2%
   - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
 
   **Conservative Dual-Anchor Methodology**:
@@ -160,9 +160,9 @@
     (Graham Number), we use the more conservative asset-based valuation
 
   **For This Stock**:
-  - Normalized Graham Number: 19.35 CAD
+  - Normalized Graham Number: 23.40 CAD
   - EPV per share: 53.64 CAD
-  - **Intrinsic Value Used**: 19.35 CAD (Capped by Normalized Graham Number)
+  - **Intrinsic Value Used**: 23.40 CAD (Capped by Normalized Graham Number)
 
   **Interpretation**: Normalized Graham Number is lower than EPV, indicating
   the stock trades at a premium to its asset value despite strong earnings power.

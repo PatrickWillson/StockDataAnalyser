@@ -14,7 +14,7 @@
 
 - Verdict: **PENDING**
 - Graham Number (Single-Year EPS): 23.68 USD
-- Graham Number (3-Year Avg EPS): 19.35 USD
+- Graham Number (3-Year Avg EPS): 23.40 USD
 - Intrinsic Value (EPV per share): N/A (requires 7+ years of annual earnings with a positive average)
 - Net-Net Value: -9.45 USD
 - Margin of Safety: N/A
@@ -106,7 +106,7 @@
   - Uses most recent annual EPS
 
 - **Graham Number - 3-Year Average EPS (Normalized)**:
-  - **Value**: 19.35 USD
+  - **Value**: 23.40 USD
   - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)
 
   **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year
@@ -114,7 +114,7 @@
   full business cycle. This aligns with Graham's actual criterion: *"Price should not exceed"*
   *"15 times average earnings of the past three years."*
 
-  **3-Year EPS**: [2023: 6.24 USD, 2022: 0.00 USD, 2022: 6.26 USD] → Avg: 4.17 USD
+  **3-Year EPS**: [2023: 6.24 USD, 2022: 6.26 USD, 2021: 5.76 USD] → Avg: 6.09 USD
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
   - **Value**: N/A
@@ -135,7 +135,7 @@
     (Graham Number), we use the more conservative asset-based valuation
 
   **For This Stock**:
-  - Normalized Graham Number: 19.35 USD
+  - Normalized Graham Number: 23.40 USD
   - EPV per share: 0.00 USD
   - **Intrinsic Value Used**: 0.00 USD (Capped by EPV)
 

@@ -107,7 +107,7 @@
 
   **Rationale**: Smooths cyclical volatility and prevents 'bull traps'
 
-  **3-Year EPS**: [2023: 6.24 USD, 2022: 0.00 USD, 2022: 6.26 USD] → Avg: 4.17 USD
+  **3-Year EPS**: [2023: 6.24 USD, 2022: 6.26 USD, 2021: 5.76 USD] → Avg: 6.09 USD
 - **EPV - Simplified Earnings Power Estimate**
 
   **Methodology:**
