@@ -203,7 +203,9 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - Run: `pytest tests/ -v` (live API tests marked `@pytest.mark.live`, deselected by `pytest.ini`).
 - Mostly property-based (Hypothesis, 100+ examples) per calculation; section tests build inline dicts; `tests/fixtures_graham_metrics.py` builds processed `financial_data`; `tests/fixtures.py` holds raw API payloads (barely used).
 - Golden baselines `tests/golden/{AAPL_US,YU_LSE,RY_TO}_baseline.md` + `test_golden_baseline.py`: the verify test is **live** and not deterministic (date header, live data) — not an offline regression guard.
-- Status at last audit: 1029 pass / 6 fail (stale assertions + one test rounding bug) / 20 skip; ~78% branch coverage; weakest: CLI, yfinance_client, risk_factors.
+- Markers (`pytest.ini`): `live` (deselected by default), `golden`, `slow`.
+- **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
+- Status: all non-live tests pass (1050 pass / 20 skip as of 2026-10-25); ~78% branch coverage at last audit; weakest: CLI, yfinance_client, risk_factors.
 
 ---
 

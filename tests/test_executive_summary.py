@@ -136,7 +136,7 @@ class TestExecutiveSummarySection:
         lines = section.generate()
         
         # Check Graham Number
-        graham_lines = [line for line in lines if "Intrinsic Value (Graham):" in line]
+        graham_lines = [line for line in lines if "Graham Number (Single-Year EPS):" in line]
         assert len(graham_lines) == 1
         assert "28.73 USD" in graham_lines[0]
         
@@ -163,7 +163,7 @@ class TestExecutiveSummarySection:
         lines = section.generate()
         
         # Check all show N/A
-        graham_lines = [line for line in lines if "Intrinsic Value (Graham):" in line]
+        graham_lines = [line for line in lines if "Graham Number (Single-Year EPS):" in line]
         assert "N/A" in graham_lines[0]
         
         epv_lines = [line for line in lines if "Intrinsic Value (EPV):" in line]

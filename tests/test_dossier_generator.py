@@ -7,6 +7,7 @@ Requirements: 9.1
 """
 
 import pytest
+from unittest.mock import patch
 from output.dossier_generator import DossierGenerator
 
 
@@ -247,9 +248,11 @@ def test_header_with_currency_conversion(sample_financial_data, sample_metrics, 
     financial_data = sample_financial_data.copy()
     financial_data['original_stock_currency'] = 'GBP'
     financial_data['currency'] = 'USD'
-    
-    generator = DossierGenerator('TEST.LSE', financial_data, sample_metrics, sample_anomalies)
-    dossier = generator.generate()
+
+    # Executive summary converts the 52-week range via FXClient; use a fixed rate instead of a live call
+    with patch('clients.fx_client.FXClient.get_rate', return_value=1.25):
+        generator = DossierGenerator('TEST.LSE', financial_data, sample_metrics, sample_anomalies)
+        dossier = generator.generate()
     
     # Verify currency conversion note is present
     assert '# CURRENCY: All values in USD (stock trades in GBP)' in dossier

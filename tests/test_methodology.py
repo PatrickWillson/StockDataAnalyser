@@ -153,7 +153,7 @@ class TestMethodologySection:
         # Find Graham Number explanation
         graham_lines = [line for line in lines if "Graham Number" in line and "28.73 USD" in line]
         assert len(graham_lines) == 1
-        assert "√(22.5 × EPS × BVPS)" in graham_lines[0]
+        assert "√(22.5 × EPS × TBVPS)" in graham_lines[0]
         
         # Check for conservative estimate note
         conservative_lines = [line for line in lines if "Conservative intrinsic value estimate" in line]
@@ -368,14 +368,11 @@ class TestMethodologySection:
         lines = section.generate()
         
         # Find Margin of Safety explanation
-        mos_lines = [line for line in lines if "Margin of Safety" in line and "25.5%" in line]
+        assert any("Margin of Safety - Conservative Dual-Anchor Approach" in line for line in lines)
+        mos_lines = [line for line in lines if "**Value**: 25.5%" in line]
         assert len(mos_lines) >= 1
-        assert any("(Graham Number - Price) / Graham Number × 100" in line for line in lines)
-        
-        # Check for percentage discount note
-        discount_lines = [line for line in lines if "Percentage discount to intrinsic value" in line]
-        assert len(discount_lines) >= 1
-        
+        assert any("((Intrinsic Value - Current Price) / Intrinsic Value) × 100" in line for line in lines)
+
         # Check for Graham's recommendation
         graham_rec_lines = [line for line in lines if "20-30%" in line and "defensive investors" in line]
         assert len(graham_rec_lines) >= 1
@@ -390,7 +387,7 @@ class TestMethodologySection:
         lines = section.generate()
         
         # Should still include explanation
-        mos_lines = [line for line in lines if "Margin of Safety" in line and "-15.3%" in line]
+        mos_lines = [line for line in lines if "**Value**: -15.3%" in line]
         assert len(mos_lines) >= 1
     
     def test_margin_of_safety_na(self):

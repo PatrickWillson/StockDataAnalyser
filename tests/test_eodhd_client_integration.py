@@ -7,6 +7,7 @@ These tests verify the client works correctly with mocked API responses.
 import pytest
 from unittest.mock import Mock, patch
 from clients.eodhd_client import EODHDClient
+from clients.fx_client import FXClient
 
 
 def test_fetch_all_data_basic():
@@ -117,7 +118,11 @@ def test_fetch_all_data_basic():
 
 def test_london_fix_integration():
     """Test London Fix is applied correctly in full fetch_all_data flow."""
-    client = EODHDClient("test_api_key")
+    # Fixed GBP->USD rate so the result is deterministic and no live FX call is made
+    fx_client = Mock(spec=FXClient)
+    fx_client.get_rate.return_value = 1.25
+    fx_client.fetch_historical_rates.return_value = None
+    client = EODHDClient("test_api_key", fx_client=fx_client)
     
     mock_response_data = {
         'General': {
@@ -156,9 +161,8 @@ def test_london_fix_integration():
         
         result = client.fetch_all_data('VOD.L')
         
-        # Price should be converted to USD (0.8 GBP * FX rate)
-        # Allow for FX rate fluctuations (0.8 GBP * 1.30-1.40 = 1.04-1.12 USD)
-        assert 1.04 <= result['price'] <= 1.12, f"Expected price between 1.04-1.12 USD, got {result['price']}"
+        # London Fix: 80.0 GBp -> 0.80 GBP, then converted to USD at the fixed rate
+        assert result['price'] == pytest.approx(0.8 * 1.25), f"Expected 1.00 USD, got {result['price']}"
         
         # Warning should be present (now in consolidated message)
         assert any('Currency Conversions' in w or 'London Fix' in w for w in result['warnings'])

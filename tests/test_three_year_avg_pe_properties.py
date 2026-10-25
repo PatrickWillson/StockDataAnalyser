@@ -465,9 +465,9 @@ def test_property_10_pe_reflects_loss_years_impact(eps_year1, eps_year2, eps_yea
     
     **Validates: Requirements 4.2, 4.4**
     """
-    # Ensure average is still positive
+    # Ensure average is still positive after the calculator rounds it to 2 decimal places
     avg_eps = (eps_year1 + eps_year2 + eps_year3) / Decimal('3')
-    assume(avg_eps > 0)
+    assume(avg_eps >= Decimal('0.005'))
     
     # Ensure the loss year actually reduces the average below the most recent year
     # (otherwise the test premise doesn't hold)
@@ -497,7 +497,8 @@ def test_property_10_pe_reflects_loss_years_impact(eps_year1, eps_year2, eps_yea
     
     # P/E on average should be higher because average EPS is lower (due to losses)
     # Since avg_eps < eps_year1, we have price/avg_eps > price/eps_year1
-    assert pe_on_avg > float(pe_current_year) * 0.99, \
+    # pe_on_avg is rounded to 2 decimal places, so allow up to 0.005 rounding error
+    assert pe_on_avg > float(pe_current_year) * 0.99 - 0.005, \
         f"P/E on 3-year average ({pe_on_avg}) should be higher than current year P/E ({float(pe_current_year)}) when average EPS is reduced by losses"
 
 

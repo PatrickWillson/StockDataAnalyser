@@ -100,7 +100,8 @@ class TestDividendDisplayIntegration:
         }
         
         # Create client and fetch data
-        with patch('clients.eodhd_client.EODHDClient._make_eodhd_request', return_value=mock_data):
+        with patch('clients.eodhd_client.EODHDClient._make_eodhd_request', return_value=mock_data), \
+             patch('clients.eodhd_client.EODHDClient._fetch_dividend_history', return_value=None):
             client = EODHDClient('test_key', debug=False)
             financial_data = client.fetch_all_data('TEST.US')
         
@@ -181,7 +182,8 @@ class TestDividendDisplayIntegration:
         }
         
         # Create client and fetch data
-        with patch('clients.eodhd_client.EODHDClient._make_eodhd_request', return_value=mock_data):
+        with patch('clients.eodhd_client.EODHDClient._make_eodhd_request', return_value=mock_data), \
+             patch('clients.eodhd_client.EODHDClient._fetch_dividend_history', return_value=None):
             client = EODHDClient('test_key', debug=False)
             financial_data = client.fetch_all_data('TEST.US')
         
