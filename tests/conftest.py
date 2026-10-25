@@ -11,9 +11,14 @@ so a blocked call alone could go unnoticed. Every attempt is therefore recorded
 and the test fails at teardown if any were made.
 """
 
+import os
 import socket
+import sys
 
 import pytest
+
+# Make project packages importable from every test without per-file sys.path hacks
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 try:
     from curl_cffi import curl as _curl_cffi_curl

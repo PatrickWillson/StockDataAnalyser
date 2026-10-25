@@ -330,7 +330,9 @@ def test_staleness_with_multiple_years(num_years, most_recent_months_old):
     result = FinancialDataProcessor.check_data_staleness(history, current_date)
     
     # Assert: Should only consider most recent year
-    if most_recent_months_old > 9.0:
+    # Report dates are whole days, so compare using the age the function actually sees
+    actual_months = int(most_recent_months_old * 30.44) / 30.44
+    if actual_months > 9.0:
         # Most recent year is stale - should return warning
         assert result is not None, \
             f"Expected warning when most recent year is {most_recent_months_old:.1f} months old"
