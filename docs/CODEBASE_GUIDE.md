@@ -111,7 +111,7 @@ claude-output/              agent-written markdown (gitignored)
 - Total debt: `longTermDebt + shortTermDebt` if either > 0, else `shortLongTermDebtTotal`.
 
 ### 4.3 `metrics` (returned by `GrahamCalculator.compute_all`)
-`graham_number, normalized_graham_number, epv, epv_details, net_net_value, nca_details, quick_ratio, three_year_avg_pe, combined_pe_pb_test, margin_of_safety, margin_of_safety_details, defensive_tests, enterprising_tests, verdict, warnings`
+`graham_number, normalized_graham_number, epv, epv_details, net_net_value, nca_details, current_ratio, quick_ratio, three_year_avg_pe, combined_pe_pb_test, margin_of_safety, margin_of_safety_details, defensive_tests, enterprising_tests, verdict, warnings`
 
 Values are floats or `"N/A"`-style strings (also `"N/A - reason"`, `"N/A (Too Young)"`). `epv` is the **total** EPV (not per share); per share is in `epv_details['epv_per_share']`.
 
@@ -150,6 +150,7 @@ Where EODHD pre-computed values are used today:
 | Normalized Graham Number | √(22.5 × mean(EPS of the 3 most recent years with statement data) × TBVPS) — uses `FinancialDataProcessor.extract_3year_eps_data`, which skips dividend-only years (revenue, net income, equity all 0.0 and EPS 0); same years as the 3-yr avg P/E |
 | Net-Net (NCAV/share) | (Current Assets − Total Liabilities) / Shares |
 | NCA details | NCA = CA − Total Liabilities; debt coverage = LTD / NCA |
+| Current ratio | CA / CL for the latest year with balance-sheet data; `{'ratio', 'fiscal_year_end'}`; shares `_latest_current_ratio` with the current-ratio investor tests, so display and PASS/FAIL agree |
 | Quick ratio | (CA − Inventory) / CL — inventory is never parsed, so sector fallback applies |
 | 3-yr avg P/E | price / mean(EPS of 3 latest complete years) |
 | Combined P/E×P/B | round(P/E) × round(P/B, BVPS-based) ≤ 22.5 |
@@ -207,7 +208,7 @@ GBX logic lives in several places: `CurrencyConverter.convert` (÷100), `FXClien
 | – | Header (`# STOCK ANALYSIS DOSSIER`, DATE, CEO/sector/currency) | `_generate_header` |
 | 1 | EXECUTIVE SUMMARY | `executive_summary.py` `ExecutiveSummarySection(financial_data, metrics)` |
 | 1.5 | TTM ANALYSIS (conditional) | `ttm_analysis.py` `TTMAnalysisSection(ttm_metrics, metrics, financial_data)` |
-| 2 | KEY METRICS | `key_metrics.py` `KeyMetricsSection(financial_data)` (metrics not passed) |
+| 2 | KEY METRICS | `key_metrics.py` `KeyMetricsSection(financial_data, {'current_ratio': …})` — only the current ratio is passed; quick ratio and NCA are withheld until inventory is parsed and NCA uses CA − CL |
 | – | RISK FACTORS | `risk_factors.py` `RiskFactorsSection` (only `_generate_second_risk_section` is live) |
 | – | METHODOLOGY NOTES | `methodology.py` `MethodologySection` |
 | – | CALCULATION DETAILS | `calculation_details.py` `CalculationDetailsSection` |
@@ -233,7 +234,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising `_test_*` method and `_determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1181 pass / 20 skip as of 2026-10-26); 84% branch coverage; weakest: base_client, yfinance_client, risk_factors (dead code).
+- Status: all non-live tests pass (1186 pass / 20 skip as of 2026-10-26); 84% branch coverage; weakest: base_client, yfinance_client, risk_factors (dead code).
 
 ---
 

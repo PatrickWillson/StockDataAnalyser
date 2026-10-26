@@ -151,10 +151,16 @@ class KeyMetricsSection(DossierSection):
         lines.append("### Liquidity Analysis")
         lines.append("")
         
-        # Current Ratio (from financial_data if available)
-        current_ratio = self.financial_data.get('current_ratio', 0)
-        if current_ratio > 0:
-            lines.append(f"- **Current Ratio**: {current_ratio:.2f} (Current Assets / Current Liabilities)")
+        # Current Ratio (calculated in core from the latest annual balance sheet)
+        current_ratio = self.metrics.get('current_ratio')
+        if isinstance(current_ratio, dict):
+            ratio = current_ratio.get('ratio')
+            fiscal_year_end = current_ratio.get('fiscal_year_end')
+            if isinstance(ratio, (int, float)):
+                lines.append(f"- **Current Ratio**: {ratio:.2f} (Current Assets / Current Liabilities, "
+                             f"fiscal year ending {fiscal_year_end})")
+            else:
+                lines.append("- **Current Ratio**: N/A (current liabilities not reported)")
         
         # Quick Ratio (from metrics if available)
         quick_ratio = self.metrics.get('quick_ratio')

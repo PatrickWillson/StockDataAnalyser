@@ -323,6 +323,10 @@
       "product": 35.31,
       "result": "FAIL"
     },
+    "current_ratio": {
+      "fiscal_year_end": "2023-12-31",
+      "ratio": 1.29
+    },
     "defensive_tests": {
       "current_ratio": "FAIL",
       "debt_to_assets": "PASS",

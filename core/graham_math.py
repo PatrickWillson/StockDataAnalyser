@@ -1011,28 +1011,43 @@ class GrahamCalculator:
         
         return 'PASS' if positive_years >= min_years else 'FAIL'
     
-    def _test_current_ratio(self, history: dict, years: list, min_ratio: float = 2.0) -> str:
-        """Test if current ratio meets minimum threshold."""
-        if not years:
-            return 'FAIL'
-        
-        # Find most recent year with actual financial data (not just dividend data)
-        latest_year = None
+    @staticmethod
+    def _latest_current_ratio(history: dict, years: list) -> tuple:
+        """
+        Current ratio (current assets / current liabilities) for the most recent year with
+        balance sheet data (current assets or equity > 0, so dividend-only years are skipped).
+
+        Returns:
+            (fiscal_year_end or None, ratio or None) — ratio is None when there is no such
+            year or current liabilities are zero
+        """
         for year in years:
             if history[year].get('current_assets', 0.0) > 0 or history[year].get('total_equity', 0.0) > 0:
-                latest_year = year
-                break
-        
-        if not latest_year:
+                current_liabilities = history[year].get('current_liabilities', 0.0)
+                if current_liabilities == 0:
+                    return year, None
+                return year, history[year].get('current_assets', 0.0) / current_liabilities
+        return None, None
+
+    def compute_current_ratio(self) -> dict:
+        """
+        Current ratio for display (GRAHAM_METHODOLOGY §4.2: defensive minimum 2.0).
+
+        Returns:
+            {'ratio': float rounded to 2dp or "N/A", 'fiscal_year_end': str or None}
+        """
+        history = self.data.get('history', {})
+        year, ratio = self._latest_current_ratio(history, sorted(history.keys(), reverse=True))
+        return {
+            'ratio': round(ratio, 2) if ratio is not None else "N/A",
+            'fiscal_year_end': year,
+        }
+
+    def _test_current_ratio(self, history: dict, years: list, min_ratio: float = 2.0) -> str:
+        """Test if current ratio meets minimum threshold."""
+        _, current_ratio = self._latest_current_ratio(history, years)
+        if current_ratio is None:
             return 'FAIL'
-        
-        current_assets = history[latest_year].get('current_assets', 0.0)
-        current_liabilities = history[latest_year].get('current_liabilities', 0.0)
-        
-        if current_liabilities == 0:
-            return 'FAIL'
-        
-        current_ratio = current_assets / current_liabilities
         return 'PASS' if current_ratio >= min_ratio else 'FAIL'
     
     def _test_debt_to_assets(self, history: dict, years: list) -> str:
@@ -1203,6 +1218,7 @@ class GrahamCalculator:
         net_net_value_raw = self.compute_net_net(round_result=False)  # Unrounded for comparison
         epv_data = self.compute_epv()  # Now returns dict
         nca_details = self.compute_nca_details()
+        current_ratio = self.compute_current_ratio()
         quick_ratio = self.compute_quick_ratio()
         three_year_avg_pe = self.compute_three_year_avg_pe()
         combined_pe_pb_test = self.compute_combined_pe_pb_test()
@@ -1236,6 +1252,7 @@ class GrahamCalculator:
             'margin_of_safety': margin_of_safety_data['mos_percentage'],  # For backward compatibility
             'margin_of_safety_details': margin_of_safety_data,  # Full details
             'nca_details': nca_details,
+            'current_ratio': current_ratio,
             'quick_ratio': quick_ratio,
             'three_year_avg_pe': three_year_avg_pe,
             'combined_pe_pb_test': combined_pe_pb_test,

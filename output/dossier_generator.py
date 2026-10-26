@@ -77,7 +77,9 @@ class DossierGenerator:
         
         # Initialize section generators
         self.executive_summary = ExecutiveSummarySection(financial_data, metrics)
-        self.key_metrics = KeyMetricsSection(financial_data)
+        # Quick ratio and NCA details are withheld until inventory is parsed and NCA uses
+        # current assets - current liabilities (GRAHAM_METHODOLOGY §4.2, §9)
+        self.key_metrics = KeyMetricsSection(financial_data, {'current_ratio': metrics.get('current_ratio')})
         self.risk_factors = RiskFactorsSection(financial_data, metrics)
         self.methodology = MethodologySection(financial_data, metrics)
         self.calculation_details = CalculationDetailsSection(financial_data, metrics)

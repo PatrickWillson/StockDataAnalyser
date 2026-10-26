@@ -38,6 +38,7 @@
 
 ### Liquidity Analysis
 
+- **Current Ratio**: 1.29 (Current Assets / Current Liabilities, fiscal year ending 2023-12-31)
 - Insider Ownership: 65.00%
 - Institutional Ownership: 13.73%
 - Beta (Volatility): 0.668

@@ -18,6 +18,7 @@ def test_key_metrics_with_nca_and_quick_ratio():
     }
     
     metrics = {
+        'current_ratio': {'ratio': 2.15, 'fiscal_year_end': '2023-12-31'},
         'quick_ratio': 1.87,
         'nca_details': {
             'current_assets': 1234567000.0,
@@ -38,7 +39,7 @@ def test_key_metrics_with_nca_and_quick_ratio():
     
     # Assert
     assert 'Liquidity Analysis' in content
-    assert 'Current Ratio**: 2.15' in content
+    assert 'Current Ratio**: 2.15 (Current Assets / Current Liabilities, fiscal year ending 2023-12-31)' in content
     assert 'Quick Ratio**: 1.87' in content
     assert 'Net Current Assets (NCA) Analysis' in content
     assert 'Current Assets**: 1,234,567,000.00 USD' in content
@@ -133,7 +134,8 @@ def test_key_metrics_without_metrics_dict():
     # Assert
     assert 'SECTION 2: KEY METRICS' in content
     assert 'Liquidity Analysis' in content
-    assert 'Current Ratio**: 2.00' in content
+    # Current ratio comes from core metrics, never from financial_data
+    assert 'Current Ratio' not in content
     # Should not crash when metrics dict is missing
 
 
@@ -171,3 +173,12 @@ def test_key_metrics_formatting():
     assert '2,221,113.25 GBP' in content
     assert '1,500,000.00 GBP' in content
     assert 'Debt Coverage Ratio**: 0.68' in content  # Rounded to 2 decimals
+
+
+def test_current_ratio_unavailable_shows_na_with_reason():
+    section = KeyMetricsSection({'currency': 'USD', 'history': {}},
+                                {'current_ratio': {'ratio': 'N/A', 'fiscal_year_end': '2023-12-31'}})
+
+    content = '\n'.join(section.generate())
+
+    assert '- **Current Ratio**: N/A (current liabilities not reported)' in content

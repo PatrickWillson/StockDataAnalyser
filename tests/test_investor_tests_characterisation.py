@@ -322,3 +322,29 @@ class TestDetermineVerdict:
         defensive = {**ALL_PASS_DEFENSIVE, "pb_ratio": "FAIL"}
         enterprising = {**ALL_PASS_ENTERPRISING, "price_test": "FAIL"}
         assert self._verdict(mos=25.0, defensive=defensive, enterprising=enterprising) == "STRONG BUY (Undervalued)"
+
+
+class TestComputeCurrentRatio:
+    """The displayed current ratio and the current-ratio tests use the same year and value."""
+
+    def test_ratio_and_fiscal_year_from_latest_balance_sheet(self):
+        history = {"2024-12-31": DIVIDEND_ONLY_YEAR,
+                   "2023-12-31": _year(current_assets=300.0, current_liabilities=120.0)}
+        assert _calc(history).compute_current_ratio() == {"ratio": 2.5, "fiscal_year_end": "2023-12-31"}
+
+    def test_zero_current_liabilities_is_na(self):
+        history = {"2023-12-31": _year(current_liabilities=0.0)}
+        assert _calc(history).compute_current_ratio() == {"ratio": "N/A", "fiscal_year_end": "2023-12-31"}
+
+    def test_no_balance_sheet_year_is_na(self):
+        assert _calc({"2024-12-31": {"dividend": 1.0}}).compute_current_ratio() == {
+            "ratio": "N/A", "fiscal_year_end": None}
+
+    @settings(max_examples=200)
+    @given(ratio=ratios)
+    def test_display_value_agrees_with_test_verdict(self, ratio):
+        history = {"2023-12-31": _year(current_assets=ratio * 100.0, current_liabilities=100.0)}
+        calc = _calc(history)
+        unrounded = (ratio * 100.0) / 100.0
+        assert calc.compute_current_ratio()["ratio"] == round(unrounded, 2)
+        assert _run("_test_current_ratio", history, min_ratio=2.0) == ("PASS" if unrounded >= 2.0 else "FAIL")
