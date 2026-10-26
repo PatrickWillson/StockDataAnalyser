@@ -28,29 +28,26 @@ class TTMCalculator:
     """
     
     def __init__(self, quarterly_data: Dict[str, Any], price: float, currency: str,
-                 original_currency: Optional[str] = None, fx_rate: Optional[float] = None,
-                 exchange: Optional[str] = None):
+                 original_currency: Optional[str] = None, fx_rate: Optional[float] = None):
         """
         Initialize TTM calculator.
         
         Args:
             quarterly_data: Dict with 'balance_sheet' and 'income_statement' keys
                            Each contains date-keyed financial data
-            price: Current stock price (in unified currency)
+            price: Current stock price, already normalised to the unified currency by the client
+                   (London Fix / GBX handling happens once, upstream)
             currency: Unified currency for all calculations
             original_currency: Original currency of quarterly data (before conversion)
             fx_rate: FX rate used for conversion (original → unified)
-            exchange: Stock exchange code (e.g., 'LSE', 'US', 'TO')
         """
         self.quarterly_data = quarterly_data
         self.currency = currency
         self.original_currency = original_currency
         self.fx_rate = fx_rate
-        self.exchange = exchange
         self.warnings: List[str] = []
         
-        # Apply London Fix if needed (before storing price)
-        self.price = self._apply_london_fix(price)
+        self.price = price
         
         # Apply currency conversion if needed
         if original_currency and currency and original_currency != currency:
@@ -78,69 +75,6 @@ class TTMCalculator:
             return datetime.strptime(date_str, '%Y-%m-%d')
         except (ValueError, TypeError):
             return None
-    
-    def _apply_london_fix(self, price: float) -> float:
-        """
-        Apply London Fix for LSE stocks if needed (GBp → GBP).
-        
-        The London Stock Exchange quotes prices in pence (GBp) but financial
-        statements are in pounds (GBP). When P/E ratio exceeds 500, it indicates
-        a currency mismatch that needs correction.
-        
-        Args:
-            price: Current stock price
-            
-        Returns:
-            Adjusted price (or original if London Fix not needed)
-        """
-        if self.exchange != "LSE":
-            return price
-        
-        # Get most recent EPS to check if London Fix is needed
-        income_statement = self.quarterly_data.get('income_statement', {})
-        if not income_statement:
-            return price
-        
-        # Get most recent period
-        dates = sorted(income_statement.keys(), reverse=True)
-        if not dates:
-            return price
-        
-        most_recent = income_statement[dates[0]]
-        net_income = most_recent.get('net_income', 0.0)
-        
-        # Get shares from balance sheet
-        balance_sheet = self.quarterly_data.get('balance_sheet', {})
-        if not balance_sheet:
-            return price
-        
-        balance_dates = sorted(balance_sheet.keys(), reverse=True)
-        if not balance_dates:
-            return price
-        
-        shares = balance_sheet[balance_dates[0]].get('shares_outstanding', 0.0)
-        
-        if shares <= 0:
-            return price
-        
-        # Calculate EPS
-        eps = net_income / shares
-        
-        if eps <= 0:
-            return price
-        
-        # Check P/E ratio
-        pe_ratio = price / eps
-        
-        if pe_ratio > 500:
-            # Price is in pence, convert to pounds
-            adjusted_price = price / 100
-            self.warnings.append(
-                f"TTM London Fix: Price adjusted from {price:.2f} GBp to {adjusted_price:.2f} GBP (P/E was {pe_ratio:.0f})"
-            )
-            return adjusted_price
-        
-        return price
     
     def _apply_currency_conversion(self, fx_rate: float) -> None:
         """

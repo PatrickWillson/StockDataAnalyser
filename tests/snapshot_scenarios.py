@@ -168,6 +168,19 @@ def lse_gbx_london_fix_semi_annual() -> Scenario:
     )
 
 
+def lse_gbx_weak_quarter() -> Scenario:
+    raw = add_periodic(extend_years(EODHDFixtures.get_lse_stock_fundamentals(), 10), 4, 6)
+    latest = max(raw["Financials"]["Income_Statement"]["quarterly"])
+    for field in ("netIncome", "netIncomeFromContinuingOps"):
+        raw["Financials"]["Income_Statement"]["quarterly"][latest][field] = 500_000
+    return Scenario(
+        "lse_gbx_weak_quarter", "YU.LSE", raw,
+        yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw)),
+        description="LSE, quarterly TTM with one weak quarter (P/E on that quarter > 500): "
+                    "TTM must not re-apply the London Fix to the already-converted price",
+    )
+
+
 def lse_gbx_low_pe() -> Scenario:
     raw = extend_years(EODHDFixtures.get_lse_stock_fundamentals(), 10)
     return Scenario(
@@ -236,6 +249,7 @@ ALL_SCENARIOS = [
     us_young_company,
     lse_gbx_london_fix_semi_annual,
     lse_gbx_low_pe,
+    lse_gbx_weak_quarter,
     lse_gbp_label_pence_price,
     tsx_cad,
     xetra_eur_usd_financials,

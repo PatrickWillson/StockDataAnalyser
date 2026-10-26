@@ -284,7 +284,6 @@ def main():
                 unified_currency = financial_data.get('currency', 'USD')
                 original_currency = financial_data.get('financials_currency', unified_currency)
                 fx_rate = financial_data.get('fx_rate_used')
-                exchange = financial_data.get('exchange', '')
                 
                 # Initialize TTM calculator
                 ttm_calculator = TTMCalculator(
@@ -292,8 +291,7 @@ def main():
                     price=price,
                     currency=unified_currency,
                     original_currency=original_currency,
-                    fx_rate=fx_rate,
-                    exchange=exchange
+                    fx_rate=fx_rate
                 )
                 
                 # Compute all TTM metrics (pass annual metrics for validation)
