@@ -55,10 +55,15 @@ class TestExtractCeoName:
         data = _officers({"Name": "A", "Title": "Chairman"}, {"Name": "B", "Title": "Head of Herbaceous Products"})
         assert FinancialDataProcessor.extract_ceo_name(data) == "B"
 
-    def test_known_defect_null_title_raises(self):
-        # Known defect: a JSON null Title raises AttributeError (only KeyError/TypeError are caught)
-        with pytest.raises(AttributeError):
-            FinancialDataProcessor.extract_ceo_name(_officers({"Name": "A", "Title": None}))
+    def test_null_title_is_treated_as_no_title(self):
+        data = _officers({"Name": "A", "Title": None}, {"Name": "B", "Title": "CEO"})
+        assert FinancialDataProcessor.extract_ceo_name(data) == "B"
+
+    def test_null_title_on_every_officer_falls_back_to_first(self):
+        assert FinancialDataProcessor.extract_ceo_name(_officers({"Name": "A", "Title": None})) == "A"
+
+    def test_null_name_returns_na(self):
+        assert FinancialDataProcessor.extract_ceo_name(_officers({"Name": None, "Title": "CEO"})) == "N/A"
 
 
 def _income(yearly):
@@ -235,3 +240,30 @@ class TestValidateDataQuality:
         history = {f"{year}-12-31": _year() for year in (2023, 2015, 2014, 2013, 2012,
                                                           2011, 2010, 2009, 2008, 2007)}
         assert self._warnings(history) == []
+
+
+class TestMalformedRawValues:
+    """JSON nulls and junk values are treated as missing (0.0), never crash, and never discard good data."""
+
+    def test_one_malformed_share_row_keeps_the_others(self):
+        data = {"outstandingShares": {"annual": {
+            "0": {"date": "2023", "shares": 100},
+            "1": {"date": "2022", "shares": "NA"},
+            "2": {"date": "2021", "shares": None},
+            "3": {"date": "2020", "shares": "abc"},
+            "4": {"date": "2019", "shares": 120},
+        }}}
+        assert FinancialDataProcessor.extract_shares_by_year(data) == {"2023": 100.0, "2019": 120.0}
+
+    def test_non_numeric_dividend_array_amount_is_skipped(self):
+        data = {"Financials": {"Cash_Flow": {"yearly": {}}},
+                "SplitsDividends": {"Dividends": [{"Date": "2023-11-10", "Value": "abc"},
+                                                  {"Date": "2023-08-10", "Value": 0.24},
+                                                  {"Date": "2022-11-10", "Value": None}]}}
+        processor = FinancialDataProcessor(currency_converter=object())
+
+        dividends, _, is_amounts, _, sources = processor.parse_dividend_history(data, None)
+
+        assert dividends == {"2023": 0.24}
+        assert is_amounts is True
+        assert sources == {"2023": "dividends_array"}

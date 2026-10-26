@@ -18,7 +18,7 @@
     },
     "dividend_yield": 0.0051,
     "employees": 164000,
-    "enterprise_value": 2965000000000,
+    "enterprise_value": 2965000000000.0,
     "exchange": "NASDAQ",
     "financials_currency": "USD",
     "forward_dividend_rate": null,

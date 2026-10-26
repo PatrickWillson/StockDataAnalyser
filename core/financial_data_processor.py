@@ -59,14 +59,14 @@ class FinancialDataProcessor:
                 # Try to find CEO by title first
                 for key, officer in officers.items():
                     if isinstance(officer, dict):
-                        title = officer.get('Title', '').lower()
+                        title = (officer.get('Title') or '').lower()
                         if 'chief executive' in title or 'ceo' in title:
-                            return officer.get('Name', 'N/A')
+                            return officer.get('Name') or 'N/A'
                 
                 # Fallback: return first officer
                 first_officer = officers.get('0', {})
                 if isinstance(first_officer, dict):
-                    return first_officer.get('Name', 'N/A')
+                    return first_officer.get('Name') or 'N/A'
         except (KeyError, TypeError):
             pass
         return 'N/A'
@@ -95,10 +95,10 @@ class FinancialDataProcessor:
             if outstanding_shares_data:
                 for item in outstanding_shares_data.values():
                     if isinstance(item, dict) and 'date' in item and 'shares' in item:
-                        year = str(item['date'])
-                        shares = item['shares']
-                        if shares and shares > 0:
-                            shares_by_year[year] = float(shares)
+                        # Sanitise per row so one malformed row doesn't discard the others
+                        shares = FinancialDataProcessor.sanitize_value(item['shares'])
+                        if shares > 0:
+                            shares_by_year[str(item['date'])] = shares
             
             return shares_by_year
         except (KeyError, TypeError, AttributeError):
@@ -584,7 +584,6 @@ class FinancialDataProcessor:
             
             # PRIORITY 2: Try to get dividends from Cash Flow statements (dividendsPaid / shares)
             cash_flow = data.get('Financials', {}).get('Cash_Flow', {}).get('yearly', {})
-            outstanding_shares_data = data.get('outstandingShares', {}).get('annual', {})
             
             # Get Cash Flow currency
             cash_flow_currency = data.get('Financials', {}).get('Cash_Flow', {}).get('currency_symbol', 'USD')
@@ -593,14 +592,8 @@ class FinancialDataProcessor:
                 self._log(f"[DEBUG] Found Cash Flow data with {len(cash_flow)} years")
                 self._log(f"[DEBUG] Cash Flow currency: {cash_flow_currency}")
                 
-                # Create a lookup for shares by year
-                shares_by_year = {}
-                if outstanding_shares_data:
-                    for item in outstanding_shares_data.values():
-                        if isinstance(item, dict) and 'date' in item and 'shares' in item:
-                            year = str(item['date'])
-                            shares = item['shares']
-                            shares_by_year[year] = shares
+                # Lookup for shares by year (malformed rows skipped)
+                shares_by_year = self.extract_shares_by_year(data)
                 
                 # Sort years to identify most recent
                 sorted_years = sorted(cash_flow.keys(), reverse=True)
@@ -648,9 +641,9 @@ class FinancialDataProcessor:
                 for div in dividend_list:
                     if isinstance(div, dict) and 'Date' in div:
                         year = div['Date'][:4]
-                        amount = div.get('Value') or div.get('Dividend') or div.get('Amount')
-                        if amount:
-                            year_totals[year] = year_totals.get(year, 0.0) + float(amount)
+                        amount = self.sanitize_value(div.get('Value') or div.get('Dividend') or div.get('Amount'))
+                        if amount > 0:
+                            year_totals[year] = year_totals.get(year, 0.0) + amount
                             source_indicators[year] = 'dividends_array'
                 
                 if year_totals:

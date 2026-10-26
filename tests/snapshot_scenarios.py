@@ -244,6 +244,40 @@ def dividend_counts_only() -> Scenario:
     )
 
 
+def messy_nulls_cross_currency() -> Scenario:
+    """JSON nulls and junk in General/Highlights/Technicals/outstandingShares (each used to crash the run)."""
+    scenario = xetra_eur_usd_financials()
+    raw = scenario.fundamentals
+    raw["General"]["Officers"]["0"]["Title"] = None
+    raw["General"]["Sector"] = None
+    raw["Highlights"]["BookValue"] = None
+    raw["Technicals"]["Beta"] = None
+    annual_shares = raw["outstandingShares"]["annual"]
+    annual_shares[sorted(annual_shares)[2]]["shares"] = "NA"
+    scenario.name = "messy_nulls_cross_currency"
+    scenario.description = ("Null officer Title, Sector, Highlights.BookValue (with an FX rate), Beta, "
+                            "and one malformed share-count row")
+    return scenario
+
+
+def messy_lse_dividend_array() -> Scenario:
+    """LSE with a null 52-week high, and dividends only in SplitsDividends.Dividends (one junk amount)."""
+    raw = extend_years(EODHDFixtures.get_lse_stock_fundamentals(), 10)
+    raw["Technicals"]["52WeekHigh"] = None
+    raw["Financials"]["Cash_Flow"]["yearly"] = {}
+    raw["SplitsDividends"].pop("ForwardAnnualDividendRate", None)
+    raw["SplitsDividends"]["Dividends"] = [
+        {"Date": "2023-10-01", "Value": "abc"},
+        {"Date": "2023-04-01", "Value": 0.28},
+        {"Date": "2022-10-01", "Value": 0.25},
+    ]
+    return Scenario(
+        "messy_lse_dividend_array", "YU.LSE", raw,
+        yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw)),
+        description="Null 52WeekHigh on LSE; dividends only from the Dividends array, one non-numeric amount",
+    )
+
+
 ALL_SCENARIOS = [
     us_mature_quarterly,
     us_young_company,
@@ -255,4 +289,6 @@ ALL_SCENARIOS = [
     xetra_eur_usd_financials,
     negative_tangible_equity,
     dividend_counts_only,
+    messy_nulls_cross_currency,
+    messy_lse_dividend_array,
 ]

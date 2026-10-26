@@ -342,7 +342,7 @@ class GrahamCalculator:
         nca_dec = current_assets_dec - total_liabilities_dec
         
         # Check for sector-specific warnings
-        sector = self.data.get('sector', '').lower()
+        sector = (self.data.get('sector') or '').lower()
         if 'financial' in sector or 'bank' in sector:
             warnings.append("NCA analysis may not be applicable for Financial companies due to balance sheet structure")
         elif 'utility' in sector or 'utilities' in sector:
@@ -421,7 +421,7 @@ class GrahamCalculator:
             return "N/A"
         
         # Handle missing inventory based on sector
-        sector = self.data.get('sector', '').lower()
+        sector = (self.data.get('sector') or '').lower()
         is_low_inventory_sector = 'service' in sector or 'technology' in sector or 'software' in sector
         
         if inventory is None:

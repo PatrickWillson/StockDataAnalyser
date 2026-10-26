@@ -184,40 +184,44 @@ class EODHDClient(BaseAPIClient):
             logger.warning(f"Currency Mismatch: Stock trades in {currency}, but financial statements are in {financials_currency}")
         
         # Extract additional company info
-        sector = general.get('Sector', 'N/A')
-        industry = general.get('Industry', 'N/A')
-        employees = general.get('FullTimeEmployees', 0)
+        # `or` defaults: EODHD returns JSON null for missing fields, which .get() passes through
+        sector = general.get('Sector') or 'N/A'
+        industry = general.get('Industry') or 'N/A'
+        employees = general.get('FullTimeEmployees') or 0
         
         logger.info(f"Company: {general.get('Name', 'Unknown')}")
         logger.info(f"Exchange: {exchange}, Currency: {currency}")
         logger.info(f"Sector: {sector}, Industry: {industry}")
         
+        # Numeric fields below are sanitised: JSON null / "NA" / junk -> 0.0 (missing)
+        sanitize = FinancialDataProcessor.sanitize_value
+
         # Extract highlights data
-        highlights = data.get('Highlights', {})
-        dividend_per_share = highlights.get('DividendShare', 0.0)
-        dividend_yield = highlights.get('DividendYield', 0.0)
-        pe_ratio = highlights.get('PERatio', 0.0)
-        book_value_per_share = highlights.get('BookValue', 0.0)
-        roe = highlights.get('ReturnOnEquityTTM', 0.0)
-        roa = highlights.get('ReturnOnAssetsTTM', 0.0)
-        profit_margin = highlights.get('ProfitMargin', 0.0)
+        highlights = data.get('Highlights') or {}
+        dividend_per_share = sanitize(highlights.get('DividendShare'))
+        dividend_yield = sanitize(highlights.get('DividendYield'))
+        pe_ratio = sanitize(highlights.get('PERatio'))
+        book_value_per_share = sanitize(highlights.get('BookValue'))
+        roe = sanitize(highlights.get('ReturnOnEquityTTM'))
+        roa = sanitize(highlights.get('ReturnOnAssetsTTM'))
+        profit_margin = sanitize(highlights.get('ProfitMargin'))
         
         # Extract valuation data
-        valuation = data.get('Valuation', {})
+        valuation = data.get('Valuation') or {}
         # Note: We calculate P/B ratio ourselves instead of using PriceBookMRQ
         # API value is often stale and uses quarterly data vs our annual audited data
-        enterprise_value = valuation.get('EnterpriseValue', 0.0)
+        enterprise_value = sanitize(valuation.get('EnterpriseValue'))
         
         # Extract ownership data
-        shares_stats = data.get('SharesStats', {})
-        insider_ownership = shares_stats.get('PercentInsiders', 0.0)
-        institutional_ownership = shares_stats.get('PercentInstitutions', 0.0)
+        shares_stats = data.get('SharesStats') or {}
+        insider_ownership = sanitize(shares_stats.get('PercentInsiders'))
+        institutional_ownership = sanitize(shares_stats.get('PercentInstitutions'))
         
         # Extract technical data
-        technicals = data.get('Technicals', {})
-        beta = technicals.get('Beta', 0.0)
-        week_52_high = technicals.get('52WeekHigh', 0.0)
-        week_52_low = technicals.get('52WeekLow', 0.0)
+        technicals = data.get('Technicals') or {}
+        beta = sanitize(technicals.get('Beta'))
+        week_52_high = sanitize(technicals.get('52WeekHigh'))
+        week_52_low = sanitize(technicals.get('52WeekLow'))
         
         # Check if delisted
         is_delisted = general.get('IsDelisted', False)

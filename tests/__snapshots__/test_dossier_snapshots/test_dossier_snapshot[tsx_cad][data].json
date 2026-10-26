@@ -23,7 +23,7 @@
     },
     "dividend_yield": 0.0051,
     "employees": 164000,
-    "enterprise_value": 2965000000000,
+    "enterprise_value": 2965000000000.0,
     "exchange": "TO",
     "financials_currency": "CAD",
     "forward_dividend_rate": 0.96,
