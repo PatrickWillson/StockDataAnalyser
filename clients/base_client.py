@@ -19,7 +19,6 @@ class BaseAPIClient:
     
     Subclasses should override:
     - API_BASE_URL: The base URL for the API
-    - _handle_response_error: Custom error handling for specific status codes
     """
     
     API_BASE_URL: Optional[str] = None
@@ -88,32 +87,6 @@ class BaseAPIClient:
             raise requests.exceptions.RequestException(
                 f"Unexpected error during API request: {str(e)}"
             ) from e
-    
-    def _handle_response_error(self, response: requests.Response) -> None:
-        """
-        Handle HTTP response errors. Override in subclasses for custom error handling.
-        
-        Args:
-            response: Response object to check
-            
-        Raises:
-            requests.exceptions.HTTPError: On HTTP errors
-        """
-        if response.status_code == 401:
-            raise requests.exceptions.HTTPError(
-                "Authentication failed. Check your API credentials.",
-                response=response
-            )
-        elif response.status_code == 429:
-            raise requests.exceptions.HTTPError(
-                "Rate limit exceeded. Please wait and try again.",
-                response=response
-            )
-        elif response.status_code >= 400:
-            raise requests.exceptions.HTTPError(
-                f"API request failed with status {response.status_code}: {response.text}",
-                response=response
-            )
     
     def close(self):
         """Close the session and clean up resources."""

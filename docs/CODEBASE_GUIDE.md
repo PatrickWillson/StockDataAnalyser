@@ -209,7 +209,7 @@ GBX logic lives in several places: `CurrencyConverter.convert` (÷100), `FXClien
 | 1 | EXECUTIVE SUMMARY | `executive_summary.py` `ExecutiveSummarySection(financial_data, metrics)` |
 | 1.5 | TTM ANALYSIS (conditional) | `ttm_analysis.py` `TTMAnalysisSection(ttm_metrics, metrics, financial_data)` |
 | 2 | KEY METRICS | `key_metrics.py` `KeyMetricsSection(financial_data, {'current_ratio': …})` — only the current ratio is passed; quick ratio and NCA are withheld until inventory is parsed and NCA uses CA − CL |
-| – | RISK FACTORS | `risk_factors.py` `RiskFactorsSection` (only `_generate_second_risk_section` is live) |
+| – | RISK FACTORS | `risk_factors.py` `RiskFactorsSection` (`generate()` → `_generate_second_risk_section`) |
 | – | METHODOLOGY NOTES | `methodology.py` `MethodologySection` |
 | – | CALCULATION DETAILS | `calculation_details.py` `CalculationDetailsSection` |
 | 4 / 5 | GRAHAM DEFENSIVE / ENTERPRISING TESTS | `graham_tests.py` `GrahamTestsSection(metrics)` |
@@ -234,7 +234,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising `_test_*` method and `_determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1192 pass / 20 skip as of 2026-10-26); 84% branch coverage; weakest: base_client, yfinance_client, risk_factors (dead code).
+- Status: all non-live tests pass (1187 pass / 20 skip as of 2026-10-26); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 
