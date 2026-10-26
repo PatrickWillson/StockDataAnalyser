@@ -238,7 +238,7 @@ Dossier format is **fixed** and optimized for LLM parsing:
 - **`.kiro/steering/`**: `stock-data-analyser-architecture.md` (detailed architecture guide)
 - **`.kiro/documentation/`**: Generated reports, investigation summaries, fix documentation
   - Example: `TTM_IMPLEMENTATION_SUMMARY.md`, `CURRENCY_UNIFICATION_VERIFICATION.md`
-- **`claude-output/`**: **All agent-written markdown goes here** — scratch notes, research summaries, investigation logs, planning docs, or any `.md` file an agent produces during a session. This directory is gitignored. Do not write agent-generated markdown to the repo root or any other directory. **Sole exception:** `docs/CODEBASE_GUIDE.md` (version-controlled codebase reference, see below).
+- **`claude-output/`**: **All agent-written markdown goes here** — scratch notes, research summaries, investigation logs, planning docs, or any `.md` file an agent produces during a session. This directory is gitignored. Do not write agent-generated markdown to the repo root or any other directory. **Exceptions:** the version-controlled references in `docs/` — `docs/CODEBASE_GUIDE.md` and `docs/GRAHAM_METHODOLOGY.md` (see below).
 - **Tests**: Serve as executable documentation of expected behavior
 
 ## File Organization Quick Reference
@@ -257,6 +257,7 @@ Dossier format is **fixed** and optimized for LLM parsing:
 | `config/graham_constants.py` | Immutable Graham methodology constants |
 | `claude-output/` | Agent-generated markdown scratch files (gitignored) |
 | `docs/CODEBASE_GUIDE.md` | Living codebase reference (version-controlled) |
+| `docs/GRAHAM_METHODOLOGY.md` | What Graham would do: sourced reference for formulas, tests, verdicts, data rules |
 
 ## Codebase Guide Maintenance
 
@@ -271,6 +272,16 @@ Dossier format is **fixed** and optimized for LLM parsing:
 - change test infrastructure (fixtures, snapshots, markers)
 
 Update the "Last full audit" line only after a full re-audit. Keep the guide describing the code as it *is*, not as planned; known bugs and refactor plans belong in `claude-output/CODEBASE_DEEP_DIVE_*.md` (local, gitignored).
+
+## Graham Methodology Reference
+
+`docs/GRAHAM_METHODOLOGY.md` records what Benjamin Graham actually prescribed (from his own Columbia lectures and 1976 interview, plus quoted and summarised passages of *The Intelligent Investor* and *Security Analysis*), with every claim labelled by source quality, and lists where the code currently deviates (§9).
+
+**Before changing any formula, threshold, investor test, verdict rule or data source:**
+1. Read the relevant section of `docs/GRAHAM_METHODOLOGY.md` and follow it.
+2. Cite the section in the change description (e.g. "per GRAHAM_METHODOLOGY §4.6").
+3. If the change fixes or introduces a deviation from Graham, update §9 in the same change.
+4. If Graham's position is unclear or a choice is needed, ask the user rather than guessing, and record the decision in the document.
 
 ## Error Handling Philosophy
 
@@ -309,7 +320,7 @@ See `README.md` for complete list.
 - ❌ **Never modify dossier section order** - Structure is optimized for LLM parsing
 - ❌ **Never use TTM for Graham tests** - Graham used annual audited data
 - ❌ **Never use EODHD pre-computed ratios or estimates in calculations** - Derive them from raw annual statement data; API-derived values only as labelled comparisons/display (see `docs/CODEBASE_GUIDE.md` §5 for known current exceptions)
-- ❌ **Never write agent-generated markdown to the repo root** - Use `claude-output/` for all scratch notes, research docs, investigation summaries, and planning files (only exception: `docs/CODEBASE_GUIDE.md`)
+- ❌ **Never write agent-generated markdown to the repo root** - Use `claude-output/` for all scratch notes, research docs, investigation summaries, and planning files (only exceptions: `docs/CODEBASE_GUIDE.md`, `docs/GRAHAM_METHODOLOGY.md`)
 
 ## Performance Notes
 
@@ -337,6 +348,8 @@ The tool functions with Fundamentals Package alone; the All World Package provid
 
 ## Getting Help
 
+- **Graham methodology questions**: See `docs/GRAHAM_METHODOLOGY.md`
+- **How the code works**: See `docs/CODEBASE_GUIDE.md`
 - **Architecture questions**: See `.kiro/steering/stock-data-analyser-architecture.md`
 - **Recent changes**: See `.kiro/documentation/` for implementation summaries
 - **Code examples**: Test files (`tests/`) serve as executable documentation

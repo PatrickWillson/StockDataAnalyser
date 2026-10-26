@@ -3,6 +3,8 @@
 > **Purpose:** a living reference for how the code works *today*, so future sessions don't need a full deep dive.
 > **Keep it current:** any change that adds, removes, renames or changes the behaviour of a module, public function, data key, formula, dossier section or pipeline step must update this file in the same change (see CLAUDE.md → "Codebase Guide Maintenance").
 >
+> What Graham would do (the methodology the code should follow, and where it currently deviates): `docs/GRAHAM_METHODOLOGY.md`.
+>
 > Last full audit: 2026-10-25 (commit b90c0ce). Known bugs and refactor plan from that audit: `claude-output/CODEBASE_DEEP_DIVE_2026-10-25.md` (local only, gitignored).
 
 ---
