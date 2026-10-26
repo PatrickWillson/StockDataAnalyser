@@ -132,22 +132,22 @@ def test_property_currency_conversion_applied_to_all_monetary_values(quarterly_d
         # Intangible assets should be multiplied by FX rate
         expected_intangibles = original['intangible_assets'] * fx_rate
         assert abs(converted['intangible_assets'] - expected_intangibles) < 0.01, \
-            f"Intangible assets should be multiplied by FX rate"
+            "Intangible assets should be multiplied by FX rate"
         
         # Goodwill should be multiplied by FX rate
         expected_goodwill = original['goodwill'] * fx_rate
         assert abs(converted['goodwill'] - expected_goodwill) < 0.01, \
-            f"Goodwill should be multiplied by FX rate"
+            "Goodwill should be multiplied by FX rate"
         
         # Current assets should be multiplied by FX rate
         expected_current_assets = original['current_assets'] * fx_rate
         assert abs(converted['current_assets'] - expected_current_assets) < 0.01, \
-            f"Current assets should be multiplied by FX rate"
+            "Current assets should be multiplied by FX rate"
         
         # Total liabilities should be multiplied by FX rate
         expected_liabilities = original['total_liabilities'] * fx_rate
         assert abs(converted['total_liabilities'] - expected_liabilities) < 0.01, \
-            f"Total liabilities should be multiplied by FX rate"
+            "Total liabilities should be multiplied by FX rate"
         
         # Shares outstanding should NOT be converted (it's a count, not monetary)
         assert converted['shares_outstanding'] == original['shares_outstanding'], \

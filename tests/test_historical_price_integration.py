@@ -89,7 +89,7 @@ def test_historical_prices_integrated_into_history_msft():
     total_years = len(history)
     coverage_ratio = years_with_price / total_years
     
-    print(f"\nHistorical Price Coverage:")
+    print("\nHistorical Price Coverage:")
     print(f"  Total years: {total_years}")
     print(f"  Years with price: {years_with_price}")
     print(f"  Years without price: {years_without_price}")
@@ -119,7 +119,7 @@ def test_historical_prices_currency_conversion_lse():
     stock_currency = financial_data.get('original_stock_currency', '')
     financials_currency = financial_data.get('financials_currency', '')
     
-    print(f"\nCurrency Info:")
+    print("\nCurrency Info:")
     print(f"  Stock Currency: {stock_currency}")
     print(f"  Financials Currency: {financials_currency}")
     
@@ -153,7 +153,7 @@ def test_historical_prices_currency_conversion_lse():
     # For LSE stocks, yfinance returns prices in GBX (pence), not GBP
     # We need to convert GBX → GBP first, then GBP → financials_currency (if needed)
     if exchange == "LSE" and stock_currency == "GBX":
-        print(f"  Converting historical prices from GBX (pence) to GBP (pounds)")
+        print("  Converting historical prices from GBX (pence) to GBP (pounds)")
         gbp_prices = {}
         for date_key, price_value in year_end_prices.items():
             if price_value is not None:

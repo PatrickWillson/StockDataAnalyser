@@ -4,7 +4,6 @@ Unit tests for Financial History section generator.
 Tests table generation, data formatting, and year sorting.
 """
 
-import pytest
 from output.sections.financial_history import FinancialHistorySection
 
 

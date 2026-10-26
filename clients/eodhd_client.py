@@ -416,7 +416,7 @@ class EODHDClient(BaseAPIClient):
                         logger.info(f"Matched historical FX rates to {len(historical_fx_rates)} fiscal year ends")
                     else:
                         logger.warning(f"Could not fetch historical FX rates for {price_currency}/{financials_currency}")
-                        warnings.append(f"Historical FX rates unavailable - using current rate for all years")
+                        warnings.append("Historical FX rates unavailable - using current rate for all years")
         
         # Convert Highlights dividends and book value to financials currency
         # Note: For LSE stocks, DividendShare and BookValue in API are already in GBP, not GBX
@@ -654,16 +654,6 @@ class EODHDClient(BaseAPIClient):
         if shares_stats is None:
             shares_stats = 0
         
-        # Get balance sheet shares from most recent year
-        balance_sheet_shares = 0
-        balance_sheet = data.get('Financials', {}).get('Balance_Sheet', {}).get('yearly', {})
-        if balance_sheet:
-            sorted_years = sorted(balance_sheet.keys(), reverse=True)
-            if sorted_years:
-                balance_sheet_shares = self.processor.sanitize_value(
-                    balance_sheet[sorted_years[0]].get('commonStockSharesOutstanding', 0)
-                )
-        
         # Get outstandingShares.annual
         outstanding_shares_annual = 0
         outstanding_shares_data = data.get('outstandingShares', {}).get('annual', {})
@@ -728,7 +718,7 @@ class EODHDClient(BaseAPIClient):
         last_update = data.get('General', {}).get('UpdatedAt', '')
         if last_update:
             try:
-                from datetime import datetime, timedelta, timezone
+                from datetime import datetime, timezone
                 # Handle ISO format with or without 'Z'
                 update_date_str = last_update.replace('Z', '+00:00')
                 update_date = datetime.fromisoformat(update_date_str)

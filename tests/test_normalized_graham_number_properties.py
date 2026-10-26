@@ -477,7 +477,7 @@ def test_normalized_graham_number_audit_trail(eps_values, tbvps):
     
     # Act: Calculate normalized Graham Number
     calculator = GrahamCalculator(financial_data)
-    result = calculator.compute_normalized_graham_number()
+    calculator.compute_normalized_graham_number()
     
     # Assert: Verify audit trail is stored
     assert hasattr(calculator, 'eps_3year_values'), \

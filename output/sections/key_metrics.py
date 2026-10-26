@@ -167,7 +167,7 @@ class KeyMetricsSection(DossierSection):
         if quick_ratio and quick_ratio != 'N/A':
             lines.append(f"- **Quick Ratio**: {quick_ratio:.2f} (Acid Test - excludes inventory)")
         elif quick_ratio == 'N/A':
-            lines.append(f"- **Quick Ratio**: N/A")
+            lines.append("- **Quick Ratio**: N/A")
         
         # NCA Details (from metrics if available)
         nca_details = self.metrics.get('nca_details', {})
@@ -205,7 +205,7 @@ class KeyMetricsSection(DossierSection):
                 lines.append("")
                 lines.append("*Graham's defensive test requires long-term debt < NCA (ratio < 1.0). This ensures the company could theoretically pay off all long-term debt using only its liquid assets.*")
             elif debt_coverage_ratio == 'N/A':
-                lines.append(f"- **Debt Coverage Ratio**: N/A")
+                lines.append("- **Debt Coverage Ratio**: N/A")
 
     
     def _add_ownership_metrics(self, lines: List[str]) -> None:

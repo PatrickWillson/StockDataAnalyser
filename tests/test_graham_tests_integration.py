@@ -4,7 +4,6 @@ This module tests that the GrahamTestsSection integrates correctly
 with the rest of the dossier generation system.
 """
 
-import pytest
 from output.sections.graham_tests import GrahamTestsSection
 
 

@@ -5,7 +5,6 @@ Tests specific examples and edge cases for data staleness detection.
 Validates Requirements 7.6, 7.7 from normalized-margin-of-safety spec.
 """
 
-import pytest
 from datetime import datetime, timedelta
 from core.financial_data_processor import FinancialDataProcessor
 
@@ -17,7 +16,6 @@ class TestCheckDataStaleness:
         """Test that data within 9 months returns None (no warning)."""
         # Data from 6 months ago
         current_date = datetime(2025, 6, 1)
-        report_date = datetime(2024, 12, 31)
         
         history = {
             '2024-12-31': {'eps': 4.85, 'revenue': 1000000}
@@ -31,7 +29,6 @@ class TestCheckDataStaleness:
         """Test that data exactly 9 months old returns None (boundary case)."""
         # Data from exactly 9 months ago (9 * 30.44 = 273.96 days)
         current_date = datetime(2025, 9, 30)
-        report_date = datetime(2024, 12, 31)
         
         history = {
             '2024-12-31': {'eps': 4.85}
@@ -46,7 +43,6 @@ class TestCheckDataStaleness:
         """Test that data older than 9 months returns warning."""
         # Data from 10 months ago (304 days = 9.98 months using 30.44 days/month)
         current_date = datetime(2025, 10, 31)
-        report_date = datetime(2024, 12, 31)
         
         history = {
             '2024-12-31': {'eps': 4.85}
@@ -64,7 +60,6 @@ class TestCheckDataStaleness:
         """Test that data older than 12 months returns warning with correct age."""
         # Data from 15 months ago (455 days = 14.95 months using 30.44 days/month)
         current_date = datetime(2026, 3, 31)
-        report_date = datetime(2024, 12, 31)
         
         history = {
             '2024-12-31': {'eps': 4.85}
@@ -165,7 +160,6 @@ class TestCheckDataStaleness:
         # 9 months = 274 days (using 30.44 days/month)
         # 9 months + 1 day = 275 days
         current_date = datetime(2025, 10, 1)
-        report_date = datetime(2024, 12, 17)  # Approximately 9 months + 1 day ago
         
         history = {
             '2024-12-17': {'eps': 4.85}
@@ -199,7 +193,6 @@ class TestCheckDataStaleness:
         """Test that leap years are handled correctly in date calculations."""
         # 2024 is a leap year
         current_date = datetime(2025, 2, 28)
-        report_date = datetime(2024, 5, 31)  # 9 months ago in leap year
         
         history = {
             '2024-05-31': {'eps': 4.85}

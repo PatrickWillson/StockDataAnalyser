@@ -7,7 +7,7 @@ Tests the historical FX rate fetching and matching using Hypothesis for property
 import pytest
 from hypothesis import given, strategies as st, settings
 from datetime import date, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 import pandas as pd
 from clients.fx_client import FXClient
 

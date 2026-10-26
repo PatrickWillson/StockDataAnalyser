@@ -11,7 +11,6 @@ Tests that the METHODOLOGY NOTES section correctly displays:
 Requirements: 6.1, 6.2, 6.3, 6.4, 8.2, 8.3
 """
 
-import pytest
 from output.sections.methodology import MethodologySection
 
 

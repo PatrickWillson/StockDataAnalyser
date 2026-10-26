@@ -10,7 +10,6 @@ NOTE: These tests are for a feature that was never implemented. They are skipped
 
 import os
 import sys
-from unittest.mock import Mock, patch, MagicMock
 import pytest
 
 # Add parent directory to path

@@ -4,7 +4,6 @@ Property-based tests for yfinance client.
 Tests universal properties that should hold across all valid inputs.
 """
 
-import pytest
 from hypothesis import given, strategies as st
 from clients.yfinance_client import YFinanceClient
 

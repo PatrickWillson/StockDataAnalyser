@@ -5,7 +5,6 @@ This test verifies that the system correctly detects a company's fiscal year end
 from existing financial statements and uses it for dividend-only years.
 """
 
-import pytest
 from core.financial_data_processor import FinancialDataProcessor
 
 

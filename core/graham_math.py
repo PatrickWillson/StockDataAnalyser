@@ -12,7 +12,7 @@ This module implements strict Graham formulas for value investing analysis:
 
 import math
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, Union, List, Any
+from typing import Dict, Union
 
 from config.graham_constants import GRAHAM_MULTIPLIER, COST_OF_CAPITAL
 from config.investor_thresholds import DEFENSIVE, ENTERPRISING
@@ -1090,9 +1090,6 @@ class GrahamCalculator:
         latest_year = self._get_latest_financial_year(history, years)
         if not latest_year:
             return 'FAIL'
-        
-        # Find the index of the latest financial year
-        latest_index = years.index(latest_year)
         
         # Get the year 10 years before the latest financial year
         # (not just years[9] which might include dividend-only years)

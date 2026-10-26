@@ -152,8 +152,8 @@ class RiskFactorsSection(DossierSection):
         if beta > 0:
             if beta < 0.5:
                 lines.append(f"- **Beta: {beta:.3f}** - Low volatility relative to market")
-                lines.append(f"  - Note: Beta varies by calculation period and benchmark. Market sources report 0.33-0.50 range.")
-                lines.append(f"  - Low beta may reflect limited liquidity and defensive sector characteristics")
+                lines.append("  - Note: Beta varies by calculation period and benchmark. Market sources report 0.33-0.50 range.")
+                lines.append("  - Low beta may reflect limited liquidity and defensive sector characteristics")
             elif beta < 1.0:
                 lines.append(f"- **Beta: {beta:.3f}** - Below-market volatility")
             elif beta < 1.5:
@@ -164,7 +164,7 @@ class RiskFactorsSection(DossierSection):
         # Average volume and market cap for liquidity assessment
         avg_volume = self.financial_data.get('average_volume', 0)
         shares = latest_data.get('shares_outstanding', 0)
-        price = self.financial_data.get('price', 0)
+        self.financial_data.get('price', 0)
         if avg_volume > 0 and shares > 0:
             liquidity_pct = (avg_volume / shares) * 100
             if liquidity_pct < 0.1:
@@ -234,7 +234,7 @@ class RiskFactorsSection(DossierSection):
         # Graham's defensive test: Long-term debt < Net Current Assets
         if net_current_assets > 0 and long_term_debt > 0:
             if long_term_debt < net_current_assets:
-                lines.append(f"- **Debt Coverage: ✓** Long-term debt < Net Current Assets (passes Graham's defensive test)")
+                lines.append("- **Debt Coverage: ✓** Long-term debt < Net Current Assets (passes Graham's defensive test)")
             else:
                 debt_ratio = (long_term_debt / net_current_assets) * 100
                 lines.append(f"- **Debt Coverage: ⚠️** Long-term debt is {debt_ratio:.0f}% of Net Current Assets (fails Graham's defensive test)")
@@ -277,11 +277,11 @@ class RiskFactorsSection(DossierSection):
                 margin_volatility = statistics.stdev(profit_margins)
                 lines.append(f"- **Profit Margin Stability: {avg_margin:.1f}% average, {margin_volatility:.1f}% std dev** over {len(profit_margins)} years")
                 if margin_volatility < 5:
-                    lines.append(f"  - Low volatility indicates stable operations")
+                    lines.append("  - Low volatility indicates stable operations")
                 elif margin_volatility < 10:
-                    lines.append(f"  - Moderate volatility")
+                    lines.append("  - Moderate volatility")
                 else:
-                    lines.append(f"  - ⚠️ High volatility indicates cyclical or unstable business")
+                    lines.append("  - ⚠️ High volatility indicates cyclical or unstable business")
             else:
                 lines.append(f"- **Profit Margin: {avg_margin:.1f}%** (insufficient history for volatility analysis)")
         
@@ -377,21 +377,21 @@ class RiskFactorsSection(DossierSection):
         if isinstance(margin_of_safety, (int, float)):
             if margin_of_safety >= 30:
                 lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Excellent discount to intrinsic value")
-                lines.append(f"  - Graham's Standard: 20-30% minimum for defensive investors")
-                lines.append(f"  - Assessment: **Low valuation risk** - substantial cushion against estimation errors")
+                lines.append("  - Graham's Standard: 20-30% minimum for defensive investors")
+                lines.append("  - Assessment: **Low valuation risk** - substantial cushion against estimation errors")
             elif margin_of_safety >= 20:
                 lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Meets Graham's minimum standard")
-                lines.append(f"  - Graham's Standard: 20-30% minimum for defensive investors")
-                lines.append(f"  - Assessment: **Acceptable valuation risk** for defensive investors")
+                lines.append("  - Graham's Standard: 20-30% minimum for defensive investors")
+                lines.append("  - Assessment: **Acceptable valuation risk** for defensive investors")
             elif margin_of_safety > 0:
                 lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Below Graham's recommended minimum")
-                lines.append(f"  - Graham's Standard: 20-30% minimum for defensive investors")
-                lines.append(f"  - Assessment: **Moderate valuation risk** - limited cushion against errors or deterioration")
-                lines.append(f"  - More suitable for enterprising investors willing to accept higher risk")
+                lines.append("  - Graham's Standard: 20-30% minimum for defensive investors")
+                lines.append("  - Assessment: **Moderate valuation risk** - limited cushion against errors or deterioration")
+                lines.append("  - More suitable for enterprising investors willing to accept higher risk")
             else:
                 lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Trading above intrinsic value")
-                lines.append(f"  - Graham's Standard: 20-30% minimum for defensive investors")
-                lines.append(f"  - Assessment: **High valuation risk** - no margin for error")
+                lines.append("  - Graham's Standard: 20-30% minimum for defensive investors")
+                lines.append("  - Assessment: **High valuation risk** - no margin for error")
         else:
             lines.append(f"- **Margin of Safety: {margin_of_safety}** - Cannot assess valuation risk")
         

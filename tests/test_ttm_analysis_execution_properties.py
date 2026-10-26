@@ -12,7 +12,7 @@ Validates: Requirements 1.3
 
 import pytest
 from datetime import datetime, timedelta
-from hypothesis import given, strategies as st, assume, settings, HealthCheck
+from hypothesis import given, strategies as st, settings, HealthCheck
 from core.ttm_calculator import TTMCalculator
 
 

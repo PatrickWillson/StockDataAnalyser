@@ -6,7 +6,6 @@ These tests require network access and are marked with @pytest.mark.live.
 """
 
 import pytest
-from datetime import date
 from clients.fx_client import FXClient
 
 

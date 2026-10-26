@@ -4,9 +4,7 @@ Tests verify that all new metrics are calculated correctly and appear in the
 dossier output with proper formatting and structure preservation.
 """
 
-import pytest
 from core.graham_math import GrahamCalculator
-from core.financial_data_processor import FinancialDataProcessor
 from output.sections.executive_summary import ExecutiveSummarySection
 from output.sections.key_metrics import KeyMetricsSection
 from output.sections.graham_tests import GrahamTestsSection

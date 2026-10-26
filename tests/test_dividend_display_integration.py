@@ -6,9 +6,7 @@ generation correctly displays dividend information with appropriate labels
 and warnings.
 """
 
-import pytest
-import json
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 from clients.eodhd_client import EODHDClient
 from output.dossier_generator import DossierGenerator
 from core.graham_math import GrahamCalculator

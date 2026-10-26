@@ -98,7 +98,7 @@ For development (tests, coverage, linting):
 pip install -r requirements-dev.txt
 pytest                 # full test suite (live API tests excluded)
 pytest --cov           # with coverage report (fails below the configured floor)
-python3 -m ruff check . # lint report
+python3 -m ruff check . # lint (must be clean)
 ```
 
 3. Configure your EODHD API key in `.env`:

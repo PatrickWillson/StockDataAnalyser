@@ -4,8 +4,7 @@ Property-based tests for price fallback logic with yfinance.
 Tests universal properties that should hold across all inputs.
 """
 
-import pytest
-from hypothesis import given, strategies as st, assume
+from hypothesis import given, strategies as st
 from core.financial_data_processor import FinancialDataProcessor
 
 

@@ -6,7 +6,7 @@ Tests that the system continues processing when historical rates are unavailable
 
 import pytest
 from hypothesis import given, strategies as st, settings
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 from clients.fx_client import FXClient
 from core.financial_data_processor import FinancialDataProcessor
 

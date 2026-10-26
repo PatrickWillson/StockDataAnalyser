@@ -14,7 +14,7 @@ Validates: Requirements 3.1, 3.2, 3.3, 3.4
 
 import pytest
 from datetime import datetime, timedelta
-from hypothesis import given, strategies as st, assume, settings
+from hypothesis import given, strategies as st, settings
 from core.ttm_calculator import TTMCalculator
 
 

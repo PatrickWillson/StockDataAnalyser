@@ -5,7 +5,7 @@ These tests verify universal properties that should hold across all valid inputs
 Each test runs 100+ iterations with randomly generated data.
 """
 
-from hypothesis import given, strategies as st, settings, assume, HealthCheck
+from hypothesis import given, strategies as st, settings, HealthCheck
 import math
 from core.anomaly_detector import AnomalyDetector
 

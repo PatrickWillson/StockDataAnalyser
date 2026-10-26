@@ -2,7 +2,6 @@
 Property-based tests for Dossier Generator functionality.
 """
 
-import pytest
 from hypothesis import given, strategies as st
 from output.dossier_generator import DossierGenerator
 

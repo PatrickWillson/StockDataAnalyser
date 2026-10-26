@@ -502,7 +502,7 @@ def test_non_december_fiscal_year(fiscal_month, fiscal_day, num_years):
     
     # Assert: Should select 3 most recent years
     assert result['valid'] is True, \
-        f"Expected valid=True for non-December fiscal year"
+        "Expected valid=True for non-December fiscal year"
     
     assert len(result['years']) == 3
     

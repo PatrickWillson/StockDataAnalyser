@@ -12,11 +12,10 @@ Validates: Requirements 1.1, 1.2, 1.4
 """
 
 import pytest
-import logging
 from datetime import datetime, timedelta
-from hypothesis import given, strategies as st, assume, settings
+from hypothesis import given, strategies as st, settings
 from core.ttm_calculator import TTMCalculator
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 class TestSemiAnnualFrequencyDetectionProperties:

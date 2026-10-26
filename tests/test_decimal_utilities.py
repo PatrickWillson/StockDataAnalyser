@@ -8,7 +8,7 @@ Validates: Requirements 10.2
 """
 
 import pytest
-from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
+from decimal import Decimal, InvalidOperation
 from hypothesis import given, settings
 from tests.test_utils_decimal import (
     to_decimal,

@@ -8,9 +8,8 @@ Properties tested:
 - Property 18: Irregular Pattern Detection (Requirements 2.4, 10.7)
 """
 
-import pytest
 from hypothesis import given, strategies as st, assume, settings
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from core.ttm_calculator import TTMCalculator
 
 

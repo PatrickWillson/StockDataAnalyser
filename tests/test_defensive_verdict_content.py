@@ -9,7 +9,6 @@ Validates specific requirements:
 - Requirements 6.5: Highlight key strengths
 """
 
-import pytest
 import sys
 import os
 

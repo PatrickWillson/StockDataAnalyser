@@ -7,7 +7,6 @@ NOTE: These tests need to be updated to work with ClientFactory pattern.
 """
 
 import pytest
-import sys
 from unittest.mock import Mock, patch
 from hypothesis import given, strategies as st
 
@@ -142,7 +141,7 @@ def test_system_continues_with_valid_price_property(ticker, exchange, price):
                 with patch('stock_data_analyser.YFinanceClient') as MockYFClient:
                     with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
                         with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
-                            with patch('stock_data_analyser.save_dossier') as mock_save:
+                            with patch('stock_data_analyser.save_dossier'):
                                 with patch('builtins.print'):
                                     # Setup mocks
                                     mock_client_instance = Mock()

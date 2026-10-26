@@ -4,7 +4,6 @@ Tests verify that WCPS and Payout Ratio columns are correctly displayed in the
 financial history table with proper formatting and alignment.
 """
 
-import pytest
 from output.sections.financial_history import FinancialHistorySection
 
 

@@ -10,19 +10,16 @@ Feature: graham-metrics-enhancement
 import pytest
 from decimal import Decimal
 from hypothesis import given, settings
-from hypothesis import strategies as st
 
 from core.graham_math import GrahamCalculator
 from tests.test_utils_decimal import (
-    decimal_strategy,
     currency_strategy,
     to_decimal,
     assert_decimal_equal
 )
 from tests.fixtures_graham_metrics import (
     GrahamMetricsFixtures,
-    EdgeCaseFixtures,
-    SectorSpecificFixtures
+    EdgeCaseFixtures
 )
 
 

@@ -3,9 +3,7 @@ Unit tests for Dossier file saving functionality.
 """
 
 import os
-import pytest
 import tempfile
-import shutil
 from stock_data_analyser import save_dossier
 
 

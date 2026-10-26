@@ -10,7 +10,6 @@ for TTM Graham Number and add a warning explaining why.
 Validates: Requirements 4.7, 4.8
 """
 
-import pytest
 from hypothesis import given, strategies as st
 from core.ttm_calculator import TTMCalculator
 

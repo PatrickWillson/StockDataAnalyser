@@ -9,7 +9,6 @@ having 10 consecutive years of positive earnings, because year 2025 had a
 declared dividend but no financial statements yet.
 """
 
-import pytest
 from hypothesis import given, strategies as st
 from core.graham_math import GrahamCalculator
 

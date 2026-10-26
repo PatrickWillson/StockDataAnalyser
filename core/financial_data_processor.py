@@ -661,7 +661,7 @@ class FinancialDataProcessor:
                 
                 if isinstance(first_value, dict) and 'Year' in first_value and 'Count' in first_value:
                     logger.warning("Using dividend payment counts (actual amounts not available from API)")
-                    self._log(f"[DEBUG] Found indexed dividend count data")
+                    self._log("[DEBUG] Found indexed dividend count data")
                     for key, value in div_data.items():
                         if isinstance(value, dict) and 'Year' in value and 'Count' in value:
                             year = str(value['Year'])
@@ -674,7 +674,7 @@ class FinancialDataProcessor:
                 
                 elif all(isinstance(k, str) and k.isdigit() and len(k) == 4 for k in list(div_data.keys())[:3]):
                     logger.warning("Using dividend payment counts (actual amounts not available from API)")
-                    self._log(f"[DEBUG] Found year-keyed dividend data")
+                    self._log("[DEBUG] Found year-keyed dividend data")
                     for year, value in div_data.items():
                         result[year] = self.sanitize_value(value)
                         source_indicators[year] = 'count'
@@ -946,7 +946,7 @@ class FinancialDataProcessor:
                 if years_as_int[i] - years_as_int[i + 1] > 1:
                     gap_count += 1
                     if gap_count >= 3:
-                        warnings.append(f"Data Gap Warning: Multiple consecutive years missing")
+                        warnings.append("Data Gap Warning: Multiple consecutive years missing")
                         break
                 else:
                     gap_count = 0

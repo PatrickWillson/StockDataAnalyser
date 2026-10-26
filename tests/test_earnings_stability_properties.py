@@ -13,7 +13,6 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from core.graham_math import GrahamCalculator
-from tests.test_utils_decimal import to_decimal
 from tests.fixtures_graham_metrics import GrahamMetricsFixtures
 
 

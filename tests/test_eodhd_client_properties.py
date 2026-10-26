@@ -5,7 +5,6 @@ These tests verify universal properties that should hold across all valid inputs
 Each test runs 100+ iterations with randomly generated data.
 """
 
-import pytest
 from hypothesis import given, strategies as st, settings
 from unittest.mock import Mock, patch
 from clients.eodhd_client import EODHDClient
@@ -156,7 +155,7 @@ def test_currency_conversion_application(price, currency_pair):
         # Conversion should occur with mocked rate
         expected_price = price * 1.5
         assert abs(converted_price - expected_price) < 0.01, \
-            f"Price should be converted using FX rate"
+            "Price should be converted using FX rate"
         assert abs(converted_price - expected_price) < 0.01, \
             f"Converted price should match expected (got {converted_price}, expected {expected_price})"
         assert success, "Conversion should succeed"

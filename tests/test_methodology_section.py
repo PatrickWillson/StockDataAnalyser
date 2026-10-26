@@ -4,7 +4,6 @@ Tests verify that all new metrics have proper methodology explanations
 including formulas, Graham references, and context.
 """
 
-import pytest
 from output.sections.methodology import MethodologySection
 
 

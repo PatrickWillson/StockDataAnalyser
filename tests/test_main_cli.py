@@ -5,10 +5,8 @@ These tests verify the CLI handles various scenarios correctly.
 """
 
 import pytest
-import sys
 import os
-from unittest.mock import Mock, patch, MagicMock
-from io import StringIO
+from unittest.mock import Mock, patch
 
 
 def test_missing_api_key_error():
@@ -18,7 +16,6 @@ def test_missing_api_key_error():
     """
     # Arrange: Mock the API_KEY as None to simulate missing key
     import stock_data_analyser
-    import logging
     
     with patch('sys.argv', ['stock_data_analyser.py', 'AAPL.US']):
         with patch.object(stock_data_analyser, 'API_KEY', None):
@@ -100,7 +97,7 @@ def test_ticker_suffix_example():
                 with patch('stock_data_analyser.ClientFactory.create_yfinance_client') as mock_create_yf:
                     with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
                         with patch('stock_data_analyser.AnomalyDetector') as MockDetector:
-                            with patch('stock_data_analyser.save_dossier') as mock_save:
+                            with patch('stock_data_analyser.save_dossier'):
                                 # Setup mocks
                                 mock_client_instance = Mock()
                                 mock_client_instance.fetch_all_data.return_value = mock_financial_data
@@ -170,9 +167,8 @@ def test_insufficient_history_warning():
                 mock_create_eodhd.return_value = mock_client_instance
                 
                 # Act
-                import stock_data_analyser
                 from clients.factory import ClientFactory
-                client = ClientFactory.create_eodhd_client('test_key')
+                ClientFactory.create_eodhd_client('test_key')
                 result = mock_client_instance.fetch_all_data('YOUNG.US')
                 
                 # Assert: Verify warning is present
@@ -211,9 +207,8 @@ def test_insufficient_history_warning():
                 mock_create_eodhd.return_value = mock_client_instance
                 
                 # Act
-                import stock_data_analyser
                 from clients.factory import ClientFactory
-                client = ClientFactory.create_eodhd_client('test_key')
+                ClientFactory.create_eodhd_client('test_key')
                 result = mock_client_instance.fetch_all_data('MATURE.US')
                 
                 # Assert: Verify no warning
@@ -254,7 +249,7 @@ def test_young_company_handling():
     with patch.dict(os.environ, {'EODHD_API_KEY': 'test_key'}):
         with patch('sys.argv', ['stock_data_analyser.py', 'STARTUP.US']):
             with patch('stock_data_analyser.ClientFactory.create_eodhd_client') as mock_create_eodhd:
-                with patch('stock_data_analyser.GrahamCalculator') as MockCalculator:
+                with patch('stock_data_analyser.GrahamCalculator'):
                     # Setup mocks
                     mock_client_instance = Mock()
                     mock_client_instance.fetch_all_data.return_value = mock_financial_data

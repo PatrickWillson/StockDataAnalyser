@@ -246,8 +246,8 @@ class FinancialHistorySection:
         if incomplete_years:
             years_str = ", ".join(incomplete_years)
             lines.append(f"- Years marked '[Data Unavailable]' ({years_str}) show declared dividends but lack complete audited annual financial statements")
-            lines.append(f"- **Graham's Principle**: Analysis and valuations use only complete annual data from audited financial statements")
-            lines.append(f"- Declared dividends are shown for income investors but excluded from historical calculations")
+            lines.append("- **Graham's Principle**: Analysis and valuations use only complete annual data from audited financial statements")
+            lines.append("- Declared dividends are shown for income investors but excluded from historical calculations")
         
         # Add note if showing counts instead of amounts
         if not is_dividend_amounts:

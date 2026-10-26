@@ -13,9 +13,8 @@ return True and identify the specific gap location.
 Validates: Requirements 2.1, 2.2, 2.3, 2.4
 """
 
-import pytest
 from datetime import datetime, timedelta
-from hypothesis import given, strategies as st, assume, settings
+from hypothesis import given, strategies as st, settings
 from core.ttm_calculator import TTMCalculator
 
 
@@ -352,8 +351,8 @@ class TestSemiAnnualGapDetectionProperties:
         
         # Assert
         assert gaps_detected is False, (
-            f"Expected no gaps for 135-day interval (lower boundary), "
-            f"but gaps were detected"
+            "Expected no gaps for 135-day interval (lower boundary), "
+            "but gaps were detected"
         )
     
     # Feature: ttm-semi-annual-gap-fix, Property 2: Semi-Annual Gap Detection Tolerance
@@ -394,8 +393,8 @@ class TestSemiAnnualGapDetectionProperties:
         
         # Assert
         assert gaps_detected is False, (
-            f"Expected no gaps for 225-day interval (upper boundary), "
-            f"but gaps were detected"
+            "Expected no gaps for 225-day interval (upper boundary), "
+            "but gaps were detected"
         )
     
     # Feature: ttm-semi-annual-gap-fix, Property 3: Actual Gap Detection for Semi-Annual
@@ -436,6 +435,6 @@ class TestSemiAnnualGapDetectionProperties:
         
         # Assert
         assert gaps_detected is True, (
-            f"Expected gap to be detected for 270-day interval (gap threshold), "
-            f"but no gap was detected"
+            "Expected gap to be detected for 270-day interval (gap threshold), "
+            "but no gap was detected"
         )

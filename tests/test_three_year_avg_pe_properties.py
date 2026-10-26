@@ -339,7 +339,6 @@ def test_property_10_pe_na_when_avg_eps_zero_or_negative(eps_year1, eps_year2, e
     **Validates: Requirements 4.6**
     """
     # Average will be zero or negative since all values are <= 0
-    avg_eps = (eps_year1 + eps_year2 + eps_year3) / Decimal('3')
     
     # Arrange
     eps_values = [eps_year1, eps_year2, eps_year3]

@@ -8,7 +8,6 @@ Requirements 6.8, 9.1:
 """
 
 import logging
-import pytest
 from io import StringIO
 
 

@@ -108,7 +108,6 @@ def test_pe_calculation_with_zero_eps():
     Test that P/E calculation handles zero EPS gracefully.
     """
     price = 100.0
-    eps = 0.0
     
     # Should not crash, should return N/A or infinity
     # This is handled by the dossier generator, not the conversion logic

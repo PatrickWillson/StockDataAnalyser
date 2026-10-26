@@ -10,7 +10,6 @@ Requirements 8.1-8.6:
 - 8.6: Include Graham quote about including deficits
 """
 
-import pytest
 from output.dossier_generator import DossierGenerator
 
 

@@ -22,7 +22,7 @@ python stock_data_analyser.py RY.TO   # Canadian stock (Toronto)
 # Run tests (live API tests excluded by default via pytest.ini; run them with -m live)
 pytest tests/ -v
 
-# Coverage (fails below the floor in pyproject.toml) and lint report
+# Coverage (fails below the floor in pyproject.toml) and lint (must be clean; enforced by tests/test_lint.py)
 pytest --cov
 python3 -m ruff check .
 

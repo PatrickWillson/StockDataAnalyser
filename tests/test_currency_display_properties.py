@@ -8,7 +8,6 @@ Tests that currency display format is consistent across all price values
 and correctly shows trading currency first with optional conversion.
 """
 
-import pytest
 from hypothesis import given, strategies as st
 from stock_data_analyser import format_price_display
 
@@ -221,7 +220,6 @@ def test_yfinance_price_currency_conversion_preserved(price, price_currency, fin
     **Validates: Requirements 5.1, 5.2, 5.4**
     """
     from core.currency_converter import CurrencyConverter
-    from clients.fx_client import FXClient
     
     # Create a mock FX client that returns our test rate
     class MockFXClient:

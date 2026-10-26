@@ -181,7 +181,7 @@ def test_historical_fx_rates_improve_accuracy():
                 max_diff = max(rate_differences)
                 
                 print(f"✓ FX rate variation: Avg {avg_diff:.1f}%, Max {max_diff:.1f}%")
-                print(f"✓ Historical rates provide more accurate historical valuations")
+                print("✓ Historical rates provide more accurate historical valuations")
             else:
                 print("⚠ No significant FX rate differences found")
         else:

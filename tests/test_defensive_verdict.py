@@ -4,7 +4,6 @@ This module tests the GrahamTestsSection class which generates both
 defensive and enterprising investor test sections.
 """
 
-import pytest
 from output.sections.graham_tests import GrahamTestsSection
 
 

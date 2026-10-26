@@ -13,7 +13,7 @@ Validates: Requirements 1.6, 1.7, 1.8, 10.8
 
 import pytest
 from datetime import datetime, timedelta
-from hypothesis import given, strategies as st, assume
+from hypothesis import given, strategies as st
 from core.ttm_calculator import TTMCalculator
 
 
@@ -231,7 +231,7 @@ class TestSelectPeriodsForTTM:
         calculator = TTMCalculator(quarterly_data, price=100.0, currency='USD')
         
         # Act
-        frequency = calculator.detect_reporting_frequency()
+        calculator.detect_reporting_frequency()
         
         # Frequency will likely be irregular due to short intervals
         # But let's test _select_periods_for_ttm directly with 'quarterly'

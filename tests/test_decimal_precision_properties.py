@@ -7,7 +7,6 @@ Tests verify that all new calculations use Python's Decimal type to prevent
 floating-point precision errors.
 """
 
-import pytest
 from hypothesis import given, strategies as st
 from decimal import Decimal, ROUND_HALF_UP
 from core.graham_math import GrahamCalculator
@@ -131,13 +130,8 @@ def test_wcps_uses_decimal_precision(current_assets, current_liabilities, shares
     expected_wcps = working_capital / shares_dec
     expected_rounded = expected_wcps.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     
-    # Act - Calculate using float (what would happen without Decimal)
-    float_wcps = (float(current_assets) - float(current_liabilities)) / float(shares)
-    float_rounded = round(float_wcps, 2)
-    
     # Assert - Decimal calculation should be more precise
     # The difference might be small, but Decimal ensures exact decimal arithmetic
-    decimal_result = float(expected_rounded)
     
     # Verify that Decimal rounding is consistent
     assert isinstance(expected_rounded, Decimal), "WCPS should use Decimal for calculation"
@@ -180,7 +174,7 @@ def test_three_year_avg_pe_uses_decimal_precision(eps_values, price):
         
         # Allow small tolerance for float conversion
         assert abs(float(result['three_year_avg_eps']) - float(avg_eps_dec)) < 0.01, \
-            f"Three-year avg EPS should use Decimal precision"
+            "Three-year avg EPS should use Decimal precision"
 
 
 def test_decimal_conversion_pattern():

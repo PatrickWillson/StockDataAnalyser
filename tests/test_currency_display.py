@@ -7,7 +7,6 @@ Tests Requirements 4.1, 4.2, 4.4:
 - Format consistency across all price displays
 """
 
-import pytest
 from stock_data_analyser import format_price_display
 
 

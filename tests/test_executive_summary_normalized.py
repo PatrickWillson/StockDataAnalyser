@@ -8,7 +8,6 @@ Tests verify that:
 Requirements: 3.3, 3.4, 3.5, 10.1
 """
 
-import pytest
 from output.sections.executive_summary import ExecutiveSummarySection
 
 

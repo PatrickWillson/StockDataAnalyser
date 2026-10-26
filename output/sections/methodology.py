@@ -155,7 +155,7 @@ class MethodologySection:
         if pe_ratio > 0 and most_recent_eps and most_recent_eps > 0:
             eps_display = format_price_display(most_recent_eps, unified_currency, unified_currency)
             lines.append(f"- **P/E Ratio ({pe_ratio:.2f})**: Current Price / Most Recent Annual EPS")
-            lines.append(f"  - Calculated from audited financials, not API pre-calculated ratios")
+            lines.append("  - Calculated from audited financials, not API pre-calculated ratios")
             lines.append(f"  - EPS: {eps_display} (Net Income / Shares Outstanding)")
     
     def _add_profitability_metrics_explanation(self, lines: List[str]) -> None:
@@ -191,15 +191,15 @@ class MethodologySection:
         normalized_graham_number = self.metrics.get('normalized_graham_number', 0)
         
         # Get 3-year EPS data from calculator if available
-        history = self.financial_data.get('history', {})
+        self.financial_data.get('history', {})
         
         # Single-Year Graham Number (Legacy)
         if isinstance(graham_number, (int, float)) and graham_number > 0:
             graham_display = format_price_display(graham_number, unified_currency, unified_currency)
             lines.append(f"- **Graham Number - Single-Year EPS ({graham_display})**: √(22.5 × EPS × TBVPS)")
-            lines.append(f"  - Conservative intrinsic value estimate")
-            lines.append(f"  - Based on Benjamin Graham's formula from 'The Intelligent Investor'")
-            lines.append(f"  - Uses most recent annual EPS")
+            lines.append("  - Conservative intrinsic value estimate")
+            lines.append("  - Based on Benjamin Graham's formula from 'The Intelligent Investor'")
+            lines.append("  - Uses most recent annual EPS")
         
         # Normalized Graham Number (3-Year Average)
         lines.append("")
@@ -208,23 +208,23 @@ class MethodologySection:
         if isinstance(normalized_graham_number, (int, float)) and normalized_graham_number > 0:
             normalized_display = format_price_display(normalized_graham_number, unified_currency, unified_currency)
             lines.append(f"  - **Value**: {normalized_display}")
-            lines.append(f"  - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)")
-            lines.append(f"")
-            lines.append(f"  **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year")
-            lines.append(f"  makes a cyclical company appear undervalued despite being a value destroyer over the")
-            lines.append(f"  full business cycle. This aligns with Graham's actual criterion: *\"Price should not exceed\"*")
-            lines.append(f"  *\"15 times average earnings of the past three years.\"*")
-            lines.append(f"")
+            lines.append("  - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)")
+            lines.append("")
+            lines.append("  **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year")
+            lines.append("  makes a cyclical company appear undervalued despite being a value destroyer over the")
+            lines.append("  full business cycle. This aligns with Graham's actual criterion: *\"Price should not exceed\"*")
+            lines.append("  *\"15 times average earnings of the past three years.\"*")
+            lines.append("")
             
             # Display 3-year EPS breakdown
             self._add_3year_eps_breakdown(lines, unified_currency)
         else:
             # Normalized Graham Number is "N/A" - still show breakdown if available
-            lines.append(f"  - **Value**: N/A")
-            lines.append(f"  - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)")
-            lines.append(f"")
-            lines.append(f"  **Rationale**: Smooths cyclical volatility and prevents 'bull traps'")
-            lines.append(f"")
+            lines.append("  - **Value**: N/A")
+            lines.append("  - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)")
+            lines.append("")
+            lines.append("  **Rationale**: Smooths cyclical volatility and prevents 'bull traps'")
+            lines.append("")
             
             # Try to show breakdown even when calculation failed
             self._add_3year_eps_breakdown(lines, unified_currency)
@@ -249,18 +249,18 @@ class MethodologySection:
             years_included = epv_details.get('years_included', [])
             net_incomes = epv_details.get('net_incomes', [])
             
-            lines.append(f"- **EPV - Simplified Earnings Power Estimate**")
-            lines.append(f"")
-            lines.append(f"  **Methodology:**")
-            lines.append(f"  - Uses 7-10 year average of net income")
-            lines.append(f"  - **Includes ALL years** (profitable and unprofitable)")
-            lines.append(f"  - Loss years reduce the average (real value destruction)")
-            lines.append(f"  - Capitalizes earnings at 10% discount rate")
-            lines.append(f"  - Inspired by Graham's emphasis on full-cycle earnings")
-            lines.append(f"")
-            lines.append(f"  **Important**: This is a simplified approach, not Graham's original methodology.")
-            lines.append(f"  Graham emphasized earnings power conceptually but didn't prescribe this exact formula.")
-            lines.append(f"")
+            lines.append("- **EPV - Simplified Earnings Power Estimate**")
+            lines.append("")
+            lines.append("  **Methodology:**")
+            lines.append("  - Uses 7-10 year average of net income")
+            lines.append("  - **Includes ALL years** (profitable and unprofitable)")
+            lines.append("  - Loss years reduce the average (real value destruction)")
+            lines.append("  - Capitalizes earnings at 10% discount rate")
+            lines.append("  - Inspired by Graham's emphasis on full-cycle earnings")
+            lines.append("")
+            lines.append("  **Important**: This is a simplified approach, not Graham's original methodology.")
+            lines.append("  Graham emphasized earnings power conceptually but didn't prescribe this exact formula.")
+            lines.append("")
             lines.append(f"  **Calculation for {ticker}:**")
             lines.append(f"  - Years Used: {years_used}")
             
@@ -292,7 +292,7 @@ class MethodologySection:
                 epv_per_share_display = format_price_display(epv_per_share, unified_currency, unified_currency)
                 lines.append(f"  - EPV Per Share: {epv_per_share_display}")
             
-            lines.append(f"")
+            lines.append("")
             
             # Add note about loss years or consistent profitability
             loss_years = [ni for ni in net_incomes if ni < 0]
@@ -312,8 +312,8 @@ class MethodologySection:
             else:
                 lines.append(f"  **Note**: All {years_used} years were profitable, demonstrating consistent earnings power.")
             
-            lines.append(f"")
-            lines.append(f"  **Graham's Principle**: *\"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle.\"*")
+            lines.append("")
+            lines.append("  **Graham's Principle**: *\"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle.\"*")
     
     def _add_net_net_explanation(self, lines: List[str], unified_currency: str) -> None:
         """Add Net-Net Value calculation explanation.
@@ -327,8 +327,8 @@ class MethodologySection:
         if isinstance(net_net, (int, float)) and net_net > 0:
             net_net_display = format_price_display(net_net, unified_currency, unified_currency)
             lines.append(f"- **Net-Net Value ({net_net_display})**: (Current Assets - Total Liabilities) / Shares")
-            lines.append(f"  - Conservative liquidation value estimate")
-            lines.append(f"  - Graham's 'cigar butt' valuation for distressed situations")
+            lines.append("  - Conservative liquidation value estimate")
+            lines.append("  - Graham's 'cigar butt' valuation for distressed situations")
     
     def _add_margin_of_safety_explanation(self, lines: List[str]) -> None:
         """Add Margin of Safety calculation explanation.
@@ -353,62 +353,62 @@ class MethodologySection:
         if isinstance(mos, (int, float)):
             lines.append(f"  - **Value**: {mos:.1f}%")
         else:
-            lines.append(f"  - **Value**: N/A")
+            lines.append("  - **Value**: N/A")
         
-        lines.append(f"  - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100")
-        lines.append(f"")
-        lines.append(f"  **Conservative Dual-Anchor Methodology**:")
-        lines.append(f"")
-        lines.append(f"  This system uses the **lower** of two valuation methods as the intrinsic value:")
-        lines.append(f"  1. **Normalized Graham Number** (3-year average EPS)")
-        lines.append(f"  2. **EPV per share** (7-10 year normalized earnings)")
-        lines.append(f"")
-        lines.append(f"  **Why This Is Conservative** (Graham's Philosophy):")
-        lines.append(f"  - Graham emphasized buying with a margin of safety")
-        lines.append(f"  - Using the lower value ensures we don't overpay")
-        lines.append(f"  - If a company looks cheap on assets (Graham Number) but has poor earnings")
-        lines.append(f"    power (EPV), the EPV reveals the true value")
-        lines.append(f"  - If a company has strong earnings (EPV) but trades above asset value")
-        lines.append(f"    (Graham Number), we use the more conservative asset-based valuation")
-        lines.append(f"")
+        lines.append("  - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100")
+        lines.append("")
+        lines.append("  **Conservative Dual-Anchor Methodology**:")
+        lines.append("")
+        lines.append("  This system uses the **lower** of two valuation methods as the intrinsic value:")
+        lines.append("  1. **Normalized Graham Number** (3-year average EPS)")
+        lines.append("  2. **EPV per share** (7-10 year normalized earnings)")
+        lines.append("")
+        lines.append("  **Why This Is Conservative** (Graham's Philosophy):")
+        lines.append("  - Graham emphasized buying with a margin of safety")
+        lines.append("  - Using the lower value ensures we don't overpay")
+        lines.append("  - If a company looks cheap on assets (Graham Number) but has poor earnings")
+        lines.append("    power (EPV), the EPV reveals the true value")
+        lines.append("  - If a company has strong earnings (EPV) but trades above asset value")
+        lines.append("    (Graham Number), we use the more conservative asset-based valuation")
+        lines.append("")
         
         # Show which metric was the limiting factor for this stock
         if limiting_factor != 'N/A':
-            lines.append(f"  **For This Stock**:")
+            lines.append("  **For This Stock**:")
             
             if isinstance(normalized_gn, (int, float)):
                 normalized_display = format_price_display(normalized_gn, unified_currency, unified_currency)
                 lines.append(f"  - Normalized Graham Number: {normalized_display}")
             else:
-                lines.append(f"  - Normalized Graham Number: N/A")
+                lines.append("  - Normalized Graham Number: N/A")
             
             if isinstance(epv_per_share, (int, float)):
                 epv_display = format_price_display(epv_per_share, unified_currency, unified_currency)
                 lines.append(f"  - EPV per share: {epv_display}")
             else:
-                lines.append(f"  - EPV per share: N/A")
+                lines.append("  - EPV per share: N/A")
             
             if isinstance(intrinsic_value_used, (int, float)):
                 intrinsic_display = format_price_display(intrinsic_value_used, unified_currency, unified_currency)
                 lines.append(f"  - **Intrinsic Value Used**: {intrinsic_display} (Capped by {limiting_factor})")
             else:
-                lines.append(f"  - **Intrinsic Value Used**: N/A")
+                lines.append("  - **Intrinsic Value Used**: N/A")
             
-            lines.append(f"")
+            lines.append("")
             
             # Add interpretation based on limiting factor
             if limiting_factor == "EPV":
-                lines.append(f"  **Interpretation**: EPV is lower than Normalized Graham Number, indicating")
-                lines.append(f"  that long-term earnings power is weaker than asset-based valuation suggests.")
-                lines.append(f"  This is a red flag - the company may be destroying value over the full cycle.")
+                lines.append("  **Interpretation**: EPV is lower than Normalized Graham Number, indicating")
+                lines.append("  that long-term earnings power is weaker than asset-based valuation suggests.")
+                lines.append("  This is a red flag - the company may be destroying value over the full cycle.")
             elif limiting_factor == "Normalized Graham Number":
-                lines.append(f"  **Interpretation**: Normalized Graham Number is lower than EPV, indicating")
-                lines.append(f"  the stock trades at a premium to its asset value despite strong earnings power.")
-                lines.append(f"  Graham would prefer to buy at a discount to both metrics.")
+                lines.append("  **Interpretation**: Normalized Graham Number is lower than EPV, indicating")
+                lines.append("  the stock trades at a premium to its asset value despite strong earnings power.")
+                lines.append("  Graham would prefer to buy at a discount to both metrics.")
         
-        lines.append(f"")
-        lines.append(f"  **Graham's Principle**: *\"The margin of safety is always dependent on the price paid.\"*")
-        lines.append(f"  Graham recommended a minimum 20-30% margin of safety for defensive investors.")
+        lines.append("")
+        lines.append("  **Graham's Principle**: *\"The margin of safety is always dependent on the price paid.\"*")
+        lines.append("  Graham recommended a minimum 20-30% margin of safety for defensive investors.")
     
     def _add_3year_eps_breakdown(self, lines: List[str], unified_currency: str) -> None:
         """Add 3-year EPS breakdown display.
@@ -424,7 +424,7 @@ class MethodologySection:
         
         history = self.financial_data.get('history', {})
         if not history:
-            lines.append(f"  **3-Year EPS**: No financial history available")
+            lines.append("  **3-Year EPS**: No financial history available")
             return
         
         # Extract 3-year EPS data
@@ -460,7 +460,7 @@ class MethodologySection:
         Args:
             lines: List to append lines to
         """
-        unified_currency = self.financial_data.get('currency', 'USD')
+        self.financial_data.get('currency', 'USD')
         
         # Three-Year Average P/E
         three_year_pe = self.metrics.get('three_year_avg_pe', {})

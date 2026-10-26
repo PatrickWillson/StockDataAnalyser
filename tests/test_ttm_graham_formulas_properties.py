@@ -10,7 +10,6 @@ Tests Properties 6-10 from the design document:
 """
 
 import math
-import pytest
 from hypothesis import given, strategies as st
 from core.ttm_calculator import TTMCalculator
 

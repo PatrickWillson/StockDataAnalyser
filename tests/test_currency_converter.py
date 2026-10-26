@@ -6,7 +6,6 @@ Tests single conversions, London Fix, batch conversions, and warning generation.
 
 import pytest
 from core.currency_converter import CurrencyConverter
-from clients.fx_client import FXClient
 
 
 class MockFXClient:

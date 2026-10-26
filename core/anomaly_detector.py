@@ -6,7 +6,7 @@ Anomalies are flagged when EPS growth rates deviate significantly from the mean.
 """
 
 import math
-from typing import Dict, List, Any
+from typing import List
 
 
 class AnomalyDetector:

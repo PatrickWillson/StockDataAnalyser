@@ -65,8 +65,7 @@ show_missing = true
 skip_covered = true
 
 # ---------------------------------------------------------------------------
-# ruff: report-only for now (python3 -m ruff check .). Existing findings are
-# cleaned up in M2, after which ruff will be enforced in the test suite.
+# ruff: enforced by tests/test_lint.py (zero findings). Run: python3 -m ruff check .
 # ---------------------------------------------------------------------------
 [tool.ruff]
 target-version = "py310"

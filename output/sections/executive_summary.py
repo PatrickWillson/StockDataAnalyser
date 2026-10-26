@@ -277,7 +277,7 @@ class ExecutiveSummarySection(DossierSection):
             unified_currency: Currency for display
         """
         forward_div = self.financial_data.get('forward_dividend_rate')
-        dividend_source = self.financial_data.get('dividend_source', 'Unknown')
+        self.financial_data.get('dividend_source', 'Unknown')
         source_indicators = self.financial_data.get('dividend_sources', {})
         
         # Get most recent COMPLETE year dividend information
@@ -338,7 +338,7 @@ class ExecutiveSummarySection(DossierSection):
             actual_yield = (forward_div / self.financial_data['price']) * 100
             div_display = format_price_display(forward_div, unified_currency, unified_currency)
             lines.append(f"- Forward Annual Dividend: {div_display} (Yield: {actual_yield:.2f}%)")
-            lines.append(f"  - ⚠️ No historical dividend data available - using forward declared rate")
+            lines.append("  - ⚠️ No historical dividend data available - using forward declared rate")
     
     def _add_valuation_ratios(self, lines: List[str]) -> None:
         """Add valuation ratios (P/E, Price/Book).

@@ -4,7 +4,6 @@ Unit tests for Calculation Details section generator.
 Tests share count disclosure, BVPS calculation display, and Graham Number calculation display.
 """
 
-import pytest
 from output.sections.calculation_details import CalculationDetailsSection, format_price_display
 
 

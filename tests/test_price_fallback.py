@@ -4,7 +4,6 @@ Unit tests for price fallback logic in FinancialDataProcessor.
 Tests the priority order: yfinance → EODHD → 0.0
 """
 
-import pytest
 from core.financial_data_processor import FinancialDataProcessor
 
 

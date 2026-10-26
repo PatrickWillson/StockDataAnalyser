@@ -59,37 +59,37 @@ class GrahamTestsSection:
         # Test 1: Earnings Stability
         earnings_stability = defensive_tests.get('earnings_stability', 'N/A')
         lines.append(f"1. **Earnings Stability**: {earnings_stability}")
-        lines.append(f"   - Criterion: Positive earnings in each of the past 10 years")
+        lines.append("   - Criterion: Positive earnings in each of the past 10 years")
         
         # Test 2: Current Ratio
         current_ratio = defensive_tests.get('current_ratio', 'N/A')
         lines.append(f"2. **Current Ratio**: {current_ratio}")
-        lines.append(f"   - Criterion: Current Ratio ≥ 2.0")
+        lines.append("   - Criterion: Current Ratio ≥ 2.0")
         
         # Test 3: Debt to Assets
         debt_to_assets = defensive_tests.get('debt_to_assets', 'N/A')
         lines.append(f"3. **Debt to Assets**: {debt_to_assets}")
-        lines.append(f"   - Criterion: Long-term Debt < Net Current Assets")
+        lines.append("   - Criterion: Long-term Debt < Net Current Assets")
         
         # Test 4: Dividend Record
         dividend_record = defensive_tests.get('dividend_record', 'N/A')
         lines.append(f"4. **Dividend Record**: {dividend_record}")
-        lines.append(f"   - Criterion: Uninterrupted dividend payments for at least 20 years")
+        lines.append("   - Criterion: Uninterrupted dividend payments for at least 20 years")
         
         # Test 5: Earnings Growth
         earnings_growth = defensive_tests.get('earnings_growth', 'N/A')
         lines.append(f"5. **Earnings Growth**: {earnings_growth}")
-        lines.append(f"   - Criterion: Earnings growth ≥ 33% over 10 years")
+        lines.append("   - Criterion: Earnings growth ≥ 33% over 10 years")
         
         # Test 6: P/E Ratio
         pe_ratio = defensive_tests.get('pe_ratio', 'N/A')
         lines.append(f"6. **P/E Ratio**: {pe_ratio}")
-        lines.append(f"   - Criterion: P/E Ratio < 15")
+        lines.append("   - Criterion: P/E Ratio < 15")
         
         # Test 7: P/B Ratio
         pb_ratio = defensive_tests.get('pb_ratio', 'N/A')
         lines.append(f"7. **P/B Ratio**: {pb_ratio}")
-        lines.append(f"   - Criterion: Price/Book Ratio < 1.5")
+        lines.append("   - Criterion: Price/Book Ratio < 1.5")
         
         # Test 8: Combined P/E × P/B Test (NEW)
         combined_test = self.metrics.get('combined_pe_pb_test', {})
@@ -104,9 +104,9 @@ class GrahamTestsSection:
                 lines.append(f"   - P/E Ratio: {pe:.2f}")
                 lines.append(f"   - P/B Ratio: {pb:.2f}")
                 lines.append(f"   - Product: {product:.2f} (must be ≤ 22.5)")
-                lines.append(f"   - *Graham specified that P/E × P/B should not exceed 22.5. This provides flexibility: a company can have a higher P/E if it has a low P/B, or vice versa.*")
+                lines.append("   - *Graham specified that P/E × P/B should not exceed 22.5. This provides flexibility: a company can have a higher P/E if it has a low P/B, or vice versa.*")
             else:
-                lines.append(f"   - Criterion: P/E × P/B ≤ 22.5")
+                lines.append("   - Criterion: P/E × P/B ≤ 22.5")
         
         lines.append("")
         lines.append("---")
@@ -131,22 +131,22 @@ class GrahamTestsSection:
         # Test 1: Earnings Stability
         earnings_stability = enterprising_tests.get('earnings_stability', 'N/A')
         lines.append(f"1. **Earnings Stability**: {earnings_stability}")
-        lines.append(f"   - Criterion: Profitability in most recent year and 5 of past 7 years")
+        lines.append("   - Criterion: Profitability in most recent year and 5 of past 7 years")
         
         # Test 2: Current Ratio
         current_ratio = enterprising_tests.get('current_ratio', 'N/A')
         lines.append(f"2. **Current Ratio**: {current_ratio}")
-        lines.append(f"   - Criterion: Current Ratio > 1.5")
+        lines.append("   - Criterion: Current Ratio > 1.5")
         
         # Test 3: Debt to Assets
         debt_to_assets = enterprising_tests.get('debt_to_assets', 'N/A')
         lines.append(f"3. **Debt to Assets**: {debt_to_assets}")
-        lines.append(f"   - Criterion: Debt < 110% of Net Current Assets")
+        lines.append("   - Criterion: Debt < 110% of Net Current Assets")
         
         # Test 4: Dividend Record
         dividend_record = enterprising_tests.get('dividend_record', 'N/A')
         lines.append(f"4. **Dividend Record**: {dividend_record}")
-        lines.append(f"   - Criterion: Currently pays a dividend (last year > 0)")
+        lines.append("   - Criterion: Currently pays a dividend (last year > 0)")
         
         # Test 5: Earnings Growth
         earnings_growth = enterprising_tests.get('earnings_growth', 'N/A - Not Required')
@@ -155,7 +155,7 @@ class GrahamTestsSection:
         # Test 6: Price Test
         price_test = enterprising_tests.get('price_test', 'N/A')
         lines.append(f"6. **Price Test**: {price_test}")
-        lines.append(f"   - Criterion: P/E < 10 OR Price < 120% of Net Tangible Assets")
+        lines.append("   - Criterion: P/E < 10 OR Price < 120% of Net Tangible Assets")
         
         lines.append("")
         lines.append("**Note on Earnings Growth:** Earnings growth is intentionally not required for Enterprising Investors per Graham's methodology. Unlike Defensive Investors (who require 7 tests including ≥33% earnings growth over 10 years), Enterprising Investors require only 6 tests focused on current financial strength and price. Graham's logic: Enterprising investors actively seek bargains, turnarounds, or cyclical companies trading below intrinsic value—situations where historical growth may be absent but current fundamentals and price create opportunity.")

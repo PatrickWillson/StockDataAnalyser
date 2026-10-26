@@ -177,7 +177,7 @@ class DossierGenerator:
         # Title and basic metadata
         lines.append(f"# STOCK ANALYSIS DOSSIER: {self.ticker}")
         lines.append(f"# DATE: {datetime.now().strftime('%Y-%m-%d')}")
-        lines.append(f"# SOURCE: EODHD (Tier 1 Data)")
+        lines.append("# SOURCE: EODHD (Tier 1 Data)")
         lines.append(f"# CEO: {ceo_name}")
         lines.append(f"# SECTOR: {sector} | INDUSTRY: {industry}")
         lines.append(f"# EMPLOYEES: {employees:,}" if employees > 0 else "# EMPLOYEES: N/A")

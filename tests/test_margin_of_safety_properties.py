@@ -10,7 +10,6 @@ across all valid inputs and edge cases.
 
 import pytest
 from hypothesis import given, strategies as st, settings, assume
-import math
 from core.graham_math import GrahamCalculator
 from config.graham_constants import GRAHAM_MULTIPLIER
 

@@ -4,7 +4,6 @@ Tests verify that NCA details and Quick Ratio are correctly displayed in the
 key metrics section when available.
 """
 
-import pytest
 from output.sections.key_metrics import KeyMetricsSection
 
 

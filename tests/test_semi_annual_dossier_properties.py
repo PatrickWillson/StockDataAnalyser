@@ -14,7 +14,7 @@ Validates: Requirements 6.1, 6.2, 6.3, 6.4
 
 import pytest
 from datetime import datetime, timedelta
-from hypothesis import given, strategies as st, assume, settings, HealthCheck
+from hypothesis import given, strategies as st, settings, HealthCheck
 from core.ttm_calculator import TTMCalculator
 from output.sections.ttm_analysis import TTMAnalysisSection
 

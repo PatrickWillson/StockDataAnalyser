@@ -4,7 +4,6 @@ Tests verify that the combined test and updated earnings stability text
 are correctly displayed in the Graham tests sections.
 """
 
-import pytest
 from output.sections.graham_tests import GrahamTestsSection
 
 

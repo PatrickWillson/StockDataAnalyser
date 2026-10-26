@@ -11,7 +11,6 @@ and complete successfully.
 import pytest
 from hypothesis import given, strategies as st
 from core.ttm_calculator import TTMCalculator
-from typing import Dict, Any
 
 
 # Strategy for generating valid quarterly data

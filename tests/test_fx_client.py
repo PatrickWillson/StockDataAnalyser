@@ -5,7 +5,7 @@ Tests the FX rate fetching functionality using yfinance.
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 from clients.fx_client import FXClient
 
 

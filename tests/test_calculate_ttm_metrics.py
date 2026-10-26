@@ -16,8 +16,7 @@ Validates: Requirements 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9
 """
 
 import pytest
-from datetime import datetime, timedelta
-from hypothesis import given, strategies as st, assume, settings, HealthCheck
+from hypothesis import given, strategies as st, settings, HealthCheck
 from core.ttm_calculator import TTMCalculator
 
 

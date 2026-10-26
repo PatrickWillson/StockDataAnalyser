@@ -4,7 +4,6 @@ Tests verify that the three-year average P/E is correctly displayed in the
 executive summary section when available.
 """
 
-import pytest
 from output.sections.executive_summary import ExecutiveSummarySection
 
 

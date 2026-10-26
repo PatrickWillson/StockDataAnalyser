@@ -5,7 +5,6 @@ Tests DTO instantiation, field access, type checking, optional field handling,
 and dataclass equality/hashing.
 """
 
-import pytest
 from core.data_models import (
     CompanyInfo,
     CurrencyInfo,

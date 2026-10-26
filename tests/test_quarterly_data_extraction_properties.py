@@ -11,8 +11,8 @@ chronological order, and all "NA" or null values should be sanitized to 0.0.
 """
 
 import pytest
-from hypothesis import given, strategies as st, assume
-from datetime import datetime, timedelta
+from hypothesis import given, strategies as st
+from datetime import datetime
 from core.financial_data_processor import FinancialDataProcessor
 
 

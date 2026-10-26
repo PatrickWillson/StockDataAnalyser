@@ -4,7 +4,6 @@ Property-based tests for FinancialDataProcessor.
 Tests the new balance sheet extraction logic for total debt and shares outstanding.
 """
 
-import pytest
 from hypothesis import given, strategies as st
 from core.financial_data_processor import FinancialDataProcessor
 

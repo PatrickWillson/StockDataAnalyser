@@ -4,7 +4,6 @@ Tests the TTMAnalysisSection class for correct markdown generation,
 percentage difference calculation, date range formatting, and N/A handling.
 """
 
-import pytest
 from output.sections.ttm_analysis import TTMAnalysisSection
 
 

@@ -139,10 +139,10 @@ class TestMarginOfSafetyEdgeCases:
         # CRITICAL: EPV = 0.0 is a valid value, so min(normalized_gn, 0.0) = 0.0
         # This is correct behavior - EPV of 0.0 means value destroyer
         assert result['intrinsic_value_used'] == 0.0, \
-            f"Expected intrinsic_value_used to be 0.0 (min of normalized_gn and EPV=0.0)"
+            "Expected intrinsic_value_used to be 0.0 (min of normalized_gn and EPV=0.0)"
         
         assert result['limiting_factor'] == "EPV", \
-            f"Expected limiting_factor 'EPV' (0.0 < normalized_gn)"
+            "Expected limiting_factor 'EPV' (0.0 < normalized_gn)"
     
     def test_only_epv_valid(self):
         """
@@ -187,17 +187,17 @@ class TestMarginOfSafetyEdgeCases:
         
         # Assert: Verify only EPV is valid
         assert result['normalized_graham_number'] == "N/A", \
-            f"Expected 'N/A' for normalized_graham_number (negative avg EPS)"
+            "Expected 'N/A' for normalized_graham_number (negative avg EPS)"
         
         assert isinstance(result['epv_per_share'], float), \
             f"Expected float for epv_per_share, got {type(result['epv_per_share'])}"
         
         # Intrinsic value should be EPV
         assert result['intrinsic_value_used'] == result['epv_per_share'], \
-            f"Expected intrinsic_value_used to be epv_per_share"
+            "Expected intrinsic_value_used to be epv_per_share"
         
         assert result['limiting_factor'] == "EPV", \
-            f"Expected limiting_factor 'EPV'"
+            "Expected limiting_factor 'EPV'"
     
     def test_both_na_returns_na(self):
         """
@@ -255,22 +255,22 @@ class TestMarginOfSafetyEdgeCases:
         
         # Assert: Verify both metrics are "N/A"
         assert result['normalized_graham_number'] == "N/A", \
-            f"Expected 'N/A' for normalized_graham_number"
+            "Expected 'N/A' for normalized_graham_number"
         
         # EPV should be 0.0 (insufficient data)
         assert result['epv_per_share'] == 0.0, \
-            f"Expected 0.0 for epv_per_share (insufficient data)"
+            "Expected 0.0 for epv_per_share (insufficient data)"
         
         # CRITICAL: EPV = 0.0 is a valid value, not "N/A"
         # So intrinsic_value_used = 0.0, and MoS = "N/A" (cannot divide by zero)
         assert result['intrinsic_value_used'] == 0.0, \
-            f"Expected intrinsic_value_used to be 0.0"
+            "Expected intrinsic_value_used to be 0.0"
         
         assert result['mos_percentage'] == "N/A", \
-            f"Expected 'N/A' for mos_percentage (cannot divide by zero)"
+            "Expected 'N/A' for mos_percentage (cannot divide by zero)"
         
         assert result['limiting_factor'] == "EPV", \
-            f"Expected limiting_factor 'EPV' (0.0 is the limiting value)"
+            "Expected limiting_factor 'EPV' (0.0 is the limiting value)"
     
     def test_epv_zero_vs_na_distinction(self):
         """
@@ -427,11 +427,11 @@ class TestMarginOfSafetyEdgeCases:
         
         # Assert: Verify intrinsic value is 0.00
         assert result['intrinsic_value_used'] == 0.0, \
-            f"Expected intrinsic_value_used to be 0.0"
+            "Expected intrinsic_value_used to be 0.0"
         
         # MoS should be "N/A" (cannot divide by zero)
         assert result['mos_percentage'] == "N/A", \
-            f"Expected 'N/A' for mos_percentage (cannot divide by zero)"
+            "Expected 'N/A' for mos_percentage (cannot divide by zero)"
     
     def test_limiting_factor_identification(self):
         """
@@ -470,7 +470,7 @@ class TestMarginOfSafetyEdgeCases:
         # Verify normalized GN is the limiting factor
         if result_1['normalized_graham_number'] < result_1['epv_per_share']:
             assert result_1['limiting_factor'] == "Normalized Graham Number", \
-                f"Expected limiting_factor 'Normalized Graham Number' when normalized_gn < epv"
+                "Expected limiting_factor 'Normalized Graham Number' when normalized_gn < epv"
         
         # Scenario 2: EPV is lower
         eps_values = [20.0, 20.0, 20.0]  # Will produce higher normalized GN
@@ -503,7 +503,7 @@ class TestMarginOfSafetyEdgeCases:
         # Verify EPV is the limiting factor
         if result_2['epv_per_share'] < result_2['normalized_graham_number']:
             assert result_2['limiting_factor'] == "EPV", \
-                f"Expected limiting_factor 'EPV' when epv < normalized_gn"
+                "Expected limiting_factor 'EPV' when epv < normalized_gn"
 
 
 if __name__ == '__main__':

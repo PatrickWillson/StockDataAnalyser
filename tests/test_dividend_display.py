@@ -8,7 +8,6 @@ Requirements 2.5, 2.6, 2.7, 2.8:
 - Show both values when both are available for most recent year
 """
 
-import pytest
 from output.dossier_generator import DossierGenerator
 
 

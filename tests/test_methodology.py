@@ -4,7 +4,6 @@ Unit tests for Methodology Notes section generator.
 Tests valuation metrics explanation, EPV methodology explanation, and formula display.
 """
 
-import pytest
 from output.sections.methodology import MethodologySection, format_price_display
 
 

@@ -8,7 +8,7 @@ Tests the priority-based dividend data sourcing:
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from core.financial_data_processor import FinancialDataProcessor
 
 

@@ -4,8 +4,7 @@ Unit tests for yfinance client.
 Tests exchange code translation, API response parsing, error handling, and price fetching.
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch, MagicMock
 from clients.yfinance_client import YFinanceClient
 
 

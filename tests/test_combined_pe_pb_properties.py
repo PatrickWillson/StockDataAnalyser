@@ -11,7 +11,7 @@ Validates: Requirements 5.1, 5.3, 5.4
 """
 
 import pytest
-from hypothesis import given, strategies as st, assume
+from hypothesis import given
 from decimal import Decimal
 
 from core.graham_math import GrahamCalculator
