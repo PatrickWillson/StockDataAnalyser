@@ -245,7 +245,7 @@
     "defensive_tests": {
       "current_ratio": "FAIL",
       "debt_to_assets": "FAIL",
-      "dividend_record": "PASS",
+      "dividend_record": "FAIL",
       "earnings_growth": "N/A (Too Young)",
       "earnings_stability": "FAIL",
       "pb_ratio": "FAIL",

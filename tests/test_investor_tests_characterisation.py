@@ -133,9 +133,18 @@ class TestDividendRecord:
         history["2000-12-31"] = _year(dividend=0.0)  # 24th year back
         assert _run("_test_dividend_record", history, len(history)) == "PASS"
 
-    def test_known_defect_young_company_can_pass(self):
-        # Known defect: Graham requires 20 years; a 3-year record paying every year passes
-        history = {f"{2023 - i}-12-31": _year() for i in range(3)}
+    def test_fewer_than_twenty_years_fails(self):
+        # Graham requires 20 years (F20): a 19-year record paying every year cannot confirm it
+        history = {f"{2023 - i}-12-31": _year() for i in range(19)}
+        assert _run("_test_dividend_record", history, len(history)) == "FAIL"
+
+    def test_missing_year_is_an_interruption(self):
+        history = {f"{2023 - i}-12-31": _year() for i in range(21)}
+        del history["2012-12-31"]  # no row at all for 2012
+        assert _run("_test_dividend_record", history, len(history)) == "FAIL"
+
+    def test_payment_counts_show_payments(self):
+        history = {f"{2023 - i}-12-31": _year(dividend=4.0) for i in range(20)}  # 4 payments a year
         assert _run("_test_dividend_record", history, len(history)) == "PASS"
 
 

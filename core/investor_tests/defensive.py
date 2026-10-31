@@ -29,12 +29,18 @@ def debt_to_net_current_assets(history: dict, years: list) -> str:
 
 
 def dividend_record(history: dict, years: list, num_years: int) -> str:
-    """Dividend paid in every one of the latest min(num_years, 20) years."""
-    years_to_check = min(num_years, DEFENSIVE.MIN_DIVIDEND_YEARS)
-    for year in years[:years_to_check]:
-        if history[year].get('dividend', 0.0) <= 0:
-            return 'FAIL'
-    return 'PASS'
+    """
+    Criterion 4.4: "uninterrupted payments for at least the past 20 years". Every one of the 20
+    calendar years ending with the newest year must have a row with a dividend (a payment count
+    above 0 also shows a payment). Fewer years of data, or a missing year, cannot confirm an
+    uninterrupted record, so the criterion is not met.
+    """
+    if not years:
+        return 'FAIL'
+    paid_years = {year[:4] for year in years if history[year].get('dividend', 0.0) > 0}
+    newest = int(max(year[:4] for year in years))
+    required = [str(newest - offset) for offset in range(DEFENSIVE.MIN_DIVIDEND_YEARS)]
+    return 'PASS' if all(year in paid_years for year in required) else 'FAIL'
 
 
 def earnings_growth(history: dict, years: list, num_years: int) -> str:
