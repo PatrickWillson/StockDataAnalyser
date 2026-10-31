@@ -12,8 +12,8 @@ from decimal import Decimal
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from core.graham_math import GrahamCalculator
 from tests.fixtures_graham_metrics import GrahamMetricsFixtures
+from core.investor_tests.criteria import earnings_stability
 
 
 class TestDefensiveEarningsStabilityLogic:
@@ -39,12 +39,11 @@ class TestDefensiveEarningsStabilityLogic:
             base_year=2023
         )
         
-        calculator = GrahamCalculator(financial_data)
         history = financial_data['history']
         years = sorted(history.keys(), reverse=True)
         
         # Act
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history,
             years,
             min_years=10,  # Defensive requires all 10 years
@@ -79,12 +78,11 @@ class TestDefensiveEarningsStabilityLogic:
             base_year=2023
         )
         
-        calculator = GrahamCalculator(financial_data)
         history = financial_data['history']
         years = sorted(history.keys(), reverse=True)
         
         # Act
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history,
             years,
             min_years=10,
@@ -108,12 +106,11 @@ class TestDefensiveEarningsStabilityLogic:
             base_year=2023
         )
         
-        calculator = GrahamCalculator(financial_data)
         history = financial_data['history']
         years = sorted(history.keys(), reverse=True)
         
         # Act
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history,
             years,
             min_years=10,
@@ -149,12 +146,11 @@ class TestDefensiveEarningsStabilityLogic:
             base_year=2023
         )
         
-        calculator = GrahamCalculator(financial_data)
         history = financial_data['history']
         years = sorted(history.keys(), reverse=True)
         
         # Act
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history,
             years,
             min_years=10,
@@ -196,12 +192,11 @@ class TestEnterprisingEarningsStabilityLogic:
             base_year=2023
         )
         
-        calculator = GrahamCalculator(financial_data)
         history = financial_data['history']
         years = sorted(history.keys(), reverse=True)
         
         # Act
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history,
             years,
             min_years=5,
@@ -231,12 +226,11 @@ class TestEnterprisingEarningsStabilityLogic:
             base_year=2023
         )
         
-        calculator = GrahamCalculator(financial_data)
         history = financial_data['history']
         years = sorted(history.keys(), reverse=True)
         
         # Act
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history,
             years,
             min_years=5,
@@ -258,12 +252,11 @@ class TestEnterprisingEarningsStabilityLogic:
             base_year=2023
         )
         
-        calculator = GrahamCalculator(financial_data)
         history = financial_data['history']
         years = sorted(history.keys(), reverse=True)
         
         # Act
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history,
             years,
             min_years=5,
@@ -299,12 +292,11 @@ class TestEnterprisingEarningsStabilityLogic:
             base_year=2023
         )
         
-        calculator = GrahamCalculator(financial_data)
         history = financial_data['history']
         years = sorted(history.keys(), reverse=True)
         
         # Act
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history,
             years,
             min_years=5,
@@ -355,19 +347,11 @@ class TestEarningsStabilityEdgeCases:
                 'current_liabilities': 400000.0
             }
         
-        financial_data = {
-            'ticker': 'TEST.US',
-            'price': 100.0,
-            'currency': 'USD',
-            'sector': 'Technology',
-            'history': history
-        }
         
-        calculator = GrahamCalculator(financial_data)
         years = sorted(history.keys(), reverse=True)
         
         # Act - Test defensive (requires all 10 years positive)
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history,
             years,
             min_years=10,

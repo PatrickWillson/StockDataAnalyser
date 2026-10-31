@@ -11,6 +11,7 @@ declared dividend but no financial statements yet.
 
 from hypothesis import given, strategies as st
 from core.graham_math import GrahamCalculator
+from core.investor_tests.criteria import earnings_stability
 
 
 class TestEarningsStabilityIncompleteYears:
@@ -47,16 +48,10 @@ class TestEarningsStabilityIncompleteYears:
                 'eps': (10000000 + i * 1000000) / 50000000
             }
         
-        financial_data = {
-            'ticker': 'TEST.US',
-            'price': 100.0,
-            'history': history
-        }
         
-        calculator = GrahamCalculator(financial_data)
         
         # Test defensive investor (requires ALL 10 years positive - strict Graham)
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history, 
             sorted(history.keys(), reverse=True),
             min_years=10,  # Changed from 8 to 10
@@ -95,16 +90,10 @@ class TestEarningsStabilityIncompleteYears:
                 'eps': (10000000 + i * 1000000) / 50000000
             }
         
-        financial_data = {
-            'ticker': 'TEST.US',
-            'price': 100.0,
-            'history': history
-        }
         
-        calculator = GrahamCalculator(financial_data)
         
         # Test enterprising investor (requires 5 of 5 years positive)
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history, 
             sorted(history.keys(), reverse=True),
             min_years=5,
@@ -144,16 +133,10 @@ class TestEarningsStabilityIncompleteYears:
                 'eps': 0.20
             }
         
-        financial_data = {
-            'ticker': 'TEST.US',
-            'price': 100.0,
-            'history': history
-        }
         
-        calculator = GrahamCalculator(financial_data)
         
         # Should skip both incomplete years and test the 5 complete years
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history, 
             sorted(history.keys(), reverse=True),
             min_years=5,
@@ -194,16 +177,10 @@ class TestEarningsStabilityIncompleteYears:
                 'eps': net_income / 50000000
             }
         
-        financial_data = {
-            'ticker': 'TEST.US',
-            'price': 100.0,
-            'history': history
-        }
         
-        calculator = GrahamCalculator(financial_data)
         
         # Enterprising requires 5 of 5 years positive - should FAIL (only 3 positive)
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history, 
             sorted(history.keys(), reverse=True),
             min_years=5,
@@ -236,16 +213,10 @@ class TestEarningsStabilityIncompleteYears:
                 'eps': 0.20
             }
         
-        financial_data = {
-            'ticker': 'TEST.US',
-            'price': 100.0,
-            'history': history
-        }
         
-        calculator = GrahamCalculator(financial_data)
         
         # Enterprising requires 5 years - should FAIL (only 3 available)
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history, 
             sorted(history.keys(), reverse=True),
             min_years=5,
@@ -279,17 +250,11 @@ class TestEarningsStabilityIncompleteYears:
                 'eps': 0.20
             }
         
-        financial_data = {
-            'ticker': 'TEST.US',
-            'price': 100.0,
-            'history': history
-        }
         
-        calculator = GrahamCalculator(financial_data)
         
         # Should count 2024 as complete year (even with negative values)
         # Enterprising requires 5 of 5 positive - should FAIL (only 4 positive, 1 loss)
-        result = calculator._test_earnings_stability(
+        result = earnings_stability(
             history, 
             sorted(history.keys(), reverse=True),
             min_years=5,
@@ -350,19 +315,19 @@ class TestEarningsStabilityIncompleteYears:
             'history': history_with_incomplete
         }
         
-        calculator_complete = GrahamCalculator(financial_data_complete)
-        calculator_incomplete = GrahamCalculator(financial_data_incomplete)
+        GrahamCalculator(financial_data_complete)
+        GrahamCalculator(financial_data_incomplete)
         
         # Test with both defensive and enterprising criteria
         for min_years, period in [(8, 10), (5, 5)]:
-            result_complete = calculator_complete._test_earnings_stability(
+            result_complete = earnings_stability(
                 history_complete,
                 sorted(history_complete.keys(), reverse=True),
                 min_years=min_years,
                 period=period
             )
             
-            result_incomplete = calculator_incomplete._test_earnings_stability(
+            result_incomplete = earnings_stability(
                 history_with_incomplete,
                 sorted(history_with_incomplete.keys(), reverse=True),
                 min_years=min_years,

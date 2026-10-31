@@ -15,10 +15,12 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Union
 
 from config.graham_constants import GRAHAM_MULTIPLIER, COST_OF_CAPITAL
-from config.investor_thresholds import DEFENSIVE, ENTERPRISING
-from core.history import has_balance_sheet_data, has_statement_data, has_statement_or_current_assets
+from core.history import has_statement_data, has_statement_or_current_assets
+from core.investor_tests import defensive, enterprising
+from core.investor_tests.criteria import latest_current_ratio
+from core.verdict import determine_verdict
 from config.valuation_config import (DEEP_VALUE_MIN_DISCOUNT_PCT, EPV_MAX_YEARS, EPV_MIN_YEARS,
-                                     NORMALIZED_EPS_YEARS, STRONG_BUY_MIN_MOS_PCT)
+                                     NORMALIZED_EPS_YEARS)
 
 
 # Default for "not precomputed by compute_all" (None and "N/A" are real results)
@@ -847,100 +849,16 @@ class GrahamCalculator:
         price = self.data.get('price', 0.0)
         
         if not history:
-            return self._get_empty_test_results(investor_type)
+            return dict(enterprising.EMPTY_RESULTS if investor_type == "enterprising" else defensive.EMPTY_RESULTS)
         
         years = sorted(history.keys(), reverse=True)
         num_years = len(years)
         
         if investor_type == "enterprising":
-            return self._run_enterprising_tests(history, years, num_years, price, tbvps)
-        else:
-            return self._run_defensive_tests(history, years, num_years, price)
-    
-    def _get_empty_test_results(self, investor_type: str) -> dict:
-        """Return empty test results when no history available."""
-        if investor_type == "enterprising":
-            return {
-                'earnings_stability': 'FAIL',
-                'current_ratio': 'FAIL',
-                'debt_to_assets': 'FAIL',
-                'dividend_record': 'FAIL',
-                'earnings_growth': 'N/A - Not Required',
-                'price_test': 'FAIL'
-            }
-        else:
-            return {
-                'earnings_stability': 'FAIL',
-                'current_ratio': 'FAIL',
-                'debt_to_assets': 'FAIL',
-                'dividend_record': 'FAIL',
-                'earnings_growth': 'FAIL',
-                'pe_ratio': 'FAIL',
-                'pb_ratio': 'FAIL'
-            }
-    
-    def _run_defensive_tests(self, history: dict, years: list, num_years: int, price: float) -> dict:
-        """Run all 7 Graham Defensive Investor tests."""
-        # Test 1: Earnings stability - positive earnings in ALL of last 10 years (strict Graham)
-        earnings_stability = self._test_earnings_stability(history, years, min_years=DEFENSIVE.MIN_EARNINGS_YEARS, period=DEFENSIVE.EARNINGS_STABILITY_YEARS)
-        
-        # Test 2: Current ratio >= 2.0
-        current_ratio_test = self._test_current_ratio(history, years, min_ratio=DEFENSIVE.MIN_CURRENT_RATIO)
-        
-        # Test 3: Long-term debt < net current assets
-        debt_test = self._test_debt_to_assets(history, years)
-        
-        # Test 4: Dividend record
-        dividend_test = self._test_dividend_record(history, years, num_years)
-        
-        # Test 5: Earnings growth >= 33% over 10 years
-        earnings_growth_test = self._test_earnings_growth(history, years, num_years)
-        
-        # Test 6: P/E ratio < 15
-        pe_test = self._test_pe_ratio(history, years, price, max_pe=DEFENSIVE.MAX_PE_RATIO)
-        
-        # Test 7: P/B ratio < 1.5
-        pb_test = self._test_pb_ratio(history, years, price, max_pb=DEFENSIVE.MAX_PB_RATIO)
-        
-        return {
-            'earnings_stability': earnings_stability,
-            'current_ratio': current_ratio_test,
-            'debt_to_assets': debt_test,
-            'dividend_record': dividend_test,
-            'earnings_growth': earnings_growth_test,
-            'pe_ratio': pe_test,
-            'pb_ratio': pb_test
-        }
-    
-    def _run_enterprising_tests(self, history: dict, years: list, num_years: int, price: float,
-                                tbvps=_UNSET) -> dict:
-        """Run Graham Enterprising Investor tests."""
-        # Test 1: Earnings stability - positive earnings for last 5 years
-        earnings_stability = self._test_earnings_stability(history, years, min_years=ENTERPRISING.MIN_EARNINGS_YEARS, period=ENTERPRISING.EARNINGS_STABILITY_YEARS)
-        
-        # Test 2: Current ratio > 1.5
-        current_ratio_test = self._test_current_ratio(history, years, min_ratio=ENTERPRISING.MIN_CURRENT_RATIO)
-        
-        # Test 3: Debt < 110% of Net Current Assets
-        debt_test = self._test_enterprising_debt(history, years)
-        
-        # Test 4: Currently pays a dividend (last year > 0)
-        dividend_test = self._test_current_dividend(history, years)
-        
-        # Test 5: Earnings growth - not required for enterprising
-        earnings_growth_test = 'N/A - Not Required'
-        
-        # Test 6: Price test - P/E < 10 OR Price < 120% of Net Tangible Assets
-        price_test = self._test_enterprising_price(history, years, price, tbvps)
-        
-        return {
-            'earnings_stability': earnings_stability,
-            'current_ratio': current_ratio_test,
-            'debt_to_assets': debt_test,
-            'dividend_record': dividend_test,
-            'earnings_growth': earnings_growth_test,
-            'price_test': price_test
-        }
+            if tbvps is _UNSET:
+                tbvps = self.compute_tbvps(round_result=False)
+            return enterprising.run_enterprising_tests(history, years, num_years, price, tbvps)
+        return defensive.run_defensive_tests(history, years, num_years, price)
     
     # Keep old method name for backward compatibility
     def run_defensive_tests(self) -> dict:
@@ -952,71 +870,6 @@ class GrahamCalculator:
         """
         return self.run_investor_tests("defensive")
     
-    def _test_earnings_stability(self, history: dict, years: list, min_years: int = 8, period: int = 10) -> str:
-        """
-        Test if company has positive earnings in required number of years.
-        
-        Graham's Earnings Stability Criteria:
-        - Defensive Investor: Positive earnings in each of the past 10 years
-        - Enterprising Investor: Profitability in most recent year and 5 of past 7 years
-        
-        Filters out incomplete years (years with only dividend data but no financial statements)
-        to ensure accurate testing. This is consistent with other test methods that use
-        _get_latest_financial_year() to skip incomplete years.
-        
-        Args:
-            history: Financial history dictionary
-            years: List of years sorted in reverse chronological order
-            min_years: Minimum number of years with positive earnings required
-                      (10 for defensive, 5 for enterprising)
-            period: Number of years to examine
-                   (10 for defensive, 7 for enterprising)
-            
-        Returns:
-            'PASS' if positive_years >= min_years, 'FAIL' otherwise
-        """
-        # Filter out incomplete years (years with no financial data, only dividends)
-        # An incomplete year has revenue=0, net_income=0, and total_equity=0
-        complete_years = []
-        for year in years:
-            year_data = history[year]
-            has_financial_data = has_statement_data(year_data)
-            if has_financial_data:
-                complete_years.append(year)
-        
-        # Take required period from complete years only
-        test_years = complete_years[:period]
-        
-        # Need enough complete years to test
-        if len(test_years) < min_years:
-            return 'FAIL'
-        
-        positive_years = 0
-        for year in test_years:
-            net_income = history[year].get('net_income', 0.0)
-            if net_income > 0:
-                positive_years += 1
-        
-        return 'PASS' if positive_years >= min_years else 'FAIL'
-    
-    @staticmethod
-    def _latest_current_ratio(history: dict, years: list) -> tuple:
-        """
-        Current ratio (current assets / current liabilities) for the most recent year with
-        balance sheet data (current assets or equity > 0, so dividend-only years are skipped).
-
-        Returns:
-            (fiscal_year_end or None, ratio or None) — ratio is None when there is no such
-            year or current liabilities are zero
-        """
-        for year in years:
-            if has_balance_sheet_data(history[year]):
-                current_liabilities = history[year].get('current_liabilities', 0.0)
-                if current_liabilities == 0:
-                    return year, None
-                return year, history[year].get('current_assets', 0.0) / current_liabilities
-        return None, None
-
     def compute_current_ratio(self) -> dict:
         """
         Current ratio for display (GRAHAM_METHODOLOGY §4.2: defensive minimum 2.0).
@@ -1025,171 +878,12 @@ class GrahamCalculator:
             {'ratio': float rounded to 2dp or "N/A", 'fiscal_year_end': str or None}
         """
         history = self.data.get('history', {})
-        year, ratio = self._latest_current_ratio(history, sorted(history.keys(), reverse=True))
+        year, ratio = latest_current_ratio(history, sorted(history.keys(), reverse=True))
         return {
             'ratio': round(ratio, 2) if ratio is not None else "N/A",
             'fiscal_year_end': year,
         }
 
-    def _test_current_ratio(self, history: dict, years: list, min_ratio: float = 2.0) -> str:
-        """Test if current ratio meets minimum threshold."""
-        _, current_ratio = self._latest_current_ratio(history, years)
-        if current_ratio is None:
-            return 'FAIL'
-        return 'PASS' if current_ratio >= min_ratio else 'FAIL'
-    
-    def _test_debt_to_assets(self, history: dict, years: list) -> str:
-        """Test if long-term debt < net current assets."""
-        if not years:
-            return 'FAIL'
-        
-        latest_year = self._get_latest_financial_year(history, years)
-        if not latest_year:
-            return 'FAIL'
-        
-        long_term_debt = history[latest_year].get('long_term_debt', 0.0)
-        current_assets = history[latest_year].get('current_assets', 0.0)
-        current_liabilities = history[latest_year].get('current_liabilities', 0.0)
-        
-        net_current_assets = current_assets - current_liabilities
-        return 'PASS' if long_term_debt < net_current_assets else 'FAIL'
-    
-    def _test_dividend_record(self, history: dict, years: list, num_years: int) -> str:
-        """Test if there is an uninterrupted dividend record."""
-        # If < 20 years, test entire history; if >= 20 years, test last 20
-        years_to_check = min(num_years, DEFENSIVE.MIN_DIVIDEND_YEARS)
-        years_subset = years[:years_to_check]
-        
-        for year in years_subset:
-            dividend = history[year].get('dividend', 0.0)
-            if dividend <= 0:
-                return 'FAIL'
-        
-        return 'PASS'
-    
-    def _test_earnings_growth(self, history: dict, years: list, num_years: int) -> str:
-        """Test if earnings have grown by >= 33% over 10 years."""
-        # If < 10 years, mark as "N/A (Too Young)"
-        if num_years < DEFENSIVE.EARNINGS_GROWTH_YEARS:
-            return 'N/A (Too Young)'
-        
-        # Get earnings from 10 years ago and most recent with financial data
-        # Find the most recent year with financial data
-        latest_year = self._get_latest_financial_year(history, years)
-        if not latest_year:
-            return 'FAIL'
-        
-        # Get the year 10 years before the latest financial year
-        # (not just years[9] which might include dividend-only years)
-        financial_years = [y for y in years if self._get_latest_financial_year(history, [y])]
-        if len(financial_years) < DEFENSIVE.EARNINGS_GROWTH_YEARS:
-            return 'N/A (Too Young)'
-        
-        oldest_year = financial_years[DEFENSIVE.EARNINGS_GROWTH_YEARS - 1]  # 10th financial year
-        
-        old_earnings = history[oldest_year].get('net_income', 0.0)
-        recent_earnings = history[latest_year].get('net_income', 0.0)
-        
-        if old_earnings <= 0:
-            return 'FAIL'
-        
-        growth_ratio = recent_earnings / old_earnings
-        return 'PASS' if growth_ratio >= DEFENSIVE.MIN_EARNINGS_GROWTH else 'FAIL'
-    
-    def _test_pe_ratio(self, history: dict, years: list, price: float, max_pe: float = 15) -> str:
-        """Test if P/E ratio is below maximum threshold."""
-        if not years or price == 0:
-            return 'FAIL'
-        
-        latest_year = self._get_latest_financial_year(history, years)
-        if not latest_year:
-            return 'FAIL'
-        
-        eps = history[latest_year].get('eps', 0.0)
-        
-        if eps <= 0:
-            return 'FAIL'
-        
-        pe_ratio = price / eps
-        return 'PASS' if pe_ratio < max_pe else 'FAIL'
-    
-    def _test_pb_ratio(self, history: dict, years: list, price: float, max_pb: float = 1.5) -> str:
-        """Test if P/B ratio is below maximum threshold."""
-        if not years or price == 0:
-            return 'FAIL'
-        
-        latest_year = self._get_latest_financial_year(history, years)
-        if not latest_year:
-            return 'FAIL'
-        
-        total_equity = history[latest_year].get('total_equity', 0.0)
-        shares_outstanding = history[latest_year].get('shares_outstanding', 0.0)
-        
-        if shares_outstanding == 0 or total_equity <= 0:
-            return 'FAIL'
-        
-        book_value_per_share = total_equity / shares_outstanding
-        pb_ratio = price / book_value_per_share
-        return 'PASS' if pb_ratio < max_pb else 'FAIL'
-    
-    def _test_enterprising_debt(self, history: dict, years: list) -> str:
-        """Test if debt < 110% of Net Current Assets (Enterprising)."""
-        if not years:
-            return 'FAIL'
-        
-        latest_year = self._get_latest_financial_year(history, years)
-        if not latest_year:
-            return 'FAIL'
-        
-        long_term_debt = history[latest_year].get('long_term_debt', 0.0)
-        current_assets = history[latest_year].get('current_assets', 0.0)
-        current_liabilities = history[latest_year].get('current_liabilities', 0.0)
-        
-        net_current_assets = current_assets - current_liabilities
-        max_allowed_debt = net_current_assets * ENTERPRISING.MAX_DEBT_ASSETS
-        
-        return 'PASS' if long_term_debt < max_allowed_debt else 'FAIL'
-    
-    def _test_current_dividend(self, history: dict, years: list) -> str:
-        """Test if company currently pays a dividend (last year > 0)."""
-        if not years:
-            return 'FAIL'
-        
-        latest_year = self._get_latest_financial_year(history, years)
-        if not latest_year:
-            return 'FAIL'
-        
-        dividend = history[latest_year].get('dividend', 0.0)
-        
-        return 'PASS' if dividend > 0 else 'FAIL'
-    
-    def _test_enterprising_price(self, history: dict, years: list, price: float, tbvps=_UNSET) -> str:
-        """Test if P/E < 10 OR Price < 120% of Net Tangible Assets."""
-        if not years or price == 0:
-            return 'FAIL'
-        
-        latest_year = self._get_latest_financial_year(history, years)
-        if not latest_year:
-            return 'FAIL'
-        
-        # Test 1: P/E < 10
-        eps = history[latest_year].get('eps', 0.0)
-        if eps > 0:
-            pe_ratio = price / eps
-            if pe_ratio < ENTERPRISING.MAX_PE_RATIO:
-                return 'PASS'
-        
-        # Test 2: Price < 120% of Tangible Book Value (not Net-Net)
-        # Graham's standard rule: buy at discount to book value
-        if tbvps is _UNSET:
-            tbvps = self.compute_tbvps(round_result=False)
-        if isinstance(tbvps, float) and tbvps > 0:
-            max_price = tbvps * ENTERPRISING.MAX_PB_RATIO
-            if price < max_price:
-                return 'PASS'
-        
-        return 'FAIL'
-    
     def compute_all(self) -> dict:
         """
         Compute all Graham metrics.
@@ -1228,8 +922,8 @@ class GrahamCalculator:
         enterprising_tests = self.run_investor_tests("enterprising", tbvps=tbvps)
         
         # Determine verdict (use new MoS structure)
-        verdict = self._determine_verdict(graham_number, margin_of_safety_data['mos_percentage'], epv_data['epv'], 
-                                         defensive_tests, enterprising_tests)
+        verdict = determine_verdict(graham_number, margin_of_safety_data['mos_percentage'], epv_data['epv'],
+                                    defensive_tests, enterprising_tests)
         
         metrics = {
             'graham_number': graham_number,  # Legacy single-year
@@ -1252,43 +946,3 @@ class GrahamCalculator:
         
         return metrics
     
-    def _determine_verdict(self, graham_number: Union[float, str], 
-                          margin_of_safety: Union[float, str], 
-                          epv: float,
-                          defensive_tests: dict = None,
-                          enterprising_tests: dict = None) -> str:
-        """
-        Determine investment verdict based on metrics.
-        
-        Args:
-            graham_number: Graham Number or "N/A"
-            margin_of_safety: Margin of Safety or "N/A"
-            epv: Earnings Power Value
-            defensive_tests: Results from defensive investor tests
-            enterprising_tests: Results from enterprising investor tests
-        
-        Returns:
-            Verdict string
-        """
-        # Handle negative equity case
-        if graham_number == "N/A":
-            return "Rely on EPV - Negative Equity"
-        
-        # Check if passes enterprising tests (if defensive fails)
-        if defensive_tests and enterprising_tests:
-            defensive_pass = all(v == 'PASS' or 'N/A' in str(v) for v in defensive_tests.values())
-            enterprising_pass = all(v == 'PASS' or 'N/A' in str(v) for v in enterprising_tests.values())
-            
-            if not defensive_pass and enterprising_pass:
-                return "ENTERPRISING BUY"
-        
-        # Handle positive margin of safety with tiers
-        if isinstance(margin_of_safety, float):
-            if margin_of_safety >= STRONG_BUY_MIN_MOS_PCT:
-                return "STRONG BUY (Undervalued)"
-            elif margin_of_safety > 0:
-                return "UNDERVALUED"
-            else:
-                return "OVERVALUED"
-        
-        return "PENDING"

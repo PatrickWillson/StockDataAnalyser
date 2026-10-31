@@ -12,6 +12,8 @@ from hypothesis import given, settings, strategies as st
 
 from config.investor_thresholds import DEFENSIVE, ENTERPRISING
 from core.graham_math import GrahamCalculator
+from core.investor_tests import criteria, defensive, enterprising
+from core.verdict import determine_verdict
 
 
 def _year(**fields):
@@ -39,15 +41,28 @@ def _years(history):
     return sorted(history, reverse=True)
 
 
+# The criterion functions in core.investor_tests, by their former GrahamCalculator method names
+CRITERIA = {
+    "_test_current_ratio": criteria.current_ratio_test,
+    "_test_debt_to_assets": defensive.debt_to_net_current_assets,
+    "_test_dividend_record": defensive.dividend_record,
+    "_test_earnings_growth": defensive.earnings_growth,
+    "_test_pe_ratio": defensive.pe_ratio,
+    "_test_pb_ratio": defensive.pb_ratio,
+    "_test_enterprising_debt": enterprising.debt_to_net_current_assets,
+    "_test_current_dividend": enterprising.current_dividend,
+    "_test_enterprising_price": enterprising.price_test,
+}
 PRICED_TESTS = {"_test_pe_ratio", "_test_pb_ratio", "_test_enterprising_price"}
 
 
 def _run(method, history, *args, price=20.0, **kwargs):
-    """Call a GrahamCalculator investor test the way run_investor_tests does."""
-    calc = _calc(history, price)
+    """Call an investor criterion the way run_investor_tests does."""
     if method in PRICED_TESTS:
         args = (price, *args)
-    return getattr(calc, method)(history, _years(history), *args, **kwargs)
+    if method == "_test_enterprising_price":
+        args = (*args, _calc(history, price).compute_tbvps(round_result=False))
+    return CRITERIA[method](history, _years(history), *args, **kwargs)
 
 
 ratios = st.floats(min_value=0.01, max_value=10.0, allow_nan=False, allow_infinity=False)
@@ -280,7 +295,7 @@ ALL_PASS_ENTERPRISING = {k: "PASS" for k in ("earnings_stability", "current_rati
 
 class TestDetermineVerdict:
     def _verdict(self, graham_number=25.0, mos=10.0, defensive=None, enterprising=None):
-        return _calc({})._determine_verdict(graham_number, mos, 0.0, defensive, enterprising)
+        return determine_verdict(graham_number, mos, 0.0, defensive, enterprising)
 
     def test_graham_number_na_short_circuits(self):
         assert self._verdict(graham_number="N/A", mos=50.0) == "Rely on EPV - Negative Equity"
