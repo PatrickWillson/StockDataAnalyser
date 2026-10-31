@@ -38,6 +38,7 @@
 ### Liquidity Analysis
 
 - **Current Ratio**: 0.99 (Current Assets / Current Liabilities, fiscal year ending 2023-09-30)
+- **Quick Ratio**: 0.94 (Acid Test - excludes inventory)
 - Insider Ownership: 0.07%
 - Institutional Ownership: 61.44%
 - Beta (Volatility): 1.290
@@ -417,7 +418,6 @@ TTM calculations provide more current financial metrics by using the most recent
 - TTM Analysis: Periodic data not available from API
 - Negative Tangible Book Value - Company has negative equity
 - Negative Tangible Book Value - Company has negative equity
-- Quick Ratio: Inventory data unavailable - using Current Assets (Technology sector)
 - Negative Tangible Book Value - Company has negative equity
 - Negative Tangible Book Value - Company has negative equity
 

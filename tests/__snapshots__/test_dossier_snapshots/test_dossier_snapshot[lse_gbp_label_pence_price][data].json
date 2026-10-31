@@ -30,6 +30,7 @@
         "eps": 0.15301797581022794,
         "goodwill": 0.0,
         "intangible_assets": 3051734.0,
+        "inventory": null,
         "long_term_debt": 5970784.0,
         "net_income": 3163852.0,
         "payout_ratio": "0.0%",
@@ -49,6 +50,7 @@
         "eps": 0.16429301221261608,
         "goodwill": 0.0,
         "intangible_assets": 3212352.0,
+        "inventory": null,
         "long_term_debt": 6285036.0,
         "net_income": 3330371.0,
         "payout_ratio": "0.0%",
@@ -68,6 +70,7 @@
         "eps": 0.17639877798796325,
         "goodwill": 0.0,
         "intangible_assets": 3381423.0,
+        "inventory": null,
         "long_term_debt": 6615827.0,
         "net_income": 3505653.0,
         "payout_ratio": "0.0%",
@@ -87,6 +90,7 @@
         "eps": 0.18939658417376753,
         "goodwill": 0.0,
         "intangible_assets": 3559392.0,
+        "inventory": null,
         "long_term_debt": 6964028.0,
         "net_income": 3690161.0,
         "payout_ratio": "0.0%",
@@ -106,6 +110,7 @@
         "eps": 0.20335211277043605,
         "goodwill": 0.0,
         "intangible_assets": 3746729.0,
+        "inventory": null,
         "long_term_debt": 7330556.0,
         "net_income": 3884380.0,
         "payout_ratio": "0.0%",
@@ -125,6 +130,7 @@
         "eps": 0.21833594984834892,
         "goodwill": 0.0,
         "intangible_assets": 3943925.0,
+        "inventory": null,
         "long_term_debt": 7716375.0,
         "net_income": 4088821.0,
         "payout_ratio": "0.0%",
@@ -144,6 +150,7 @@
         "eps": 0.23442385620915032,
         "goodwill": 0.0,
         "intangible_assets": 4151500.0,
+        "inventory": null,
         "long_term_debt": 8122500.0,
         "net_income": 4304022.0,
         "payout_ratio": "0.0%",
@@ -163,6 +170,7 @@
         "eps": 0.25169722222222224,
         "goodwill": 0.0,
         "intangible_assets": 4370000.0,
+        "inventory": null,
         "long_term_debt": 8550000.0,
         "net_income": 4530550.0,
         "payout_ratio": "0.0%",
@@ -182,6 +190,7 @@
         "eps": 0.2649444444444444,
         "goodwill": 0.0,
         "intangible_assets": 4600000.0,
+        "inventory": null,
         "long_term_debt": 9000000.0,
         "net_income": 4769000.0,
         "payout_ratio": "0.0%",
@@ -201,6 +210,7 @@
         "eps": 1.7144444444444444,
         "goodwill": 0.0,
         "intangible_assets": 4800000.0,
+        "inventory": 8000000.0,
         "long_term_debt": 9500000.0,
         "net_income": 30860000.0,
         "payout_ratio": "34.0%",
@@ -330,7 +340,7 @@
     },
     "net_net_value": 0.06,
     "normalized_graham_number": 8.42,
-    "quick_ratio": "N/A",
+    "quick_ratio": 1.2,
     "three_year_avg_pe": {
       "pe_on_avg": 22.19,
       "three_year_avg_eps": 0.74,
@@ -341,9 +351,7 @@
       ]
     },
     "verdict": "OVERVALUED",
-    "warnings": [
-      "Quick Ratio: Cannot calculate - inventory data unavailable for Utilities sector"
-    ]
+    "warnings": []
   },
   "ttm_metrics": null
 }

@@ -43,6 +43,7 @@ class BalanceSheetRow:
     short_term_debt: Optional[float]
     total_debt_reported: Optional[float]
     total_assets: Optional[float]
+    inventory: Optional[float]
     shares_outstanding: Optional[float]
 
     @classmethod
@@ -62,6 +63,7 @@ class BalanceSheetRow:
             short_term_debt=optional_float(raw.get('shortTermDebt', 0)),
             total_debt_reported=optional_float(raw.get('shortLongTermDebtTotal', 0)),
             total_assets=optional_float(raw.get('totalAssets')),
+            inventory=optional_float(raw.get('inventory')),
             shares_outstanding=optional_float(shares_raw),
         )
 
@@ -78,8 +80,11 @@ class BalanceSheetRow:
             return reported
         return _zero_if_missing(self.long_term_debt) + _zero_if_missing(self.short_term_debt)
 
-    def as_history_fields(self) -> Dict[str, float]:
-        """Balance-sheet fields of a history row (missing values as 0.0)."""
+    def as_history_fields(self) -> Dict[str, Optional[float]]:
+        """
+        Balance-sheet fields of a history row (missing values as 0.0, except inventory: None when
+        not reported, so the quick ratio can tell "not reported" from "no inventory").
+        """
         return {
             'total_equity': _zero_if_missing(self.total_equity),
             'intangible_assets': _zero_if_missing(self.intangible_assets),
@@ -90,6 +95,7 @@ class BalanceSheetRow:
             'long_term_debt': _zero_if_missing(self.long_term_debt),
             'total_assets': _zero_if_missing(self.total_assets),
             'total_debt': self.total_debt,
+            'inventory': self.inventory,
             'shares_outstanding': _zero_if_missing(self.shares_outstanding),
         }
 

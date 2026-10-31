@@ -218,9 +218,11 @@ class TestQuarterlyDataExtractionProperties:
         
         result = processor.parse_quarterly_balance_sheet(mock_data)
         
-        # Verify all values are numeric (float)
+        # Verify all values are numeric (float); inventory None = not reported (F14)
         for period, data in result.items():
             for field, value in data.items():
+                if field == 'inventory' and value is None:
+                    continue
                 assert isinstance(value, (int, float)), \
                     f"Period {period}, field {field}: expected numeric, got {type(value)}"
                 assert not (isinstance(value, float) and (value != value)), \

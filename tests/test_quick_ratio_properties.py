@@ -156,132 +156,29 @@ class TestQuickRatioCalculationCorrectness:
         )
 
 
-class TestQuickRatioSectorBasedInventoryHandling:
+class TestQuickRatioMissingInventory:
     """
-    Property 6: Quick Ratio Sector-Based Inventory Handling
-    
-    For any balance sheet data with missing inventory, if the sector is Services or Technology,
-    the system should use current_assets without subtraction; otherwise, it should return "N/A".
-    
-    Validates: Requirements 2.3, 2.4
+    F14: missing inventory gives "N/A" in every sector; it is never imputed from the sector
+    (GRAHAM_METHODOLOGY §8.4: exclude, don't impute).
     """
     
-    @pytest.mark.parametrize("sector,should_calculate", [
-        ("Services", True),
-        ("Service", True),
-        ("Technology", True),
-        ("Software", True),
-        ("Technology Services", True),
-        ("Manufacturing", False),
-        ("Retail", False),
-        ("Consumer Goods", False),
-        ("Healthcare", False),
-        ("Energy", False)
+    @pytest.mark.parametrize("sector", [
+        "Services", "Technology", "Software", "Manufacturing", "Retail", "Energy", None,
     ])
-    def test_missing_inventory_sector_handling(self, sector, should_calculate):
-        """
-        Property: Missing inventory handling depends on sector.
-        
-        Services and Technology sectors: use current_assets (inventory assumed minimal)
-        Other sectors: return "N/A" (conservative approach)
-        """
-        # Arrange
+    def test_missing_inventory_is_na_whatever_the_sector(self, sector):
         financial_data = EdgeCaseFixtures.get_missing_inventory_data(sector=sector)
         calculator = GrahamCalculator(financial_data)
         
-        # Act
-        quick_ratio = calculator.compute_quick_ratio()
-        
-        # Assert
-        if should_calculate:
-            assert quick_ratio != "N/A", \
-                f"Should calculate Quick Ratio for {sector} sector with missing inventory"
-            
-            # Verify it equals current ratio (inventory = 0)
-            year_data = financial_data['history']['2023-12-31']
-            expected = to_decimal(year_data['current_assets']) / to_decimal(year_data['current_liabilities'])
-            actual = to_decimal(quick_ratio)
-            
-            assert_decimal_equal(
-                actual,
-                expected,
-                tolerance=Decimal('0.01'),
-                message=f"Quick ratio for {sector} with missing inventory should equal current ratio"
-            )
-            
-            # Verify warning is present
-            assert any('Inventory data unavailable' in w for w in calculator.warnings), \
-                f"Should have warning about missing inventory for {sector}"
-        else:
-            assert quick_ratio == "N/A", \
-                f"Should return N/A for {sector} sector with missing inventory"
-            
-            # Verify warning is present
-            assert any('Cannot calculate' in w and 'inventory' in w.lower() for w in calculator.warnings), \
-                f"Should have warning about inability to calculate for {sector}"
+        assert calculator.compute_quick_ratio() == "N/A"
+        assert any('Cannot calculate' in w and 'inventory not reported' in w for w in calculator.warnings)
     
-    def test_services_sector_missing_inventory(self):
-        """
-        Unit test: Services sector with missing inventory uses current assets.
-        """
-        # Arrange
-        financial_data = EdgeCaseFixtures.get_missing_inventory_data(sector='Services')
-        calculator = GrahamCalculator(financial_data)
-        
-        # Act
-        quick_ratio = calculator.compute_quick_ratio()
-        
-        # Assert
-        assert quick_ratio != "N/A", "Should calculate for Services sector"
-        
-        # Verify equals current ratio
-        year_data = financial_data['history']['2023-12-31']
-        expected = to_decimal(year_data['current_assets']) / to_decimal(year_data['current_liabilities'])
-        actual = to_decimal(quick_ratio)
-        
-        assert_decimal_equal(actual, expected, tolerance=Decimal('0.01'))
-        
-        # Verify warning mentions Services sector
-        assert any('Services' in w for w in calculator.warnings), \
-            "Warning should mention Services sector"
-    
-    def test_technology_sector_missing_inventory(self):
-        """
-        Unit test: Technology sector with missing inventory uses current assets.
-        """
-        # Arrange
+    def test_reported_zero_inventory_equals_current_ratio(self):
         financial_data = EdgeCaseFixtures.get_missing_inventory_data(sector='Technology')
-        calculator = GrahamCalculator(financial_data)
-        
-        # Act
-        quick_ratio = calculator.compute_quick_ratio()
-        
-        # Assert
-        assert quick_ratio != "N/A", "Should calculate for Technology sector"
-        
-        # Verify warning mentions Technology sector
-        assert any('Technology' in w for w in calculator.warnings), \
-            "Warning should mention Technology sector"
-    
-    def test_manufacturing_sector_missing_inventory(self):
-        """
-        Unit test: Manufacturing sector with missing inventory returns N/A.
-        """
-        # Arrange
-        financial_data = EdgeCaseFixtures.get_missing_inventory_data(sector='Manufacturing')
-        calculator = GrahamCalculator(financial_data)
-        
-        # Act
-        quick_ratio = calculator.compute_quick_ratio()
-        
-        # Assert
-        assert quick_ratio == "N/A", "Should return N/A for Manufacturing sector"
-        
-        # Verify warning mentions Manufacturing sector
-        assert any('Manufacturing' in w for w in calculator.warnings), \
-            "Warning should mention Manufacturing sector"
-        assert any('Cannot calculate' in w for w in calculator.warnings), \
-            "Warning should indicate inability to calculate"
+        year_data = financial_data['history']['2023-12-31']
+        year_data['inventory'] = 0.0
+        quick_ratio = GrahamCalculator(financial_data).compute_quick_ratio()
+        expected = to_decimal(year_data['current_assets']) / to_decimal(year_data['current_liabilities'])
+        assert_decimal_equal(to_decimal(quick_ratio), expected, tolerance=Decimal('0.01'))
 
 
 class TestQuickRatioEdgeCases:

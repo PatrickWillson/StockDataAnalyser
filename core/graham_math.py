@@ -418,20 +418,11 @@ class GrahamCalculator:
             self.warnings.append("Quick Ratio: Cannot calculate - current liabilities is zero")
             return "N/A"
         
-        # Handle missing inventory based on sector
-        sector = (self.data.get('sector') or '').lower()
-        is_low_inventory_sector = 'service' in sector or 'technology' in sector or 'software' in sector
-        
+        # Inventory not reported: N/A, never imputed from the sector (GRAHAM_METHODOLOGY §8.4).
+        # A reported 0 is a real value (no inventory)
         if inventory is None:
-            if is_low_inventory_sector:
-                # Services and Technology companies typically have minimal inventory
-                # Use current assets directly (equivalent to current ratio)
-                self.warnings.append(f"Quick Ratio: Inventory data unavailable - using Current Assets ({self.data.get('sector', 'Unknown')} sector)")
-                inventory = 0.0
-            else:
-                # Conservative approach: cannot calculate without inventory for other sectors
-                self.warnings.append(f"Quick Ratio: Cannot calculate - inventory data unavailable for {self.data.get('sector', 'Unknown')} sector")
-                return "N/A"
+            self.warnings.append("Quick Ratio: Cannot calculate - inventory not reported in the annual balance sheet")
+            return "N/A"
         
         # Convert to Decimal for precise calculation
         current_assets_dec = Decimal(str(current_assets))

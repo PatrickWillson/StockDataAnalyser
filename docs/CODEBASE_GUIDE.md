@@ -114,7 +114,7 @@ claude-output/              agent-written markdown (gitignored)
 | unused by consumers | `dividend_currency`, `ttm_dividend_currency`, `dividend_per_share`, `dividend_yield`, `enterprise_value`, `api_last_update` |
 
 ### 4.2 `history` row (built by `FinancialDataProcessor.merge_financial_data`; statement fields come from `core.statement_parsing` rows via `as_history_fields()`)
-`revenue, net_income, eps, dividend, total_equity, intangible_assets, goodwill, current_assets, current_liabilities, total_liabilities, long_term_debt, total_assets, total_debt, shares_outstanding, wcps, payout_ratio, year_end_price`
+`revenue, net_income, eps, dividend, total_equity, intangible_assets, goodwill, current_assets, current_liabilities, total_liabilities, long_term_debt, total_assets, total_debt, inventory (None = not reported), shares_outstanding, wcps, payout_ratio, year_end_price`
 
 - Missing numbers are **0.0** (via `sanitize_value`, which also maps JSON null, `"NA"` and non-numeric junk to 0.0), not None. `wcps` may be `"N/A"`; `payout_ratio` is a formatted string (`"12.3%"`, `"0.0%"`, `"N/A"`); `year_end_price` may be None.
 - Keys are fiscal year-end dates. **Dividend-only years** (dividend data exists but no statements, often the current/future year) are synthesised with the latest FYE month-day and all statement fields 0.0.
@@ -163,7 +163,7 @@ Where EODHD pre-computed values are used today:
 | Net-Net (NCAV/share) | (Current Assets − Total Liabilities) / Shares |
 | NCA details | NCA = CA − Total Liabilities; debt coverage = LTD / NCA |
 | Current ratio | CA / CL for the latest year with balance-sheet data; `{'ratio', 'fiscal_year_end'}`; shares `_latest_current_ratio` with the current-ratio investor tests, so display and PASS/FAIL agree |
-| Quick ratio | (CA − Inventory) / CL — inventory is never parsed, so sector fallback applies |
+| Quick ratio | (CA − Inventory) / CL from the latest annual balance sheet (`inventory` parsed; a reported 0 counts). Inventory not reported → N/A with a warning, never imputed from the sector (F14) |
 | 3-yr avg P/E | price / mean(EPS of 3 latest complete years) |
 | Combined P/E×P/B | round(P/E) × round(P/B, BVPS-based) ≤ 22.5 |
 | EPV | mean(net income, up to 10 complete years, min 7) / COST_OF_CAPITAL; per share = EPV / latest shares. `compute_epv()` turns N/A into 0.0 |
@@ -221,7 +221,7 @@ Price-unit logic lives in `core/price_quote.py` (`is_minor_unit`, `to_major_unit
 | – | Header (`# STOCK ANALYSIS DOSSIER`, DATE, CEO/sector/currency) | `_generate_header` |
 | 1 | EXECUTIVE SUMMARY | `executive_summary.py` `ExecutiveSummarySection(financial_data, metrics)` |
 | 1.5 | TTM ANALYSIS (conditional) | `ttm_analysis.py` `TTMAnalysisSection(ttm_metrics, metrics, financial_data)` |
-| 2 | KEY METRICS | `key_metrics.py` `KeyMetricsSection(financial_data, {'current_ratio': …})` — only the current ratio is passed; quick ratio and NCA are withheld until inventory is parsed and NCA uses CA − CL |
+| 2 | KEY METRICS | `key_metrics.py` `KeyMetricsSection(financial_data, {'current_ratio': …, 'quick_ratio': …})` — NCA is still withheld until it uses CA − CL |
 | – | RISK FACTORS | `risk_factors.py` `RiskFactorsSection` (`generate()` → `_generate_second_risk_section`) |
 | – | METHODOLOGY NOTES | `methodology.py` `MethodologySection` |
 | – | CALCULATION DETAILS | `calculation_details.py` `CalculationDetailsSection` |
@@ -247,7 +247,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising `_test_*` method and `_determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1242 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1238 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

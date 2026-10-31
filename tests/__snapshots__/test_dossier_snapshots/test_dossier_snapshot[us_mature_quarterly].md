@@ -59,6 +59,7 @@
 ### Liquidity Analysis
 
 - **Current Ratio**: 0.99 (Current Assets / Current Liabilities, fiscal year ending 2023-09-30)
+- **Quick Ratio**: 0.94 (Acid Test - excludes inventory)
 - Insider Ownership: 0.07%
 - Institutional Ownership: 61.44%
 - Beta (Volatility): 1.290
@@ -439,7 +440,6 @@ TTM calculations provide more current financial metrics by using the most recent
 - [VALIDATION] ROA Difference: API shows 22.40% (TTM basis), calculated 27.50% (annual basis) (22.8% difference). Using annual data from audited financials per Graham methodology.
 - Year 2024-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Historical prices unavailable for 1 fiscal year ends (no trading data within 7-day window). Historical P/E and P/B will show N/A for those years.
-- Quick Ratio: Inventory data unavailable - using Current Assets (Technology sector)
 
 ### Normalized Graham Number Requirements:
 - **3-Year Data Requirement**: Normalized Graham Number calculation requires 3 consecutive years of annual EPS data

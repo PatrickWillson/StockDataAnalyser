@@ -29,11 +29,17 @@ def test_balance_sheet_row_keeps_missing_distinct_from_zero():
 def test_balance_sheet_field_mapping():
     raw = {"totalStockholderEquity": 500, "intangibleAssets": 10, "goodWill": 20, "totalCurrentAssets": 300,
            "totalCurrentLiabilities": 100, "totalLiab": 250, "longTermDebt": 80, "totalAssets": 750,
-           "commonStockSharesOutstanding": 50}
+           "commonStockSharesOutstanding": 50, "inventory": 40}
     assert BalanceSheetRow.from_eodhd("2023-12-31", raw).as_history_fields() == {
         "total_equity": 500.0, "intangible_assets": 10.0, "goodwill": 20.0, "current_assets": 300.0,
         "current_liabilities": 100.0, "total_liabilities": 250.0, "long_term_debt": 80.0,
-        "total_assets": 750.0, "total_debt": 80.0, "shares_outstanding": 50.0}
+        "total_assets": 750.0, "total_debt": 80.0, "shares_outstanding": 50.0, "inventory": 40.0}
+
+
+def test_unreported_inventory_is_none_not_zero():
+    """F14: the quick ratio must tell "not reported" (None) from "no inventory" (0.0)."""
+    assert BalanceSheetRow.from_eodhd("d", {}).as_history_fields()["inventory"] is None
+    assert BalanceSheetRow.from_eodhd("d", {"inventory": 0}).as_history_fields()["inventory"] == 0.0
 
 
 def test_share_count_fallback_chain():
