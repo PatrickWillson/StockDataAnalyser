@@ -12,7 +12,10 @@ from core.investor_tests.criteria import current_ratio_test, earnings_stability,
 
 
 def debt_to_net_current_assets(history: dict, years: list) -> str:
-    """Long-term debt below net current assets (current assets − current liabilities)."""
+    """
+    Criterion 4.2 (industrials): long-term debt "should not exceed the net current assets (or
+    working capital)" — LTD ≤ current assets − current liabilities.
+    """
     if not years:
         return 'FAIL'
     latest_year = latest_financial_year(history, years)
@@ -22,7 +25,7 @@ def debt_to_net_current_assets(history: dict, years: list) -> str:
     current_assets = history[latest_year].get('current_assets', 0.0)
     current_liabilities = history[latest_year].get('current_liabilities', 0.0)
     net_current_assets = current_assets - current_liabilities
-    return 'PASS' if long_term_debt < net_current_assets else 'FAIL'
+    return 'PASS' if long_term_debt <= net_current_assets else 'FAIL'
 
 
 def dividend_record(history: dict, years: list, num_years: int) -> str:

@@ -71,7 +71,7 @@ class GrahamTestsSection:
         # Test 3: Debt to Assets
         debt_to_assets = defensive_tests.get('debt_to_assets', 'N/A')
         lines.append(f"3. **Debt to Assets**: {debt_to_assets}")
-        lines.append("   - Criterion: Long-term Debt < Net Current Assets")
+        lines.append("   - Criterion: Long-term debt ≤ net current assets (current assets − current liabilities)")
         
         # Test 4: Dividend Record
         dividend_record = defensive_tests.get('dividend_record', 'N/A')
@@ -144,7 +144,7 @@ class GrahamTestsSection:
         # Test 3: Debt to Assets
         debt_to_assets = enterprising_tests.get('debt_to_assets', 'N/A')
         lines.append(f"3. **Debt to Assets**: {debt_to_assets}")
-        lines.append(f"   - Criterion: Debt < {ENTERPRISING.MAX_DEBT_ASSETS:.0%} of Net Current Assets")
+        lines.append(f"   - Criterion: Long-term debt ≤ {ENTERPRISING.MAX_DEBT_ASSETS:.0%} of net current assets (current assets − current liabilities)")
         
         # Test 4: Dividend Record
         dividend_record = enterprising_tests.get('dividend_record', 'N/A')

@@ -11,7 +11,7 @@ from core.investor_tests.criteria import current_ratio_test, earnings_stability,
 
 
 def debt_to_net_current_assets(history: dict, years: list) -> str:
-    """Long-term debt below MAX_DEBT_ASSETS × net current assets (current assets − current liabilities)."""
+    """Criterion 5.2: debt "not more than 110% of net current assets" — LTD ≤ 1.10 × (CA − CL)."""
     if not years:
         return 'FAIL'
     latest_year = latest_financial_year(history, years)
@@ -21,7 +21,7 @@ def debt_to_net_current_assets(history: dict, years: list) -> str:
     current_assets = history[latest_year].get('current_assets', 0.0)
     current_liabilities = history[latest_year].get('current_liabilities', 0.0)
     max_allowed_debt = (current_assets - current_liabilities) * ENTERPRISING.MAX_DEBT_ASSETS
-    return 'PASS' if long_term_debt < max_allowed_debt else 'FAIL'
+    return 'PASS' if long_term_debt <= max_allowed_debt else 'FAIL'
 
 
 def current_dividend(history: dict, years: list) -> str:

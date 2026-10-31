@@ -356,7 +356,7 @@ TTM calculations provide more current financial metrics by using the most recent
 2. **Current Ratio**: FAIL
    - Criterion: Current Ratio ≥ 2.0
 3. **Debt to Assets**: PASS
-   - Criterion: Long-term Debt < Net Current Assets
+   - Criterion: Long-term debt ≤ net current assets (current assets − current liabilities)
 4. **Dividend Record**: FAIL
    - Criterion: Uninterrupted dividend payments for at least 20 years
 5. **Earnings Growth**: PASS
@@ -380,7 +380,7 @@ TTM calculations provide more current financial metrics by using the most recent
 2. **Current Ratio**: FAIL
    - Criterion: Current Ratio > 1.5
 3. **Debt to Assets**: PASS
-   - Criterion: Debt < 110% of Net Current Assets
+   - Criterion: Long-term debt ≤ 110% of net current assets (current assets − current liabilities)
 4. **Dividend Record**: PASS
    - Criterion: Currently pays a dividend (last year > 0)
 5. **Earnings Growth**: N/A - Not Required

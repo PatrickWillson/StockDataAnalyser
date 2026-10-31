@@ -99,8 +99,10 @@ class TestDebtToAssets:
     def test_debt_below_net_current_assets_passes(self):
         assert _run("_test_debt_to_assets", {"2023-12-31": _year(long_term_debt=299.0)}) == "PASS"
 
-    def test_debt_equal_to_net_current_assets_fails(self):
-        assert _run("_test_debt_to_assets", {"2023-12-31": _year(long_term_debt=300.0)}) == "FAIL"
+    def test_debt_equal_to_net_current_assets_passes(self):
+        # "should not exceed": equality passes (F20)
+        assert _run("_test_debt_to_assets", {"2023-12-31": _year(long_term_debt=300.0)}) == "PASS"
+        assert _run("_test_debt_to_assets", {"2023-12-31": _year(long_term_debt=300.01)}) == "FAIL"
 
     def test_known_defect_missing_debt_passes(self):
         # Known defect: missing long-term debt is 0.0, which passes silently
@@ -251,9 +253,11 @@ class TestEnterprisingDebt:
     def test_debt_below_limit_passes(self):
         assert _run("_test_enterprising_debt", {"2023-12-31": _year(long_term_debt=329.0)}) == "PASS"
 
-    def test_debt_at_limit_fails(self):
+    def test_debt_at_limit_passes(self):
+        # "not more than 110%": equality passes (F20)
         limit = 300.0 * ENTERPRISING.MAX_DEBT_ASSETS
-        assert _run("_test_enterprising_debt", {"2023-12-31": _year(long_term_debt=limit)}) == "FAIL"
+        assert _run("_test_enterprising_debt", {"2023-12-31": _year(long_term_debt=limit)}) == "PASS"
+        assert _run("_test_enterprising_debt", {"2023-12-31": _year(long_term_debt=limit + 0.01)}) == "FAIL"
 
     def test_no_years_or_no_financial_year_fails(self):
         assert _run("_test_enterprising_debt", {}) == "FAIL"
