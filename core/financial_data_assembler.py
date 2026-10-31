@@ -263,18 +263,21 @@ class FinancialDataAssembler:
             # So we don't divide by 100 - just change the currency label
             highlights_dividend_currency = "GBP"
         
-        if dividend_per_share and dividend_per_share > 0 and highlights_dividend_currency != financials_currency:
-            converted_dividend, success = self.currency_converter.convert(
-                dividend_per_share, highlights_dividend_currency, financials_currency
-            )
-            converted_book_value, _ = self.currency_converter.convert(
-                book_value_per_share, highlights_dividend_currency, financials_currency
-            )
-            
-            if success:
-                dividend_per_share = converted_dividend
-                book_value_per_share = converted_book_value
-                logger.info(f"Dividend and Book Value converted from {highlights_dividend_currency} to {financials_currency}")
+        # Each converted on its own: book value no longer depends on a dividend being present (F10)
+        if highlights_dividend_currency != financials_currency:
+            if dividend_per_share and dividend_per_share > 0:
+                converted_dividend, success = self.currency_converter.convert(
+                    dividend_per_share, highlights_dividend_currency, financials_currency
+                )
+                if success:
+                    dividend_per_share = converted_dividend
+            if book_value_per_share and book_value_per_share > 0:
+                converted_book_value, success = self.currency_converter.convert(
+                    book_value_per_share, highlights_dividend_currency, financials_currency
+                )
+                if success:
+                    book_value_per_share = converted_book_value
+                    logger.info(f"Book Value converted from {highlights_dividend_currency} to {financials_currency}")
         
         # Convert forward dividend rate to financials currency
         if forward_dividend_rate:
@@ -367,7 +370,8 @@ class FinancialDataAssembler:
         
         # Cross-validate calculated metrics against API values
         logger.info("Cross-validating metrics...")
-        validation_warnings = self._cross_validate_metrics(data, pe_ratio, calculated_bvps, calculated_roe, calculated_roa, calculated_profit_margin)
+        validation_warnings = self._cross_validate_metrics(data, pe_ratio, calculated_bvps, calculated_roe, calculated_roa, calculated_profit_margin,
+                                                           api_bvps=book_value_per_share, currency=financials_currency)
         warnings.extend(validation_warnings)
         
         # Validate data quality
@@ -471,7 +475,8 @@ class FinancialDataAssembler:
         }
     
     def _cross_validate_metrics(self, data: Dict[str, Any], calculated_pe: float, calculated_bvps: float, 
-                                calculated_roe: float, calculated_roa: float, calculated_profit_margin: float) -> List[str]:
+                                calculated_roe: float, calculated_roa: float, calculated_profit_margin: float,
+                                api_bvps: Optional[float] = None, currency: str = "") -> List[str]:
         """
         Cross-validate calculated metrics against API's pre-calculated values.
         Flag significant discrepancies for user review.
@@ -483,6 +488,8 @@ class FinancialDataAssembler:
             calculated_roe: Return on Equity calculated from annual data
             calculated_roa: Return on Assets calculated from annual data
             calculated_profit_margin: Profit Margin calculated from annual data
+            api_bvps: Highlights.BookValue converted to the financials currency (None: read it raw)
+            currency: Financials currency, for the warning text
         
         Returns:
             List of validation warnings
@@ -534,8 +541,10 @@ class FinancialDataAssembler:
                 )
                 logger.info(f"P/E difference: API {api_pe:.2f} (TTM) vs Calculated {calculated_pe:.2f} (Annual)")
         
-        # Check Book Value
-        api_bvps = data.get('Highlights', {}).get('BookValue', 0)
+        # Check Book Value, both sides in the financials currency (F10): the caller passes
+        # Highlights.BookValue already converted; the raw value is only a fallback for direct callers
+        if api_bvps is None:
+            api_bvps = data.get('Highlights', {}).get('BookValue', 0)
         
         # Handle None values - convert to 0 for comparison
         if api_bvps is None:
@@ -547,12 +556,12 @@ class FinancialDataAssembler:
             bvps_diff_pct = abs(calculated_bvps - api_bvps) / api_bvps * 100
             if bvps_diff_pct > BVPS_MAX_DIFF_PCT:
                 warnings.append(
-                    f"[VALIDATION] Book Value Discrepancy: API shows ${api_bvps:.2f}, "
-                    f"calculated ${calculated_bvps:.2f} ({bvps_diff_pct:.1f}% difference). "
-                    f"Calculated value subtracts intangibles/goodwill per Graham methodology. "
-                    f"API may use different share count or accounting treatment."
+                    f"[VALIDATION] Book Value Discrepancy: API shows {api_bvps:.2f} {currency}, "
+                    f"calculated {calculated_bvps:.2f} {currency} ({bvps_diff_pct:.1f}% difference). "
+                    f"Calculated value is total equity / that year's shares from the annual balance sheet; "
+                    f"the API figure may use a different date, share count or accounting treatment."
                 )
-                logger.warning(f"Book Value discrepancy detected: API ${api_bvps:.2f} vs Calculated ${calculated_bvps:.2f}")
+                logger.warning(f"Book Value discrepancy detected: API {api_bvps:.2f} vs Calculated {calculated_bvps:.2f} {currency}")
         
         # Check for stale price data
         last_update = data.get('General', {}).get('UpdatedAt', '')

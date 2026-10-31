@@ -429,7 +429,7 @@ TTM calculations provide more current financial metrics by using the most recent
 
 ### Data Quality & Limitations:
 - Price Source: yfinance (primary source)
-- Currency Conversions: EUR → USD at rate 1.0825; EUR → USD at rate 1.0825; EUR → USD at rate 1.0825; EUR → USD at rate 1.0825
+- Currency Conversions: EUR → USD at rate 1.0825; EUR → USD at rate 1.0825; EUR → USD at rate 1.0825
 - [VALIDATION] API data is 46 days old (last update: 2024-01-15). Price and market data may be stale.
 - [VALIDATION] ROA Difference: API shows 22.40% (TTM basis), calculated 27.50% (annual basis) (22.8% difference). Using annual data from audited financials per Graham methodology.
 - Year 2022-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)

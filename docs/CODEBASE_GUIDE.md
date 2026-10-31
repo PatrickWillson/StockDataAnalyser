@@ -193,7 +193,7 @@ YoY EPS growth % (skip prev EPS ≤ 0), population SD, flag |z| > 2.0. Needs ≥
 3. Price: `EODHDClient.fetch_all_data` fetches the yfinance `PriceQuote` (I/O); `FinancialDataProcessor.get_current_price(quote, trading_ccy, warnings)` accepts it only if the price is positive **and** the quote currency matches EODHD's `General.CurrencyCode` (`same_currency`, any unit); otherwise it returns a reason and the assembler raises `PriceUnavailableError` (no EODHD price fallback: no price, no dossier). No I/O in core. Then:
    - unit from the **quote currency code** (F6): minor unit (GBp/GBX, ZAc, ILA) → ÷100 to the major currency (London Fix for GBP), logged in the conversion history; no P/E heuristic. EODHD's 52-week range is divided the same way (same exchange prices, same unit)
    - then convert to financials ccy; `fx_rate_used` recorded; historical FX fetched for fiscal year-ends.
-4. Highlights dividend/BVPS, forward dividend, TTM dividend: GBX relabelled GBP, then converted.
+4. Highlights dividend/BVPS, forward dividend, TTM dividend: GBX relabelled GBP, then converted (dividend and book value each on their own, F10). The BVPS cross-check compares the converted `Highlights.BookValue` with equity / shares, both in the financials currency.
 5. `core.historical_prices.apply_year_end_prices` converts historical year-end prices: same Yahoo listing, so the quote's unit applies (÷100 for a minor unit, falling back to EODHD's trading code when `price_quote_currency` is absent), then historical FX with current-rate fallback.
 6. Executive Summary treats the 52-week range as `price_currency_before_fx` and converts it with `fx_rate_used` (the rate already used for the price); no FX calls happen in the output layer.
 7. All conversions are logged into `warnings` via `CurrencyConverter.get_consolidated_warning()`.
@@ -247,7 +247,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising `_test_*` method and `_determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1239 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1242 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 
