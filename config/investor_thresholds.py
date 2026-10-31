@@ -28,12 +28,18 @@ class DefensiveThresholds:
         MAX_PE_RATIO: Maximum acceptable Price-to-Earnings ratio (15.0)
         MAX_PB_RATIO: Maximum acceptable Price-to-Book ratio (1.5)
         MIN_EARNINGS_GROWTH: Minimum earnings growth over 10 years (1.33 = 33%)
+        EARNINGS_STABILITY_YEARS: Years examined for earnings stability (10)
+        MIN_DIVIDEND_YEARS: Years of uninterrupted dividends examined (20)
+        EARNINGS_GROWTH_YEARS: Span of the earnings growth test (10 financial years)
     """
     MIN_CURRENT_RATIO: float = 2.0
     MIN_EARNINGS_YEARS: int = 10  # Graham: "Some earnings in EACH of the past 10 years"
     MAX_PE_RATIO: float = 15.0
     MAX_PB_RATIO: float = 1.5
     MIN_EARNINGS_GROWTH: float = 1.33  # 33% over 10 years
+    EARNINGS_STABILITY_YEARS: int = 10
+    MIN_DIVIDEND_YEARS: int = 20  # Graham: uninterrupted dividends for at least 20 years
+    EARNINGS_GROWTH_YEARS: int = 10
 
 
 @dataclass(frozen=True)
@@ -51,13 +57,15 @@ class EnterprisingThresholds:
         MAX_DEBT_ASSETS: Maximum debt relative to net current assets (1.10 = 110%)
         MIN_EARNINGS_YEARS: Minimum years of positive earnings required (5 years)
         MAX_PE_RATIO: Maximum acceptable Price-to-Earnings ratio (10.0)
-        MAX_PB_RATIO: Maximum acceptable Price-to-Book ratio (1.2)
+        MAX_PB_RATIO: Maximum price relative to net tangible assets (1.2 = 120%)
+        EARNINGS_STABILITY_YEARS: Years examined for earnings stability (5)
     """
     MIN_CURRENT_RATIO: float = 1.5
     MAX_DEBT_ASSETS: float = 1.10  # Debt < 110% of Net Current Assets
     MIN_EARNINGS_YEARS: int = 5
     MAX_PE_RATIO: float = 10.0
-    MAX_PB_RATIO: float = 1.2
+    MAX_PB_RATIO: float = 1.2  # Price < 120% of net tangible assets
+    EARNINGS_STABILITY_YEARS: int = 5
 
 
 # Singleton instances for use throughout the application

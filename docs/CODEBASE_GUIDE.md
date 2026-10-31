@@ -63,7 +63,8 @@ core/
   data_models.py            dataclasses (NOT used in production — everything is dicts)
 config/
   graham_constants.py       GRAHAM_MULTIPLIER=22.5, COST_OF_CAPITAL=0.10 (immutable)
-  investor_thresholds.py    DEFENSIVE / ENTERPRISING frozen dataclasses (test thresholds)
+  investor_thresholds.py    DEFENSIVE / ENTERPRISING frozen dataclasses (test thresholds and windows: earnings stability, dividend record, earnings growth)
+  valuation_config.py       project valuation settings: NORMALIZED_EPS_YEARS (3), EPV_MIN/MAX_YEARS (7/10), DEEP_VALUE_MIN_DISCOUNT_PCT (2.0), STRONG_BUY_MIN_MOS_PCT (20)
   api_config.py             APIConfig (unused in production)
   output_config.py          OutputConfig (unused in production)
 output/

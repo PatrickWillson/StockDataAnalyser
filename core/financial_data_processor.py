@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from core.currency_converter import CurrencyConverter
 from core.history import has_statement_data
+from config.valuation_config import NORMALIZED_EPS_YEARS
 
 logger = logging.getLogger(__name__)
 
@@ -1111,12 +1112,12 @@ class FinancialDataProcessor:
                         if not has_no_statement_data(history[year])]
 
         # Check if we have at least 3 years
-        if len(sorted_years) < 3:
-            result['warning'] = f"Insufficient data: Only {len(sorted_years)} years available, need 3 for normalized calculation"
+        if len(sorted_years) < NORMALIZED_EPS_YEARS:
+            result['warning'] = f"Insufficient data: Only {len(sorted_years)} years available, need {NORMALIZED_EPS_YEARS} for normalized calculation"
             return result
         
         # Extract first 3 years
-        three_years = sorted_years[:3]
+        three_years = sorted_years[:NORMALIZED_EPS_YEARS]
         eps_values = []
         missing_years = []
         

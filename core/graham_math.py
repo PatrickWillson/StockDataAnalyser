@@ -17,6 +17,8 @@ from typing import Dict, Union
 from config.graham_constants import GRAHAM_MULTIPLIER, COST_OF_CAPITAL
 from config.investor_thresholds import DEFENSIVE, ENTERPRISING
 from core.history import has_balance_sheet_data, has_statement_data, has_statement_or_current_assets
+from config.valuation_config import (DEEP_VALUE_MIN_DISCOUNT_PCT, EPV_MAX_YEARS, EPV_MIN_YEARS,
+                                     NORMALIZED_EPS_YEARS, STRONG_BUY_MIN_MOS_PCT)
 
 
 class GrahamCalculator:
@@ -190,7 +192,7 @@ class GrahamCalculator:
         
         # Calculate arithmetic mean of 3-year EPS
         eps_values = eps_data['eps_values']
-        eps_3yr_avg = sum(eps_values) / 3
+        eps_3yr_avg = sum(eps_values) / NORMALIZED_EPS_YEARS
         
         # Store individual EPS values and years for audit trail
         self.eps_3year_values = eps_values
@@ -482,8 +484,8 @@ class GrahamCalculator:
                 complete_years.append(year)
         
         # Need at least 3 years of data
-        if len(complete_years) < 3:
-            self.warnings.append(f"Three-Year Average P/E: Insufficient data - need 3 years, have {len(complete_years)}")
+        if len(complete_years) < NORMALIZED_EPS_YEARS:
+            self.warnings.append(f"Three-Year Average P/E: Insufficient data - need {NORMALIZED_EPS_YEARS} years, have {len(complete_years)}")
             return {
                 'three_year_avg_eps': "N/A",
                 'pe_on_avg': "N/A",
@@ -491,7 +493,7 @@ class GrahamCalculator:
             }
         
         # Get most recent 3 years with financial data
-        years_to_use = complete_years[:3]
+        years_to_use = complete_years[:NORMALIZED_EPS_YEARS]
         
         # Extract EPS for each year (including negative values for losses)
         eps_values = []
@@ -622,7 +624,7 @@ class GrahamCalculator:
             product = float(product_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
             
             # Compare to Graham's threshold of 22.5
-            threshold = Decimal('22.5')
+            threshold = Decimal(str(GRAHAM_MULTIPLIER))
             result = "PASS" if product_dec <= threshold else "FAIL"
         
         return {
@@ -750,11 +752,11 @@ class GrahamCalculator:
                 complete_years.append(year)
         
         # Need at least 7 years per Graham's methodology
-        if len(complete_years) < 7:
-            return f"N/A - Insufficient history ({len(complete_years)} complete years, minimum 7 required)"
+        if len(complete_years) < EPV_MIN_YEARS:
+            return f"N/A - Insufficient history ({len(complete_years)} complete years, minimum {EPV_MIN_YEARS} required)"
         
         # Use up to 10 complete years
-        years_to_use = complete_years[:10]
+        years_to_use = complete_years[:EPV_MAX_YEARS]
         
         # Calculate average net income INCLUDING loss years
         net_incomes = []
@@ -879,7 +881,7 @@ class GrahamCalculator:
     def _run_defensive_tests(self, history: dict, years: list, num_years: int, price: float) -> dict:
         """Run all 7 Graham Defensive Investor tests."""
         # Test 1: Earnings stability - positive earnings in ALL of last 10 years (strict Graham)
-        earnings_stability = self._test_earnings_stability(history, years, min_years=DEFENSIVE.MIN_EARNINGS_YEARS, period=10)
+        earnings_stability = self._test_earnings_stability(history, years, min_years=DEFENSIVE.MIN_EARNINGS_YEARS, period=DEFENSIVE.EARNINGS_STABILITY_YEARS)
         
         # Test 2: Current ratio >= 2.0
         current_ratio_test = self._test_current_ratio(history, years, min_ratio=DEFENSIVE.MIN_CURRENT_RATIO)
@@ -912,7 +914,7 @@ class GrahamCalculator:
     def _run_enterprising_tests(self, history: dict, years: list, num_years: int, price: float) -> dict:
         """Run Graham Enterprising Investor tests."""
         # Test 1: Earnings stability - positive earnings for last 5 years
-        earnings_stability = self._test_earnings_stability(history, years, min_years=ENTERPRISING.MIN_EARNINGS_YEARS, period=5)
+        earnings_stability = self._test_earnings_stability(history, years, min_years=ENTERPRISING.MIN_EARNINGS_YEARS, period=ENTERPRISING.EARNINGS_STABILITY_YEARS)
         
         # Test 2: Current ratio > 1.5
         current_ratio_test = self._test_current_ratio(history, years, min_ratio=ENTERPRISING.MIN_CURRENT_RATIO)
@@ -1053,7 +1055,7 @@ class GrahamCalculator:
     def _test_dividend_record(self, history: dict, years: list, num_years: int) -> str:
         """Test if there is an uninterrupted dividend record."""
         # If < 20 years, test entire history; if >= 20 years, test last 20
-        years_to_check = min(num_years, 20)
+        years_to_check = min(num_years, DEFENSIVE.MIN_DIVIDEND_YEARS)
         years_subset = years[:years_to_check]
         
         for year in years_subset:
@@ -1066,7 +1068,7 @@ class GrahamCalculator:
     def _test_earnings_growth(self, history: dict, years: list, num_years: int) -> str:
         """Test if earnings have grown by >= 33% over 10 years."""
         # If < 10 years, mark as "N/A (Too Young)"
-        if num_years < 10:
+        if num_years < DEFENSIVE.EARNINGS_GROWTH_YEARS:
             return 'N/A (Too Young)'
         
         # Get earnings from 10 years ago and most recent with financial data
@@ -1078,10 +1080,10 @@ class GrahamCalculator:
         # Get the year 10 years before the latest financial year
         # (not just years[9] which might include dividend-only years)
         financial_years = [y for y in years if self._get_latest_financial_year(history, [y])]
-        if len(financial_years) < 10:
+        if len(financial_years) < DEFENSIVE.EARNINGS_GROWTH_YEARS:
             return 'N/A (Too Young)'
         
-        oldest_year = financial_years[9]  # 10th financial year
+        oldest_year = financial_years[DEFENSIVE.EARNINGS_GROWTH_YEARS - 1]  # 10th financial year
         
         old_earnings = history[oldest_year].get('net_income', 0.0)
         recent_earnings = history[latest_year].get('net_income', 0.0)
@@ -1179,7 +1181,7 @@ class GrahamCalculator:
         # Graham's standard rule: buy at discount to book value
         tbvps = self.compute_tbvps(round_result=False)
         if isinstance(tbvps, float) and tbvps > 0:
-            max_price = tbvps * 1.20
+            max_price = tbvps * ENTERPRISING.MAX_PB_RATIO
             if price < max_price:
                 return 'PASS'
         
@@ -1213,7 +1215,7 @@ class GrahamCalculator:
         if isinstance(net_net_value_raw, float) and price > 0:
             # Calculate percentage difference: (net_net - price) / net_net * 100
             pct_below = ((net_net_value_raw - price) / net_net_value_raw * 100) if net_net_value_raw > 0 else 0
-            if pct_below > 2.0:  # Price is more than 2% below net-net
+            if pct_below > DEEP_VALUE_MIN_DISCOUNT_PCT:  # Price is more than 2% below net-net
                 self.warnings.append("DEEP VALUE OPPORTUNITY - Price below Net-Net Value")
         
         # Run both defensive and enterprising tests
@@ -1277,7 +1279,7 @@ class GrahamCalculator:
         
         # Handle positive margin of safety with tiers
         if isinstance(margin_of_safety, float):
-            if margin_of_safety >= 20:
+            if margin_of_safety >= STRONG_BUY_MIN_MOS_PCT:
                 return "STRONG BUY (Undervalued)"
             elif margin_of_safety > 0:
                 return "UNDERVALUED"

@@ -15,6 +15,13 @@ from config.investor_thresholds import (
 )
 from config.api_config import APIConfig, EODHD_CONFIG, FX_CONFIG
 from config.output_config import OutputConfig
+from config.valuation_config import (
+    NORMALIZED_EPS_YEARS,
+    EPV_MIN_YEARS,
+    EPV_MAX_YEARS,
+    DEEP_VALUE_MIN_DISCOUNT_PCT,
+    STRONG_BUY_MIN_MOS_PCT,
+)
 
 __all__ = [
     'GRAHAM_MULTIPLIER',
@@ -27,4 +34,9 @@ __all__ = [
     'EODHD_CONFIG',
     'FX_CONFIG',
     'OutputConfig',
+    'NORMALIZED_EPS_YEARS',
+    'EPV_MIN_YEARS',
+    'EPV_MAX_YEARS',
+    'DEEP_VALUE_MIN_DISCOUNT_PCT',
+    'STRONG_BUY_MIN_MOS_PCT',
 ]

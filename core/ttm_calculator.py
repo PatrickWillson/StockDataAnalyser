@@ -14,6 +14,7 @@ Key Features:
 import logging
 from datetime import datetime
 from typing import Dict, Union, List, Any, Optional
+from config.graham_constants import GRAHAM_MULTIPLIER
 
 # Configure module-level logger
 logger = logging.getLogger(__name__)
@@ -603,7 +604,7 @@ class TTMCalculator:
             return "N/A"
         
         # Calculate Graham Number
-        graham_number = math.sqrt(22.5 * ttm_eps * ttm_tbvps)
+        graham_number = math.sqrt(GRAHAM_MULTIPLIER * ttm_eps * ttm_tbvps)
         
         return round(graham_number, 2)
     
