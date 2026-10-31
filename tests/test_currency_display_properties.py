@@ -9,7 +9,7 @@ and correctly shows trading currency first with optional conversion.
 """
 
 from hypothesis import given, strategies as st
-from stock_data_analyser import format_price_display
+from output.formatting import format_price_display
 
 
 # Common currency codes

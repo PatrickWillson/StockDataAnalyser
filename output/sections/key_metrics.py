@@ -6,36 +6,7 @@ including profitability metrics, book value, ownership, and risk metrics.
 
 from typing import List, Dict, Any
 from output.sections.base import DossierSection
-
-
-def format_price_display(price: float, trading_currency: str, financials_currency: str, 
-                        converted_value: float = None) -> str:
-    """
-    Format price display with trading currency first.
-    
-    Args:
-        price: Price value in trading currency
-        trading_currency: Currency the stock trades in
-        financials_currency: Currency of financial statements
-        converted_value: Optional converted value in financials currency
-        
-    Returns:
-        Formatted price string
-    """
-    # Format price with commas and 2 decimal places
-    formatted_price = f"{price:,.2f}"
-    
-    # Single currency case
-    if trading_currency == financials_currency:
-        return f"{formatted_price} {trading_currency}"
-    
-    # Dual currency case - show trading currency first, then conversion
-    if converted_value is not None:
-        formatted_converted = f"{converted_value:,.2f}"
-        return f"{formatted_price} {trading_currency} ({formatted_converted} {financials_currency})"
-    
-    # Fallback if no converted value provided but currencies differ
-    return f"{formatted_price} {trading_currency}"
+from output.formatting import format_price_display
 
 
 class KeyMetricsSection(DossierSection):

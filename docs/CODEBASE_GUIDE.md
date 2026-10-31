@@ -67,6 +67,7 @@ config/
   output_config.py          OutputConfig (unused in production)
 output/
   dossier_generator.py      DossierGenerator: header, section assembly, Critical Alerts
+  formatting.py             shared formatters (format_price_display) — sections import from here
   sections/base.py          DossierSection ABC (generate() -> List[str])
   sections/*.py             one module per dossier section (§6)
 tests/                      ~115 test files, pytest + Hypothesis; syrupy snapshots in tests/__snapshots__/
@@ -216,7 +217,7 @@ GBX logic lives in several places: `CurrencyConverter.convert` (÷100), `FXClien
 | 6 | 20-YEAR FINANCIALS | `financial_history.py` `FinancialHistorySection(financial_data)` |
 | 3 | CRITICAL ALERTS | `_generate_critical_alerts` (warnings + anomalies) — rendered **last** |
 
-Each section's `generate()` returns `List[str]`; the generator joins with `\n`. Only some sections subclass `DossierSection`. `format_price_display` is duplicated in several section modules and the CLI. Several sections do their own arithmetic (BVPS, NCA, ratios, yields, risk bands) rather than reading core results.
+Each section's `generate()` returns `List[str]`; the generator joins with `\n`. Only some sections subclass `DossierSection`. Money amounts are formatted with `output.formatting.format_price_display` (one shared definition), though some sections still format inline (e.g. `USD29.11` in calculation_details). Several sections do their own arithmetic (BVPS, NCA, ratios, yields, risk bands) rather than reading core results.
 
 ---
 

@@ -4,7 +4,8 @@ Unit tests for Key Metrics section generator.
 Tests profitability metrics display, ownership metrics display, and book value calculation.
 """
 
-from output.sections.key_metrics import KeyMetricsSection, format_price_display
+from output.sections.key_metrics import KeyMetricsSection
+from output.formatting import format_price_display
 
 
 class TestFormatPriceDisplay:

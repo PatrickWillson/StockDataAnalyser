@@ -777,7 +777,7 @@ def test_currency_display_format():
     
     Requirements: 4.1, 4.2 (Currency display)
     """
-    from stock_data_analyser import format_price_display
+    from output.formatting import format_price_display
     
     # Test single currency
     result = format_price_display(1650.0, 'GBX', 'GBX')

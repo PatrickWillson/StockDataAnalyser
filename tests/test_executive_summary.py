@@ -6,7 +6,8 @@ and price display with currency conversion.
 """
 
 import pytest
-from output.sections.executive_summary import ExecutiveSummarySection, format_price_display
+from output.sections.executive_summary import ExecutiveSummarySection
+from output.formatting import format_price_display
 
 
 class TestFormatPriceDisplay:

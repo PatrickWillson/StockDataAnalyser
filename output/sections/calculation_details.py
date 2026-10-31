@@ -6,42 +6,7 @@ This includes share count disclosure, BVPS calculation, Graham Number calculatio
 Net-Net Value calculation, currency conversion details, and EPV methodology clarification.
 """
 
-from typing import List, Dict, Any, Optional
-
-
-def format_price_display(price: float, trading_currency: str, financials_currency: str, 
-                        converted_value: Optional[float] = None) -> str:
-    """
-    Format price display with trading currency first.
-    
-    Requirements 4.1, 4.2, 4.3, 4.4:
-    - Shows trading currency first (e.g., "1,650 GBX")
-    - Shows conversion when currencies differ (e.g., "1,650 GBX (16.50 GBP)")
-    - Consistent format across all price displays
-    
-    Args:
-        price: Price value in trading currency
-        trading_currency: Currency the stock trades in
-        financials_currency: Currency of financial statements
-        converted_value: Optional converted value in financials currency
-        
-    Returns:
-        Formatted price string
-    """
-    # Format price with commas and 2 decimal places
-    formatted_price = f"{price:,.2f}"
-    
-    # Single currency case
-    if trading_currency == financials_currency:
-        return f"{formatted_price} {trading_currency}"
-    
-    # Dual currency case - show trading currency first, then conversion
-    if converted_value is not None:
-        formatted_converted = f"{converted_value:,.2f}"
-        return f"{formatted_price} {trading_currency} ({formatted_converted} {financials_currency})"
-    
-    # Fallback if no converted value provided but currencies differ
-    return f"{formatted_price} {trading_currency}"
+from typing import List, Dict, Any
 
 
 class CalculationDetailsSection:

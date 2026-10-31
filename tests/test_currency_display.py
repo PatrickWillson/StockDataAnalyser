@@ -7,7 +7,7 @@ Tests Requirements 4.1, 4.2, 4.4:
 - Format consistency across all price displays
 """
 
-from stock_data_analyser import format_price_display
+from output.formatting import format_price_display
 
 
 def test_single_currency_format():
