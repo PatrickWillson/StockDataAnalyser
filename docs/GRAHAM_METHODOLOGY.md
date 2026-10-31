@@ -41,6 +41,7 @@
 2. **Working capital and net current assets.** Graham repeatedly cites companies selling below working capital (*"Curtiss-Wright selling at two thirds or less of its working capital alone"*). **[P]**
 3. **Net-net (bargain) issues.** Buying at two-thirds of net current asset value, as a diversified group: *"if a stock with $50 working capital sells at $32, that would be an interesting stock. If you buy 30 companies of that sort, you're bound to make money … if you buy stocks at two-thirds of the working capital value, you have a dependable indication of group undervaluation."* **[P]** (1976) Net current asset value = current assets − **all** liabilities (and preferred stock). **[S]**
 4. **Book value in the defensive test** is *"the book value last reported."* **[Q]** Asset tests elsewhere (enterprising price test, net-nets) use **net tangible assets**. **[S]**
+5. **Project decision (2026-10-31): book value means tangible book value** (equity − goodwill − intangibles) for the Graham Number and the defensive P/B test. **[I]** Graham valued what a buyer gets as tangible equity (§3.1, [P]), every other asset test he set uses net tangible assets (§3.3, §5.6), and when the text is ambiguous the conservative reading wins (§8.4). Secondary sources commonly read his book value this way, but the exact wording of *Security Analysis*'s "Significance of Book Value" chapter was not verified. The user asked to "go with what Graham would do".
 
 ## 4. Defensive investor — the seven criteria (*Intelligent Investor* ch. 14)
 
@@ -107,8 +108,8 @@ The ordered verdict rules are in `claude-output/REFACTOR_SCOPE.md` (D8) and will
 | Defensive P/E (4.6) | 15 × 3-year average EPS | Single-year EPS | F20 |
 | Defensive earnings growth (4.5) | Per-share, 3-year averages at both ends | Single-year total net income vs 10th year | F20 |
 | Defensive dividend record (4.4) | 20 uninterrupted years | Passes with fewer years if all paid | F20 |
-| Defensive P/B (4.7) | ≤ 1.5 × book, or P/E × P/B ≤ 22.5 | ≤ 1.5 × BVPS; 22.5 product computed but not used in the test | F20 |
-| Book value for Graham Number | "Book value last reported" (§3.4) | Tangible book (TBVPS) | **Open decision** (BVPS vs TBVPS) |
+| Defensive P/B (4.7) | ≤ 1.5 × tangible book (§3.5), or P/E × P/B ≤ 22.5 | ≤ 1.5 × BVPS; 22.5 product computed but not used in the test | F20 (switch to TBVPS + product rule) |
+| Book value for Graham Number | Tangible book (§3.5 decision) | Tangible book (TBVPS) | **Decided** — matches |
 | Adequate size (4.1) | Required | Not implemented | Ignored by decision D7 |
 | Enterprising price (5.1, 5.6) | Low P/E **and** < 120% net tangible assets | P/E < 10 **or** price < 1.2 × TBVPS | F20 (AND) |
 | Enterprising earnings growth (5.5) | Required (≈5-year) | "N/A - Not Required" | F20 |
