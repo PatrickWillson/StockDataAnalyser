@@ -30,7 +30,7 @@ Requires `EODHD_API_KEY` in `.env`. `--debug` sets DEBUG logging and dumps raw E
 | 0 | `stock_data_analyser.py` import time | `load_dotenv()`; `API_KEY` read into a module global |
 | 1 | `main()` | argparse (`ticker` upper-cased, `--debug`); `configure_logging(debug, secrets=[API_KEY])` (urllib3 logger pinned to WARNING; `SecretRedactingFilter` on root handlers); exit 1 if no key |
 | 2 | `ClientFactory` | builds `EODHDClient(api_key, FXClient())` and `YFinanceClient` |
-| 3 | `EODHDClient.fetch_all_data(ticker, yf_client)` | fetch + parse + currency-normalise + some calculations → `financial_data` dict (§4.1); data-quality warnings include `validate_data_quality` and `check_data_staleness` (latest annual report > 9 months old; dividend-only years ignored) |
+| 3 | `EODHDClient.fetch_all_data(ticker, yf_client)` | client fetches fundamentals + dividend endpoint, then `core.financial_data_assembler.FinancialDataAssembler.assemble(data, dividend_api_data, ticker, yf_client)` parses, currency-normalises, calculates and validates → `financial_data` dict (§4.1); data-quality warnings include `validate_data_quality` and `check_data_staleness` (latest annual report > 9 months old; dividend-only years ignored) |
 | 4 | CLI lines ~125–260 | historical year-end prices from yfinance, matched to fiscal year-ends, GBX÷100, historical FX applied → writes `history[date]['year_end_price']` + warnings |
 | 5 | `GrahamCalculator(financial_data).compute_all()` | → `metrics` dict (§4.3) |
 | 6 | `TTMCalculator(...).compute_all(annual_metrics=metrics)` | only if `quarterly_data` present; wrapped in try/except → `ttm_metrics` (§4.4) |
@@ -38,7 +38,7 @@ Requires `EODHD_API_KEY` in `.env`. `--debug` sets DEBUG logging and dumps raw E
 | 8 | `DossierGenerator(ticker, financial_data, metrics, anomalies, ttm_metrics).generate()` | → Markdown string |
 | 9 | `save_dossier` | writes `data/{TICKER}_DOSSIER.md` (path relative to CWD) |
 
-Error handling: clients raise typed errors from `clients/errors.py` (`DataSourceError` → `EODHDAuthError` (401), `EODHDRateLimitError` (429), `EODHDRequestError` (network / other status / bad JSON), `PriceUnavailableError` (no price from yfinance or EODHD)); no client calls `sys.exit`. `main()` catches `PriceUnavailableError` (fatal banner + troubleshooting), other `DataSourceError` (message) and any other `Exception` (critical), each → exit 1. Exit codes are only 0/1.
+Error handling: clients and the assembler raise typed errors from `core/errors.py` (`DataSourceError` → `EODHDAuthError` (401), `EODHDRateLimitError` (429), `EODHDRequestError` (network / other status / bad JSON), `PriceUnavailableError` (no price from yfinance or EODHD)); no client calls `sys.exit`. `main()` catches `PriceUnavailableError` (fatal banner + troubleshooting), other `DataSourceError` (message) and any other `Exception` (critical), each → exit 1. Exit codes are only 0/1.
 
 ---
 
@@ -49,12 +49,13 @@ stock_data_analyser.py      CLI + orchestration (+ historical price/FX block)
 logging_utils.py            redact(), SecretRedactingFilter, install_secret_redaction — keeps API keys out of logs
 clients/
   base_client.py            BaseAPIClient: requests.Session, urllib3 Retry(3, backoff 1.0, 5xx, GET)
-  eodhd_client.py           EODHDClient: fundamentals + dividend endpoint; fetch_all_data (the big one)
+  eodhd_client.py           EODHDClient: fetches fundamentals + dividend endpoint (and the --debug raw dump); delegates assembly to core
   yfinance_client.py        YFinanceClient: EXCHANGE_MAPPING, get_price, historical prices, FYE matching
   fx_client.py              FXClient: yfinance "{A}{B}=X" rates, current + historical, per-instance cache
   factory.py                ClientFactory: builds clients (validates API key)
-  errors.py                 DataSourceError hierarchy raised by clients instead of exiting
 core/
+  financial_data_assembler.py  FinancialDataAssembler: raw fundamentals + dividends → financial_data (price, London Fix, FX, ratios, cross-validation, data-quality warnings)
+  errors.py                 DataSourceError hierarchy (EODHDAuthError, EODHDRateLimitError, EODHDRequestError, PriceUnavailableError) — raised instead of exiting
   financial_data_processor.py  FinancialDataProcessor: raw JSON → per-year history, dividends, price, validation
   currency_converter.py     CurrencyConverter: convert / convert_batch / apply_london_fix, conversion log
   graham_math.py            GrahamCalculator: all Graham formulas, investor tests, verdict
@@ -83,13 +84,13 @@ claude-output/              agent-written markdown (gitignored)
 
 **Enforced layer rules** (import-linter, `pyproject.toml`, checked by `tests/test_architecture.py` on every test run): layers `output | clients` > `core` > `config` (a lower layer may not import a higher one; `output` and `clients` may not import each other); `core` must not import `clients`; `output` must not import `clients`, even indirectly. There are no exceptions (`ignore_imports`) — never add one. `CurrencyConverter` takes its FX source by injection (`RateSource` protocol); `ClientFactory` supplies the real `FXClient`. The CLI (`stock_data_analyser.py`) and `logging_utils.py` are top-level modules and are not analysed.
 
-**Actual dependency directions:** `clients → core` (eodhd_client & factory use core's processor/converter — allowed by the layers; the client still performs assembly logic, moved to core in M3.4); `core` imports nothing from `clients` (FX rates and the yfinance price client are injected objects); `output → core` (methodology imports FinancialDataProcessor).
+**Actual dependency directions:** `clients → core` (eodhd_client & factory use core's processor/converter — allowed by the layers; assembly logic lives in `core/financial_data_assembler.py`); `core` imports nothing from `clients` (FX rates and the yfinance price client are injected objects); `output → core` (methodology imports FinancialDataProcessor).
 
 ---
 
 ## 4. Data shapes
 
-### 4.1 `financial_data` (returned by `EODHDClient.fetch_all_data`)
+### 4.1 `financial_data` (returned by `FinancialDataAssembler.assemble`, via `EODHDClient.fetch_all_data`)
 | Key | Meaning |
 |---|---|
 | `ticker`, `exchange` | `General.Code` (no suffix), `General.Exchange` |
@@ -250,7 +251,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 | To… | Edit |
 |---|---|
 | add a Graham metric | `core/graham_math.py` (+ `compute_all`), property test, section in `output/sections/`, methodology text, **this guide §4.3/§5.1** |
-| add an EODHD field | `financial_data_processor.py` parser + `merge_financial_data`; `fetch_all_data` return dict; **§4.1/§4.2** |
+| add an EODHD field | `financial_data_processor.py` parser + `merge_financial_data`; `FinancialDataAssembler.assemble` return dict; **§4.1/§4.2** |
 | add an exchange | `YFinanceClient.EXCHANGE_MAPPING`; **§7** |
 | change a threshold | `config/investor_thresholds.py` (Graham constants are immutable) — also hardcoded strings in `graham_tests.py`/`methodology.py` |
 | add/reorder a section | `output/dossier_generator.py` + `output/sections/`; **§8** (order is fixed for LLM parsing) |

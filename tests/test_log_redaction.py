@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from logging_utils import redact, SecretRedactingFilter, install_secret_redaction
 from clients.eodhd_client import EODHDClient
-from clients.errors import EODHDRequestError
+from core.errors import EODHDRequestError
 import stock_data_analyser
 
 FAKE_KEY = "FAKEKEY1234567890abcdef"

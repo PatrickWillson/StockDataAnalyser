@@ -5,7 +5,7 @@ import logging
 from dotenv import load_dotenv
 
 # Import Core Modules
-from clients.errors import DataSourceError, PriceUnavailableError
+from core.errors import DataSourceError, PriceUnavailableError
 from clients.factory import ClientFactory
 from core.graham_math import GrahamCalculator
 from core.anomaly_detector import AnomalyDetector

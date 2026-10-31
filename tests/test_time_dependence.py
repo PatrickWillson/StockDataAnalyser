@@ -33,7 +33,7 @@ def test_api_staleness_warning():
     client = EODHDClient('test_key', fx_client=object())
     data = {'General': {'UpdatedAt': '2026-01-01'}}
 
-    warnings = client._cross_validate_metrics(data, 0.0, 0.0, 0.0, 0.0, 0.0)
+    warnings = client.assembler._cross_validate_metrics(data, 0.0, 0.0, 0.0, 0.0, 0.0)
 
     assert any('API data is 30 days old' in w for w in warnings)
 

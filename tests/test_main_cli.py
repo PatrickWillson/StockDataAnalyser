@@ -7,7 +7,7 @@ These tests verify the CLI handles various scenarios correctly.
 import pytest
 import os
 from unittest.mock import Mock, patch
-from clients.errors import PriceUnavailableError
+from core.errors import PriceUnavailableError
 
 
 def test_missing_api_key_error():

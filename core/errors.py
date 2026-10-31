@@ -1,8 +1,8 @@
 """
-Errors raised by the data clients when no reliable dossier can be produced.
+Errors raised when no reliable dossier can be produced (data source failures, missing price).
 
-Clients raise these instead of exiting; the CLI turns them into an error message and
-exit code 1 ("no data is better than wrong data").
+Clients and core raise these instead of exiting; the CLI turns them into an error message
+and exit code 1 ("no data is better than wrong data").
 """
 
 
