@@ -20,6 +20,7 @@ from output.sections.calculation_details import CalculationDetailsSection
 from output.sections.graham_tests import GrahamTestsSection
 from output.sections.financial_history import FinancialHistorySection
 from output.sections.ttm_analysis import TTMAnalysisSection
+from core.history import has_statement_data
 
 
 class DossierGenerator:
@@ -190,7 +191,7 @@ class DossierGenerator:
             most_recent_year = None
             for year in sorted_years:
                 year_data = history[year]
-                if year_data.get('revenue', 0.0) > 0 or year_data.get('net_income', 0.0) != 0 or year_data.get('total_equity', 0.0) > 0:
+                if has_statement_data(year_data):
                     most_recent_year = year.split('-')[0]
                     break
             

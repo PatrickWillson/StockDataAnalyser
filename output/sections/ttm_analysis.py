@@ -6,6 +6,7 @@ analysis dossier, including TTM Graham calculations and comparisons with annual 
 
 from typing import List, Dict, Any, Union
 from output.sections.base import DossierSection
+from core.history import has_statement_data
 
 
 class TTMAnalysisSection(DossierSection):
@@ -268,11 +269,7 @@ class TTMAnalysisSection(DossierSection):
             # Find most recent complete fiscal year
             for year_key in sorted_years:
                 year_data = history[year_key]
-                has_financial_data = (
-                    year_data.get('revenue', 0.0) > 0 or 
-                    year_data.get('net_income', 0.0) != 0 or 
-                    year_data.get('total_equity', 0.0) > 0
-                )
+                has_financial_data = has_statement_data(year_data)
                 if has_financial_data:
                     fiscal_year = year_key.split('-')[0]
                     fiscal_year_dividend = year_data.get('dividend', 0.0)

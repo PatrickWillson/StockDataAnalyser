@@ -7,6 +7,7 @@ EPV (Earnings Power Value), Net-Net Value, and Margin of Safety.
 
 from typing import List, Dict, Any
 from output.formatting import format_price_display
+from core.history import has_statement_data
 
 
 class MethodologySection:
@@ -102,7 +103,7 @@ class MethodologySection:
         sorted_years = sorted(history.keys(), reverse=True)
         for year in sorted_years:
             year_data = history[year]
-            if year_data.get('revenue', 0.0) > 0 or year_data.get('net_income', 0.0) != 0 or year_data.get('total_equity', 0.0) > 0:
+            if has_statement_data(year_data):
                 return year_data.get('eps', 0)
         
         return 0

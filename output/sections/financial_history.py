@@ -6,6 +6,7 @@ per share, total debt, shares outstanding, historical prices, and valuation rati
 """
 
 from typing import List, Dict, Any, Optional
+from core.history import has_income_data
 
 
 class FinancialHistorySection:
@@ -173,7 +174,7 @@ class FinancialHistorySection:
             year_end_price = data.get('year_end_price')  # Can be None
             
             # Check if this year has actual financial data or just dividend data
-            has_financial_data = revenue > 0 or net_income != 0 or eps != 0
+            has_financial_data = has_income_data(data)
             
             # Format values - show "[Data Unavailable]" for years without financial statements
             if not has_financial_data and dividend > 0:

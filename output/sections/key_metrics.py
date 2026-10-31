@@ -7,6 +7,7 @@ including profitability metrics, book value, ownership, and risk metrics.
 from typing import List, Dict, Any
 from output.sections.base import DossierSection
 from output.formatting import format_price_display
+from core.history import has_statement_data
 
 
 class KeyMetricsSection(DossierSection):
@@ -100,7 +101,7 @@ class KeyMetricsSection(DossierSection):
             # Find most recent year with financial data
             for year in sorted_years:
                 year_data = history[year]
-                if year_data.get('revenue', 0.0) > 0 or year_data.get('net_income', 0.0) != 0 or year_data.get('total_equity', 0.0) > 0:
+                if has_statement_data(year_data):
                     most_recent_data = year_data
                     total_equity = most_recent_data.get('total_equity', 0)
                     shares = most_recent_data.get('shares_outstanding', 0)

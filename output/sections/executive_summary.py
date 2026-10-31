@@ -7,6 +7,7 @@ including verdict, intrinsic values, margin of safety, current price, and divide
 from typing import List, Dict, Any
 from output.sections.base import DossierSection
 from output.formatting import format_price_display
+from core.history import has_statement_data
 
 
 class ExecutiveSummarySection(DossierSection):
@@ -259,11 +260,7 @@ class ExecutiveSummarySection(DossierSection):
             # Find the most recent year with complete financial data
             for year_key in sorted_years:
                 year_data = history[year_key]
-                has_financial_data = (
-                    year_data.get('revenue', 0.0) > 0 or 
-                    year_data.get('net_income', 0.0) != 0 or 
-                    year_data.get('total_equity', 0.0) > 0
-                )
+                has_financial_data = has_statement_data(year_data)
                 
                 if has_financial_data:
                     # This is a complete year - use it for trailing dividend

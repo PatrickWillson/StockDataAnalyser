@@ -8,6 +8,7 @@ Separates data processing logic from API client concerns.
 import logging
 from typing import Dict, Any, List, Optional
 from core.currency_converter import CurrencyConverter
+from core.history import has_statement_data
 
 logger = logging.getLogger(__name__)
 
@@ -992,7 +993,7 @@ class FinancialDataProcessor:
             total_equity = year_data.get('total_equity', 0.0)
             
             # Check if this year has any financial data
-            if revenue > 0 or net_income != 0 or total_equity > 0:
+            if has_statement_data(year_data):
                 most_recent_year = year
                 break
         

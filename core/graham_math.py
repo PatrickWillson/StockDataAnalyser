@@ -16,6 +16,7 @@ from typing import Dict, Union
 
 from config.graham_constants import GRAHAM_MULTIPLIER, COST_OF_CAPITAL
 from config.investor_thresholds import DEFENSIVE, ENTERPRISING
+from core.history import has_balance_sheet_data, has_statement_data, has_statement_or_current_assets
 
 
 class GrahamCalculator:
@@ -56,12 +57,7 @@ class GrahamCalculator:
         for year in years:
             year_data = history[year]
             # Check if year has actual financial data (not just dividend)
-            has_financial_data = (
-                year_data.get('revenue', 0.0) > 0 or
-                year_data.get('net_income', 0.0) != 0 or
-                year_data.get('total_equity', 0.0) > 0 or
-                year_data.get('current_assets', 0.0) > 0
-            )
+            has_financial_data = has_statement_or_current_assets(year_data)
             if has_financial_data:
                 return year
         return None
@@ -481,11 +477,7 @@ class GrahamCalculator:
         complete_years = []
         for year in sorted_years:
             year_data = history[year]
-            has_financial_data = (
-                year_data.get('revenue', 0.0) > 0 or
-                year_data.get('net_income', 0.0) != 0 or  # Can be negative (loss)
-                year_data.get('total_equity', 0.0) > 0
-            )
+            has_financial_data = has_statement_data(year_data)
             if has_financial_data:
                 complete_years.append(year)
         
@@ -753,11 +745,7 @@ class GrahamCalculator:
         complete_years = []
         for year in sorted_years:
             year_data = history[year]
-            has_financial_data = (
-                year_data.get('revenue', 0.0) > 0 or
-                year_data.get('net_income', 0.0) != 0 or  # Can be negative (loss)
-                year_data.get('total_equity', 0.0) > 0
-            )
+            has_financial_data = has_statement_data(year_data)
             if has_financial_data:
                 complete_years.append(year)
         
@@ -988,11 +976,7 @@ class GrahamCalculator:
         complete_years = []
         for year in years:
             year_data = history[year]
-            has_financial_data = (
-                year_data.get('revenue', 0.0) > 0 or
-                year_data.get('net_income', 0.0) != 0 or  # Can be negative (loss)
-                year_data.get('total_equity', 0.0) > 0
-            )
+            has_financial_data = has_statement_data(year_data)
             if has_financial_data:
                 complete_years.append(year)
         
@@ -1022,7 +1006,7 @@ class GrahamCalculator:
             year or current liabilities are zero
         """
         for year in years:
-            if history[year].get('current_assets', 0.0) > 0 or history[year].get('total_equity', 0.0) > 0:
+            if has_balance_sheet_data(history[year]):
                 current_liabilities = history[year].get('current_liabilities', 0.0)
                 if current_liabilities == 0:
                     return year, None

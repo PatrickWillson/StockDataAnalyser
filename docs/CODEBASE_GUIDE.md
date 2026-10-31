@@ -57,6 +57,7 @@ core/
   financial_data_processor.py  FinancialDataProcessor: raw JSON → per-year history, dividends, price, validation
   currency_converter.py     CurrencyConverter: convert / convert_batch / apply_london_fix, conversion log
   graham_math.py            GrahamCalculator: all Graham formulas, investor tests, verdict
+  history.py                predicates for "this year has real data" (skip dividend-only years) + latest_year()
   ttm_calculator.py         TTMCalculator: frequency detection, period selection, TTM metrics
   anomaly_detector.py       AnomalyDetector: EPS growth Z-scores
   data_models.py            dataclasses (NOT used in production — everything is dicts)
@@ -142,7 +143,7 @@ Where EODHD pre-computed values are used today:
 `SharesStats.SharesOutstanding` (a raw current share count) is the last-resort share count for years without an annual figure.
 
 ### 5.1 Graham (`core/graham_math.py`, `GrahamCalculator`)
-"Latest financial year" = first year (newest first) with `revenue>0 or net_income≠0 or total_equity>0` (variants exist; several methods inline their own predicate).
+"Latest financial year" = first year (newest first) passing a `core.history` predicate. Four variants exist, each defined once there and kept distinct on purpose (unifying them would change output): `has_statement_data` (revenue>0 or net_income≠0 or equity>0 — used by most code), `has_statement_or_current_assets` (`_get_latest_financial_year`), `has_balance_sheet_data` (current ratio), `has_income_data` (20-year table). `extract_3year_eps_data` uses its own stricter "all statement fields present and zero" test (F2).
 
 | Metric | Formula / rule |
 |---|---|
@@ -235,7 +236,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising `_test_*` method and `_determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1188 pass / 20 skip as of 2026-10-26); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1196 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

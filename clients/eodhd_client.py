@@ -13,6 +13,7 @@ from clients.base_client import BaseAPIClient
 from clients.fx_client import FXClient
 from core.currency_converter import CurrencyConverter
 from core.financial_data_processor import FinancialDataProcessor
+from core.history import has_statement_data
 
 logger = logging.getLogger(__name__)
 
@@ -326,7 +327,7 @@ class EODHDClient(BaseAPIClient):
             for year in sorted_years:
                 year_data = history[year]
                 # Check if year has actual financial data (not just dividend)
-                if year_data.get('revenue', 0.0) > 0 or year_data.get('net_income', 0.0) != 0 or year_data.get('total_equity', 0.0) > 0:
+                if has_statement_data(year_data):
                     most_recent_eps = year_data.get('eps', 0.0)
                     break
         
@@ -485,7 +486,7 @@ class EODHDClient(BaseAPIClient):
             most_recent_year = None
             for year in sorted_years:
                 year_data = history[year]
-                if year_data.get('revenue', 0.0) > 0 or year_data.get('net_income', 0.0) != 0 or year_data.get('total_equity', 0.0) > 0:
+                if has_statement_data(year_data):
                     most_recent_year = year
                     break
             

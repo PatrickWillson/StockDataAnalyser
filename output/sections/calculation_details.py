@@ -7,6 +7,7 @@ Net-Net Value calculation, currency conversion details, and EPV methodology clar
 """
 
 from typing import List, Dict, Any
+from core.history import has_statement_data
 
 
 class CalculationDetailsSection:
@@ -97,7 +98,7 @@ class CalculationDetailsSection:
         sorted_years = sorted(history.keys(), reverse=True)
         for year in sorted_years:
             year_data = history[year]
-            if year_data.get('revenue', 0.0) > 0 or year_data.get('net_income', 0.0) != 0 or year_data.get('total_equity', 0.0) > 0:
+            if has_statement_data(year_data):
                 return year, year_data
         
         return None, None

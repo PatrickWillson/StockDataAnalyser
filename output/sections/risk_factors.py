@@ -8,6 +8,7 @@ dividend risk, valuation risk, and data quality risk assessments.
 from typing import List, Dict, Any
 from output.sections.base import DossierSection
 from output.formatting import format_price_display
+from core.history import has_statement_data
 
 
 class RiskFactorsSection(DossierSection):
@@ -74,7 +75,7 @@ class RiskFactorsSection(DossierSection):
             latest_year = None
             for year in sorted_years:
                 year_data = history[year]
-                if year_data.get('revenue', 0.0) > 0 or year_data.get('net_income', 0.0) != 0 or year_data.get('total_equity', 0.0) > 0:
+                if has_statement_data(year_data):
                     latest_year = year
                     break
             
