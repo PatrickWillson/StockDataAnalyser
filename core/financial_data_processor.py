@@ -10,7 +10,7 @@ from typing import Dict, Any, List, Optional
 from core.currency_converter import CurrencyConverter
 from core.history import has_statement_data, is_dividend_only_year
 from config.valuation_config import NORMALIZED_EPS_YEARS
-from config.data_quality_config import (ANNUAL_REPORT_MAX_AGE_MONTHS, DAYS_PER_MONTH, MAX_CONSECUTIVE_YEAR_GAPS,
+from config.data_quality_config import (ANNUAL_REPORT_MAX_AGE_MONTHS, DAYS_PER_MONTH, MAX_MISSING_HISTORY_YEARS,
                                          MIN_HISTORY_YEARS_RECOMMENDED)
 
 logger = logging.getLogger(__name__)
@@ -941,20 +941,18 @@ class FinancialDataProcessor:
             if missing_fields:
                 warnings.append(f"Year {year}: Incomplete data (missing: {', '.join(missing_fields)})")
         
-        # Check for data gaps (3+ consecutive years)
-        if len(sorted_years) > MAX_CONSECUTIVE_YEAR_GAPS:
-            years_as_int = [int(y.split('-')[0]) for y in sorted_years if y.split('-')[0].isdigit()]
-            years_as_int.sort(reverse=True)
-            
-            gap_count = 0
-            for i in range(len(years_as_int) - 1):
-                if years_as_int[i] - years_as_int[i + 1] > 1:
-                    gap_count += 1
-                    if gap_count >= MAX_CONSECUTIVE_YEAR_GAPS:
-                        warnings.append("Data Gap Warning: Multiple consecutive years missing")
-                        break
-                else:
-                    gap_count = 0
+        # Check for data gaps: fiscal years with no annual report inside the reported range
+        # (dividend-only placeholder years don't count as reports, so they can't hide a gap)
+        report_years = sorted({int(y.split('-')[0]) for y in sorted_years
+                               if y.split('-')[0].isdigit() and not is_dividend_only_year(history[y])})
+        if len(report_years) >= 2:
+            missing_years = sorted(set(range(report_years[0], report_years[-1] + 1)) - set(report_years),
+                                   reverse=True)
+            if len(missing_years) >= MAX_MISSING_HISTORY_YEARS:
+                warnings.append(
+                    f"Data Gap Warning: {len(missing_years)} fiscal years missing between "
+                    f"{report_years[0]} and {report_years[-1]} ({', '.join(str(y) for y in missing_years)})"
+                )
 
     @staticmethod
     def calculate_profitability_metrics(

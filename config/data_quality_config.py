@@ -28,7 +28,7 @@ FISCAL_YEAR_END_LOOKBACK_DAYS: Final[int] = 7
 
 # History completeness
 MIN_HISTORY_YEARS_RECOMMENDED: Final[int] = 10
-MAX_CONSECUTIVE_YEAR_GAPS: Final[int] = 3          # warn after this many consecutive gaps
+MAX_MISSING_HISTORY_YEARS: Final[int] = 3          # warn when this many fiscal years are missing in the reported range
 
 # Anomaly detection (EPS growth Z-scores)
 ANOMALY_Z_SCORE_THRESHOLD: Final[float] = 2.0

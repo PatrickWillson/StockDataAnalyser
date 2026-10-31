@@ -225,21 +225,36 @@ class TestValidateDataQuality:
         assert self._warnings(history) == [
             "Year 2020-12-31: Incomplete data (missing: revenue, net_income, eps, total_equity)"]
 
-    def test_gap_check_skipped_for_three_or_fewer_years(self):
+    def test_gap_check_also_applies_to_short_histories(self):
         history = {f"{year}-12-31": _year() for year in (2023, 2019, 2015)}
         assert self._warnings(history) == [
-            "Insufficient History Warning: Only 3 years of data available (minimum 10 recommended)"]
+            "Insufficient History Warning: Only 3 years of data available (minimum 10 recommended)",
+            "Data Gap Warning: 6 fiscal years missing between 2015 and 2023 (2022, 2021, 2020, 2018, 2017, 2016)"]
 
-    def test_three_consecutive_gaps_warn(self):
+    def test_scattered_missing_years_warn(self):
         history = {f"{year}-12-31": _year() for year in (2023, 2021, 2019, 2017, 2015,
                                                           2014, 2013, 2012, 2011, 2010)}
-        assert "Data Gap Warning: Multiple consecutive years missing" in self._warnings(history)
+        assert self._warnings(history) == [
+            "Data Gap Warning: 4 fiscal years missing between 2010 and 2023 (2022, 2020, 2018, 2016)"]
 
-    def test_known_defect_single_large_gap_not_flagged(self):
-        # Known defect: one multi-year hole (2023 -> 2015) counts as a single gap, so no warning
+    def test_single_large_gap_warns(self):
         history = {f"{year}-12-31": _year() for year in (2023, 2015, 2014, 2013, 2012,
                                                           2011, 2010, 2009, 2008, 2007)}
+        assert self._warnings(history) == [
+            "Data Gap Warning: 7 fiscal years missing between 2007 and 2023 "
+            "(2022, 2021, 2020, 2019, 2018, 2017, 2016)"]
+
+    def test_fewer_missing_years_than_the_limit_do_not_warn(self):
+        history = {f"{year}-12-31": _year() for year in (2023, 2022, 2020, 2019, 2017, 2016,
+                                                          2015, 2014, 2013, 2012)}
         assert self._warnings(history) == []
+
+    def test_dividend_only_years_do_not_fill_a_gap(self):
+        dividend_only = {"revenue": 0.0, "net_income": 0.0, "eps": 0.0, "total_equity": 0.0, "dividend": 1.0}
+        history = {f"{year}-12-31": _year() for year in (2023, 2019, 2018, 2017, 2016, 2015, 2014, 2013, 2012, 2011)}
+        history.update({f"{year}-12-31": dividend_only for year in (2022, 2021, 2020)})
+        warnings = self._warnings(history)
+        assert "Data Gap Warning: 3 fiscal years missing between 2011 and 2023 (2022, 2021, 2020)" in warnings
 
 
 class TestMalformedRawValues:
