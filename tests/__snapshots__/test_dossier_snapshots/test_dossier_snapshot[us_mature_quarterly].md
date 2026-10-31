@@ -42,13 +42,11 @@
 - TTM P/E Ratio: 30.05
 - TTM P/B Ratio: 46.90
 
-- TTM Dividend (Last 12 Months): 0.96 USD (Yield: 0.51%)
-  - Based on 4 payment(s):
-    - 2024-07-01: 0.2400 USD
-    - 2024-04-01: 0.2400 USD
+- TTM Dividend (Last 12 Months): 0.48 USD (Yield: 0.26%)
+  - Based on 2 payment(s):
     - 2024-01-01: 0.2400 USD
     - 2023-10-01: 0.2400 USD
-  - FY2023 Dividend: 0.24 USD (Yield: 0.13%, Diff: +300.0%)
+  - FY2023 Dividend: 0.24 USD (Yield: 0.13%, Diff: +100.0%)
 
 ---
 

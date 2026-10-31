@@ -728,11 +728,13 @@ class FinancialDataProcessor:
         # Calculate cutoff date (12 months ago)
         cutoff_date = ref_date - timedelta(days=365)
         cutoff_str = cutoff_date.strftime('%Y-%m-%d')
+        ref_str = ref_date.strftime('%Y-%m-%d')
         
         # Extract currency from first record
         currency = dividend_api_data[0].get('currency', 'USD')
         
-        # Filter payments in last 12 months
+        # Filter payments in the last 12 months up to the reference date (declared future
+        # payments are not trailing dividends)
         ttm_total = 0.0
         ttm_payments = []
         
@@ -740,7 +742,7 @@ class FinancialDataProcessor:
             # Use payment date if available, otherwise ex-dividend date
             payment_date_str = div.get('paymentDate') or div.get('date')
             
-            if payment_date_str and payment_date_str >= cutoff_str:
+            if payment_date_str and cutoff_str <= payment_date_str <= ref_str:
                 value = self.sanitize_value(div.get('value', 0))
                 if value > 0:
                     ttm_total += value

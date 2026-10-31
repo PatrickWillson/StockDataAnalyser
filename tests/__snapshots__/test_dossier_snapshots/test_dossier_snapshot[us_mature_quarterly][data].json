@@ -395,19 +395,9 @@
     "roe": 1.5607601454639075,
     "sector": "Technology",
     "ticker": "AAPL",
-    "ttm_dividend": 0.96,
+    "ttm_dividend": 0.48,
     "ttm_dividend_currency": "USD",
     "ttm_dividend_payments": [
-      {
-        "currency": "USD",
-        "date": "2024-07-01",
-        "value": 0.24
-      },
-      {
-        "currency": "USD",
-        "date": "2024-04-01",
-        "value": 0.24
-      },
       {
         "currency": "USD",
         "date": "2024-01-01",

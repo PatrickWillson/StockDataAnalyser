@@ -175,11 +175,14 @@ class TestCalculateTtmDividend:
         assert currency == "EUR"
         assert [p["currency"] for p in payments] == ["EUR", "USD"]
 
-    def test_known_defect_future_payments_are_included(self, processor):
-        # Known defect: there is no upper date bound, so declared future payments count
-        total, _, _ = processor.calculate_ttm_dividend(
-            [{"paymentDate": "2025-06-01", "value": 1.0}], reference_date="2024-02-29")
-        assert total == 1.0
+    def test_declared_future_payments_are_excluded(self, processor):
+        total, payments, _ = processor.calculate_ttm_dividend([
+            {"paymentDate": "2025-06-01", "value": 1.0},   # declared, not yet paid
+            {"paymentDate": "2024-03-01", "value": 1.0},   # day after the reference date
+            {"paymentDate": "2024-02-29", "value": 0.5},   # on the reference date: included
+        ], reference_date="2024-02-29")
+        assert total == 0.5
+        assert [p["date"] for p in payments] == ["2024-02-29"]
 
     @pytest.mark.time_machine(datetime(2024, 2, 29, 12, 0, tzinfo=timezone.utc), tick=False)
     def test_invalid_reference_date_falls_back_to_today(self, processor):
