@@ -212,9 +212,7 @@ def test_ttm_calculation_workflow():
     ttm_calculator = TTMCalculator(
         quarterly_data=quarterly_data,
         price=420.0,
-        currency='USD',
-        original_currency='USD',
-        fx_rate=None
+        currency='USD'
     )
     
     # Compute all TTM metrics
@@ -273,9 +271,7 @@ def test_ttm_dossier_generation():
     ttm_calculator = TTMCalculator(
         quarterly_data=quarterly_data,
         price=420.0,
-        currency='USD',
-        original_currency='USD',
-        fx_rate=None
+        currency='USD'
     )
     ttm_metrics = ttm_calculator.compute_all(annual_metrics=annual_metrics)
     
@@ -404,9 +400,7 @@ def test_ttm_warnings_in_critical_alerts():
     ttm_calculator = TTMCalculator(
         quarterly_data=quarterly_data,
         price=420.0,
-        currency='USD',
-        original_currency='USD',
-        fx_rate=None
+        currency='USD'
     )
     ttm_metrics = ttm_calculator.compute_all(annual_metrics=annual_metrics)
     

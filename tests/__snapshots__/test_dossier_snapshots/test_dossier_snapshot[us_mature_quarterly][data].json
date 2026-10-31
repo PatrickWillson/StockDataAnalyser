@@ -556,8 +556,6 @@
   "ttm_metrics": {
     "currency": "USD",
     "date_range": "Q4 2022 through Q3 2023",
-    "fx_rate_used": null,
-    "original_currency": "USD",
     "periods_used": [
       "2023-09-30",
       "2023-06-30",

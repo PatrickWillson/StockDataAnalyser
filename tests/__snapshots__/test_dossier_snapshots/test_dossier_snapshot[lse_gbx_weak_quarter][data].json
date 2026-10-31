@@ -481,8 +481,6 @@
   "ttm_metrics": {
     "currency": "GBP",
     "date_range": "Q1 2023 through Q4 2023",
-    "fx_rate_used": null,
-    "original_currency": "GBP",
     "periods_used": [
       "2023-12-31",
       "2023-09-30",

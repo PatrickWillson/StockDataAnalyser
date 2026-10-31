@@ -113,18 +113,11 @@ def main():
         ttm_metrics = None
         if quarterly_data and (quarterly_data.get('balance_sheet') or quarterly_data.get('income_statement')):
             try:
-                # Get currency information for TTM calculator
-                unified_currency = financial_data.get('currency', 'USD')
-                original_currency = financial_data.get('financials_currency', unified_currency)
-                fx_rate = financial_data.get('fx_rate_used')
-                
-                # Initialize TTM calculator
+                # Periodic statements are in the financials (= unified) currency
                 ttm_calculator = TTMCalculator(
                     quarterly_data=quarterly_data,
                     price=price,
-                    currency=unified_currency,
-                    original_currency=original_currency,
-                    fx_rate=fx_rate
+                    currency=financial_data.get('currency', 'USD'),
                 )
                 
                 # Compute all TTM metrics (pass annual metrics for validation)

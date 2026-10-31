@@ -19,14 +19,14 @@ def _quarterly(net_income_latest):
 
 def test_price_is_used_as_given_even_when_one_quarter_is_weak():
     # Latest quarter EPS = 500k / 18m = 0.028 -> P/E on that quarter alone = 594
-    calc = TTMCalculator(_quarterly(500_000.0), price=16.50, currency="GBP", original_currency="GBP")
+    calc = TTMCalculator(_quarterly(500_000.0), price=16.50, currency="GBP")
 
     assert calc.price == 16.50
     assert not any("London Fix" in w for w in calc.warnings)
 
 
 def test_ttm_pe_uses_unadjusted_price():
-    calc = TTMCalculator(_quarterly(500_000.0), price=16.50, currency="GBP", original_currency="GBP")
+    calc = TTMCalculator(_quarterly(500_000.0), price=16.50, currency="GBP")
 
     metrics = calc.compute_all()
 

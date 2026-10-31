@@ -46,8 +46,7 @@ class TTMCalculator:
     Handles edge cases gracefully with warnings.
     """
     
-    def __init__(self, quarterly_data: Dict[str, Any], price: float, currency: str,
-                 original_currency: Optional[str] = None, fx_rate: Optional[float] = None):
+    def __init__(self, quarterly_data: Dict[str, Any], price: float, currency: str):
         """
         Initialize TTM calculator.
         
@@ -56,29 +55,15 @@ class TTMCalculator:
                            Each contains date-keyed financial data
             price: Current stock price, already normalised to the unified currency by the client
                    (London Fix / GBX handling happens once, upstream)
-            currency: Unified currency for all calculations
-            original_currency: Original currency of quarterly data (before conversion)
-            fx_rate: FX rate used for conversion (original → unified)
+            currency: Unified currency for all calculations. Periodic statements are in the
+                      financials currency, which is the unified currency, so no conversion is
+                      needed; the calculator never modifies quarterly_data.
         """
         self.quarterly_data = quarterly_data
         self.currency = currency
-        self.original_currency = original_currency
-        self.fx_rate = fx_rate
         self.warnings: List[str] = []
         
         self.price = price
-        
-        # Apply currency conversion if needed
-        if original_currency and currency and original_currency != currency:
-            if fx_rate and fx_rate > 0:
-                self._apply_currency_conversion(fx_rate)
-                self.warnings.append(
-                    f"TTM Currency Conversion: {original_currency} → {currency} at rate {fx_rate:.4f}"
-                )
-            else:
-                self.warnings.append(
-                    f"TTM Currency Conversion: Unable to convert {original_currency} → {currency} (rate unavailable)"
-                )
     
     def _parse_date(self, date_str: str) -> Optional[datetime]:
         """
@@ -94,39 +79,6 @@ class TTMCalculator:
             return datetime.strptime(date_str, '%Y-%m-%d')
         except (ValueError, TypeError):
             return None
-    
-    def _apply_currency_conversion(self, fx_rate: float) -> None:
-        """
-        Apply currency conversion to all monetary values in quarterly data.
-        
-        Converts all monetary fields (revenue, net income, equity, assets, liabilities)
-        by multiplying by the FX rate.
-        
-        Args:
-            fx_rate: Exchange rate to apply (original_currency → unified_currency)
-        """
-        # Monetary fields in income statement
-        income_monetary_fields = ['revenue', 'net_income']
-        
-        # Monetary fields in balance sheet
-        balance_monetary_fields = [
-            'total_equity', 'intangible_assets', 'goodwill',
-            'current_assets', 'total_liabilities', 'claims_outside_equity'
-        ]
-        
-        # Convert income statement data
-        income_statement = self.quarterly_data.get('income_statement', {})
-        for period_date, period_data in income_statement.items():
-            for field in income_monetary_fields:
-                if field in period_data:
-                    period_data[field] = period_data[field] * fx_rate
-        
-        # Convert balance sheet data
-        balance_sheet = self.quarterly_data.get('balance_sheet', {})
-        for period_date, period_data in balance_sheet.items():
-            for field in balance_monetary_fields:
-                if field in period_data:
-                    period_data[field] = period_data[field] * fx_rate
     
     def _calculate_interval_days(self, date1_str: str, date2_str: str) -> Optional[int]:
         """
@@ -917,8 +869,6 @@ class TTMCalculator:
                 'reporting_frequency': 'irregular',
                 'date_range': 'N/A',
                 'currency': self.currency,
-                'original_currency': self.original_currency,
-                'fx_rate_used': self.fx_rate,
                 'warnings': self.warnings.copy()
             }
         
@@ -981,8 +931,6 @@ class TTMCalculator:
             'date_range': ttm_metrics.get('date_range', 'N/A'),
             'periods_used': ttm_metrics.get('periods_used', []),
             'currency': self.currency,
-            'original_currency': self.original_currency,
-            'fx_rate_used': self.fx_rate,
             'warnings': self.warnings.copy()
         }
         
