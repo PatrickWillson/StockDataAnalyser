@@ -60,6 +60,8 @@ class TTMCalculator:
         self.quarterly_data = quarterly_data
         self.currency = currency
         self.warnings: List[str] = []
+        # Set by calculate_ttm_metrics once detected, so an early exit reports the real frequency
+        self.reporting_frequency = 'irregular'
         
         self.price = price
     
@@ -348,6 +350,7 @@ class TTMCalculator:
         
         # Detect reporting frequency
         frequency = self.detect_reporting_frequency()
+        self.reporting_frequency = frequency
         
         if frequency == 'irregular':
             # Before giving up, check if there are gaps that caused the irregular pattern
@@ -770,17 +773,21 @@ class TTMCalculator:
             self.warnings.append(f"TTM Analysis: Failed to calculate metrics - {str(e)}")
             ttm_metrics = {}
         
-        # If no metrics available, return minimal result
+        # If no metrics available, return the same keys with N/A values; the warnings say why
         if not ttm_metrics:
             return {
+                'ttm_revenue': "N/A",
+                'ttm_net_income': "N/A",
+                'ttm_eps': "N/A",
                 'ttm_graham_number': "N/A",
                 'ttm_tbvps': "N/A",
                 'ttm_net_net': "N/A",
                 'ttm_margin_of_safety': "N/A",
                 'ttm_pe_ratio': "N/A",
                 'ttm_pb_ratio': "N/A",
-                'reporting_frequency': 'irregular',
+                'reporting_frequency': self.reporting_frequency,
                 'date_range': 'N/A',
+                'periods_used': [],
                 'currency': self.currency,
                 'warnings': self.warnings.copy()
             }

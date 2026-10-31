@@ -131,7 +131,7 @@ claude-output/              agent-written markdown (gitignored)
 Values are floats or `"N/A"`-style strings (also `"N/A - reason"`, `"N/A (Too Young)"`). `epv` is the **total** EPV (not per share); per share is in `epv_details['epv_per_share']`.
 
 ### 4.4 `ttm_metrics` (returned by `TTMCalculator.compute_all`)
-`ttm_revenue, ttm_net_income, ttm_eps, ttm_graham_number, ttm_tbvps, ttm_net_net, ttm_margin_of_safety, ttm_pe_ratio, ttm_pb_ratio, reporting_frequency ('quarterly'|'semi-annual'|'irregular'), date_range, periods_used, currency, warnings` (the early exit when no TTM metrics can be built omits `ttm_revenue`, `ttm_net_income`, `ttm_eps`, `periods_used` and always reports `'irregular'`)
+`ttm_revenue, ttm_net_income, ttm_eps, ttm_graham_number, ttm_tbvps, ttm_net_net, ttm_margin_of_safety, ttm_pe_ratio, ttm_pb_ratio, reporting_frequency ('quarterly'|'semi-annual'|'irregular'), date_range, periods_used, currency, warnings` (when no TTM metrics can be built, the same keys come back with "N/A" values, `periods_used` `[]`, the detected `reporting_frequency`, and the reason in `warnings`)
 The early-exit (insufficient/irregular data) dict omits some of these.
 
 ---
@@ -250,7 +250,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising criterion in `core/investor_tests/` and `core.verdict.determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1251 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1252 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

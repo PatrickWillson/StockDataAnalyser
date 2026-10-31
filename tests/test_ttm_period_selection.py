@@ -52,3 +52,13 @@ def test_missing_aligned_balance_sheet_falls_back_with_warning():
     calc = _calc(income_dates, balance_dates=['2024-06-30'])
     assert calc.calculate_ttm_metrics()['total_equity'] == 500.0
     assert any('No balance sheet for 2024-09-30' in w for w in calc.warnings)
+
+
+def test_early_exit_has_the_full_schema_and_the_detected_frequency():
+    """Too few quarters: same keys as a full result, frequency still 'quarterly'."""
+    full = _calc(['2024-12-31', '2024-09-30', '2024-06-30', '2024-03-31']).compute_all()
+    early = _calc(['2024-12-31', '2024-09-30', '2024-06-30']).compute_all()
+    assert set(early) == set(full)
+    assert early['reporting_frequency'] == 'quarterly'
+    assert early['ttm_graham_number'] == "N/A"
+    assert any('Insufficient periodic data' in w for w in early['warnings'])
