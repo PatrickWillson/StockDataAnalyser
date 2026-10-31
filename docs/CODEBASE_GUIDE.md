@@ -146,7 +146,7 @@ Where EODHD pre-computed values are used today:
 | `Highlights.BookValue` | Shown only as "API BVPS" comparison in Calculation Details | Yes (labelled comparison) |
 | `Beta`, `52WeekHigh/Low`, `PercentInsiders/Institutions` | Display; Beta also drives a Risk Factors band | Display-only market data |
 | `DividendShare`, `DividendYield`, `EnterpriseValue` | Read, never used | Unused |
-| `ForwardAnnualDividendRate` (estimate) | **Inserted into `history` as the latest year's dividend when the cash-flow figure is missing**; used for Risk Factors payout/coverage and Executive Summary "Forward Rate" yield | **No** — known exception |
+| `ForwardAnnualDividendRate` (estimate) | Never written into `history` (F21); used for Risk Factors payout/coverage and the Executive Summary "Forward Rate" yield | **No** — known exception (Risk Factors payout/coverage) |
 | `NumberDividendsByYear` (payment counts) | **Used as dividend amounts** when nothing else exists | **No** — known exception |
 | `MarketCapitalization`, `SharesOutstanding`, `SharePrice`, `LastPrice` | Never used for the price (removed by F21: yfinance is the only price source) | Yes |
 

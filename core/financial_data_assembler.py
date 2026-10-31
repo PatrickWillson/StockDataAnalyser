@@ -387,8 +387,6 @@ class FinancialDataAssembler:
                     dividend_source = 'Dividend API'
                 elif source == 'cash_flow':
                     dividend_source = 'Cash Flow'
-                elif source == 'forward_rate':
-                    dividend_source = 'Forward Rate'
             else:
                 # Mixed sources
                 dividend_source = 'Mixed'

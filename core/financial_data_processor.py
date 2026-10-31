@@ -279,7 +279,10 @@ class FinancialDataProcessor:
         Priority Order:
         1. EODHD Dividend API (declared dividends with exact dates)
         2. Cash Flow dividendsPaid (actual cash distributed)
-        3. ForwardAnnualDividendRate (for most recent year only if others unavailable)
+        3. Dividends array, then NumberDividendsByYear (payment counts, flagged by is_amount_data=False)
+        
+        ForwardAnnualDividendRate is an EODHD estimate: it is returned for labelled display only and
+        never written into the history (GRAHAM_METHODOLOGY §8.1, F21).
         
         Args:
             data: Full EODHD fundamentals API response
@@ -349,10 +352,6 @@ class FinancialDataProcessor:
                 # Lookup for shares by year (malformed rows skipped)
                 shares_by_year = self.extract_shares_by_year(data)
                 
-                # Sort years to identify most recent
-                sorted_years = sorted(cash_flow.keys(), reverse=True)
-                most_recent_year = sorted_years[0].split('-')[0] if sorted_years else None
-                
                 # Calculate dividend per share from dividendsPaid
                 for year, cf_data in cash_flow.items():
                     if isinstance(cf_data, dict):
@@ -371,12 +370,6 @@ class FinancialDataProcessor:
                                     self._log(f"[DEBUG] Year {year_only}: Dividend per share = {div_per_share:.4f} (from {div_amount:,.0f} / {shares:,.0f} shares) [cash_flow]")
                             except (ValueError, TypeError) as e:
                                 self._log(f"[DEBUG] Could not parse dividendsPaid for {year}: {e}")
-                
-                # For most recent year only: use forward rate if cash flow missing
-                if most_recent_year and most_recent_year not in result and forward_rate and forward_rate > 0:
-                    result[most_recent_year] = forward_rate
-                    source_indicators[most_recent_year] = 'forward_rate'
-                    self._log(f"[DEBUG] Year {most_recent_year}: Using ForwardAnnualDividendRate = {forward_rate:.4f} [forward_rate]")
                 
                 if result:
                     is_amount_data = True

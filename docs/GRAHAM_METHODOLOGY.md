@@ -116,7 +116,7 @@ The ordered verdict rules are in `claude-output/REFACTOR_SCOPE.md` (D8) and will
 | Verdict (§7) | Quality **and** margin of safety | ENTERPRISING BUY can override a negative MoS; N/A counts as pass | F20 (D8) |
 | Historical prices | Actual market price, adjusted only for splits / capital changes (§2.4, §8.3) | Split-adjusted, not dividend-adjusted | **Fixed (F8)**. Open check: Yahoo closes are split-adjusted to today's share basis while each year's EPS uses that year's share count, so a split year may mismatch — unverified against real data |
 | Total debt (display, Risk Factors) | Count every obligation ranking ahead of the stock; prefer the conservative figure (§8.4) | Reported total incl. leases, else component sum | **Decided 2026-10-31** (user: "go with what Graham would do"); debt tests (4.2, 5.2) still use long-term debt as Graham specified |
-| Pre-computed EODHD values | Raw data (§8.1) | Forward dividend in history, dividend counts as amounts (market-cap price fallback **removed**: yfinance only, no price → no dossier) | F21 (price done) |
+| Pre-computed EODHD values | Raw data (§8.1) | Forward estimate in Risk Factors payout/coverage, dividend counts as amounts (**removed**: market-cap price fallback, forward estimate in history) | F21 (price, history done) |
 
 ## 10. Sources
 
