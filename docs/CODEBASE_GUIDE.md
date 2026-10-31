@@ -261,3 +261,28 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 | change a threshold | `config/investor_thresholds.py` (Graham constants are immutable) — also hardcoded strings in `graham_tests.py`/`methodology.py` |
 | add/reorder a section | `output/dossier_generator.py` + `output/sections/`; **§8** (order is fixed for LLM parsing) |
 | change currency logic | every GBX site listed in **§6** |
+| rely on an unverified field meaning | add it to **§11** with its evidence |
+
+## 11. Data-source assumptions pending confirmation
+
+The code relies on these readings of EODHD (and yfinance) fields. Each is listed with the evidence so far; **"pending"** means it is not confirmed by the vendor's documentation or by enough raw responses. To confirm, run `python stock_data_analyser.py <TICKER> --debug` (writes `data/<TICKER>_raw_api_response.json`, gitignored) for a ticker that exercises the case, and compare with the company's filings. Update the row (and the code, if it is wrong) when confirmed. Evidence so far: one real raw response (`data/WLKP_US_raw_api_response.json`, US/USD), 212 real dossiers in `data/` (outputs, not raw data) and EODHD's [Splits and Dividends API docs](https://eodhd.com/financial-apis/api-splits-dividends).
+
+| # | Assumption | Code relying on it | Evidence | Status | Confirm with |
+|---|---|---|---|---|---|
+| E1 | Dividend API amounts for LSE stocks are in **pounds** while prices are in pence | dividend paths (no ÷100) | EODHD docs: *"On the LSE the dividend currency is not the quote currency"* (Shell ≈ 3,650p vs 0.28915 GBP); 30 real LSE dossiers give realistic yields | **Confirmed** | — |
+| E2 | `Highlights.DividendShare`, `Highlights.BookValue` and `SplitsDividends.ForwardAnnualDividendRate` for LSE stocks are also pound-scale | Highlights/forward relabel GBX→GBP | 30 real LSE dossiers (e.g. ABF forward 0.63 GBP) — outputs only | Pending | `VOD.LSE`, `ABF.LSE` raw JSON |
+| E3 | The Dividend API `currency` of the first record applies to every record | `parse_dividend_history` | none | Pending | a stock that changed dividend currency (e.g. `VOD.LSE`, `SHEL.LSE`) |
+| E4 | Dividend API `value` is split-adjusted to today's shares; `unadjustedValue` is the amount actually paid | `parse_dividend_history` uses `value` | EODHD docs define both fields | **Confirmed** (field meaning) — but see E5 | — |
+| E5 | `outstandingShares` / `commonStockSharesOutstanding` are as reported each year (not restated for later splits) | per-year EPS, BVPS, payout, historical P/E against split-adjusted Yahoo closes and split-adjusted dividends | none (WLKP had no splits) | **Pending — affects correctness in split years** | `AAPL.US` (4:1 split 2020, 7:1 2014): compare 2019 shares with 4.4bn (as reported) vs 17.7bn (restated) |
+| E6 | `Technicals.52WeekHigh/52WeekLow` are in the exchange quoting unit (pence for LSE), like the price | 52-week ÷100 for minor-unit quotes | inferred from LSE snapshots/dossiers | Pending | `VOD.LSE` raw JSON vs a quote page |
+| E7 | `Highlights.BookValue` is in the trading currency (`General.CurrencyCode`) | BVPS cross-check / display conversion | none | Pending | a cross-currency stock (`CAML.LSE` USD financials) |
+| E8 | `shortLongTermDebtTotal` = all short- and long-term debt incl. lease obligations | total debt (display) | WLKP: equals `longTermDebt`; 2017 row reports short = long = total (summing would double count) | Pending (definition undocumented) | a lessee, e.g. `AAPL.US`, `TSCO.LSE`, against the 10-K/annual report |
+| E9 | `totalStockholderEquity` excludes minority (noncontrolling) interest | BVPS/TBVPS | WLKP 2024: total assets − total liabilities − equity = 310.6M, matching its minority interest | One ticker | another company with a large minority interest |
+| E10 | `totalStockholderEquity` includes preferred stock (US GAAP convention), shown separately as `preferredStockTotalEquity` | TBVPS/NCAV (preferred not yet deducted — GRAHAM_METHODOLOGY §9) | none (no preferred in WLKP) | Pending | a preferred issuer, e.g. `BAC.US`, `WFC.US` |
+| E11 | `netIncome` = net income attributable to the parent incl. special items; `netIncomeApplicableToCommonShares` = after preferred dividends; `netIncomeFromContinuingOps` is **before** minority interest | net income source (`statement_parsing`) | WLKP: `netIncome` / shares = 1.77 = EODHD `epsActual`; continuing ops 369.2M vs 62.4M | One ticker | a preferred issuer and a company with discontinued operations |
+| E12 | Annual income statements carry no `eps` field, so EPS = net income ÷ that year's shares | EPS fallback | WLKP has no `eps` key | One ticker | any second raw response |
+| E13 | The balance sheet `currency_symbol` is the currency of all three statements | unified currency | none | Pending | a cross-currency filer (`CAML.LSE`, `VOD.LSE` EUR) |
+| E14 | `General.CurrencyCode` for JSE stocks is a minor unit (`ZAC`) | `price_quote.same_currency` / `to_major_unit` | none | Pending | any `.JSE` ticker |
+| E15 | yfinance `fast_info['currency']` is `GBp` for LSE, `ZAc` for JSE, `ILA` for TASE, ISO codes elsewhere | quote currency match and minor-unit ÷100 | yfinance convention; not tested live here | Pending | `YU.L`, `NPN.JO`, `TEVA.TA` via yfinance |
+| E16 | yfinance `history(auto_adjust=False)['Close']` is split-adjusted but not dividend-adjusted | historical P/E, P/B | yfinance documents `Close` vs `Adj Close` | Pending (version-specific) | compare `AAPL` 2019 close with the actual pre-split price |
+
