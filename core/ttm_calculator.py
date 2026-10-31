@@ -15,6 +15,24 @@ import logging
 from datetime import datetime
 from typing import Dict, Union, List, Any, Optional
 from config.graham_constants import GRAHAM_MULTIPLIER
+from config.ttm_config import (
+    EARLIEST_PERIOD_YEAR,
+    FREQUENCY_DETECTION_MAX_PERIODS,
+    MAX_FUTURE_YEARS,
+    QUARTERLY_EXPECTED_INTERVAL_DAYS,
+    QUARTERLY_GAP_TOLERANCE_DAYS,
+    QUARTERLY_INTERVAL_DAYS,
+    QUARTERLY_PERIODS,
+    QUARTERLY_SPAN_DAYS,
+    SEMI_ANNUAL_EXPECTED_INTERVAL_DAYS,
+    SEMI_ANNUAL_GAP_TOLERANCE_DAYS,
+    SEMI_ANNUAL_INTERVAL_DAYS,
+    SEMI_ANNUAL_PERIODS,
+    SEMI_ANNUAL_SPAN_DAYS,
+    TTM_EPS_MAX_DIFF_PCT,
+    TTM_NET_INCOME_MAX_DIFF_PCT,
+    TTM_REVENUE_MAX_DIFF_PCT,
+)
 
 # Configure module-level logger
 logger = logging.getLogger(__name__)
@@ -166,7 +184,7 @@ class TTMCalculator:
         # Use only the most recent periods to detect current reporting pattern
         # This handles companies that switched from quarterly to semi-annual (or vice versa)
         # Use up to 5 most recent periods (4 intervals) for detection
-        recent_dates = dates[:min(5, len(dates))]
+        recent_dates = dates[:min(FREQUENCY_DETECTION_MAX_PERIODS, len(dates))]
         logger.debug(f"Frequency detection: Using {len(recent_dates)} most recent periods: {recent_dates}")
         
         # Calculate intervals between consecutive periods
@@ -188,12 +206,12 @@ class TTMCalculator:
         
         # Classify based on average interval
         # Quarterly: ~90 days (±15 days) → 75-105 days
-        if 75 <= avg_interval <= 105:
+        if QUARTERLY_INTERVAL_DAYS[0] <= avg_interval <= QUARTERLY_INTERVAL_DAYS[1]:
             logger.debug("Frequency detection: Classified as QUARTERLY (75-105 days)")
             return 'quarterly'
         
         # Semi-annual: ~180 days (±30 days) → 150-210 days
-        if 150 <= avg_interval <= 210:
+        if SEMI_ANNUAL_INTERVAL_DAYS[0] <= avg_interval <= SEMI_ANNUAL_INTERVAL_DAYS[1]:
             logger.debug("Frequency detection: Classified as SEMI-ANNUAL (150-210 days)")
             return 'semi-annual'
         
@@ -227,11 +245,11 @@ class TTMCalculator:
         
         # Expected interval and tolerance based on frequency
         if frequency == 'quarterly':
-            expected_interval = 90
-            tolerance = 30  # Allow ±30 days for quarterly (more lenient than detection)
+            expected_interval = QUARTERLY_EXPECTED_INTERVAL_DAYS
+            tolerance = QUARTERLY_GAP_TOLERANCE_DAYS  # more lenient than detection
         else:  # semi-annual
-            expected_interval = 180
-            tolerance = 45  # Allow ±45 days for semi-annual
+            expected_interval = SEMI_ANNUAL_EXPECTED_INTERVAL_DAYS
+            tolerance = SEMI_ANNUAL_GAP_TOLERANCE_DAYS
         
         # Calculate and log threshold
         threshold = expected_interval + tolerance
@@ -284,7 +302,7 @@ class TTMCalculator:
         logger.debug(f"Period selection starting: frequency={frequency}")
         
         # Determine number of periods needed
-        periods_needed = 4 if frequency == 'quarterly' else 2
+        periods_needed = QUARTERLY_PERIODS if frequency == 'quarterly' else SEMI_ANNUAL_PERIODS
         logger.debug(f"Periods needed for {frequency} reporting: {periods_needed}")
         
         # Get sorted periods
@@ -333,12 +351,12 @@ class TTMCalculator:
                 # - Semi-annual: 2 periods = 1 interval of ~180 days = ~180 days
                 if frequency == 'quarterly':
                     # 3 intervals × 90 days ± 15 days per interval = 270 ± 45 days
-                    expected_min, expected_max = 225, 315
+                    expected_min, expected_max = QUARTERLY_SPAN_DAYS
                     expected_desc = "~270 days (3 quarterly intervals)"
                 else:  # semi-annual
                     # 1 interval of ~180 days ± 30 days = 180 ± 30 days
                     # (Using ±30 days tolerance for semi-annual as per frequency detection)
-                    expected_min, expected_max = 150, 210
+                    expected_min, expected_max = SEMI_ANNUAL_SPAN_DAYS
                     expected_desc = "~180 days (1 semi-annual interval)"
                 
                 logger.debug(f"Span validation: expected range {expected_min}-{expected_max} days ({expected_desc})")
@@ -389,9 +407,9 @@ class TTMCalculator:
             income_statement = self.quarterly_data.get('income_statement', {})
             income_dates = sorted(income_statement.keys(), reverse=True)
             
-            if len(income_dates) >= 4:
+            if len(income_dates) >= QUARTERLY_PERIODS:
                 # Try to detect gaps assuming quarterly reporting
-                test_periods = income_dates[:4]
+                test_periods = income_dates[:QUARTERLY_PERIODS]
                 if self._detect_data_gaps(test_periods, 'quarterly'):
                     # Gap was detected, warning already added
                     pass
@@ -794,8 +812,8 @@ class TTMCalculator:
             True if all dates are valid, False otherwise
         """
         current_date = datetime.now()
-        future_limit = datetime(current_date.year + 1, 12, 31)
-        past_limit = datetime(1950, 1, 1)
+        future_limit = datetime(current_date.year + MAX_FUTURE_YEARS, 12, 31)
+        past_limit = datetime(EARLIEST_PERIOD_YEAR, 1, 1)
         
         invalid_dates = []
         
@@ -837,7 +855,7 @@ class TTMCalculator:
         if ttm_eps > 0 and annual_eps > 0:
             eps_diff_pct = abs(ttm_eps - annual_eps) / annual_eps * 100
             
-            if eps_diff_pct > 20:
+            if eps_diff_pct > TTM_EPS_MAX_DIFF_PCT:
                 warning_msg = (
                     f"TTM Validation: TTM EPS differs from annual EPS by {eps_diff_pct:.1f}% "
                     f"(TTM: {ttm_eps:.2f}, Annual: {annual_eps:.2f})"
@@ -851,7 +869,7 @@ class TTMCalculator:
         if ttm_revenue > 0 and annual_revenue > 0:
             revenue_diff_pct = abs(ttm_revenue - annual_revenue) / annual_revenue * 100
             
-            if revenue_diff_pct > 50:
+            if revenue_diff_pct > TTM_REVENUE_MAX_DIFF_PCT:
                 warning_msg = (
                     f"TTM Validation: TTM revenue differs from annual revenue by {revenue_diff_pct:.1f}% "
                     f"(TTM: {ttm_revenue:.0f}, Annual: {annual_revenue:.0f})"
@@ -865,7 +883,7 @@ class TTMCalculator:
         if ttm_net_income != 0 and annual_net_income != 0:
             net_income_diff_pct = abs(ttm_net_income - annual_net_income) / abs(annual_net_income) * 100
             
-            if net_income_diff_pct > 50:
+            if net_income_diff_pct > TTM_NET_INCOME_MAX_DIFF_PCT:
                 warning_msg = (
                     f"TTM Validation: TTM net income differs from annual net income by {net_income_diff_pct:.1f}% "
                     f"(TTM: {ttm_net_income:.0f}, Annual: {annual_net_income:.0f})"
