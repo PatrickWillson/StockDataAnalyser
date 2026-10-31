@@ -283,6 +283,6 @@ The code relies on these readings of EODHD (and yfinance) fields. Each is listed
 | E12 | Annual income statements carry no `eps` field, so EPS = net income ÷ that year's shares | EPS fallback | WLKP has no `eps` key | One ticker | any second raw response |
 | E13 | The balance sheet `currency_symbol` is the currency of all three statements | unified currency | none | Pending | a cross-currency filer (`CAML.LSE`, `VOD.LSE` EUR) |
 | E14 | `General.CurrencyCode` for JSE stocks is a minor unit (`ZAC`) | `price_quote.same_currency` / `to_major_unit` | none | Pending | any `.JSE` ticker |
-| E15 | yfinance `fast_info['currency']` is `GBp` for LSE, `ZAc` for JSE, `ILA` for TASE, ISO codes elsewhere | quote currency match and minor-unit ÷100 | yfinance convention; not tested live here | Pending | `YU.L`, `NPN.JO`, `TEVA.TA` via yfinance |
-| E16 | yfinance `history(auto_adjust=False)['Close']` is split-adjusted but not dividend-adjusted | historical P/E, P/B | yfinance documents `Close` vs `Adj Close` | Pending (version-specific) | compare `AAPL` 2019 close with the actual pre-split price |
+| E15 | yfinance `fast_info['currency']` is `GBp` for LSE, `ZAc` for JSE, `ILA` for TASE, ISO codes elsewhere | quote currency match and minor-unit ÷100 | live check 2026-10-31 (yfinance 1.0): `YU.L`/`VOD.L` GBp, `NPN.JO` ZAc, `TEVA.TA` ILA, `AAPL` USD, `SAP.DE` EUR, `RY.TO` CAD | **Confirmed** | — |
+| E16 | yfinance `history(auto_adjust=False)['Close']` is split-adjusted but not dividend-adjusted | historical P/E, P/B | live check 2026-10-31 (yfinance 1.0): AAPL 2020-08-28 (day before the 4:1 split) `Close` 124.81 = traded ≈ $499 ÷ 4; `Adj Close` 120.96 (dividend-adjusted) | **Confirmed** | — |
 
