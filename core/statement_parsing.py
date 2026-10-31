@@ -112,8 +112,11 @@ class IncomeStatementRow:
         eps_raw = raw.get('eps')
         if eps_raw in _MISSING_MARKERS[:3]:
             eps_raw = raw.get('basicEPS') or raw.get('epsBasic')
-        # Graham focused on earning power from continuing operations
-        net_income_raw = raw.get('netIncomeFromContinuingOps')
+        # Earnings for the common stock, special items included (GRAHAM_METHODOLOGY §2.3: special
+        # charges and credits "should be included in the average earnings"). Never
+        # netIncomeFromContinuingOps: it drops those items and EODHD reports it before minority
+        # interest (WLKP 2024: 369.2M vs 62.4M attributable, ~6x the real EPS)
+        net_income_raw = raw.get('netIncomeApplicableToCommonShares')
         if net_income_raw in _MISSING_MARKERS[:3]:
             net_income_raw = raw.get('netIncome')
         return cls(

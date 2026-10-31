@@ -77,8 +77,8 @@ class TestParseIncomeStatement:
 
     def test_maps_fields_and_sorts_newest_first(self, processor):
         result = processor.parse_income_statement(_income({
-            "2022-12-31": {"totalRevenue": 100, "netIncomeFromContinuingOps": 10, "eps": 1.0},
-            "2023-12-31": {"totalRevenue": 120, "netIncomeFromContinuingOps": 12, "eps": 1.2},
+            "2022-12-31": {"totalRevenue": 100, "netIncome": 10, "eps": 1.0},
+            "2023-12-31": {"totalRevenue": 120, "netIncome": 12, "eps": 1.2},
         }))
         assert list(result) == ["2023-12-31", "2022-12-31"]
         assert result["2023-12-31"] == {"revenue": 120.0, "net_income": 12.0, "eps": 1.2}
@@ -109,11 +109,19 @@ class TestParseIncomeStatement:
         }))
         assert result["2023-12-31"]["net_income"] == 7.0
 
-    def test_continuing_ops_used_when_both_present(self, processor):
+    def test_continuing_ops_never_used(self, processor):
+        """Graham includes special items; EODHD's continuing-ops line is also before minority interest."""
         result = processor.parse_income_statement(_income({
-            "2023-12-31": {"netIncomeFromContinuingOps": 9, "netIncome": 7},
+            "2023-12-31": {"netIncomeFromContinuingOps": 369, "netIncome": 62},
         }))
-        assert result["2023-12-31"]["net_income"] == 9.0
+        assert result["2023-12-31"]["net_income"] == 62.0
+
+    def test_income_applicable_to_common_preferred_over_net_income(self, processor):
+        """Earnings for the common stock: after preferred dividends."""
+        result = processor.parse_income_statement(_income({
+            "2023-12-31": {"netIncomeApplicableToCommonShares": 55, "netIncome": 62},
+        }))
+        assert result["2023-12-31"]["net_income"] == 55.0
 
     def test_missing_values_become_zero(self, processor):
         result = processor.parse_income_statement(_income({"2023-12-31": {}}))

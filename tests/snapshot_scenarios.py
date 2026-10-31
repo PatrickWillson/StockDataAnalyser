@@ -259,6 +259,24 @@ def stale_annual_report() -> Scenario:
     )
 
 
+def minority_interest() -> Scenario:
+    """
+    EODHD's netIncomeFromContinuingOps can be before minority interest (seen in real WLKP.US data:
+    369.2M vs 62.4M attributable). EPS must come from net income attributable to the common.
+    """
+    raw = extend_years(EODHDFixtures.get_aapl_fundamentals(), 10)
+    for entry in raw["Financials"]["Income_Statement"]["yearly"].values():
+        attributable = entry["netIncome"]
+        entry["netIncomeFromContinuingOps"] = attributable * 6
+        entry["minorityInterest"] = -attributable * 5
+        entry.pop("netIncomeApplicableToCommonShares", None)
+    return Scenario(
+        "minority_interest", "AAPL.US", raw,
+        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw), currency="USD"),
+        description="Continuing-ops income 6x the attributable net income (large minority interest)",
+    )
+
+
 def messy_nulls_cross_currency() -> Scenario:
     """JSON nulls and junk in General/Highlights/Technicals/outstandingShares (each used to crash the run)."""
     scenario = xetra_eur_usd_financials()
@@ -307,4 +325,5 @@ ALL_SCENARIOS = [
     stale_annual_report,
     messy_nulls_cross_currency,
     messy_lse_dividend_array,
+    minority_interest,
 ]

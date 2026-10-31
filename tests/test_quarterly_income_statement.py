@@ -174,8 +174,8 @@ class TestParseQuarterlyIncomeStatement:
         assert result['2025-09-30']['eps'] == 2.5
         assert result['2025-06-30']['eps'] == 2.4
     
-    def test_parse_quarterly_income_statement_net_income_from_continuing_ops(self):
-        """Test preference for netIncomeFromContinuingOps over netIncome."""
+    def test_parse_quarterly_income_statement_ignores_continuing_ops(self):
+        """netIncome (special items included, after minority interest) is used, never continuing ops."""
         processor = FinancialDataProcessor(debug=False)
         
         mock_data = {
@@ -184,8 +184,8 @@ class TestParseQuarterlyIncomeStatement:
                     'quarterly': {
                         '2025-09-30': {
                             'totalRevenue': 100000.0,
-                            'netIncomeFromContinuingOps': 12000.0,  # Should use this
-                            'netIncome': 10000.0,  # Should ignore this
+                            'netIncomeFromContinuingOps': 12000.0,  # Should ignore this
+                            'netIncome': 10000.0,  # Should use this
                             'eps': 2.5,
                         },
                         '2025-06-30': {
@@ -200,8 +200,8 @@ class TestParseQuarterlyIncomeStatement:
         
         result = processor.parse_quarterly_income_statement(mock_data)
         
-        # Should prefer netIncomeFromContinuingOps when available
-        assert result['2025-09-30']['net_income'] == 12000.0
+        # Never netIncomeFromContinuingOps
+        assert result['2025-09-30']['net_income'] == 10000.0
         
         # Should fall back to netIncome when continuing ops not available
         assert result['2025-06-30']['net_income'] == 9500.0
