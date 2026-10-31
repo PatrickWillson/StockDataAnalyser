@@ -947,6 +947,7 @@ class GrahamCalculator:
                                     defensive_tests, enterprising_tests)
         
         metrics = {
+            'tbvps': round(tbvps, 2) if isinstance(tbvps, float) else "N/A",  # latest annual, for comparisons
             'graham_number': graham_number,  # Legacy single-year
             'normalized_graham_number': normalized_graham_number,  # New 3-year average
             'epv': epv_data['epv'],  # Keep backward compatibility

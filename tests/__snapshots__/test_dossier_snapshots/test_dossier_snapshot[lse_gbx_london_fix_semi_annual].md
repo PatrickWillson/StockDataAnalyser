@@ -37,11 +37,11 @@
 - Period Covered: H1 2023 through H2 2023
 
 - TTM Graham Number: 12.77 GBP (Annual: 12.78 GBP, Diff: -0.1%)
-- TTM Tangible Book Value Per Share: 4.23 GBP
+- TTM Tangible Book Value Per Share: 4.23 GBP (Annual: 4.23 GBP, Diff: 0.0%)
 - TTM Net-Net Value: 0.06 GBP (Annual: 0.06 GBP, Diff: 0.0%)
-- TTM Margin of Safety: -29.2% (Annual: -349.6%, Diff: +91.6%)
-- TTM P/E Ratio: 9.62
-- TTM P/B Ratio: 3.67
+- TTM Margin of Safety: -29.2% (vs the TTM Graham Number; the annual margin of safety uses the lower of the normalized Graham Number and EPV)
+- TTM P/E Ratio: 9.62 (Annual: 9.62, Diff: 0.0%)
+- TTM P/B Ratio: 3.67 (Annual: 3.67, Diff: +0.1%)
 
 ---
 

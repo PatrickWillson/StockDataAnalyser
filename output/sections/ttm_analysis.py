@@ -110,36 +110,38 @@ class TTMAnalysisSection(DossierSection):
             is_currency=True
         )
         
-        # TTM Margin of Safety
-        self._add_metric_with_comparison(
-            lines,
-            "TTM Margin of Safety",
-            self.ttm_metrics.get('ttm_margin_of_safety'),
-            self.annual_metrics.get('margin_of_safety'),
-            currency,
-            is_currency=False,
-            is_percentage=True
-        )
+        # TTM Margin of Safety: measured against the TTM Graham Number, a different basis from the
+        # annual margin of safety (lower of normalized Graham Number and EPV), so no diff is shown
+        ttm_mos = self.ttm_metrics.get('ttm_margin_of_safety')
+        if isinstance(ttm_mos, (int, float)):
+            lines.append(f"- TTM Margin of Safety: {float(ttm_mos):.1f}% (vs the TTM Graham Number; the annual "
+                         f"margin of safety uses the lower of the normalized Graham Number and EPV)")
+        else:
+            lines.append("- TTM Margin of Safety: N/A")
         
-        # TTM P/E Ratio
+        # TTM P/E and P/B against the latest annual P/E and P/B (price / latest annual EPS and BVPS)
         self._add_metric_with_comparison(
             lines,
             "TTM P/E Ratio",
             self.ttm_metrics.get('ttm_pe_ratio'),
-            self.annual_metrics.get('pe_ratio'),
+            self._annual_ratio('pe_ratio'),
             currency,
             is_currency=False
         )
         
-        # TTM P/B Ratio
         self._add_metric_with_comparison(
             lines,
             "TTM P/B Ratio",
             self.ttm_metrics.get('ttm_pb_ratio'),
-            self.annual_metrics.get('pb_ratio'),
+            self._annual_ratio('price_to_book'),
             currency,
             is_currency=False
         )
+    
+    def _annual_ratio(self, key: str) -> Union[float, str]:
+        """Latest annual P/E or P/B from financial_data, "N/A" when not positive."""
+        value = self.financial_data.get(key)
+        return value if isinstance(value, (int, float)) and value > 0 else "N/A"
     
     def _add_metric_with_comparison(self, lines: List[str], label: str, 
                                    ttm_value: Union[float, str], 
@@ -230,9 +232,11 @@ class TTMAnalysisSection(DossierSection):
             if abs(annual_float) == 0:
                 return ""
             
-            pct_diff = ((ttm_float - annual_float) / abs(annual_float)) * 100
+            pct_diff = round(((ttm_float - annual_float) / abs(annual_float)) * 100, 1)
             
-            # Format with sign
+            # Format with sign (rounded first, so a tiny negative shows as 0.0%, not -0.0%)
+            if pct_diff == 0:
+                return "0.0%"
             if pct_diff > 0:
                 return f"+{pct_diff:.1f}%"
             else:

@@ -126,7 +126,7 @@ claude-output/              agent-written markdown (gitignored)
 - Total debt: reported `shortLongTermDebtTotal` (short + long-term debt incl. leases) when > 0, else `longTermDebt + shortTermDebt` (GRAHAM_METHODOLOGY §9). Display only (history table, Risk Factors "short-term debt and leases" = total − long-term); Graham's debt tests use `long_term_debt`.
 
 ### 4.3 `metrics` (returned by `GrahamCalculator.compute_all`)
-`graham_number, normalized_graham_number, epv, epv_details, net_net_value, nca_details, current_ratio, quick_ratio, three_year_avg_pe, combined_pe_pb_test, margin_of_safety, margin_of_safety_details, defensive_tests, enterprising_tests, verdict, warnings`
+`tbvps (latest annual, rounded; "N/A"), graham_number, normalized_graham_number, epv, epv_details, net_net_value, nca_details, current_ratio, quick_ratio, three_year_avg_pe, combined_pe_pb_test, margin_of_safety, margin_of_safety_details, defensive_tests, enterprising_tests, verdict, warnings`
 
 Values are floats or `"N/A"`-style strings (also `"N/A - reason"`, `"N/A (Too Young)"`). `epv` is the **total** EPV (not per share); per share is in `epv_details['epv_per_share']`.
 
@@ -182,7 +182,7 @@ Where EODHD pre-computed values are used today:
 3. `_select_periods_for_ttm`: 4 quarters or 2 halves; gap check (any interval > expected + tolerance, i.e. > 120 d quarterly / > 225 d semi-annual, aborts TTM); span check (quarterly 225–315 d, semi 150–210 d).
 4. `calculate_ttm_metrics`: sum revenue/NI over periods; balance items from the balance sheet dated at the latest selected income period (else the latest one, with a warning); TTM EPS = ΣNI / latest shares.
 5. TTM TBVPS / Graham Number / Net-Net / MoS (MoS uses TTM Graham Number only) / P/E / P/B.
-6. `DossierGenerator` shows the TTM section only if `ttm_graham_number != "N/A"`.
+6. `DossierGenerator` shows the TTM section only if `ttm_graham_number != "N/A"`. The section compares TTM Graham Number, TBVPS (`metrics['tbvps']`), net-net, P/E and P/B (`financial_data['pe_ratio']`, `['price_to_book']`) with the latest annual figures; the TTM margin of safety is shown with its basis, not diffed (the annual one is defined differently).
 
 ### 5.3 Anomalies (`core/anomaly_detector.py`)
 YoY EPS growth % (skip prev EPS ≤ 0), population SD, flag |z| > 2.0. Needs ≥ 3 growth rates (in practice can't flag with < 6).
@@ -250,7 +250,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising criterion in `core/investor_tests/` and `core.verdict.determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1252 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1255 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

@@ -35,12 +35,12 @@
 - Reporting Frequency: Quarterly
 - Period Covered: Q4 2022 through Q3 2023
 
-- TTM Graham Number: 23.69 USD (Annual: 23.68 USD, Diff: +0.0%)
-- TTM Tangible Book Value Per Share: 4.00 USD
+- TTM Graham Number: 23.69 USD (Annual: 23.68 USD, Diff: 0.0%)
+- TTM Tangible Book Value Per Share: 4.00 USD (Annual: 4.00 USD, Diff: 0.0%)
 - TTM Net-Net Value: -9.46 USD (Annual: -9.46 USD, Diff: 0.0%)
-- TTM Margin of Safety: -691.3% (Annual: -701.1%, Diff: +1.4%)
-- TTM P/E Ratio: 30.05
-- TTM P/B Ratio: 46.90
+- TTM Margin of Safety: -691.3% (vs the TTM Graham Number; the annual margin of safety uses the lower of the normalized Graham Number and EPV)
+- TTM P/E Ratio: 30.05 (Annual: 30.05, Diff: 0.0%)
+- TTM P/B Ratio: 46.90 (Annual: 46.90, Diff: 0.0%)
 
 - TTM Dividend (Last 12 Months): 0.48 USD (Yield: 0.26%)
   - Based on 2 payment(s):
