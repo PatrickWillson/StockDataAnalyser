@@ -11,6 +11,7 @@ This module implements strict Graham formulas for value investing analysis:
 """
 
 import math
+from core.formulas import net_current_asset_value, tangible_equity
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Union
 
@@ -102,8 +103,7 @@ class GrahamCalculator:
             return "N/A"
         
         # Calculate TBVPS - use absolute values to handle negative reporting
-        tangible_equity = total_equity - abs(intangible_assets) - abs(goodwill)
-        tbvps = tangible_equity / shares_outstanding
+        tbvps = tangible_equity(total_equity, intangible_assets, goodwill) / shares_outstanding
         
         # Handle negative TBVPS
         if tbvps < 0:
@@ -250,7 +250,7 @@ class GrahamCalculator:
             return "N/A"
         
         # Calculate Net-Net Value
-        net_net = (current_assets - total_liabilities) / shares_outstanding
+        net_net = net_current_asset_value(current_assets, total_liabilities) / shares_outstanding
         
         return round(net_net, 2) if round_result else net_net
     
@@ -337,7 +337,7 @@ class GrahamCalculator:
         long_term_debt_dec = Decimal(str(long_term_debt))
         
         # Calculate NCA
-        nca_dec = current_assets_dec - total_liabilities_dec
+        nca_dec = net_current_asset_value(current_assets_dec, total_liabilities_dec)
         
         # Check for sector-specific warnings
         sector = (self.data.get('sector') or '').lower()

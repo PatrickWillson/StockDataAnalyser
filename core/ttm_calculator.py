@@ -15,6 +15,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Union, List, Any, Optional
 from config.graham_constants import GRAHAM_MULTIPLIER
+from core.formulas import net_current_asset_value, tangible_equity
 from config.ttm_config import (
     EARLIEST_PERIOD_YEAR,
     FREQUENCY_DETECTION_MAX_PERIODS,
@@ -579,8 +580,7 @@ class TTMCalculator:
             return "N/A"
         
         # Calculate tangible book value
-        tangible_book_value = total_equity - intangible_assets - goodwill
-        tbvps = tangible_book_value / shares_outstanding
+        tbvps = tangible_equity(total_equity, intangible_assets, goodwill) / shares_outstanding
         
         # Check for negative TBVPS
         if tbvps < 0:
@@ -653,7 +653,7 @@ class TTMCalculator:
             return "N/A"
         
         # Calculate net-net value
-        net_net_value = (current_assets - total_liabilities) / shares_outstanding
+        net_net_value = net_current_asset_value(current_assets, total_liabilities) / shares_outstanding
         
         return round(net_net_value, 2)
     
