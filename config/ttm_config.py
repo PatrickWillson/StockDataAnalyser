@@ -7,7 +7,7 @@ Engineering choices, not Graham's criteria (Graham tests use annual audited data
 
 from typing import Final, Tuple
 
-# Frequency detection: mean interval between the most recent periodic statements
+# Frequency detection: median interval between the most recent periodic statements
 FREQUENCY_DETECTION_MAX_PERIODS: Final[int] = 5                      # 5 dates -> 4 intervals
 QUARTERLY_INTERVAL_DAYS: Final[Tuple[int, int]] = (75, 105)          # inclusive range
 SEMI_ANNUAL_INTERVAL_DAYS: Final[Tuple[int, int]] = (150, 210)       # inclusive range

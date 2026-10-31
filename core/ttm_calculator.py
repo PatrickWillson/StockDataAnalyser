@@ -12,6 +12,7 @@ Key Features:
 """
 
 import logging
+import statistics
 from datetime import datetime
 from typing import Dict, Union, List, Any, Optional
 from core.formulas import graham_number, margin_of_safety_pct, net_current_asset_value, price_multiple, tangible_equity
@@ -102,7 +103,8 @@ class TTMCalculator:
         Detect reporting frequency by analyzing period intervals.
         
         Algorithm:
-        - Calculate average interval between consecutive periods
+        - Median interval between consecutive recent periods (one missing period does not
+          change the classification; gaps are reported separately by _detect_data_gaps)
         - Uses only the most recent periods to detect current reporting pattern
         - ~90 days (±15 days) → Quarterly
         - ~180 days (±30 days) → Semi-annual
@@ -149,9 +151,9 @@ class TTMCalculator:
             self.warnings.append("TTM Analysis: Unable to calculate period intervals")
             return 'irregular'
         
-        # Calculate average interval
-        avg_interval = sum(intervals) / len(intervals)
-        logger.debug(f"Frequency detection: Average interval = {avg_interval:.1f} days (from {len(intervals)} intervals)")
+        # Median interval: robust to one missing or extra period
+        avg_interval = statistics.median(intervals)
+        logger.debug(f"Frequency detection: Median interval = {avg_interval:.1f} days (from {len(intervals)} intervals)")
         
         # Classify based on average interval
         # Quarterly: ~90 days (±15 days) → 75-105 days
@@ -167,7 +169,7 @@ class TTMCalculator:
         # Irregular pattern
         logger.debug(f"Frequency detection: Classified as IRREGULAR (avg {avg_interval:.1f} days outside valid ranges)")
         self.warnings.append(
-            f"TTM Analysis: Irregular reporting pattern detected (avg interval: {avg_interval:.0f} days)"
+            f"TTM Analysis: Irregular reporting pattern detected (median interval: {avg_interval:.0f} days)"
         )
         return 'irregular'
     
@@ -215,14 +217,11 @@ class TTMCalculator:
             # Log interval calculation with dates and days
             logger.debug(f"Gap detection: Interval between {periods[i+1]} and {periods[i]} = {interval} days (threshold: {threshold})")
             
-            # Check if interval is significantly larger than expected (indicating missing period)
-            # If interval is ~2x expected, there's likely a missing period
+            # Any interval above expected + tolerance means the selected periods do not
+            # cover consecutive reporting periods (no dead zone below 2x the expected interval)
             if interval > threshold:
-                # Calculate how many periods might be missing
-                missing_count = round(interval / expected_interval) - 1
-                logger.debug(f"Gap detected: interval {interval} days > threshold {threshold} days, missing_count={missing_count}")
-                if missing_count > 0:
-                    missing_periods.append(f"between {periods[i + 1]} and {periods[i]}")
+                logger.debug(f"Gap detected: interval {interval} days > threshold {threshold} days")
+                missing_periods.append(f"between {periods[i + 1]} and {periods[i]}")
             else:
                 logger.debug(f"No gap: interval {interval} days <= threshold {threshold} days")
         
@@ -392,8 +391,13 @@ class TTMCalculator:
             ttm_revenue += period_data.get('revenue', 0.0)
             ttm_net_income += period_data.get('net_income', 0.0)
         
-        # Get most recent balance sheet values
-        most_recent_balance = balance_sheet[balance_dates[0]]
+        # Balance sheet at the end of the latest income period, so book value and the share
+        # count match the earnings; the latest balance sheet only when that one is not reported
+        balance_date = selected_periods[0] if selected_periods[0] in balance_sheet else balance_dates[0]
+        if balance_date != selected_periods[0]:
+            self.warnings.append(f"TTM Analysis: No balance sheet for {selected_periods[0]}; "
+                                 f"using the one dated {balance_date}")
+        most_recent_balance = balance_sheet[balance_date]
         
         total_equity = most_recent_balance.get('total_equity', 0.0)
         intangible_assets = most_recent_balance.get('intangible_assets', 0.0)
