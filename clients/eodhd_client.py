@@ -540,6 +540,10 @@ class EODHDClient(BaseAPIClient):
         # Validate data quality
         logger.info("Validating data quality...")
         self.processor.validate_data_quality(history, warnings)
+        if history:
+            staleness_warning = self.processor.check_data_staleness(history)
+            if staleness_warning:
+                warnings.append(staleness_warning)
         
         # Determine overall dividend source for data quality assessment
         dividend_source = 'Unknown'

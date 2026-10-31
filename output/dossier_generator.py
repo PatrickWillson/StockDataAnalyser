@@ -21,6 +21,7 @@ from output.sections.graham_tests import GrahamTestsSection
 from output.sections.financial_history import FinancialHistorySection
 from output.sections.ttm_analysis import TTMAnalysisSection
 from core.history import has_statement_data
+from config.data_quality_config import ANNUAL_REPORT_MAX_AGE_MONTHS
 
 
 class DossierGenerator:
@@ -244,7 +245,7 @@ class DossierGenerator:
         lines.append("### Normalized Graham Number Requirements:")
         lines.append("- **3-Year Data Requirement**: Normalized Graham Number calculation requires 3 consecutive years of annual EPS data")
         lines.append("- **Fallback Strategy**: When insufficient data is available, the system falls back to EPV (Earnings Power Value) for Margin of Safety calculation")
-        lines.append("- **Staleness Detection**: Annual reports older than 9 months trigger a data staleness warning")
+        lines.append(f"- **Staleness Detection**: Annual reports older than {ANNUAL_REPORT_MAX_AGE_MONTHS:g} months trigger a data staleness warning")
         lines.append("- **Data Quality**: All 3 years must have non-null, numeric EPS values for normalized calculation to proceed")
         lines.append("")
         

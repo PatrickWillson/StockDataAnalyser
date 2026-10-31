@@ -8,7 +8,7 @@ Separates data processing logic from API client concerns.
 import logging
 from typing import Dict, Any, List, Optional
 from core.currency_converter import CurrencyConverter
-from core.history import has_statement_data
+from core.history import has_statement_data, is_dividend_only_year
 from config.valuation_config import NORMALIZED_EPS_YEARS
 from config.data_quality_config import (ANNUAL_REPORT_MAX_AGE_MONTHS, DAYS_PER_MONTH, MAX_CONSECUTIVE_YEAR_GAPS,
                                          MIN_HISTORY_YEARS_RECOMMENDED)
@@ -1106,13 +1106,8 @@ class FinancialDataProcessor:
         # statement data: dividend-only years added by merge_financial_data have revenue,
         # net income and equity all present and 0.0, and EPS 0.0. A break-even year still
         # has revenue or equity, so it is kept.
-        def has_no_statement_data(year_data: Dict[str, Any]) -> bool:
-            statement_fields = ('revenue', 'net_income', 'total_equity')
-            return (all(field in year_data and year_data[field] in (0, 0.0) for field in statement_fields)
-                    and year_data.get('eps') in (None, 0, 0.0))
-
         sorted_years = [year for year in sorted(history.keys(), reverse=True)
-                        if not has_no_statement_data(history[year])]
+                        if not is_dividend_only_year(history[year])]
 
         # Check if we have at least 3 years
         if len(sorted_years) < NORMALIZED_EPS_YEARS:
@@ -1198,9 +1193,13 @@ class FinancialDataProcessor:
         if current_date is None:
             current_date = datetime.now()
         
-        # Get most recent year from history
-        sorted_years = sorted(history.keys(), reverse=True)
-        most_recent_year = sorted_years[0]
+        # Most recent year with an annual report (dividend-only placeholder years are skipped;
+        # they are often in the future and would trigger a false "future date" warning)
+        report_years = [year for year in sorted(history.keys(), reverse=True)
+                        if not is_dividend_only_year(history[year])]
+        if not report_years:
+            return "No financial history available"
+        most_recent_year = report_years[0]
         
         # Parse year as ISO date (YYYY-MM-DD format)
         try:

@@ -244,6 +244,20 @@ def dividend_counts_only() -> Scenario:
     )
 
 
+def stale_annual_report() -> Scenario:
+    """Latest annual report 2021: older than 9 months at the pinned date -> staleness warning."""
+    raw = extend_years(EODHDFixtures.get_aapl_fundamentals(), 10)
+    for statement in ("Balance_Sheet", "Income_Statement", "Cash_Flow"):
+        yearly = raw["Financials"][statement]["yearly"]
+        for fye in [d for d in yearly if d >= "2022"]:
+            del yearly[fye]
+    return Scenario(
+        "stale_annual_report", "AAPL.US", raw,
+        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw)),
+        description="Most recent annual report 2021-09-25: data staleness warning",
+    )
+
+
 def messy_nulls_cross_currency() -> Scenario:
     """JSON nulls and junk in General/Highlights/Technicals/outstandingShares (each used to crash the run)."""
     scenario = xetra_eur_usd_financials()
@@ -289,6 +303,7 @@ ALL_SCENARIOS = [
     xetra_eur_usd_financials,
     negative_tangible_equity,
     dividend_counts_only,
+    stale_annual_report,
     messy_nulls_cross_currency,
     messy_lse_dividend_array,
 ]

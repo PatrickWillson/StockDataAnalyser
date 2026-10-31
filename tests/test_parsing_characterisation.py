@@ -267,3 +267,24 @@ class TestMalformedRawValues:
         assert dividends == {"2023": 0.24}
         assert is_amounts is True
         assert sources == {"2023": "dividends_array"}
+
+
+class TestDataStalenessIgnoresDividendOnlyYears:
+    """The staleness check uses the latest annual report, not dividend-only placeholder years."""
+
+    REPORT = {"revenue": 100.0, "net_income": 10.0, "eps": 1.0, "total_equity": 50.0}
+    DIVIDEND_ONLY = {"revenue": 0.0, "net_income": 0.0, "eps": 0.0, "total_equity": 0.0, "dividend": 0.5}
+
+    def test_future_dividend_only_year_is_not_reported_as_future_data(self):
+        history = {"2024-09-30": self.DIVIDEND_ONLY, "2023-09-30": self.REPORT}
+        assert FinancialDataProcessor.check_data_staleness(history, datetime(2024, 3, 1)) is None
+
+    def test_stale_report_behind_a_dividend_only_year_still_warns(self):
+        history = {"2024-12-31": self.DIVIDEND_ONLY, "2022-12-31": self.REPORT}
+        warning = FinancialDataProcessor.check_data_staleness(history, datetime(2024, 3, 1))
+        assert warning == "Potentially Stale Data: Most recent annual report is from 2022-12-31 (13 months old)"
+
+    def test_only_dividend_only_years_means_no_history(self):
+        history = {"2024-12-31": self.DIVIDEND_ONLY}
+        assert FinancialDataProcessor.check_data_staleness(history, datetime(2024, 3, 1)) == \
+            "No financial history available"

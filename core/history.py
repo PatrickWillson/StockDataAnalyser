@@ -41,6 +41,18 @@ def has_balance_sheet_data(year_data: YearData) -> bool:
     return year_data.get('current_assets', 0.0) > 0 or year_data.get('total_equity', 0.0) > 0
 
 
+def is_dividend_only_year(year_data: YearData) -> bool:
+    """
+    True for rows merge_financial_data creates from dividend data alone: revenue, net income
+    and equity all present and 0.0, and EPS 0/None. A break-even or loss year still has
+    revenue or equity, so it is not dividend-only. Rows lacking those keys are not judged
+    dividend-only (they are partial data, not placeholders).
+    """
+    statement_fields = ('revenue', 'net_income', 'total_equity')
+    return (all(field in year_data and year_data[field] in (0, 0.0) for field in statement_fields)
+            and year_data.get('eps') in (None, 0, 0.0))
+
+
 def latest_year(history: Dict[str, YearData], years: Iterable[str],
                 predicate: Callable[[YearData], bool] = has_statement_data) -> Optional[str]:
     """
