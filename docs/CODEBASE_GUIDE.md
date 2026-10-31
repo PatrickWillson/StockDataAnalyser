@@ -83,7 +83,7 @@ claude-output/              agent-written markdown (gitignored)
 
 **Enforced layer rules** (import-linter, `pyproject.toml`, checked by `tests/test_architecture.py` on every test run): layers `output | clients` > `core` > `config` (a lower layer may not import a higher one; `output` and `clients` may not import each other); `core` must not import `clients`; `output` must not import `clients`, even indirectly. The only allowed exception is the known violation `core.currency_converter -> clients.fx_client` (listed under `ignore_imports`; to be removed in M3 — never add entries). The CLI (`stock_data_analyser.py`) and `logging_utils.py` are top-level modules and are not analysed.
 
-**Actual dependency directions** (not the idealised ones): `clients → core` (eodhd_client & factory import core), `core → clients` (currency_converter imports fx_client; processor calls yfinance), `output → core/clients` (methodology imports FinancialDataProcessor; executive_summary builds a CurrencyConverter → live FX call).
+**Actual dependency directions** (not the idealised ones): `clients → core` (eodhd_client & factory import core), `core → clients` (currency_converter imports fx_client; processor calls yfinance), `output → core` (methodology imports FinancialDataProcessor, which still pulls in `core.currency_converter` → `clients.fx_client`).
 
 ---
 
@@ -191,10 +191,10 @@ YoY EPS growth % (skip prev EPS ≤ 0), population SD, flag |z| > 2.0. Needs ≥
    - then convert to financials ccy; `fx_rate_used` recorded; historical FX fetched for fiscal year-ends.
 4. Highlights dividend/BVPS, forward dividend, TTM dividend: GBX relabelled GBP, then converted.
 5. CLI converts historical year-end prices (GBX÷100 for LSE, then historical FX, fallback to current).
-6. Executive Summary converts the 52-week range itself (new FX call).
+6. Executive Summary converts the 52-week range with `fx_rate_used` (the rate already used for the price); no FX calls happen in the output layer.
 7. All conversions are logged into `warnings` via `CurrencyConverter.get_consolidated_warning()` (except the plain GBX÷100 path).
 
-GBX logic lives in several places: `CurrencyConverter.convert` (÷100), `FXClient.get_rate` (GBX treated as GBP, no factor), `convert_batch` (no special case), `eodhd_client`, CLI, `executive_summary`. Change one → check all.
+GBX logic lives in several places: `CurrencyConverter.convert` (÷100), `FXClient.get_rate` (GBX treated as GBP, no factor), `convert_batch` (no special case), `eodhd_client`, CLI. Change one → check all.
 
 ---
 

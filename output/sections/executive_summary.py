@@ -206,20 +206,16 @@ class ExecutiveSummarySection(DossierSection):
             if exchange == "LSE" and original_stock_currency == "GBX":
                 trading_currency = "GBP"  # Values are already in GBP after London Fix
             
-            # Convert to unified currency if needed
+            # Convert to unified currency if needed, with the rate core already used for the price
+            # (fx_rate_used: price currency -> financials currency; same pair as trading_currency here)
             if trading_currency != unified_currency:
-                # Use CurrencyConverter for proper GBX/GBP handling
-                from core.currency_converter import CurrencyConverter
-                converter = CurrencyConverter()
+                fx_rate = self.financial_data.get('fx_rate_used')
                 
-                high_converted, high_success = converter.convert(week_52_high, trading_currency, unified_currency)
-                low_converted, low_success = converter.convert(week_52_low, trading_currency, unified_currency)
-                
-                if high_success and low_success:
+                if fx_rate:
                     high_display = format_price_display(week_52_high, trading_currency, 
-                                                       unified_currency, high_converted)
+                                                       unified_currency, week_52_high * fx_rate)
                     low_display = format_price_display(week_52_low, trading_currency, 
-                                                      unified_currency, low_converted)
+                                                      unified_currency, week_52_low * fx_rate)
                 else:
                     # Fallback if conversion unavailable
                     high_display = format_price_display(week_52_high, trading_currency, 
