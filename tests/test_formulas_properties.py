@@ -37,3 +37,29 @@ def test_ncav_deducts_claims_ahead_of_the_common(current_assets, total_liabiliti
     ncav = net_current_asset_value(current_assets, total_liabilities, claims)
     assert ncav == current_assets - total_liabilities - claims
     assert ncav <= net_current_asset_value(current_assets, total_liabilities)
+
+
+positive = st.floats(min_value=0.01, max_value=1e6, allow_nan=False, allow_infinity=False)
+
+
+@settings(max_examples=200)
+@given(eps=positive, book=positive)
+def test_graham_number_is_the_price_at_pe_15_times_pb_1_5(eps, book):
+    """√(22.5 × EPS × BV): at that price, P/E × P/B = 22.5 (= 15 × 1.5)."""
+    from core.formulas import graham_number
+    price = graham_number(eps, book)
+    assert abs((price / eps) * (price / book) - 22.5) < 1e-6 * 22.5
+
+
+@settings(max_examples=200)
+@given(value=positive, price=positive)
+def test_margin_of_safety_sign_follows_price_vs_value(value, price):
+    from core.formulas import margin_of_safety_pct
+    mos = margin_of_safety_pct(value, price)
+    assert (mos > 0) == (price < value)
+    assert mos <= 100
+
+
+def test_price_multiple():
+    from core.formulas import price_multiple
+    assert price_multiple(30.0, 2.0) == 15.0

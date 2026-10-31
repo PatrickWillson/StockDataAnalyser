@@ -10,8 +10,7 @@ This module implements strict Graham formulas for value investing analysis:
 - Defensive Investor Tests
 """
 
-import math
-from core.formulas import net_current_asset_value, tangible_equity
+from core.formulas import graham_number, margin_of_safety_pct, net_current_asset_value, tangible_equity
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Union
 
@@ -145,10 +144,7 @@ class GrahamCalculator:
         if eps <= 0:
             return "N/A"
         
-        # Calculate Graham Number
-        graham_number = math.sqrt(GRAHAM_MULTIPLIER * eps * tbvps)
-        
-        return round(graham_number, 2)
+        return round(graham_number(eps, tbvps), 2)
     
     def compute_normalized_graham_number(self, round_result: bool = True) -> Union[float, str]:
         """
@@ -205,7 +201,7 @@ class GrahamCalculator:
             return "N/A"
         
         # Calculate normalized Graham Number
-        normalized_graham_number = math.sqrt(GRAHAM_MULTIPLIER * eps_3yr_avg * tbvps)
+        normalized_graham_number = graham_number(eps_3yr_avg, tbvps)
         
         return round(normalized_graham_number, 2) if round_result else normalized_graham_number
     
@@ -690,8 +686,7 @@ class GrahamCalculator:
             if intrinsic_value == 0.00:
                 mos_percentage = "N/A"
             else:
-                mos_percentage = ((intrinsic_value - current_price) / intrinsic_value) * 100
-                mos_percentage = round(mos_percentage, 1)
+                mos_percentage = round(margin_of_safety_pct(intrinsic_value, current_price), 1)
         
         return {
             'mos_percentage': mos_percentage,

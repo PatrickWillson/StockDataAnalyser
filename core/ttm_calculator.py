@@ -14,8 +14,7 @@ Key Features:
 import logging
 from datetime import datetime
 from typing import Dict, Union, List, Any, Optional
-from config.graham_constants import GRAHAM_MULTIPLIER
-from core.formulas import net_current_asset_value, tangible_equity
+from core.formulas import graham_number, margin_of_safety_pct, net_current_asset_value, price_multiple, tangible_equity
 from config.ttm_config import (
     EARLIEST_PERIOD_YEAR,
     FREQUENCY_DETECTION_MAX_PERIODS,
@@ -603,8 +602,6 @@ class TTMCalculator:
         Returns:
             float rounded to 2 decimals, or "N/A" if invalid inputs
         """
-        import math
-        
         ttm_eps = ttm_metrics.get('ttm_eps', 0.0)
         ttm_tbvps = self.compute_ttm_tbvps(ttm_metrics)
         
@@ -623,10 +620,7 @@ class TTMCalculator:
             self.warnings.append("TTM Graham Number: TBVPS is negative")
             return "N/A"
         
-        # Calculate Graham Number
-        graham_number = math.sqrt(GRAHAM_MULTIPLIER * ttm_eps * ttm_tbvps)
-        
-        return round(graham_number, 2)
+        return round(graham_number(ttm_eps, ttm_tbvps), 2)
     
     def compute_ttm_net_net(self, ttm_metrics: Dict[str, Any]) -> Union[float, str]:
         """
@@ -683,9 +677,7 @@ class TTMCalculator:
             return "N/A"
         
         # Calculate margin of safety
-        margin_of_safety = ((graham_number - self.price) / graham_number) * 100
-        
-        return round(margin_of_safety, 1)
+        return round(margin_of_safety_pct(graham_number, self.price), 1)
     
     def compute_ttm_pe_pb_ratios(self, ttm_metrics: Dict[str, Any]) -> Dict[str, Union[float, str]]:
         """
@@ -710,7 +702,7 @@ class TTMCalculator:
             self.warnings.append("TTM P/E: EPS is zero or negative")
             ttm_pe_ratio = "N/A"
         else:
-            ttm_pe_ratio = round(self.price / ttm_eps, 2)
+            ttm_pe_ratio = round(price_multiple(self.price, ttm_eps), 2)
         
         # Calculate Book Value Per Share
         if shares_outstanding <= 0:
@@ -723,7 +715,7 @@ class TTMCalculator:
                 self.warnings.append("TTM P/B: Book value per share is zero or negative")
                 ttm_pb_ratio = "N/A"
             else:
-                ttm_pb_ratio = round(self.price / book_value_per_share, 2)
+                ttm_pb_ratio = round(price_multiple(self.price, book_value_per_share), 2)
         
         return {
             'ttm_pe_ratio': ttm_pe_ratio,

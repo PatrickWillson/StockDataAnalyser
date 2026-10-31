@@ -109,7 +109,7 @@ The ordered verdict rules are in `claude-output/REFACTOR_SCOPE.md` (D8) and will
 | Defensive P/E (4.6) | 15 × 3-year average EPS | Single-year EPS | F20 |
 | Defensive earnings growth (4.5) | Per-share, 3-year averages at both ends | Single-year total net income vs 10th year | F20 |
 | Defensive dividend record (4.4) | 20 uninterrupted years | Passes with fewer years if all paid | F20 |
-| Defensive P/B (4.7) | ≤ 1.5 × tangible book (§3.5), or P/E × P/B ≤ 22.5 | ≤ 1.5 × BVPS; 22.5 product computed but not used in the test | F20 (switch to TBVPS + product rule) |
+| Defensive P/B (4.7) | ≤ 1.5 × tangible book (§3.5), or P/E × P/B ≤ 22.5 with the P/E on three-year average earnings (the 4.6 multiplier) | ≤ 1.5 × BVPS; the 22.5 product is computed from single-year P/E × total-equity P/B and not used in the test | F20 (TBVPS, three-year-average multiplier, product rule) |
 | Book value for Graham Number | Tangible book (§3.5 decision) | Tangible book (TBVPS) | **Decided** — matches |
 | Adequate size (4.1) | Required | Not implemented | Ignored by decision D7 |
 | Enterprising price (5.1, 5.6) | Low P/E **and** < 120% net tangible assets | P/E < 10 **or** price < 1.2 × TBVPS | F20 (AND) |

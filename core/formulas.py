@@ -6,6 +6,10 @@ The functions are plain arithmetic: they accept floats or Decimals and leave rou
 "N/A" handling and warnings to the caller.
 """
 
+import math
+
+from config.graham_constants import GRAHAM_MULTIPLIER
+
 
 def tangible_equity(total_equity, intangible_assets, goodwill):
     """
@@ -26,3 +30,22 @@ def net_current_asset_value(current_assets, total_liabilities, claims_outside_eq
     Not working capital (current assets − current liabilities).
     """
     return current_assets - total_liabilities - claims_outside_equity
+
+
+def graham_number(eps, book_value_per_share):
+    """
+    √(22.5 × EPS × book value per share): the highest price passing both P/E ≤ 15 and
+    P/B ≤ 1.5 (GRAHAM_METHODOLOGY §4). Caller ensures both inputs are positive.
+    """
+    return math.sqrt(GRAHAM_MULTIPLIER * eps * book_value_per_share)
+
+
+def margin_of_safety_pct(value, price):
+    """Discount of price below an appraised value, in % of that value (§1.2). value must be non-zero."""
+    return (value - price) / value * 100
+
+
+def price_multiple(price, per_share_amount):
+    """Price ÷ a per-share figure (P/E on EPS, P/B on book value). per_share_amount must be non-zero."""
+    return price / per_share_amount
+
