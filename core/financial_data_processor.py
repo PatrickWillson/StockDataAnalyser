@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from core.currency_converter import CurrencyConverter
 from core.history import has_statement_data, is_dividend_only_year
+from core.statement_parsing import parse_balance_sheet_rows, parse_income_statement_rows
 from config.valuation_config import NORMALIZED_EPS_YEARS
 from config.data_quality_config import (ANNUAL_REPORT_MAX_AGE_MONTHS, DAYS_PER_MONTH, MAX_MISSING_HISTORY_YEARS,
                                          MIN_HISTORY_YEARS_RECOMMENDED)
@@ -210,63 +211,9 @@ class FinancialDataProcessor:
         Returns:
             Dictionary with year as key and financial data as value
         """
-        result = {}
-        try:
-            yearly_data = data.get('Financials', {}).get('Balance_Sheet', {}).get('yearly', {})
-            
-            if not yearly_data:
-                self._log("[DEBUG] No Balance Sheet yearly data found in API response")
-                return result
-            
-            # Sort by date descending
-            sorted_years = sorted(yearly_data.keys(), reverse=True)
-            self._log(f"[DEBUG] Found {len(sorted_years)} years of Balance Sheet data")
-            
-            for year in sorted_years:
-                year_data = yearly_data[year]
-                
-                # Extract debt components for total debt calculation
-                long_term_debt = self.sanitize_value(year_data.get('longTermDebt', 0))
-                short_term_debt = self.sanitize_value(year_data.get('shortTermDebt', 0))
-                total_debt_precalc = self.sanitize_value(year_data.get('shortLongTermDebtTotal', 0))
-                
-                # Total debt: sum the components when both are reported; when one is missing, prefer
-                # the reported total (a partial sum understates debt); otherwise sum what exists.
-                # Graham emphasized tracking total debt to distinguish companies that grow
-                # through retained earnings vs leverage.
-                if long_term_debt > 0 and short_term_debt > 0:
-                    total_debt = long_term_debt + short_term_debt
-                elif total_debt_precalc > 0:
-                    total_debt = total_debt_precalc
-                else:
-                    total_debt = long_term_debt + short_term_debt
-                
-                # Extract shares outstanding with fallback chain
-                # EODHD sometimes uses different field names for share count
-                shares_outstanding = (
-                    year_data.get('commonStockSharesOutstanding') or
-                    year_data.get('weightedAverageShsOut') or
-                    year_data.get('weightedAverageShsOutDil') or
-                    0
-                )
-                shares_outstanding = self.sanitize_value(shares_outstanding)
-                
-                result[year] = {
-                    'total_equity': self.sanitize_value(year_data.get('totalStockholderEquity')),
-                    'intangible_assets': self.sanitize_value(year_data.get('intangibleAssets')),
-                    'goodwill': self.sanitize_value(year_data.get('goodWill')),
-                    'current_assets': self.sanitize_value(year_data.get('totalCurrentAssets')),
-                    'current_liabilities': self.sanitize_value(year_data.get('totalCurrentLiabilities')),
-                    'total_liabilities': self.sanitize_value(year_data.get('totalLiab')),
-                    'long_term_debt': long_term_debt,
-                    'total_assets': self.sanitize_value(year_data.get('totalAssets')),
-                    'total_debt': total_debt,  # NEW: Total debt for Graham trend analysis
-                    'shares_outstanding': shares_outstanding,  # NEW: Track dilution/buybacks
-                }
-        except (KeyError, TypeError, AttributeError) as e:
-            self._log(f"[DEBUG] Error parsing Balance Sheet: {e}")
-        
-        return result
+        rows = parse_balance_sheet_rows(data, 'yearly')
+        self._log(f"[DEBUG] Found {len(rows)} periods of Balance Sheet data")
+        return {row.period_end: row.as_history_fields() for row in rows}
     
     def parse_income_statement(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
         """
@@ -275,48 +222,9 @@ class FinancialDataProcessor:
         Returns:
             Dictionary with year as key and financial data as value
         """
-        result = {}
-        try:
-            yearly_data = data.get('Financials', {}).get('Income_Statement', {}).get('yearly', {})
-            
-            if not yearly_data:
-                self._log("[DEBUG] No Income Statement yearly data found in API response")
-                return result
-            
-            # Sort by date descending
-            sorted_years = sorted(yearly_data.keys(), reverse=True)
-            self._log(f"[DEBUG] Found {len(sorted_years)} years of Income Statement data")
-            
-            for year in sorted_years:
-                year_data = yearly_data[year]
-                
-                # Try to get EPS directly, or calculate from netIncome / shares
-                eps_value = year_data.get('eps')
-                if eps_value is None or eps_value == 'NA' or eps_value == '':
-                    # Try alternative field names
-                    eps_value = year_data.get('basicEPS') or year_data.get('epsBasic')
-                    if eps_value:
-                        self._log(f"[DEBUG] Year {year}: Using alternative EPS field")
-                
-                # Use netIncomeFromContinuingOps (Graham's preferred metric) with fallback to netIncome
-                # Graham focused on earning power from continuing operations, excluding discontinued ops
-                net_income_value = year_data.get('netIncomeFromContinuingOps')
-                if net_income_value is None or net_income_value == 'NA' or net_income_value == '':
-                    net_income_value = year_data.get('netIncome')
-                    if net_income_value:
-                        self._log(f"[DEBUG] Year {year}: Using netIncome (netIncomeFromContinuingOps not available)")
-                else:
-                    self._log(f"[DEBUG] Year {year}: Using netIncomeFromContinuingOps")
-                
-                result[year] = {
-                    'revenue': self.sanitize_value(year_data.get('totalRevenue')),
-                    'net_income': self.sanitize_value(net_income_value),
-                    'eps': self.sanitize_value(eps_value),
-                }
-        except (KeyError, TypeError, AttributeError) as e:
-            self._log(f"[DEBUG] Error parsing Income Statement: {e}")
-        
-        return result
+        rows = parse_income_statement_rows(data, 'yearly')
+        self._log(f"[DEBUG] Found {len(rows)} periods of Income Statement data")
+        return {row.period_end: row.as_history_fields() for row in rows}
     
     def parse_quarterly_balance_sheet(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
         """
@@ -347,63 +255,9 @@ class FinancialDataProcessor:
                 ...
             }
         """
-        result = {}
-        try:
-            quarterly_data = data.get('Financials', {}).get('Balance_Sheet', {}).get('quarterly', {})
-            
-            if not quarterly_data:
-                self._log("[DEBUG] No Balance Sheet quarterly data found in API response")
-                return result
-            
-            # Sort by date descending (most recent first)
-            sorted_periods = sorted(quarterly_data.keys(), reverse=True)
-            self._log(f"[DEBUG] Found {len(sorted_periods)} quarters of Balance Sheet data")
-            
-            for period in sorted_periods:
-                period_data = quarterly_data[period]
-                
-                # Extract debt components for total debt calculation
-                long_term_debt = self.sanitize_value(period_data.get('longTermDebt', 0))
-                short_term_debt = self.sanitize_value(period_data.get('shortTermDebt', 0))
-                total_debt_precalc = self.sanitize_value(period_data.get('shortLongTermDebtTotal', 0))
-                
-                # Total debt: same rule as the annual parser
-                if long_term_debt > 0 and short_term_debt > 0:
-                    total_debt = long_term_debt + short_term_debt
-                elif total_debt_precalc > 0:
-                    total_debt = total_debt_precalc
-                else:
-                    total_debt = long_term_debt + short_term_debt
-                
-                # Extract shares outstanding with fallback chain
-                shares_outstanding = (
-                    period_data.get('commonStockSharesOutstanding') or
-                    period_data.get('weightedAverageShsOut') or
-                    period_data.get('weightedAverageShsOutDil') or
-                    0
-                )
-                shares_outstanding = self.sanitize_value(shares_outstanding)
-                
-                result[period] = {
-                    'total_equity': self.sanitize_value(period_data.get('totalStockholderEquity')),
-                    'intangible_assets': self.sanitize_value(period_data.get('intangibleAssets')),
-                    'goodwill': self.sanitize_value(period_data.get('goodWill')),
-                    'current_assets': self.sanitize_value(period_data.get('totalCurrentAssets')),
-                    'current_liabilities': self.sanitize_value(period_data.get('totalCurrentLiabilities')),
-                    'total_liabilities': self.sanitize_value(period_data.get('totalLiab')),
-                    'long_term_debt': long_term_debt,
-                    'total_assets': self.sanitize_value(period_data.get('totalAssets')),
-                    'total_debt': total_debt,
-                    'shares_outstanding': shares_outstanding,
-                }
-                
-                self._log(f"[DEBUG] Period {period}: Equity={result[period]['total_equity']:,.0f}, "
-                         f"Shares={result[period]['shares_outstanding']:,.0f}")
-        
-        except (KeyError, TypeError, AttributeError) as e:
-            self._log(f"[DEBUG] Error parsing quarterly Balance Sheet: {e}")
-        
-        return result
+        rows = parse_balance_sheet_rows(data, 'quarterly')
+        self._log(f"[DEBUG] Found {len(rows)} periods of quarterly Balance Sheet data")
+        return {row.period_end: row.as_history_fields() for row in rows}
     
     def parse_quarterly_income_statement(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
         """
@@ -431,53 +285,9 @@ class FinancialDataProcessor:
                 ...
             }
         """
-        result = {}
-        try:
-            quarterly_data = data.get('Financials', {}).get('Income_Statement', {}).get('quarterly', {})
-            
-            if not quarterly_data:
-                self._log("[DEBUG] No Income Statement quarterly data found in API response")
-                return result
-            
-            # Sort by date descending (most recent first)
-            sorted_periods = sorted(quarterly_data.keys(), reverse=True)
-            self._log(f"[DEBUG] Found {len(sorted_periods)} quarters of Income Statement data")
-            
-            for period in sorted_periods:
-                period_data = quarterly_data[period]
-                
-                # Try to get EPS directly, or calculate from netIncome / shares
-                eps_value = period_data.get('eps')
-                if eps_value is None or eps_value == 'NA' or eps_value == '':
-                    # Try alternative field names
-                    eps_value = period_data.get('basicEPS') or period_data.get('epsBasic')
-                    if eps_value:
-                        self._log(f"[DEBUG] Period {period}: Using alternative EPS field")
-                
-                # Use netIncomeFromContinuingOps (Graham's preferred metric) with fallback to netIncome
-                # Graham focused on earning power from continuing operations, excluding discontinued ops
-                net_income_value = period_data.get('netIncomeFromContinuingOps')
-                if net_income_value is None or net_income_value == 'NA' or net_income_value == '':
-                    net_income_value = period_data.get('netIncome')
-                    if net_income_value:
-                        self._log(f"[DEBUG] Period {period}: Using netIncome (netIncomeFromContinuingOps not available)")
-                else:
-                    self._log(f"[DEBUG] Period {period}: Using netIncomeFromContinuingOps")
-                
-                result[period] = {
-                    'revenue': self.sanitize_value(period_data.get('totalRevenue')),
-                    'net_income': self.sanitize_value(net_income_value),
-                    'eps': self.sanitize_value(eps_value),
-                }
-                
-                self._log(f"[DEBUG] Period {period}: Revenue={result[period]['revenue']:,.0f}, "
-                         f"Net Income={result[period]['net_income']:,.0f}, "
-                         f"EPS={result[period]['eps']:.2f}")
-        
-        except (KeyError, TypeError, AttributeError) as e:
-            self._log(f"[DEBUG] Error parsing quarterly Income Statement: {e}")
-        
-        return result
+        rows = parse_income_statement_rows(data, 'quarterly')
+        self._log(f"[DEBUG] Found {len(rows)} periods of quarterly Income Statement data")
+        return {row.period_end: row.as_history_fields() for row in rows}
     
     def merge_quarterly_data(self, balance_sheet: Dict[str, Dict[str, float]], 
                             income_statement: Dict[str, Dict[str, float]]) -> Dict[str, Any]:

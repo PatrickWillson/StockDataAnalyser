@@ -1,0 +1,64 @@
+"""
+core.statement_parsing: typed rows keep "not reported" (None) distinct from 0.0, and
+as_history_fields() reproduces the history-row shape (missing -> 0.0).
+"""
+
+import pytest
+
+from core.statement_parsing import (
+    BalanceSheetRow, IncomeStatementRow, optional_float,
+    parse_balance_sheet_rows, parse_income_statement_rows,
+)
+
+
+@pytest.mark.parametrize("raw,expected", [
+    (None, None), ("", None), ("NA", None), ("N/A", None), ("abc", None), ([1], None),
+    (0, 0.0), ("0", 0.0), (12, 12.0), ("-3.5", -3.5),
+])
+def test_optional_float(raw, expected):
+    assert optional_float(raw) == expected
+
+
+def test_balance_sheet_row_keeps_missing_distinct_from_zero():
+    row = BalanceSheetRow.from_eodhd("2023-12-31", {"totalStockholderEquity": 0, "goodWill": None})
+    assert row.total_equity == 0.0
+    assert row.goodwill is None
+    assert row.as_history_fields()["goodwill"] == 0.0
+
+
+def test_balance_sheet_field_mapping():
+    raw = {"totalStockholderEquity": 500, "intangibleAssets": 10, "goodWill": 20, "totalCurrentAssets": 300,
+           "totalCurrentLiabilities": 100, "totalLiab": 250, "longTermDebt": 80, "totalAssets": 750,
+           "commonStockSharesOutstanding": 50}
+    assert BalanceSheetRow.from_eodhd("2023-12-31", raw).as_history_fields() == {
+        "total_equity": 500.0, "intangible_assets": 10.0, "goodwill": 20.0, "current_assets": 300.0,
+        "current_liabilities": 100.0, "total_liabilities": 250.0, "long_term_debt": 80.0,
+        "total_assets": 750.0, "total_debt": 80.0, "shares_outstanding": 50.0}
+
+
+def test_share_count_fallback_chain():
+    assert BalanceSheetRow.from_eodhd("d", {"weightedAverageShsOut": 7}).shares_outstanding == 7.0
+    assert BalanceSheetRow.from_eodhd("d", {"weightedAverageShsOutDil": 9}).shares_outstanding == 9.0
+    assert BalanceSheetRow.from_eodhd("d", {}).shares_outstanding == 0.0
+
+
+def test_income_statement_chains():
+    row = IncomeStatementRow.from_eodhd("d", {"eps": "NA", "basicEPS": 2.0, "netIncomeFromContinuingOps": None,
+                                              "netIncome": 40, "totalRevenue": 100})
+    assert (row.eps, row.net_income, row.revenue) == (2.0, 40.0, 100.0)
+
+
+def test_rows_newest_first_for_either_period():
+    data = {"Financials": {"Income_Statement": {"quarterly": {"2023-03-31": {"eps": 1}, "2023-06-30": {"eps": 2}}}}}
+    assert [r.period_end for r in parse_income_statement_rows(data, "quarterly")] == ["2023-06-30", "2023-03-31"]
+    assert parse_income_statement_rows(data, "yearly") == []
+
+
+def test_malformed_row_keeps_rows_parsed_so_far():
+    data = {"Financials": {"Balance_Sheet": {"yearly": {"2023-12-31": {"totalAssets": 1}, "2022-12-31": "junk"}}}}
+    assert [r.period_end for r in parse_balance_sheet_rows(data)] == ["2023-12-31"]
+
+
+def test_unknown_period_is_rejected():
+    with pytest.raises(ValueError):
+        parse_balance_sheet_rows({}, "monthly")

@@ -54,6 +54,7 @@ clients/
   fx_client.py              FXClient: yfinance "{A}{B}=X" rates, current + historical, per-instance cache
   factory.py                ClientFactory: builds clients (validates API key)
 core/
+  statement_parsing.py      typed BalanceSheetRow / IncomeStatementRow (Optional fields; None = not reported) for yearly and quarterly statements; holds the raw EODHD key names; as_history_fields() → history-row dicts
   historical_prices.py      apply_year_end_prices(): year-end price currency handling + merge into history
   financial_data_assembler.py  FinancialDataAssembler: raw fundamentals + dividends → financial_data (price, London Fix, FX, ratios, cross-validation, data-quality warnings)
   errors.py                 DataSourceError hierarchy (EODHDAuthError, EODHDRateLimitError, EODHDRequestError, PriceUnavailableError) — raised instead of exiting
@@ -110,7 +111,7 @@ claude-output/              agent-written markdown (gitignored)
 | `quarterly_data` | `{'balance_sheet': {date: row}, 'income_statement': {date: row}}` for TTM |
 | unused by consumers | `dividend_currency`, `price_currency_before_fx`, `ttm_dividend_currency`, `dividend_per_share`, `dividend_yield`, `enterprise_value`, `api_last_update` |
 
-### 4.2 `history` row (built by `FinancialDataProcessor.merge_financial_data`)
+### 4.2 `history` row (built by `FinancialDataProcessor.merge_financial_data`; statement fields come from `core.statement_parsing` rows via `as_history_fields()`)
 `revenue, net_income, eps, dividend, total_equity, intangible_assets, goodwill, current_assets, current_liabilities, total_liabilities, long_term_debt, total_assets, total_debt, shares_outstanding, wcps, payout_ratio, year_end_price`
 
 - Missing numbers are **0.0** (via `sanitize_value`, which also maps JSON null, `"NA"` and non-numeric junk to 0.0), not None. `wcps` may be `"N/A"`; `payout_ratio` is a formatted string (`"12.3%"`, `"0.0%"`, `"N/A"`); `year_end_price` may be None.
@@ -243,7 +244,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising `_test_*` method and `_determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1218 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1235 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 
