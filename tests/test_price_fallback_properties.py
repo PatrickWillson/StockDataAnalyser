@@ -60,8 +60,7 @@ def test_yfinance_is_primary_source_with_correct_labeling(yf_price, eodhd_price)
     # Get price
     price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="TEST.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
@@ -69,7 +68,6 @@ def test_yfinance_is_primary_source_with_correct_labeling(yf_price, eodhd_price)
     if yf_price is not None:
         assert price == yf_price
         assert source == 'yfinance'
-        assert yf_client.get_price_called, "Should call yfinance when client provided"
         assert len(warnings) == 1, "Should warn about price source"
         assert "yfinance" in warnings[0].lower()
         assert "primary source" in warnings[0].lower()
@@ -78,7 +76,6 @@ def test_yfinance_is_primary_source_with_correct_labeling(yf_price, eodhd_price)
     elif eodhd_price is not None:
         assert price == eodhd_price
         assert source == 'EODHD'
-        assert yf_client.get_price_called, "Should call yfinance first even if it returns None"
         assert len(warnings) == 1, "Should warn when using EODHD fallback"
         assert "EODHD" in warnings[0]
         assert "yfinance unavailable" in warnings[0]
@@ -87,7 +84,6 @@ def test_yfinance_is_primary_source_with_correct_labeling(yf_price, eodhd_price)
     else:
         assert price == 0.0
         assert source == 'Missing'
-        assert yf_client.get_price_called, "Should attempt yfinance even if it returns None"
         assert len(warnings) == 0, "Should not warn when both sources fail"
 
 
@@ -115,15 +111,13 @@ def test_yfinance_always_takes_priority(price):
     
     result_price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="TEST.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
     # Should use yfinance price, not EODHD
     assert result_price == price
     assert source == 'yfinance'
-    assert yf_client.get_price_called
     assert len(warnings) == 1
     assert "yfinance" in warnings[0].lower()
 
@@ -150,8 +144,7 @@ def test_yfinance_source_adds_warning(yf_price):
     
     result_price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="TEST.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
@@ -194,8 +187,7 @@ def test_eodhd_price_from_any_location(location, price):
     
     result_price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="TEST.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
@@ -230,15 +222,13 @@ def test_fallback_to_eodhd_when_yfinance_fails(eodhd_price):
     
     result_price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="TEST.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
     # Should fall back to EODHD
     assert result_price == eodhd_price
     assert source == 'EODHD'
-    assert yf_client.get_price_called, "Should attempt yfinance first"
     assert len(warnings) == 1
     assert "EODHD" in warnings[0]
     assert "yfinance unavailable" in warnings[0]
@@ -250,34 +240,29 @@ def test_fallback_to_eodhd_when_yfinance_fails(eodhd_price):
 )
 def test_ticker_passed_to_yfinance_client(ticker, yf_price):
     """
-    Property: Ticker should be correctly passed to yfinance client.
-    
-    For any ticker, when yfinance is used, the ticker should be passed
-    correctly to the yfinance client.
-    
+    Property: the client fetching the data passes the ticker unchanged to the yfinance client,
+    and the fetched price becomes the yfinance-sourced price.
+
+    The fetch happens in EODHDClient.fetch_all_data (the I/O shell); core receives the price.
+
     **Validates: Requirements 1.1**
     """
-    # Ensure ticker has a dot (valid format)
+    from unittest.mock import Mock, patch
+    from clients.eodhd_client import EODHDClient
+
     if '.' not in ticker:
         ticker = ticker + ".US"
-    
-    data = {
-        'Highlights': {},
-        'General': {}
-    }
-    
+
     yf_client = MockYFinanceClient(price_to_return=yf_price)
-    warnings = []
-    
-    FinancialDataProcessor.get_current_price(
-        data,
-        yf_client=yf_client,
-        ticker=ticker,
-        warnings=warnings
-    )
-    
+    client = EODHDClient("test_key", fx_client=Mock())
+    with patch.object(client, "_make_eodhd_request", return_value={'Highlights': {}, 'General': {}}), \
+         patch.object(client, "_fetch_dividend_history", return_value=None):
+        result = client.fetch_all_data(ticker, yf_client=yf_client)
+
     assert yf_client.get_price_called
     assert yf_client.ticker_received == ticker
+    assert result['price'] == yf_price
+    assert result['price_source'] == 'yfinance'
 
 
 @given(
@@ -303,15 +288,13 @@ def test_sanitizes_invalid_yfinance_values(na_value):
     
     result_price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="TEST.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
     # Should fall back to EODHD since yfinance value is invalid
     assert result_price == 100.0
     assert source == 'EODHD'
-    assert yf_client.get_price_called
 
 
 
@@ -342,8 +325,7 @@ def test_no_unnecessary_eodhd_price_extraction(yf_price, eodhd_price):
     
     result_price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="TEST.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
@@ -389,8 +371,7 @@ def test_price_validation_is_preserved(source, price):
     
     result_price, result_source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="TEST.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
@@ -427,8 +408,7 @@ def test_invalid_prices_are_rejected(invalid_price):
     
     result_price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="TEST.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     

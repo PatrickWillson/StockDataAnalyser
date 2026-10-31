@@ -85,16 +85,13 @@ def test_yfinance_primary_when_available():
     
     price, source, _ = FinancialDataProcessor.get_current_price(
         data, 
-        yf_client=yf_client, 
-        ticker="AAPL.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True, 
         warnings=warnings
     )
     
     # yfinance should be used as primary source
     assert price == 175.25
     assert source == 'yfinance'
-    assert yf_client.get_price_called
-    assert yf_client.ticker_received == "AAPL.US"
     assert len(warnings) == 1
     assert "Price Source: yfinance" in warnings[0]
 
@@ -112,15 +109,13 @@ def test_yfinance_fallback_to_eodhd():
     
     price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="AAPL.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
     # Should fall back to EODHD
     assert price == 100.00
     assert source == 'EODHD'
-    assert yf_client.get_price_called
     # Should have a warning about falling back to EODHD
     assert len(warnings) == 1
     assert "EODHD" in warnings[0]
@@ -138,8 +133,7 @@ def test_warning_message_when_using_yfinance():
     
     price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="YU.LSE",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
@@ -160,14 +154,12 @@ def test_returns_zero_when_both_sources_fail():
     
     price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="INVALID.XX",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
     assert price == 0.0
     assert source == 'Missing'
-    assert yf_client.get_price_called
     assert len(warnings) == 0  # No warning when both fail
 
 
@@ -199,15 +191,13 @@ def test_yfinance_takes_priority_over_eodhd():
     
     price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker="TEST.US",
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
     # yfinance should take priority
     assert price == 200.00
     assert source == 'yfinance'
-    assert yf_client.get_price_called
     assert len(warnings) == 1
     assert "Price Source: yfinance" in warnings[0]
 
@@ -252,8 +242,7 @@ def test_yfinance_lse_price_used_as_is():
     warnings = []
     price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker='YU.LSE',
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     
@@ -288,8 +277,7 @@ def test_yfinance_non_lse_price_no_conversion():
     warnings = []
     price, source, _ = FinancialDataProcessor.get_current_price(
         data,
-        yf_client=yf_client,
-        ticker='AAPL.US',
+        yf_price=yf_client.price_to_return, yfinance_attempted=True,
         warnings=warnings
     )
     

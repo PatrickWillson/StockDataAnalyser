@@ -37,7 +37,8 @@ class FinancialDataAssembler:
         self.debug = debug
     
     def assemble(self, data: Dict[str, Any], dividend_api_data: Optional[List[Dict[str, Any]]],
-                 ticker: str, yf_client: Optional[Any] = None) -> Dict[str, Any]:
+                 ticker: str, yf_price: Optional[float] = None,
+                 yfinance_attempted: bool = False) -> Dict[str, Any]:
         """
         Build the financial_data dict (see docs/CODEBASE_GUIDE.md §4.1).
 
@@ -45,7 +46,8 @@ class FinancialDataAssembler:
             data: Raw EODHD fundamentals JSON
             dividend_api_data: Records from the EODHD Dividend API, or None
             ticker: Ticker as given to the CLI (e.g. AAPL.US)
-            yf_client: Optional yfinance client (primary price source)
+            yf_price: Current price from yfinance (primary source), fetched by the caller, or None
+            yfinance_attempted: True if the caller queried yfinance (even without a result)
 
         Raises:
             PriceUnavailableError: no current price from yfinance or EODHD
@@ -176,7 +178,8 @@ class FinancialDataAssembler:
                                                       outstanding_shares_by_year=shares_by_year)
         
         # Get current price
-        price, price_source, is_from_market_cap = self.processor.get_current_price(data, yf_client=yf_client, ticker=ticker, warnings=warnings)
+        price, price_source, is_from_market_cap = self.processor.get_current_price(
+            data, yf_price=yf_price, warnings=warnings, yfinance_attempted=yfinance_attempted)
         
         # Check if price is available
         if price == 0.0 or price_source == 'Missing':

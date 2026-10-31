@@ -519,8 +519,7 @@ def test_yu_lse_complete_flow_with_yfinance_fallback():
     # Step 1: Get price with yfinance
     price, price_source, is_from_market_cap = FinancialDataProcessor.get_current_price(
         mock_data,
-        yf_client=mock_yf_client,
-        ticker='YU.LSE',
+        yf_price=mock_yf_client.get_price.return_value, yfinance_attempted=True,
         warnings=warnings
     )
     
@@ -634,7 +633,6 @@ def test_yu_lse_complete_flow_with_yfinance_fallback():
     # Assert: Verify yfinance was used
     assert price == 1650.0, f"Expected 1650.0 GBX, got {price}"
     assert any("yfinance" in w for w in warnings), "Should have yfinance warning"
-    mock_yf_client.get_price.assert_called_once_with('YU.LSE')
     
     # Assert: Verify EPV includes loss years
     epv_result = metrics.get('epv')
@@ -689,8 +687,7 @@ def test_fatal_error_when_both_price_sources_fail():
     warnings = []
     price, price_source, _ = FinancialDataProcessor.get_current_price(
         mock_data,
-        yf_client=mock_yf_client,
-        ticker='TEST.US',
+        yf_price=mock_yf_client.get_price.return_value, yfinance_attempted=True,
         warnings=warnings
     )
     

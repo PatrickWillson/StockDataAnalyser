@@ -109,8 +109,9 @@ class FinancialDataProcessor:
             return {}
     
     @staticmethod
-    def get_current_price(data: Dict[str, Any], yf_client: Optional[Any] = None,
-                         ticker: Optional[str] = None, warnings: Optional[List[str]] = None) -> tuple[float, str, bool]:
+    def get_current_price(data: Dict[str, Any], yf_price: Optional[float] = None,
+                          warnings: Optional[List[str]] = None,
+                          yfinance_attempted: bool = False) -> tuple[float, str, bool]:
         """
         Extract current price with yfinance as primary source.
         
@@ -123,9 +124,11 @@ class FinancialDataProcessor:
         
         Args:
             data: EODHD API response
-            yf_client: Optional yfinance client for price fetching (primary source)
-            ticker: Ticker symbol (required for yfinance)
+            yf_price: Current price already fetched from yfinance (primary source), or None
             warnings: List to append warnings to
+            yfinance_attempted: True if yfinance was queried (even if it returned no price);
+                                the EODHD fallback warning then says "yfinance unavailable"
+
             
         Returns:
             Tuple of (price, source, is_from_market_cap) where:
@@ -140,12 +143,10 @@ class FinancialDataProcessor:
         if warnings is None:
             warnings = []
         
-        # Try yfinance first (primary source)
-        if yf_client and ticker:
-            yf_price = yf_client.get_price(ticker)
-            if yf_price and yf_price > 0:
-                warnings.append("Price Source: yfinance (primary source)")
-                return yf_price, 'yfinance', False
+        # yfinance first (primary source); the caller fetches it, so this function does no I/O
+        if yf_price and yf_price > 0:
+            warnings.append("Price Source: yfinance (primary source)")
+            return yf_price, 'yfinance', False
         
         # Fall back to EODHD price extraction
         try:
@@ -162,7 +163,7 @@ class FinancialDataProcessor:
                 shares_outstanding = FinancialDataProcessor.sanitize_value(shares_outstanding)
                 if market_cap > 0 and shares_outstanding > 0:
                     calculated_price = market_cap / shares_outstanding
-                    if yf_client:
+                    if yfinance_attempted:
                         warnings.append("Price Source: EODHD (calculated from MarketCap / Shares, yfinance unavailable)")
                     else:
                         warnings.append("Price Source: EODHD (calculated from MarketCap / Shares)")
@@ -173,7 +174,7 @@ class FinancialDataProcessor:
             if price is not None:
                 sanitized = FinancialDataProcessor.sanitize_value(price)
                 if sanitized > 0:
-                    if yf_client:
+                    if yfinance_attempted:
                         warnings.append("Price Source: EODHD (yfinance unavailable)")
                     return sanitized, 'EODHD', False
             
@@ -183,7 +184,7 @@ class FinancialDataProcessor:
             if price is not None:
                 sanitized = FinancialDataProcessor.sanitize_value(price)
                 if sanitized > 0:
-                    if yf_client:
+                    if yfinance_attempted:
                         warnings.append("Price Source: EODHD (yfinance unavailable)")
                     return sanitized, 'EODHD', False
             
@@ -192,7 +193,7 @@ class FinancialDataProcessor:
             if price is not None:
                 sanitized = FinancialDataProcessor.sanitize_value(price)
                 if sanitized > 0:
-                    if yf_client:
+                    if yfinance_attempted:
                         warnings.append("Price Source: EODHD (yfinance unavailable)")
                     return sanitized, 'EODHD', False
             

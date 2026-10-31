@@ -85,7 +85,7 @@ claude-output/              agent-written markdown (gitignored)
 
 **Enforced layer rules** (import-linter, `pyproject.toml`, checked by `tests/test_architecture.py` on every test run): layers `output | clients` > `core` > `config` (a lower layer may not import a higher one; `output` and `clients` may not import each other); `core` must not import `clients`; `output` must not import `clients`, even indirectly. There are no exceptions (`ignore_imports`) — never add one. `CurrencyConverter` takes its FX source by injection (`RateSource` protocol); `ClientFactory` supplies the real `FXClient`. The CLI (`stock_data_analyser.py`) and `logging_utils.py` are top-level modules and are not analysed.
 
-**Actual dependency directions:** `clients → core` (eodhd_client & factory use core's processor/converter — allowed by the layers; assembly logic lives in `core/financial_data_assembler.py`); `core` imports nothing from `clients` (FX rates and the yfinance price client are injected objects); `output → core` (methodology imports FinancialDataProcessor).
+**Actual dependency directions:** `clients → core` (eodhd_client & factory use core's processor/converter — allowed by the layers; assembly logic lives in `core/financial_data_assembler.py`); `core` imports nothing from `clients` and makes no network calls of its own: the price is fetched by the client and passed in, and FX rates come through the injected `RateSource` port (`get_rate`, `fetch_historical_rates`); `output → core` (methodology imports FinancialDataProcessor).
 
 ---
 
@@ -187,7 +187,7 @@ YoY EPS growth % (skip prev EPS ≤ 0), population SD, flag |z| > 2.0. Needs ≥
 
 1. Trading ccy = `General.CurrencyCode`; financials ccy = balance-sheet `currency_symbol`; unified = financials.
 2. Dividends: `convert_batch` to financials ccy at **current** rate.
-3. Price: yfinance → EODHD fallbacks (`get_current_price`). Then:
+3. Price: `EODHDClient.fetch_all_data` fetches the yfinance price (I/O); `FinancialDataProcessor.get_current_price(data, yf_price, warnings, yfinance_attempted)` picks it if positive, else EODHD fallbacks (MarketCap/shares, Highlights/General SharePrice, LastPrice) — no I/O in core. Then:
    - LSE & P/E > 500 → ÷100, label GBP (London Fix, also adjusts 52-week range)
    - else GBX (not from market cap) → ÷100
    - then convert to financials ccy; `fx_rate_used` recorded; historical FX fetched for fiscal year-ends.
