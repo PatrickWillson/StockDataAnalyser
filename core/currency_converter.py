@@ -6,25 +6,39 @@ Centralizes currency logic for maintainability and testability.
 """
 
 import logging
-from typing import List, Tuple, Optional, Dict
-from clients.fx_client import FXClient
+from typing import List, Tuple, Optional, Dict, Protocol
 from config.data_quality_config import LONDON_FIX_PE_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
 
+class RateSource(Protocol):
+    """Anything that can supply an FX rate (e.g. clients.fx_client.FXClient)."""
+
+    def get_rate(self, from_currency: str, to_currency: str) -> Optional[float]:
+        ...
+
+
 class CurrencyConverter:
     """Handles all currency conversion operations."""
     
-    def __init__(self, fx_client: Optional[FXClient] = None):
+    def __init__(self, fx_client: Optional[RateSource] = None):
         """
-        Initialize currency converter with optional FX client.
+        Initialize currency converter.
         
         Args:
-            fx_client: Optional FX client for fetching rates (creates one if not provided)
+            fx_client: Source of FX rates, injected by the caller (core never creates one).
+                       Without it, cross-currency conversions report failure; same-currency
+                       and GBX/GBP conversions still work.
         """
-        self.fx_client = fx_client or FXClient()
+        self.fx_client = fx_client
         self.conversion_history: List[str] = []
+    
+    def _get_rate(self, from_currency: str, to_currency: str) -> Optional[float]:
+        """Rate from the injected source, or None when no source was provided."""
+        if self.fx_client is None:
+            return None
+        return self.fx_client.get_rate(from_currency, to_currency)
     
     def convert(self, amount: float, from_currency: str, 
                 to_currency: str) -> Tuple[float, bool]:
@@ -65,7 +79,7 @@ class CurrencyConverter:
             return converted_amount, True
         
         # Get FX rate
-        fx_rate = self.fx_client.get_rate(from_currency, to_currency)
+        fx_rate = self._get_rate(from_currency, to_currency)
         
         if fx_rate:
             converted_amount = amount * fx_rate
@@ -142,7 +156,7 @@ class CurrencyConverter:
             return amounts.copy()
         
         # Get FX rate once for all conversions
-        fx_rate = self.fx_client.get_rate(from_currency, to_currency)
+        fx_rate = self._get_rate(from_currency, to_currency)
         
         if fx_rate:
             converted = {key: value * fx_rate for key, value in amounts.items()}

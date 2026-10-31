@@ -81,9 +81,9 @@ data/                       generated dossiers (gitignored)
 claude-output/              agent-written markdown (gitignored)
 ```
 
-**Enforced layer rules** (import-linter, `pyproject.toml`, checked by `tests/test_architecture.py` on every test run): layers `output | clients` > `core` > `config` (a lower layer may not import a higher one; `output` and `clients` may not import each other); `core` must not import `clients`; `output` must not import `clients`, even indirectly. The only allowed exception is the known violation `core.currency_converter -> clients.fx_client` (listed under `ignore_imports`; to be removed in M3 — never add entries). The CLI (`stock_data_analyser.py`) and `logging_utils.py` are top-level modules and are not analysed.
+**Enforced layer rules** (import-linter, `pyproject.toml`, checked by `tests/test_architecture.py` on every test run): layers `output | clients` > `core` > `config` (a lower layer may not import a higher one; `output` and `clients` may not import each other); `core` must not import `clients`; `output` must not import `clients`, even indirectly. There are no exceptions (`ignore_imports`) — never add one. `CurrencyConverter` takes its FX source by injection (`RateSource` protocol); `ClientFactory` supplies the real `FXClient`. The CLI (`stock_data_analyser.py`) and `logging_utils.py` are top-level modules and are not analysed.
 
-**Actual dependency directions** (not the idealised ones): `clients → core` (eodhd_client & factory import core), `core → clients` (currency_converter imports fx_client; processor calls yfinance), `output → core` (methodology imports FinancialDataProcessor, which still pulls in `core.currency_converter` → `clients.fx_client`).
+**Actual dependency directions:** `clients → core` (eodhd_client & factory use core's processor/converter — allowed by the layers; the client still performs assembly logic, moved to core in M3.4); `core` imports nothing from `clients` (FX rates and the yfinance price client are injected objects); `output → core` (methodology imports FinancialDataProcessor).
 
 ---
 

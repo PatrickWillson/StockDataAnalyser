@@ -27,7 +27,7 @@ class FinancialDataProcessor:
             currency_converter: Optional currency converter for currency conversions
             debug: Enable debug logging (default: False)
         """
-        self.currency_converter = currency_converter or CurrencyConverter()
+        self.currency_converter = currency_converter
         self.debug = debug
     
     def _log(self, message: str):

@@ -94,4 +94,5 @@ class ClientFactory:
             >>> fx_client = factory.create_fx_client()
             >>> converter = factory.create_currency_converter(fx_client=fx_client)
         """
-        return CurrencyConverter(fx_client=fx_client)
+        # The composition root supplies the real FX source; core never creates one
+        return CurrencyConverter(fx_client=fx_client or FXClient())
