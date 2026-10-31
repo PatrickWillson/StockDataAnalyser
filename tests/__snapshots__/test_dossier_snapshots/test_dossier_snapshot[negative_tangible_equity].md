@@ -357,7 +357,7 @@ TTM calculations provide more current financial metrics by using the most recent
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
 | 2023 | 383285000000.0 | 96995000000.0 | 6.237596109751595 | 0.9544014007404859 | 4.0 | ⚠️ -0.11 | 15.3% | 106.02B | 15.550B | 187.45 | 30.1 | 46.9 |
 | 2022 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.927843295904111 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2022 | 394328000000.0 | 99803000000.0 | 6.259821838783072 | 0.927843295904111 | 3.18 | ⚠️ -1.17 | 14.8% | 98.96B | 15.943B | 172.45 | 27.5 | 54.2 |
+| 2022 | 394328000000.0 | 99803000000.0 | 6.259821838783072 | 0.927843295904111 | 3.18 | ⚠️ -1.17 | 14.8% | 120.07B | 15.943B | 172.45 | 27.5 | 54.2 |
 | 2021 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.8806957124783874 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2021 | 365817000000.0 | 94680000000.0 | 5.763756829850952 | 0.8806957124783874 | 3.84 | 0.57 | 15.3% | 109.11B | 16.427B | 158.66 | 27.5 | 41.3 |
 | 2020 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.8095565685873096 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |

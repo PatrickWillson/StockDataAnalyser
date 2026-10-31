@@ -331,3 +331,25 @@ class TestEpsFallbackShares:
         is_ = {"2021-12-31": {"net_income": 400.0, "eps": 1.5, "revenue": 1.0}}
         history = FinancialDataProcessor.merge_financial_data(self.BS, is_, {}, 100.0, {})
         assert history["2021-12-31"]["eps"] == 1.5
+
+
+class TestTotalDebtWithOneComponentMissing:
+    """A single reported debt component is a partial figure; the reported total wins over it."""
+
+    @staticmethod
+    def _total_debt(year_data):
+        processor = FinancialDataProcessor(currency_converter=object())
+        data = {"Financials": {"Balance_Sheet": {"yearly": {"2022-12-31": year_data}}}}
+        return processor.parse_balance_sheet(data)["2022-12-31"]["total_debt"]
+
+    def test_long_term_only_uses_reported_total(self):
+        assert self._total_debt({"longTermDebt": 98_959, "shortLongTermDebtTotal": 120_069}) == 120_069
+
+    def test_short_term_only_uses_reported_total(self):
+        assert self._total_debt({"shortTermDebt": 5_000, "shortLongTermDebtTotal": 20_000}) == 20_000
+
+    def test_single_component_without_total_is_used(self):
+        assert self._total_debt({"longTermDebt": 98_959}) == 98_959
+
+    def test_both_components_are_summed(self):
+        assert self._total_debt({"longTermDebt": 100, "shortTermDebt": 50, "shortLongTermDebtTotal": 200}) == 150

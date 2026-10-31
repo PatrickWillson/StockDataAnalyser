@@ -229,15 +229,16 @@ class FinancialDataProcessor:
                 short_term_debt = self.sanitize_value(year_data.get('shortTermDebt', 0))
                 total_debt_precalc = self.sanitize_value(year_data.get('shortLongTermDebtTotal', 0))
                 
-                # Calculate total debt (prefer components, fallback to precalculated)
+                # Total debt: sum the components when both are reported; when one is missing, prefer
+                # the reported total (a partial sum understates debt); otherwise sum what exists.
                 # Graham emphasized tracking total debt to distinguish companies that grow
-                # through retained earnings vs leverage
-                if long_term_debt > 0 or short_term_debt > 0:
+                # through retained earnings vs leverage.
+                if long_term_debt > 0 and short_term_debt > 0:
                     total_debt = long_term_debt + short_term_debt
                 elif total_debt_precalc > 0:
                     total_debt = total_debt_precalc
                 else:
-                    total_debt = 0
+                    total_debt = long_term_debt + short_term_debt
                 
                 # Extract shares outstanding with fallback chain
                 # EODHD sometimes uses different field names for share count
@@ -365,13 +366,13 @@ class FinancialDataProcessor:
                 short_term_debt = self.sanitize_value(period_data.get('shortTermDebt', 0))
                 total_debt_precalc = self.sanitize_value(period_data.get('shortLongTermDebtTotal', 0))
                 
-                # Calculate total debt (prefer components, fallback to precalculated)
-                if long_term_debt > 0 or short_term_debt > 0:
+                # Total debt: same rule as the annual parser
+                if long_term_debt > 0 and short_term_debt > 0:
                     total_debt = long_term_debt + short_term_debt
                 elif total_debt_precalc > 0:
                     total_debt = total_debt_precalc
                 else:
-                    total_debt = 0
+                    total_debt = long_term_debt + short_term_debt
                 
                 # Extract shares outstanding with fallback chain
                 shares_outstanding = (
