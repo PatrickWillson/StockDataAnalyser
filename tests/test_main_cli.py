@@ -7,6 +7,7 @@ These tests verify the CLI handles various scenarios correctly.
 import pytest
 import os
 from unittest.mock import Mock, patch
+from clients.errors import PriceUnavailableError
 
 
 def test_missing_api_key_error():
@@ -276,16 +277,6 @@ def test_fatal_error_when_both_sources_fail():
     Test system exits with code 1 when both yfinance and EODHD fail to provide price.
     Validates: Requirements 1.5
     """
-    # Arrange: Mock financial data with price = 0.0 (both sources failed)
-    mock_financial_data = {
-        'ticker': 'NOPRICE',
-        'exchange': 'NASDAQ',
-        'currency': 'USD',
-        'price': 0.0,  # Both sources failed
-        'ceo_name': 'Test CEO',
-        'history': {},
-        'warnings': []
-    }
     
     with patch.dict(os.environ, {'EODHD_API_KEY': 'test_key'}):
         import importlib
@@ -298,8 +289,10 @@ def test_fatal_error_when_both_sources_fail():
                     # Capture logging output
                     with patch('logging.Logger.error') as mock_log_error:
                         # Setup mocks
+                        # The client raises when neither source provides a price
                         mock_client_instance = Mock()
-                        mock_client_instance.fetch_all_data.return_value = mock_financial_data
+                        mock_client_instance.fetch_all_data.side_effect = PriceUnavailableError(
+                            "Current price unavailable from yfinance and EODHD for NOPRICE.US")
                         mock_create_eodhd.return_value = mock_client_instance
                         
                         mock_yf_instance = Mock()

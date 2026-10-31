@@ -5,6 +5,7 @@ import logging
 from dotenv import load_dotenv
 
 # Import Core Modules
+from clients.errors import DataSourceError, PriceUnavailableError
 from clients.factory import ClientFactory
 from core.graham_math import GrahamCalculator
 from core.anomaly_detector import AnomalyDetector
@@ -76,22 +77,7 @@ def main():
         client = ClientFactory.create_eodhd_client(API_KEY, debug=args.debug)
         yf_client = ClientFactory.create_yfinance_client(debug=args.debug)
         financial_data = client.fetch_all_data(ticker, yf_client=yf_client)
-        
-        # Check if price is available - fatal error if not
         price = financial_data.get('price', 0.0)
-        if price == 0.0:
-            logger.error("="*80)
-            logger.error("FATAL ERROR: Current price unavailable from all sources")
-            logger.error("="*80)
-            logger.error("Graham's Principle: 'No data is better than wrong data.'")
-            logger.error("The system cannot generate a reliable valuation without current price data.")
-            logger.error("Please verify the ticker symbol or try again later.")
-            logger.error("Data sources attempted:")
-            logger.error("  1. yfinance (Yahoo Finance - primary source)")
-            logger.error("  2. EODHD API (Highlights.SharePrice, General.SharePrice, General.LastPrice)")
-            logger.error("Both sources failed to provide current price data.")
-            logger.error("="*80)
-            sys.exit(1)
         
         # 1.5. Fetch Historical Prices (for Historical P/E and P/B columns)
         logger.info("[2/6] Fetching Historical Prices from yfinance...")
@@ -284,9 +270,33 @@ def main():
         dossier_content = generator.generate()
         save_dossier(ticker, dossier_content)
 
+    except PriceUnavailableError as e:
+        _log_price_unavailable(ticker, e)
+        sys.exit(1)
+    except DataSourceError as e:
+        logger.error(str(e))
+        sys.exit(1)
     except Exception as e:
         logger.critical(f"Failed to process {ticker}: {str(e)}")
         sys.exit(1)
+
+
+def _log_price_unavailable(ticker, error):
+    """Explain why no dossier was produced when no current price is available."""
+    logger.error("="*80)
+    logger.error("FATAL ERROR: Current price unavailable from all sources")
+    logger.error("="*80)
+    logger.error(str(error))
+    logger.error("Graham's Principle: 'No data is better than wrong data.'")
+    logger.error("The system cannot generate a reliable valuation without current price data.")
+    logger.error("Data sources attempted:")
+    logger.error("  1. yfinance (Yahoo Finance - primary source)")
+    logger.error("  2. EODHD API (Highlights.SharePrice, General.SharePrice, General.LastPrice)")
+    logger.error("Troubleshooting:")
+    logger.error("  - Check the ticker format (e.g. AAPL.US, VOD.LSE) and that the stock is actively trading")
+    logger.error("  - yfinance may not have data for this ticker; check the exchange mapping in clients/yfinance_client.py")
+    logger.error("  - EODHD may lack a price for delisted stocks or data gaps")
+    logger.error("="*80)
 
 if __name__ == "__main__":
     main()

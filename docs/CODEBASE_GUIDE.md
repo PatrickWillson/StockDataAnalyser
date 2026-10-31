@@ -38,7 +38,7 @@ Requires `EODHD_API_KEY` in `.env`. `--debug` sets DEBUG logging and dumps raw E
 | 8 | `DossierGenerator(ticker, financial_data, metrics, anomalies, ttm_metrics).generate()` | → Markdown string |
 | 9 | `save_dossier` | writes `data/{TICKER}_DOSSIER.md` (path relative to CWD) |
 
-Error handling: everything after the key check is in one `try/except Exception` → log + exit 1. Clients call `sys.exit(1)` directly on fatal API errors (401, 429, non-200, no price). Exit codes are only 0/1.
+Error handling: clients raise typed errors from `clients/errors.py` (`DataSourceError` → `EODHDAuthError` (401), `EODHDRateLimitError` (429), `EODHDRequestError` (network / other status / bad JSON), `PriceUnavailableError` (no price from yfinance or EODHD)); no client calls `sys.exit`. `main()` catches `PriceUnavailableError` (fatal banner + troubleshooting), other `DataSourceError` (message) and any other `Exception` (critical), each → exit 1. Exit codes are only 0/1.
 
 ---
 
@@ -53,6 +53,7 @@ clients/
   yfinance_client.py        YFinanceClient: EXCHANGE_MAPPING, get_price, historical prices, FYE matching
   fx_client.py              FXClient: yfinance "{A}{B}=X" rates, current + historical, per-instance cache
   factory.py                ClientFactory: builds clients (validates API key)
+  errors.py                 DataSourceError hierarchy raised by clients instead of exiting
 core/
   financial_data_processor.py  FinancialDataProcessor: raw JSON → per-year history, dividends, price, validation
   currency_converter.py     CurrencyConverter: convert / convert_batch / apply_london_fix, conversion log
@@ -240,7 +241,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising `_test_*` method and `_determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1200 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1210 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

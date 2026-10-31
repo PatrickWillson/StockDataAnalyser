@@ -6,10 +6,10 @@ Delegates data processing to FinancialDataProcessor for separation of concerns.
 """
 
 import requests
-import sys
 import logging
 from typing import Dict, Any, Optional, List
 from clients.base_client import BaseAPIClient
+from clients.errors import EODHDAuthError, EODHDRateLimitError, EODHDRequestError, PriceUnavailableError
 from clients.fx_client import FXClient
 from core.currency_converter import CurrencyConverter
 from core.financial_data_processor import FinancialDataProcessor
@@ -53,7 +53,9 @@ class EODHDClient(BaseAPIClient):
             API response as dictionary
             
         Raises:
-            SystemExit: On API errors
+            EODHDAuthError: HTTP 401
+            EODHDRateLimitError: HTTP 429
+            EODHDRequestError: network failure, other HTTP status, or invalid JSON
         """
         url = self.API_BASE_URL.format(ticker=ticker)
         params = {
@@ -63,26 +65,23 @@ class EODHDClient(BaseAPIClient):
         
         try:
             response = self._make_request(url, params=params)
-            
-            # Handle EODHD-specific errors
-            if response.status_code == 401:
-                logger.error("Authentication failed. Check your EODHD_API_KEY.")
-                sys.exit(1)
-            elif response.status_code == 429:
-                logger.error("Rate limit exceeded. Please wait and try again.")
-                sys.exit(1)
-            elif response.status_code != 200:
-                logger.error(f"API request failed with status {response.status_code}: {response.text}")
-                sys.exit(1)
-            
-            return response.json()
-            
         except requests.exceptions.RequestException as e:
-            logger.error(str(e))
-            sys.exit(1)
+            raise EODHDRequestError(str(e)) from e
         except Exception as e:
-            logger.error(f"Unexpected error during API request: {str(e)}")
-            sys.exit(1)
+            raise EODHDRequestError(f"Unexpected error during API request: {str(e)}") from e
+        
+        # Handle EODHD-specific errors
+        if response.status_code == 401:
+            raise EODHDAuthError("Authentication failed. Check your EODHD_API_KEY.")
+        if response.status_code == 429:
+            raise EODHDRateLimitError("Rate limit exceeded. Please wait and try again.")
+        if response.status_code != 200:
+            raise EODHDRequestError(f"API request failed with status {response.status_code}: {response.text}")
+        
+        try:
+            return response.json()
+        except Exception as e:
+            raise EODHDRequestError(f"Unexpected error during API request: {str(e)}") from e
     
     def _fetch_dividend_history(self, ticker: str) -> Optional[List[Dict[str, Any]]]:
         """
@@ -299,25 +298,7 @@ class EODHDClient(BaseAPIClient):
         
         # Check if price is available
         if price == 0.0 or price_source == 'Missing':
-            logger.error("="*70)
-            logger.error("Both sources failed to provide current price data.")
-            logger.error("="*70)
-            logger.error("Troubleshooting:")
-            logger.error("1. EODHD API: Price not available in fundamentals endpoint")
-            logger.error("   - This can happen for delisted stocks or data gaps")
-            logger.error("   - Check if ticker format is correct (e.g., AAPL.US, VOD.LSE)")
-            logger.error("2. yfinance Fallback: Failed or unavailable")
-            logger.error("   - yfinance may not have data for this ticker")
-            logger.error("   - Check if ticker format is correct for yfinance")
-            logger.error("   - Verify stock is actively trading")
-            logger.error(f"   - Ticker: {ticker}")
-            logger.error("3. Possible Solutions:")
-            logger.error("   - Verify ticker format matches exchange requirements")
-            logger.error("   - Try a different ticker that has EODHD price data")
-            logger.error("   - Check if stock is actively trading")
-            logger.error("   - Check exchange mapping in yfinance client")
-            logger.error("="*70)
-            sys.exit(1)
+            raise PriceUnavailableError(f"Current price unavailable from yfinance and EODHD for {ticker}")
         
         logger.info(f"Current Price: {price} (Source: {price_source})")
         

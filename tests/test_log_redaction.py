@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from logging_utils import redact, SecretRedactingFilter, install_secret_redaction
 from clients.eodhd_client import EODHDClient
+from clients.errors import EODHDRequestError
 import stock_data_analyser
 
 FAKE_KEY = "FAKEKEY1234567890abcdef"
@@ -107,17 +108,32 @@ class TestConfigureLogging:
 
 
 class TestEODHDClientErrorPath:
-    def test_key_not_logged_when_request_fails(self, root_stream):
-        """Retry exhaustion errors include the full URL; the key must still not be logged."""
-        install_secret_redaction([FAKE_KEY])
+    def test_request_failure_raises_typed_error(self):
         client = EODHDClient(FAKE_KEY, fx_client=Mock())
         client.session.get = Mock(side_effect=requests.exceptions.RetryError(
             f"Max retries exceeded with url: {URL_WITH_KEY}"
         ))
 
-        with pytest.raises(SystemExit):
+        with pytest.raises(EODHDRequestError):
             client._make_eodhd_request("AAPL.US")
 
+    def test_key_not_logged_when_request_fails_end_to_end(self, root_stream, monkeypatch):
+        """Retry exhaustion errors include the full URL; main() logs them, and the key must not appear."""
+        def failing_client(api_key, debug=False):
+            client = EODHDClient(api_key, fx_client=Mock())
+            client.session.get = Mock(side_effect=requests.exceptions.RetryError(
+                f"Max retries exceeded with url: {URL_WITH_KEY}"
+            ))
+            return client
+
+        monkeypatch.setattr(stock_data_analyser, "API_KEY", FAKE_KEY)
+        monkeypatch.setattr(stock_data_analyser.ClientFactory, "create_eodhd_client", staticmethod(failing_client))
+        monkeypatch.setattr(sys, "argv", ["stock_data_analyser.py", "AAPL.US"])
+
+        with pytest.raises(SystemExit) as exit_info:
+            stock_data_analyser.main()
+
         output = root_stream.getvalue()
-        assert "Unexpected error" in output or "Max retries" in output
+        assert exit_info.value.code == 1
+        assert "Max retries" in output
         assert FAKE_KEY not in output
