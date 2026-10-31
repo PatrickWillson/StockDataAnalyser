@@ -167,8 +167,8 @@ This saves the raw API response to `data/[TICKER]_raw_api_response.json` and pri
 ## Key Implementation Details
 
 ### Price Fetching Strategy
-1. **Primary**: yfinance (no API key required, real-time, no rate limits)
-2. **Fallback**: EODHD API (extract from fundamentals data)
+1. **Only source**: yfinance (no API key required, real-time, no rate limits)
+2. **No fallback**: EODHD price fields and MarketCap/Shares are opaque (date, unit), so no yfinance price means no dossier (exit 1)
 3. **Unmapped exchanges**: Attempt without suffix, then fail gracefully
 
 **Exchange code mapping** is in `clients/yfinance_client.py`:

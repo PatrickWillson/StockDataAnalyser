@@ -113,7 +113,7 @@ The ordered verdict rules are in `claude-output/REFACTOR_SCOPE.md` (D8) and will
 | Enterprising price (5.1, 5.6) | Low P/E **and** < 120% net tangible assets | P/E < 10 **or** price < 1.2 × TBVPS | F20 (AND) |
 | Enterprising earnings growth (5.5) | Required (≈5-year) | "N/A - Not Required" | F20 |
 | Verdict (§7) | Quality **and** margin of safety | ENTERPRISING BUY can override a negative MoS; N/A counts as pass | F20 (D8) |
-| Pre-computed EODHD values | Raw data (§8.1) | Forward dividend in history, dividend counts as amounts, market-cap price fallback | F21 |
+| Pre-computed EODHD values | Raw data (§8.1) | Forward dividend in history, dividend counts as amounts (market-cap price fallback **removed**: yfinance only, no price → no dossier) | F21 (price done) |
 
 ## 10. Sources
 

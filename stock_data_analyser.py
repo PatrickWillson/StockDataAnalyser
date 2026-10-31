@@ -167,18 +167,16 @@ def main():
 def _log_price_unavailable(ticker, error):
     """Explain why no dossier was produced when no current price is available."""
     logger.error("="*80)
-    logger.error("FATAL ERROR: Current price unavailable from all sources")
+    logger.error("FATAL ERROR: Current price unavailable")
     logger.error("="*80)
     logger.error(str(error))
     logger.error("Graham's Principle: 'No data is better than wrong data.'")
     logger.error("The system cannot generate a reliable valuation without current price data.")
-    logger.error("Data sources attempted:")
-    logger.error("  1. yfinance (Yahoo Finance - primary source)")
-    logger.error("  2. EODHD API (Highlights.SharePrice, General.SharePrice, General.LastPrice)")
+    logger.error("Price source: yfinance (Yahoo Finance). EODHD price fields are not used: their date and unit are opaque.")
     logger.error("Troubleshooting:")
     logger.error("  - Check the ticker format (e.g. AAPL.US, VOD.LSE) and that the stock is actively trading")
     logger.error("  - yfinance may not have data for this ticker; check the exchange mapping in clients/yfinance_client.py")
-    logger.error("  - EODHD may lack a price for delisted stocks or data gaps")
+    logger.error("  - Delisted or suspended stocks have no current price")
     logger.error("="*80)
 
 if __name__ == "__main__":

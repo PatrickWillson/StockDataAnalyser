@@ -52,7 +52,7 @@ def test_ticker_suffix_preservation(base_ticker, suffix):
         
         # Call the method
         try:
-            client.fetch_all_data(ticker)
+            client.fetch_all_data(ticker, yf_client=Mock(get_price=Mock(return_value=100.0)))
         except SystemExit:
             # Ignore system exits for this test
             pass

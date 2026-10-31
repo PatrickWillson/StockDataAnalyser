@@ -37,8 +37,7 @@ class FinancialDataAssembler:
         self.debug = debug
     
     def assemble(self, data: Dict[str, Any], dividend_api_data: Optional[List[Dict[str, Any]]],
-                 ticker: str, yf_price: Optional[float] = None,
-                 yfinance_attempted: bool = False) -> Dict[str, Any]:
+                 ticker: str, yf_price: Optional[float] = None) -> Dict[str, Any]:
         """
         Build the financial_data dict (see docs/CODEBASE_GUIDE.md §4.1).
 
@@ -46,11 +45,10 @@ class FinancialDataAssembler:
             data: Raw EODHD fundamentals JSON
             dividend_api_data: Records from the EODHD Dividend API, or None
             ticker: Ticker as given to the CLI (e.g. AAPL.US)
-            yf_price: Current price from yfinance (primary source), fetched by the caller, or None
-            yfinance_attempted: True if the caller queried yfinance (even without a result)
+            yf_price: Current price from yfinance (the only price source), fetched by the caller, or None
 
         Raises:
-            PriceUnavailableError: no current price from yfinance or EODHD
+            PriceUnavailableError: no current price from yfinance
         """
         warnings = []
         
@@ -176,12 +174,11 @@ class FinancialDataAssembler:
                                                       outstanding_shares_by_year=shares_by_year)
         
         # Get current price
-        price, price_source, is_from_market_cap = self.processor.get_current_price(
-            data, yf_price=yf_price, warnings=warnings, yfinance_attempted=yfinance_attempted)
+        price, price_source = self.processor.get_current_price(yf_price=yf_price, warnings=warnings)
         
         # Check if price is available
         if price == 0.0 or price_source == 'Missing':
-            raise PriceUnavailableError(f"Current price unavailable from yfinance and EODHD for {ticker}")
+            raise PriceUnavailableError(f"Current price unavailable from yfinance for {ticker}")
         
         logger.info(f"Current Price: {price} (Source: {price_source})")
         
@@ -218,9 +215,8 @@ class FinancialDataAssembler:
                 if week_52_low > 0:
                     week_52_low = week_52_low / 100
                     logger.info(f"London Fix applied to 52-week low: {week_52_low:.2f} GBP")
-        elif exchange == "LSE" and currency == "GBX" and not is_from_market_cap:
+        elif exchange == "LSE" and currency == "GBX":
             # No London Fix needed, but currency is GBX, so convert to GBP
-            # Skip this if price is from MarketCap (already in GBP)
             price = price / 100
             price_currency = "GBP"
             logger.info(f"Converted GBX to GBP: {price:.2f} GBP")
@@ -231,10 +227,6 @@ class FinancialDataAssembler:
             if week_52_low > 0:
                 week_52_low = week_52_low / 100
                 logger.info(f"Converted 52-week low from GBX to GBP: {week_52_low:.2f} GBP")
-        elif exchange == "LSE" and is_from_market_cap:
-            # Price from MarketCap is already in GBP
-            price_currency = "GBP"
-            logger.info(f"Price from MarketCap is in GBP: {price:.2f} GBP")
         
         # Convert price to financials currency if they differ
         fx_rate_used = None

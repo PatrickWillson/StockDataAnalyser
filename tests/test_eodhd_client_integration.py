@@ -93,7 +93,7 @@ def test_fetch_all_data_basic():
         mock_response.json.return_value = mock_response_data
         mock_get.return_value = mock_response
         
-        result = client.fetch_all_data('AAPL.US')
+        result = client.fetch_all_data('AAPL.US', yf_client=Mock(get_price=Mock(return_value=150.0)))
         
         # Verify basic structure
         assert result['ticker'] == 'AAPL'
@@ -159,7 +159,7 @@ def test_london_fix_integration():
         mock_response.json.return_value = mock_response_data
         mock_get.return_value = mock_response
         
-        result = client.fetch_all_data('VOD.L')
+        result = client.fetch_all_data('VOD.L', yf_client=Mock(get_price=Mock(return_value=80.0)))
         
         # London Fix: 80.0 GBp -> 0.80 GBP, then converted to USD at the fixed rate
         assert result['price'] == pytest.approx(0.8 * 1.25), f"Expected 1.00 USD, got {result['price']}"
@@ -216,7 +216,7 @@ def test_data_sanitization():
         mock_response.json.return_value = mock_response_data
         mock_get.return_value = mock_response
         
-        result = client.fetch_all_data('TEST.US')
+        result = client.fetch_all_data('TEST.US', yf_client=Mock(get_price=Mock(return_value=10.0)))
         
         # Verify NA values are converted to 0.0
         data = result['history']['2023-12-31']

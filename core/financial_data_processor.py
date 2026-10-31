@@ -110,99 +110,28 @@ class FinancialDataProcessor:
             return {}
     
     @staticmethod
-    def get_current_price(data: Dict[str, Any], yf_price: Optional[float] = None,
-                          warnings: Optional[List[str]] = None,
-                          yfinance_attempted: bool = False) -> tuple[float, str, bool]:
+    def get_current_price(yf_price: Optional[float] = None,
+                          warnings: Optional[List[str]] = None) -> tuple[float, str]:
         """
-        Extract current price with yfinance as primary source.
+        Current price from yfinance, the only price source.
         
-        Priority order:
-        1. yfinance (primary - most current)
-        2. EODHD Highlights.MarketCapitalization / SharesOutstanding (calculated)
-        3. EODHD Highlights.SharePrice
-        4. EODHD General.SharePrice
-        5. EODHD General.LastPrice
+        EODHD price fields and MarketCapitalization / SharesOutstanding are not used: their
+        date, basis and unit (pence or pounds) are opaque (GRAHAM_METHODOLOGY §8.1). Without
+        a usable price there is no valuation, so the caller stops (no price, no dossier).
         
         Args:
-            data: EODHD API response
-            yf_price: Current price already fetched from yfinance (primary source), or None
-            warnings: List to append warnings to
-            yfinance_attempted: True if yfinance was queried (even if it returned no price);
-                                the EODHD fallback warning then says "yfinance unavailable"
-
+            yf_price: Current price already fetched from yfinance, or None
+            warnings: List to append the price-source note to
             
         Returns:
-            Tuple of (price, source, is_from_market_cap) where:
-                - price: float price value
-                - source: 'yfinance', 'EODHD', or 'Missing'
-                - is_from_market_cap: True if price was calculated from MarketCap/Shares
-            
-        Note:
-            When is_from_market_cap is True, the price is already in the base currency
-            (e.g., GBP for LSE stocks), not in pence (GBX).
+            (price, 'yfinance'), or (0.0, 'Missing') when yfinance gave no positive price
         """
         if warnings is None:
             warnings = []
-        
-        # yfinance first (primary source); the caller fetches it, so this function does no I/O
         if yf_price and yf_price > 0:
             warnings.append("Price Source: yfinance (primary source)")
-            return yf_price, 'yfinance', False
-        
-        # Fall back to EODHD price extraction
-        try:
-            highlights = data.get('Highlights', {})
-            
-            # Try to calculate from MarketCapitalization / SharesOutstanding
-            # This gives us price in base currency (GBP for LSE, not GBX)
-            market_cap = highlights.get('MarketCapitalization')
-            shares_stats = data.get('SharesStats', {})
-            shares_outstanding = shares_stats.get('SharesOutstanding')
-            
-            if market_cap and shares_outstanding:
-                market_cap = FinancialDataProcessor.sanitize_value(market_cap)
-                shares_outstanding = FinancialDataProcessor.sanitize_value(shares_outstanding)
-                if market_cap > 0 and shares_outstanding > 0:
-                    calculated_price = market_cap / shares_outstanding
-                    if yfinance_attempted:
-                        warnings.append("Price Source: EODHD (calculated from MarketCap / Shares, yfinance unavailable)")
-                    else:
-                        warnings.append("Price Source: EODHD (calculated from MarketCap / Shares)")
-                    return calculated_price, 'EODHD', True  # Mark as from MarketCap
-            
-            # Try to get from Highlights.SharePrice
-            price = highlights.get('SharePrice')
-            if price is not None:
-                sanitized = FinancialDataProcessor.sanitize_value(price)
-                if sanitized > 0:
-                    if yfinance_attempted:
-                        warnings.append("Price Source: EODHD (yfinance unavailable)")
-                    return sanitized, 'EODHD', False
-            
-            # Fallback to General section
-            general = data.get('General', {})
-            price = general.get('SharePrice')
-            if price is not None:
-                sanitized = FinancialDataProcessor.sanitize_value(price)
-                if sanitized > 0:
-                    if yfinance_attempted:
-                        warnings.append("Price Source: EODHD (yfinance unavailable)")
-                    return sanitized, 'EODHD', False
-            
-            # Try alternative fields
-            price = general.get('LastPrice')
-            if price is not None:
-                sanitized = FinancialDataProcessor.sanitize_value(price)
-                if sanitized > 0:
-                    if yfinance_attempted:
-                        warnings.append("Price Source: EODHD (yfinance unavailable)")
-                    return sanitized, 'EODHD', False
-            
-            # All sources failed
-            return 0.0, 'Missing', False
-            
-        except (KeyError, TypeError):
-            return 0.0, 'Missing', False
+            return yf_price, 'yfinance'
+        return 0.0, 'Missing'
     
     def parse_balance_sheet(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
         """

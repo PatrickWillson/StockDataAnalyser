@@ -200,12 +200,9 @@ Use the format `SYMBOL.EXCHANGE` where:
 
 ⭐ **Most Commonly Used Exchanges**: US, LSE, TO, XETRA, PA, HK, AU
 
-### Price Data Fallback
+### Price Data
 
-The system uses a two-tier approach for price data:
-
-1. **Primary Source**: yfinance (Yahoo Finance - real-time prices, no API key required)
-2. **Fallback Source**: EODHD API (extracted from fundamentals data)
+The current price comes from yfinance (Yahoo Finance - real-time prices, no API key required) only. EODHD price fields are not used, because their date and unit are unclear; if yfinance has no price, no dossier is produced.
 
 Exchange code translation between EODHD and yfinance formats is handled automatically. yfinance provides current market prices without requiring API keys or rate limits.
 

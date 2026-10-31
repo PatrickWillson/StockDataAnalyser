@@ -159,8 +159,7 @@ class EODHDClient(BaseAPIClient):
         logger.info("Fetching dividend history...")
         dividend_api_data = self._fetch_dividend_history(ticker)
         
-        # Current price from yfinance (primary source); assembly itself does no I/O for the price
+        # Current price from yfinance (the only price source); assembly itself does no I/O
         yf_price = yf_client.get_price(ticker) if yf_client else None
         
-        return self.assembler.assemble(data, dividend_api_data, ticker, yf_price=yf_price,
-                                       yfinance_attempted=yf_client is not None)
+        return self.assembler.assemble(data, dividend_api_data, ticker, yf_price=yf_price)
