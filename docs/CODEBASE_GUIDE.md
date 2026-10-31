@@ -120,7 +120,7 @@ claude-output/              agent-written markdown (gitignored)
 - Keys are fiscal year-end dates. **Dividend-only years** (dividend data exists but no statements, often the current/future year) are synthesised with the latest FYE month-day and all statement fields 0.0.
 - Shares priority (malformed `outstandingShares.annual` rows are skipped individually): `outstandingShares.annual` → BS `commonStockSharesOutstanding` / `weightedAverageShsOut` / `...Dil` → `SharesStats.SharesOutstanding`.
 - EPS: API `eps`/`basicEPS`/`epsBasic`; if 0, fallback `net_income / shares`. Net income prefers `netIncomeFromContinuingOps`.
-- Total debt: `longTermDebt + shortTermDebt` if either > 0, else `shortLongTermDebtTotal`.
+- Total debt: reported `shortLongTermDebtTotal` (short + long-term debt incl. leases) when > 0, else `longTermDebt + shortTermDebt` (GRAHAM_METHODOLOGY §9). Display only (history table, Risk Factors "short-term debt and leases" = total − long-term); Graham's debt tests use `long_term_debt`.
 
 ### 4.3 `metrics` (returned by `GrahamCalculator.compute_all`)
 `graham_number, normalized_graham_number, epv, epv_details, net_net_value, nca_details, current_ratio, quick_ratio, three_year_avg_pe, combined_pe_pb_test, margin_of_safety, margin_of_safety_details, defensive_tests, enterprising_tests, verdict, warnings`
@@ -247,7 +247,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising `_test_*` method and `_determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1235 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1236 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

@@ -68,17 +68,15 @@ class BalanceSheetRow:
     @property
     def total_debt(self) -> float:
         """
-        Sum the components when both are reported; when one is missing, prefer the reported
-        total (a partial sum understates debt); otherwise sum what exists.
+        The reported total (shortLongTermDebtTotal: short- and long-term debt including lease
+        obligations) when present; otherwise the sum of the reported components. Graham counted
+        every obligation ranking ahead of the stock, and the conservative figure is the fuller
+        one (GRAHAM_METHODOLOGY §8.4).
         """
-        long_term = _zero_if_missing(self.long_term_debt)
-        short_term = _zero_if_missing(self.short_term_debt)
         reported = _zero_if_missing(self.total_debt_reported)
-        if long_term > 0 and short_term > 0:
-            return long_term + short_term
         if reported > 0:
             return reported
-        return long_term + short_term
+        return _zero_if_missing(self.long_term_debt) + _zero_if_missing(self.short_term_debt)
 
     def as_history_fields(self) -> Dict[str, float]:
         """Balance-sheet fields of a history row (missing values as 0.0)."""

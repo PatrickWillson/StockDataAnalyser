@@ -52,8 +52,8 @@
 ### Financial Strength Risk:
 - **Current Ratio: 0.99x** - ⚠️ Critical liquidity risk
 - **Long-Term Debt: $106,000,000,000 USD** (30.0% of assets) - ⚠️ High leverage
-  - Short-term debt: $15,000,000 USD
-  - Total debt: $106,015,000,000 USD (30.1% of assets)
+  - Short-term debt and leases: $5,088,000,000 USD
+  - Total debt: $111,088,000,000 USD (31.5% of assets)
 
 ### Operational Stability Risk:
 - **Profit Margin Stability: 25.7% average, 0.3% std dev** over 6 years
@@ -367,7 +367,7 @@ TTM calculations provide more current financial metrics by using the most recent
 
 | Year | Revenue | Net Income | EPS | Div Count | BVPS | WCPS | Payout Ratio | Total Debt | Shares (B) | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
-| 2023 | 383285000000.0 | 96995000000.0 | 6.237596109751595 | 4.0 | 4.0 | ⚠️ -0.11 | 64.1% | 106.02B | 15.550B | 187.45 | 30.1 | 46.9 |
+| 2023 | 383285000000.0 | 96995000000.0 | 6.237596109751595 | 4.0 | 4.0 | ⚠️ -0.11 | 64.1% | 111.09B | 15.550B | 187.45 | 30.1 | 46.9 |
 | 2022 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 4.0 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2022 | 394328000000.0 | 99803000000.0 | 6.259821838783072 | 4.0 | 3.18 | ⚠️ -1.17 | 63.9% | 120.07B | 15.943B | 172.45 | 27.5 | 54.2 |
 | 2021 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 4.0 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |

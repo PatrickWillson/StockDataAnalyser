@@ -204,7 +204,8 @@ class RiskFactorsSection(DossierSection):
         # Debt levels
         long_term_debt = latest_data.get('long_term_debt', 0.0)
         total_debt = latest_data.get('total_debt', 0.0)
-        short_term_debt = total_debt - long_term_debt if total_debt > long_term_debt else 0.0
+        # Total debt is the reported total (incl. leases), so the remainder is short-term debt and leases
+        other_debt = total_debt - long_term_debt if total_debt > long_term_debt else 0.0
         total_assets = latest_data.get('total_assets', 0.0)
         net_current_assets = current_assets - current_liabilities
         
@@ -222,14 +223,14 @@ class RiskFactorsSection(DossierSection):
             
             # Show long-term debt with breakdown
             lines.append(f"- **Long-Term Debt: ${long_term_debt:,.0f} {unified_currency}** ({lt_debt_to_assets:.1f}% of assets) - {assessment}")
-            if short_term_debt > 0:
-                lines.append(f"  - Short-term debt: ${short_term_debt:,.0f} {unified_currency}")
+            if other_debt > 0:
+                lines.append(f"  - Short-term debt and leases: ${other_debt:,.0f} {unified_currency}")
                 lines.append(f"  - Total debt: ${total_debt:,.0f} {unified_currency} ({total_debt_to_assets:.1f}% of assets)")
         elif total_assets > 0 and long_term_debt == 0:
             lines.append(f"- **Long-Term Debt: ${long_term_debt:,.0f} {unified_currency}** - Debt-free (excellent)")
-            if short_term_debt > 0:
+            if other_debt > 0:
                 total_debt_to_assets = (total_debt / total_assets) * 100
-                lines.append(f"  - Short-term debt: ${short_term_debt:,.0f} {unified_currency} ({total_debt_to_assets:.1f}% of assets)")
+                lines.append(f"  - Short-term debt and leases: ${other_debt:,.0f} {unified_currency} ({total_debt_to_assets:.1f}% of assets)")
         
         # Graham's defensive test: Long-term debt < Net Current Assets
         if net_current_assets > 0 and long_term_debt > 0:

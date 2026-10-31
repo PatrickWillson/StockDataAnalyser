@@ -333,8 +333,8 @@ class TestEpsFallbackShares:
         assert history["2021-12-31"]["eps"] == 1.5
 
 
-class TestTotalDebtWithOneComponentMissing:
-    """A single reported debt component is a partial figure; the reported total wins over it."""
+class TestTotalDebtRule:
+    """The reported total (incl. leases) wins whenever present; otherwise the components are summed."""
 
     @staticmethod
     def _total_debt(year_data):
@@ -351,5 +351,8 @@ class TestTotalDebtWithOneComponentMissing:
     def test_single_component_without_total_is_used(self):
         assert self._total_debt({"longTermDebt": 98_959}) == 98_959
 
-    def test_both_components_are_summed(self):
-        assert self._total_debt({"longTermDebt": 100, "shortTermDebt": 50, "shortLongTermDebtTotal": 200}) == 150
+    def test_reported_total_preferred_over_both_components(self):
+        assert self._total_debt({"longTermDebt": 100, "shortTermDebt": 50, "shortLongTermDebtTotal": 200}) == 200
+
+    def test_both_components_summed_without_reported_total(self):
+        assert self._total_debt({"longTermDebt": 100, "shortTermDebt": 50}) == 150

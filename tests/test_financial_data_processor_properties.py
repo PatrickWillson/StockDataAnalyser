@@ -103,10 +103,10 @@ class TestTotalDebtCalculation:
         assert '2024-12-31' in result
         assert result['2024-12-31']['total_debt'] == 0.0
     
-    def test_total_debt_prefers_components_over_precalculated(self):
+    def test_total_debt_prefers_reported_total_over_components(self):
         """
-        Property: When both components and precalculated total are available,
-        should prefer components (more accurate).
+        Property: When the reported total (shortLongTermDebtTotal, which includes lease
+        obligations) is available it is used, not the narrower component sum (GRAHAM_METHODOLOGY §8.4).
         """
         processor = FinancialDataProcessor(debug=False)
         
@@ -129,8 +129,8 @@ class TestTotalDebtCalculation:
         result = processor.parse_balance_sheet(mock_data)
         
         assert '2024-12-31' in result
-        # Should use components (150M), not precalculated (200M)
-        assert result['2024-12-31']['total_debt'] == 150000000.0
+        # Should use the reported total (200M), not the component sum (150M)
+        assert result['2024-12-31']['total_debt'] == 200000000.0
 
 
 class TestSharesOutstandingExtraction:
