@@ -272,7 +272,8 @@ class TTMAnalysisSection(DossierSection):
                 has_financial_data = has_statement_data(year_data)
                 if has_financial_data:
                     fiscal_year = year_key.split('-')[0]
-                    fiscal_year_dividend = year_data.get('dividend', 0.0)
+                    if self.financial_data.get('is_dividend_amounts', False):
+                        fiscal_year_dividend = year_data.get('dividend', 0.0)
                     break
         
         lines.append("")

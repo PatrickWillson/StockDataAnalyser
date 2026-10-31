@@ -53,6 +53,7 @@ class TestExecutiveSummarySection:
             'week_52_high': 199.62,
             'week_52_low': 124.17,
             'forward_dividend_rate': 1.00,
+            'is_dividend_amounts': True,
             'dividend_source': 'cash_flow',
             'dividend_sources': {'2023': 'cash_flow'},
             'pe_ratio': 24.55,

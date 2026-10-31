@@ -262,6 +262,13 @@ class ExecutiveSummarySection(DossierSection):
                     most_recent_div_amount = year_data.get('dividend', 0.0)
                     break
         
+        # Payment counts are not amounts (F21): report the count, never a per-share figure or yield
+        if not self.financial_data.get('is_dividend_amounts', False):
+            if most_recent_div_amount:
+                lines.append(f"- Dividend: amount not available ({most_recent_div_amount:.0f} payments "
+                             f"in {most_recent_complete_year}; payment counts only)")
+            most_recent_div_amount = 0.0
+        
         # Requirement 2.7: Show both trailing (complete year) and forward rate when both available
         if most_recent_div_source in ['cash_flow', 'dividend_api'] and forward_div and forward_div > 0 and most_recent_div_amount > 0:
             # Both actual dividend (from complete year) and forward rate available - show both

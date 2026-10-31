@@ -21,7 +21,7 @@
   - Conservative Intrinsic Value: 23.40 USD
 - Current Price: 187.45 USD
 - 52-Week Range: 124.17 USD - 199.62 USD
-- Trailing Dividend: 4.00 USD (Yield: 2.13%) [2023]
+- Dividend: amount not available (4 payments in 2023; payment counts only)
 - P/E Ratio (Current Year): 30.05
 - P/E Ratio (3-Year Avg): 30.79 (based on avg EPS of 6.09 from 2021-2023)
 - Price/Book: 46.90
@@ -370,20 +370,20 @@ TTM calculations provide more current financial metrics by using the most recent
 
 | Year | Revenue | Net Income | EPS | Div Count | BVPS | WCPS | Payout Ratio | Total Debt | Shares (B) | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
-| 2023 | 383285000000.0 | 96995000000.0 | 6.237596109751595 | 4.0 | 4.0 | ⚠️ -0.11 | 64.1% | 111.09B | 15.550B | 187.45 | 30.1 | 46.9 |
+| 2023 | 383285000000.0 | 96995000000.0 | 6.237596109751595 | 4.0 | 4.0 | ⚠️ -0.11 | N/A | 111.09B | 15.550B | 187.45 | 30.1 | 46.9 |
 | 2022 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 4.0 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2022 | 394328000000.0 | 99803000000.0 | 6.259821838783072 | 4.0 | 3.18 | ⚠️ -1.17 | 63.9% | 120.07B | 15.943B | 172.45 | 27.5 | 54.2 |
+| 2022 | 394328000000.0 | 99803000000.0 | 6.259821838783072 | 4.0 | 3.18 | ⚠️ -1.17 | N/A | 120.07B | 15.943B | 172.45 | 27.5 | 54.2 |
 | 2021 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 4.0 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2021 | 365817000000.0 | 94680000000.0 | 5.763756829850952 | 4.0 | 3.84 | 0.57 | 69.4% | 109.11B | 16.427B | 158.66 | 27.5 | 41.3 |
+| 2021 | 365817000000.0 | 94680000000.0 | 5.763756829850952 | 4.0 | 3.84 | 0.57 | N/A | 109.11B | 16.427B | 158.66 | 27.5 | 41.3 |
 | 2020 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 4.0 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2020 | 347526150000.0 | 89946000000.0 | 5.298183169547693 | 4.0 | 3.53 | 0.52 | 75.5% | 103.65B | 16.977B | 145.97 | 27.6 | 41.3 |
+| 2020 | 347526150000.0 | 89946000000.0 | 5.298183169547693 | 4.0 | 3.53 | 0.52 | N/A | 103.65B | 16.977B | 145.97 | 27.6 | 41.3 |
 | 2019 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 4.0 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2019 | 330149842500.0 | 85448700000.0 | 4.807796614899591 | 4.0 | 3.2 | 0.48 | 83.2% | 98.47B | 17.773B | 134.29 | 27.9 | 42.0 |
-| 2018 | 313642350375.0 | 81176265000.0 | 4.477849788386874 | N/A | 2.98 | 0.44 | 0.0% | 93.54B | 18.128B | 123.54 | 27.6 | 41.5 |
-| 2017 | 297960232856.0 | 77117451750.0 | 4.170546371672121 | N/A | 2.78 | 0.41 | 0.0% | 88.87B | 18.491B | 113.66 | 27.3 | 40.9 |
-| 2016 | 283062221213.0 | 73261579162.0 | 3.8843324049086845 | N/A | 2.59 | 0.38 | 0.0% | 84.42B | 18.861B | 104.57 | 26.9 | 40.4 |
-| 2015 | 268909110153.0 | 69598500204.0 | 3.617760573227029 | N/A | 2.41 | 0.36 | 0.0% | 80.20B | 19.238B | 96.20 | 26.6 | 39.9 |
-| 2014 | 255463654645.0 | 66118575194.0 | 3.3694828868839335 | N/A | 2.25 | 0.33 | 0.0% | 76.19B | 19.623B | 88.51 | 26.3 | 39.3 |
+| 2019 | 330149842500.0 | 85448700000.0 | 4.807796614899591 | 4.0 | 3.2 | 0.48 | N/A | 98.47B | 17.773B | 134.29 | 27.9 | 42.0 |
+| 2018 | 313642350375.0 | 81176265000.0 | 4.477849788386874 | N/A | 2.98 | 0.44 | N/A | 93.54B | 18.128B | 123.54 | 27.6 | 41.5 |
+| 2017 | 297960232856.0 | 77117451750.0 | 4.170546371672121 | N/A | 2.78 | 0.41 | N/A | 88.87B | 18.491B | 113.66 | 27.3 | 40.9 |
+| 2016 | 283062221213.0 | 73261579162.0 | 3.8843324049086845 | N/A | 2.59 | 0.38 | N/A | 84.42B | 18.861B | 104.57 | 26.9 | 40.4 |
+| 2015 | 268909110153.0 | 69598500204.0 | 3.617760573227029 | N/A | 2.41 | 0.36 | N/A | 80.20B | 19.238B | 96.20 | 26.6 | 39.9 |
+| 2014 | 255463654645.0 | 66118575194.0 | 3.3694828868839335 | N/A | 2.25 | 0.33 | N/A | 76.19B | 19.623B | 88.51 | 26.3 | 39.3 |
 
 **Note on Data Completeness:**
 - Years marked '[Data Unavailable]' (2022, 2021, 2020, 2019) show declared dividends but lack complete audited annual financial statements

@@ -505,7 +505,8 @@ class FinancialDataProcessor:
     @staticmethod
     def merge_financial_data(balance_sheet: Dict, income_statement: Dict, 
                             dividend_history: Dict, shares_outstanding: float,
-                            outstanding_shares_by_year: Optional[Dict[str, float]] = None) -> Dict[str, Dict[str, float]]:
+                            outstanding_shares_by_year: Optional[Dict[str, float]] = None,
+                            dividends_are_amounts: bool = True) -> Dict[str, Dict[str, float]]:
         """
         Merge balance sheet, income statement, and dividend data by year.
         Calculates EPS from net income if not available.
@@ -516,6 +517,8 @@ class FinancialDataProcessor:
             dividend_history: Dividend data by year
             shares_outstanding: Default shares outstanding (fallback)
             outstanding_shares_by_year: Optional dict of year-specific shares outstanding
+            dividends_are_amounts: False when dividend_history holds payment counts; the payout
+                                   ratio is then "N/A" (counts are never used as amounts, F21)
         
         Returns:
             Dictionary with year as key and merged financial data as value
@@ -611,9 +614,9 @@ class FinancialDataProcessor:
             # Calculate Payout Ratio
             # Formula: (Dividend / EPS) × 100
             # Return "N/A" if EPS ≤ 0, "0.0%" if dividend = 0
-            if eps <= 0:
+            if eps <= 0 or not dividends_are_amounts:
                 # Cannot calculate meaningful payout ratio with negative/zero earnings
-                # Even if dividend is 0, the ratio is undefined against a loss
+                # (even if dividend is 0, the ratio is undefined against a loss), or from counts
                 payout_ratio = "N/A"
             elif div_amount == 0:
                 # No dividend paid, but earnings are positive

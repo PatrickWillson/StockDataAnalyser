@@ -152,8 +152,9 @@ class FinancialDataAssembler:
             logger.info(f"TTM Dividend: {ttm_dividend:.4f} {ttm_dividend_currency} from {len(ttm_dividend_payments)} payments")
         
         # Convert dividend history to financials currency if needed
-        # This is critical for Dividend API data which comes in the stock's trading currency
-        if dividend_currency != financials_currency:
+        # This is critical for Dividend API data which comes in the stock's trading currency.
+        # Payment counts have no currency and are never converted (F21)
+        if is_dividend_amounts and dividend_currency != financials_currency:
             logger.info(f"Converting dividends from {dividend_currency} to {financials_currency}...")
             converted_dividends = self.currency_converter.try_convert_batch(
                 dividend_history, dividend_currency, financials_currency
@@ -173,7 +174,8 @@ class FinancialDataAssembler:
         logger.info("Merging financial data...")
         history = self.processor.merge_financial_data(balance_sheet, income_statement, 
                                                       dividend_history, shares_outstanding,
-                                                      outstanding_shares_by_year=shares_by_year)
+                                                      outstanding_shares_by_year=shares_by_year,
+                                                      dividends_are_amounts=is_dividend_amounts)
         
         # Get current price
         price, price_problem = self.processor.get_current_price(quote, currency, warnings=warnings)

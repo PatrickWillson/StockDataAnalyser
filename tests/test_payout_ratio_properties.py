@@ -426,3 +426,13 @@ class TestPayoutRatioMultiYear:
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+def test_payout_ratio_not_computed_from_payment_counts():
+    """F21: dividend_history holding payment counts gives payout 'N/A', never count / EPS."""
+    bs = {'2023': {'total_equity': 100.0, 'current_assets': 50.0, 'current_liabilities': 20.0}}
+    is_ = {'2023': {'revenue': 1000.0, 'net_income': 100.0, 'eps': 5.0}}
+    history = FinancialDataProcessor.merge_financial_data(bs, is_, {'2023': 4.0}, 20.0,
+                                                          dividends_are_amounts=False)
+    assert history['2023-12-31']['payout_ratio'] == "N/A"
+    assert history['2023-12-31']['dividend'] == 4.0  # kept as the payment count for display
