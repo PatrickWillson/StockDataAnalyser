@@ -59,7 +59,7 @@ class FakeTicker:
         self.info = {} if last_price is None else {"regularMarketPrice": last_price}
         self._closes = closes
 
-    def history(self, start=None, end=None, auto_adjust=True, **kwargs) -> pd.DataFrame:
+    def history(self, start=None, end=None, auto_adjust=False, **kwargs) -> pd.DataFrame:
         # Like yfinance, `end` is exclusive
         rows = {d: c for d, c in sorted(self._closes.items())
                 if (start is None or d >= str(start)) and (end is None or d < str(end))}

@@ -233,3 +233,14 @@ class TestYFinanceClient:
         client = YFinanceClient()
         result = client._translate_ticker("AAPL", "")
         assert result is None
+
+    @patch('yfinance.Ticker')
+    def test_historical_prices_are_not_dividend_adjusted(self, mock_ticker_class):
+        """F8: split-adjusted 'Close' only (auto_adjust=False), never the dividend-adjusted series."""
+        import pandas as pd
+        hist = pd.DataFrame({'Close': [100.0], 'Adj Close': [90.0]},
+                            index=pd.DatetimeIndex([pd.Timestamp('2023-12-29')]))
+        mock_ticker_class.return_value.history.return_value = hist
+        prices = YFinanceClient().fetch_historical_prices("AAPL.US", "2023-01-01", "2024-01-01")
+        assert prices == {'2023-12-29': 100.0}
+        assert mock_ticker_class.return_value.history.call_args.kwargs['auto_adjust'] is False

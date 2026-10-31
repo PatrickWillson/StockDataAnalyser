@@ -265,9 +265,9 @@ class YFinanceClient:
         """
         Fetch historical daily closing prices from yfinance.
         
-        This method fetches split-adjusted historical prices for Graham-style
-        trend analysis. Prices are adjusted for stock splits to ensure
-        comparability across time.
+        Prices are adjusted for stock splits only, not for dividends: Graham compared each year's
+        earnings with the price actually paid in the market (GRAHAM_METHODOLOGY §2.4, §8.3), and
+        dividend adjustment lowers past prices, understating historical P/E and P/B.
         
         Args:
             ticker: Ticker in EODHD format (e.g., 'MSFT.US', 'VOD.LSE')
@@ -279,8 +279,8 @@ class YFinanceClient:
             Example: {'2024-06-30': 450.12, '2024-06-29': 449.50, ...}
             
         Note:
-            - Uses auto_adjust=True to handle stock splits automatically
-            - Historical prices are split-adjusted for comparability
+            - Uses auto_adjust=False: Yahoo's 'Close' is split-adjusted, not dividend-adjusted
+              ('Adj Close', the dividend-adjusted series, is ignored)
             - Returns None on any failure (network errors, invalid tickers, etc.)
         """
         try:
@@ -308,9 +308,9 @@ class YFinanceClient:
                 self.logger.error("yfinance library not installed. Run: pip install yfinance")
                 return None
             
-            # Fetch historical data with split adjustment
+            # Split-adjusted closes, without dividend adjustment
             ticker_obj = yf.Ticker(yf_ticker)
-            hist = ticker_obj.history(start=start_date, end=end_date, auto_adjust=True)
+            hist = ticker_obj.history(start=start_date, end=end_date, auto_adjust=False)
             
             if hist.empty:
                 if self.debug:
