@@ -818,24 +818,10 @@ class FinancialDataProcessor:
             if div_amount == 0.0 and year_only not in dividend_history:
                 missing_div_count += 1
             
-            # Get year-specific shares if available, otherwise use default
-            year_shares = shares_outstanding
-            if outstanding_shares_by_year and year_only in outstanding_shares_by_year:
-                year_shares = outstanding_shares_by_year[year_only]
-            
-            # Get EPS, or calculate from net income if missing
-            eps = is_data.get('eps', 0.0)
-            net_income = is_data.get('net_income', 0.0)
-            
-            # If EPS is missing but we have net income and shares, calculate it
-            if eps == 0.0 and net_income != 0.0 and year_shares > 0:
-                eps = net_income / year_shares
-                calculated_eps_count += 1
-            
-            # Determine final shares with priority:
+            # Determine this year's shares with priority:
             # 1. Year-specific shares from outstandingShares.annual (most accurate)
-            # 2. Balance sheet shares (if non-zero)
-            # 3. Fallback shares
+            # 2. Balance sheet shares for that year (if non-zero)
+            # 3. Fallback: current shares outstanding
             bs_shares = bs_data.get('shares_outstanding', 0.0)
             if outstanding_shares_by_year and year_only in outstanding_shares_by_year:
                 final_shares = outstanding_shares_by_year[year_only]
@@ -843,6 +829,14 @@ class FinancialDataProcessor:
                 final_shares = bs_shares
             else:
                 final_shares = shares_outstanding
+            
+            # Get EPS, or calculate from net income if missing, using the same year's shares
+            eps = is_data.get('eps', 0.0)
+            net_income = is_data.get('net_income', 0.0)
+            
+            if eps == 0.0 and net_income != 0.0 and final_shares > 0:
+                eps = net_income / final_shares
+                calculated_eps_count += 1
             
             # Calculate Working Capital Per Share (WCPS)
             # Formula: (Current Assets - Current Liabilities) / Shares Outstanding

@@ -306,3 +306,28 @@ class TestDataStalenessIgnoresDividendOnlyYears:
         history = {"2024-12-31": self.DIVIDEND_ONLY}
         assert FinancialDataProcessor.check_data_staleness(history, datetime(2024, 3, 1)) == \
             "No financial history available"
+
+
+class TestEpsFallbackShares:
+    """When EPS is missing, it is net income / that year's shares — never today's share count first."""
+
+    BS = {"2021-12-31": {"shares_outstanding": 200.0}, "2023-12-31": {"shares_outstanding": 150.0}}
+    IS = {"2021-12-31": {"net_income": 400.0, "eps": 0.0, "revenue": 1.0},
+          "2023-12-31": {"net_income": 300.0, "eps": 0.0, "revenue": 1.0}}
+
+    def test_uses_balance_sheet_shares_when_no_year_specific_count(self):
+        history = FinancialDataProcessor.merge_financial_data(self.BS, self.IS, {}, 100.0, {"2023": 150.0})
+        assert history["2023-12-31"]["eps"] == 2.0          # 300 / 150 (outstandingShares)
+        assert history["2021-12-31"]["eps"] == 2.0          # 400 / 200 (balance sheet), not 400 / 100 (current)
+        assert history["2021-12-31"]["shares_outstanding"] == 200.0
+
+    def test_falls_back_to_current_shares_only_without_any_year_count(self):
+        bs = {"2021-12-31": {"shares_outstanding": 0.0}}
+        is_ = {"2021-12-31": {"net_income": 400.0, "eps": 0.0, "revenue": 1.0}}
+        history = FinancialDataProcessor.merge_financial_data(bs, is_, {}, 100.0, {})
+        assert history["2021-12-31"]["eps"] == 4.0          # 400 / 100
+
+    def test_reported_eps_is_kept(self):
+        is_ = {"2021-12-31": {"net_income": 400.0, "eps": 1.5, "revenue": 1.0}}
+        history = FinancialDataProcessor.merge_financial_data(self.BS, is_, {}, 100.0, {})
+        assert history["2021-12-31"]["eps"] == 1.5

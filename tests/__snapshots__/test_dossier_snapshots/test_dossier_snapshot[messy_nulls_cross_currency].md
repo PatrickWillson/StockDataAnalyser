@@ -14,17 +14,17 @@
 
 - Verdict: **OVERVALUED**
 - Graham Number (Single-Year EPS): 23.68 USD
-- Graham Number (3-Year Avg EPS): 23.60 USD
+- Graham Number (3-Year Avg EPS): 23.40 USD
 - Intrinsic Value (EPV per share): 53.64 USD (10-year average earnings)
 - Net-Net Value: -9.45 USD
-- Margin of Safety: -694.4% (Capped by Normalized Graham Number)
-  - Conservative Intrinsic Value: 23.60 USD
+- Margin of Safety: -701.2% (Capped by Normalized Graham Number)
+  - Conservative Intrinsic Value: 23.40 USD
 - Current Price: 187.49 USD
 - 52-Week Range: 124.17 EUR (134.41 USD) - 199.62 EUR (216.09 USD)
 - Trailing Dividend: 0.95 USD (Yield: 0.51%) - Paid (Cash Flow) [2023]
   - Forward Rate: 1.04 USD (Yield: 0.55%)
 - P/E Ratio (Current Year): 30.06
-- P/E Ratio (3-Year Avg): 30.26 (based on avg EPS of 6.20 from 2021-2023)
+- P/E Ratio (3-Year Avg): 30.80 (based on avg EPS of 6.09 from 2021-2023)
 - Price/Book: 46.91
 
 ---
@@ -65,7 +65,7 @@
 - **Dividend History: 9 of 10 years** - Mostly consistent
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -694.4%** - Trading above intrinsic value
+- **Margin of Safety: -701.2%** - Trading above intrinsic value
   - Graham's Standard: 20-30% minimum for defensive investors
   - Assessment: **High valuation risk** - no margin for error
   - Intrinsic Value (Graham): 23.68 USD
@@ -107,7 +107,7 @@
   - Uses most recent annual EPS
 
 - **Graham Number - 3-Year Average EPS (Normalized)**:
-  - **Value**: 23.60 USD
+  - **Value**: 23.40 USD
   - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)
 
   **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year
@@ -115,7 +115,7 @@
   full business cycle. This aligns with Graham's actual criterion: *"Price should not exceed"*
   *"15 times average earnings of the past three years."*
 
-  **3-Year EPS**: [2023: 6.24 USD, 2022: 6.26 USD, 2021: 6.09 USD] → Avg: 6.20 USD
+  **3-Year EPS**: [2023: 6.24 USD, 2022: 6.26 USD, 2021: 5.76 USD] → Avg: 6.09 USD
 - **EPV - Simplified Earnings Power Estimate**
 
   **Methodology:**
@@ -141,7 +141,7 @@
   **Graham's Principle**: *"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle."*
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
-  - **Value**: -694.4%
+  - **Value**: -701.2%
   - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
 
   **Conservative Dual-Anchor Methodology**:
@@ -159,9 +159,9 @@
     (Graham Number), we use the more conservative asset-based valuation
 
   **For This Stock**:
-  - Normalized Graham Number: 23.60 USD
+  - Normalized Graham Number: 23.40 USD
   - EPV per share: 53.64 USD
-  - **Intrinsic Value Used**: 23.60 USD (Capped by Normalized Graham Number)
+  - **Intrinsic Value Used**: 23.40 USD (Capped by Normalized Graham Number)
 
   **Interpretation**: Normalized Graham Number is lower than EPV, indicating
   the stock trades at a premium to its asset value despite strong earnings power.
@@ -385,7 +385,7 @@ TTM calculations provide more current financial metrics by using the most recent
 | 2023 | 383285000000.0 | 96995000000.0 | 6.237596109751595 | 0.9544014007404859 | 4.0 | ⚠️ -0.11 | 15.3% | 106.02B | 15.550B | 173.20 | 27.8 | 43.3 |
 | 2022 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.927843295904111 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2022 | 394328000000.0 | 99803000000.0 | 6.259821838783072 | 0.927843295904111 | 3.18 | ⚠️ -1.17 | 14.8% | 98.96B | 15.943B | 188.03 | 30.0 | 59.1 |
-| 2021 | 365817000000.0 | 94680000000.0 | 6.088722095688242 | N/A | 3.84 | 0.57 | 0.0% | 109.11B | 16.427B | 168.59 | 27.7 | 43.9 |
+| 2021 | 365817000000.0 | 94680000000.0 | 5.763756829850952 | N/A | 3.84 | 0.57 | 0.0% | 109.11B | 16.427B | 168.59 | 29.2 | 43.9 |
 | 2020 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.8095565685873096 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2020 | 347526150000.0 | 89946000000.0 | 5.298183169547693 | 0.8095565685873096 | 3.53 | 0.52 | 15.3% | 103.65B | 16.977B | 151.05 | 28.5 | 42.8 |
 | 2019 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.7346260416957371 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
