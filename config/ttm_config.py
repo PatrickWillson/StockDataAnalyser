@@ -1,9 +1,8 @@
 """
 TTM (trailing twelve months) analysis settings.
 
-Reporting-frequency detection, gap and span checks for selecting periodic statements,
-and the limits for TTM-vs-annual sanity warnings. Engineering choices, not Graham's
-criteria (Graham tests use annual audited data only — see GRAHAM_METHODOLOGY §8).
+Reporting-frequency detection, gap and span checks for selecting periodic statements.
+Engineering choices, not Graham's criteria (Graham tests use annual audited data only — see GRAHAM_METHODOLOGY §8).
 """
 
 from typing import Final, Tuple
@@ -31,7 +30,3 @@ SEMI_ANNUAL_SPAN_DAYS: Final[Tuple[int, int]] = (150, 210)           # 1 interva
 EARLIEST_PERIOD_YEAR: Final[int] = 1950
 MAX_FUTURE_YEARS: Final[int] = 1                                     # up to Dec 31 of next year
 
-# TTM vs annual sanity warnings: warn when TTM differs from annual by more than X%
-TTM_EPS_MAX_DIFF_PCT: Final[float] = 20
-TTM_REVENUE_MAX_DIFF_PCT: Final[float] = 50
-TTM_NET_INCOME_MAX_DIFF_PCT: Final[float] = 50

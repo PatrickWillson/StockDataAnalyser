@@ -33,7 +33,7 @@ Requires `EODHD_API_KEY` in `.env`. `--debug` sets DEBUG logging and dumps raw E
 | 3 | `EODHDClient.fetch_all_data(ticker, yf_client)` | client fetches fundamentals + dividend endpoint, then `core.financial_data_assembler.FinancialDataAssembler.assemble(data, dividend_api_data, ticker, yf_client)` parses, currency-normalises, calculates and validates → `financial_data` dict (§4.1); data-quality warnings include `validate_data_quality` and `check_data_staleness` (latest annual report > 9 months old; dividend-only years ignored) |
 | 4 | `main()` + `core.historical_prices.apply_year_end_prices` | CLI fetches daily yfinance prices and matches them to fiscal year-ends; `apply_year_end_prices` divides minor-unit prices by 100 (per `price_quote_currency`, e.g. GBp), applies historical FX (current-rate fallback), writes `history[date]['year_end_price']` and adds warnings |
 | 5 | `GrahamCalculator(financial_data).compute_all()` | → `metrics` dict (§4.3). TBVPS, normalized Graham Number and EPV are computed once and passed to the Graham Number, margin of safety and investor tests (each public method still computes them itself when called alone) |
-| 6 | `TTMCalculator(...).compute_all(annual_metrics=metrics)` | only if `quarterly_data` present; wrapped in try/except → `ttm_metrics` (§4.4) |
+| 6 | `TTMCalculator(quarterly_data, price, currency).compute_all()` | only if `quarterly_data` present; wrapped in try/except → `ttm_metrics` (§4.4) |
 | 7 | `AnomalyDetector(financial_data).scan()` | → `anomalies: List[str]` |
 | 8 | `DossierGenerator(ticker, financial_data, metrics, anomalies, ttm_metrics).generate()` | → Markdown string |
 | 9 | `save_dossier` | writes `data/{TICKER}_DOSSIER.md` (path relative to CWD) |
@@ -74,7 +74,7 @@ config/
   investor_thresholds.py    DEFENSIVE / ENTERPRISING frozen dataclasses (test thresholds and windows: earnings stability, dividend record, earnings growth)
   data_quality_config.py    data-check settings: cross-validation % limits, staleness (7 days API, 9 months report), FYE lookback 7 days, min history 10 years, missing-years limit 3, anomaly Z-score 2.0
   risk_thresholds.py        Risk Factors display bands (beta, liquidity, debt/assets, margin volatility, ROE, payout, dividend coverage, MoS, history window); labels only — no calculation, test or verdict uses them
-  ttm_config.py             TTM settings: frequency bands (75–105 / 150–210 days), gap tolerances, span checks, period-date limits, TTM-vs-annual warning limits (20% EPS, 50% revenue/NI)
+  ttm_config.py             TTM settings: frequency bands (75–105 / 150–210 days), gap tolerances, span checks, period-date limits
   valuation_config.py       project valuation settings: NORMALIZED_EPS_YEARS (3), EPV_MIN/MAX_YEARS (7/10), DEEP_VALUE_MIN_DISCOUNT_PCT (2.0), STRONG_BUY_MIN_MOS_PCT (20)
   api_config.py             APIConfig (unused in production)
   output_config.py          OutputConfig (unused in production)
@@ -250,7 +250,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising criterion in `core/investor_tests/` and `core.verdict.determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1246 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1247 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

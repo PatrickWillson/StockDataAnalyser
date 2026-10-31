@@ -273,7 +273,7 @@ def test_ttm_dossier_generation():
         price=420.0,
         currency='USD'
     )
-    ttm_metrics = ttm_calculator.compute_all(annual_metrics=annual_metrics)
+    ttm_metrics = ttm_calculator.compute_all()
     
     # Add TTM warnings to financial data
     financial_data['warnings'].extend(ttm_metrics.get('warnings', []))
@@ -402,7 +402,7 @@ def test_ttm_warnings_in_critical_alerts():
         price=420.0,
         currency='USD'
     )
-    ttm_metrics = ttm_calculator.compute_all(annual_metrics=annual_metrics)
+    ttm_metrics = ttm_calculator.compute_all()
     
     # Add TTM warnings to financial data
     financial_data['warnings'].extend(ttm_metrics.get('warnings', []))

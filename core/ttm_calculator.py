@@ -29,9 +29,6 @@ from config.ttm_config import (
     SEMI_ANNUAL_INTERVAL_DAYS,
     SEMI_ANNUAL_PERIODS,
     SEMI_ANNUAL_SPAN_DAYS,
-    TTM_EPS_MAX_DIFF_PCT,
-    TTM_NET_INCOME_MAX_DIFF_PCT,
-    TTM_REVENUE_MAX_DIFF_PCT,
 )
 
 # Configure module-level logger
@@ -348,7 +345,6 @@ class TTMCalculator:
         
         # Run data quality validations FIRST (before any other processing)
         self._validate_period_order(income_dates)
-        self._validate_no_duplicates(income_dates)
         self._validate_date_ranges(income_dates)
         
         # Detect reporting frequency
@@ -715,35 +711,6 @@ class TTMCalculator:
         
         return True
     
-    def _validate_no_duplicates(self, periods: List[str]) -> bool:
-        """
-        Verify no duplicate period dates.
-        
-        Note: Since periods come from dict keys, Python automatically deduplicates them.
-        This validation checks if the list has duplicates (which shouldn't happen with dict keys).
-        
-        Args:
-            periods: List of period dates
-            
-        Returns:
-            True if no duplicates found, False otherwise
-        """
-        if len(periods) != len(set(periods)):
-            # Find duplicates
-            seen = set()
-            duplicates = []
-            for period in periods:
-                if period in seen:
-                    duplicates.append(period)
-                seen.add(period)
-            
-            self.warnings.append(
-                f"TTM Data Quality: Duplicate periods found: {', '.join(duplicates)}"
-            )
-            return False
-        
-        return True
-    
     def _validate_date_ranges(self, periods: List[str]) -> bool:
         """
         Verify period dates are within expected ranges.
@@ -782,70 +749,12 @@ class TTMCalculator:
         
         return True
     
-    def _validate_ttm_vs_annual(self, ttm_metrics: Dict[str, Any], 
-                                annual_metrics: Optional[Dict[str, Any]] = None) -> None:
-        """
-        Compare TTM values to annual values and add warnings if differences are significant.
-        
-        Args:
-            ttm_metrics: TTM financial metrics
-            annual_metrics: Annual financial metrics (optional)
-        """
-        if not annual_metrics:
-            # No annual metrics to compare against
-            return
-        
-        # Compare TTM EPS to annual EPS
-        ttm_eps = ttm_metrics.get('ttm_eps', 0.0)
-        annual_eps = annual_metrics.get('eps', 0.0)
-        
-        if ttm_eps > 0 and annual_eps > 0:
-            eps_diff_pct = abs(ttm_eps - annual_eps) / annual_eps * 100
-            
-            if eps_diff_pct > TTM_EPS_MAX_DIFF_PCT:
-                warning_msg = (
-                    f"TTM Validation: TTM EPS differs from annual EPS by {eps_diff_pct:.1f}% "
-                    f"(TTM: {ttm_eps:.2f}, Annual: {annual_eps:.2f})"
-                )
-                self.warnings.append(warning_msg)
-        
-        # Compare TTM revenue to annual revenue
-        ttm_revenue = ttm_metrics.get('ttm_revenue', 0.0)
-        annual_revenue = annual_metrics.get('revenue', 0.0)
-        
-        if ttm_revenue > 0 and annual_revenue > 0:
-            revenue_diff_pct = abs(ttm_revenue - annual_revenue) / annual_revenue * 100
-            
-            if revenue_diff_pct > TTM_REVENUE_MAX_DIFF_PCT:
-                warning_msg = (
-                    f"TTM Validation: TTM revenue differs from annual revenue by {revenue_diff_pct:.1f}% "
-                    f"(TTM: {ttm_revenue:.0f}, Annual: {annual_revenue:.0f})"
-                )
-                self.warnings.append(warning_msg)
-        
-        # Compare TTM net income to annual net income
-        ttm_net_income = ttm_metrics.get('ttm_net_income', 0.0)
-        annual_net_income = annual_metrics.get('net_income', 0.0)
-        
-        if ttm_net_income != 0 and annual_net_income != 0:
-            net_income_diff_pct = abs(ttm_net_income - annual_net_income) / abs(annual_net_income) * 100
-            
-            if net_income_diff_pct > TTM_NET_INCOME_MAX_DIFF_PCT:
-                warning_msg = (
-                    f"TTM Validation: TTM net income differs from annual net income by {net_income_diff_pct:.1f}% "
-                    f"(TTM: {ttm_net_income:.0f}, Annual: {annual_net_income:.0f})"
-                )
-                self.warnings.append(warning_msg)
-    
-    def compute_all(self, annual_metrics: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def compute_all(self) -> Dict[str, Any]:
         """
         Compute all TTM metrics and Graham calculations.
         
         Each calculation is isolated with try/except to ensure one failure
         doesn't stop other calculations from completing.
-        
-        Args:
-            annual_metrics: Optional annual financial metrics for validation comparison
         
         Returns:
             Dict with all TTM calculations, warnings, and metadata
@@ -871,13 +780,6 @@ class TTMCalculator:
                 'currency': self.currency,
                 'warnings': self.warnings.copy()
             }
-        
-        # Validate TTM vs annual metrics if annual metrics provided
-        if annual_metrics:
-            try:
-                self._validate_ttm_vs_annual(ttm_metrics, annual_metrics)
-            except Exception as e:
-                self.warnings.append(f"TTM Validation: Failed to compare with annual metrics - {str(e)}")
         
         # Compute Graham calculations with error isolation
         # Each calculation is wrapped in try/except to ensure failures are isolated

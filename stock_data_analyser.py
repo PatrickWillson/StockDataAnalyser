@@ -120,8 +120,7 @@ def main():
                     currency=financial_data.get('currency', 'USD'),
                 )
                 
-                # Compute all TTM metrics (pass annual metrics for validation)
-                ttm_metrics = ttm_calculator.compute_all(annual_metrics=metrics)
+                ttm_metrics = ttm_calculator.compute_all()
                 
                 # Add TTM warnings to financial data warnings
                 if ttm_metrics.get('warnings'):
