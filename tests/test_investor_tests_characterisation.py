@@ -179,24 +179,36 @@ class TestEarningsGrowth:
         assert _run("_test_earnings_growth", history, len(history)) == "PASS"
 
 
+def _three_years(eps_newest_first):
+    return {f"{2023 - i}-12-31": _year(eps=eps) for i, eps in enumerate(eps_newest_first)}
+
+
 class TestPeRatio:
+    """Defensive 4.6 (F20): price ≤ 15 × the average EPS of the three latest reported years."""
+
     @settings(max_examples=200)
     @given(pe=st.floats(min_value=1.0, max_value=40.0, allow_nan=False))
-    def test_passes_strictly_below_maximum(self, pe):
+    def test_uses_three_year_average_inclusive(self, pe):
+        history = _three_years([3.0, 2.0, 1.0])  # average 2.0
         price = 2.0 * pe
-        expected = "PASS" if price / 2.0 < DEFENSIVE.MAX_PE_RATIO else "FAIL"
-        assert _run("_test_pe_ratio", {"2023-12-31": _year(eps=2.0)}, price=price,
-                    max_pe=DEFENSIVE.MAX_PE_RATIO) == expected
+        expected = "PASS" if price / 2.0 <= DEFENSIVE.MAX_PE_RATIO else "FAIL"
+        assert _run("_test_pe_ratio", history, price=price, max_pe=DEFENSIVE.MAX_PE_RATIO) == expected
 
-    def test_exact_maximum_fails(self):
-        assert _run("_test_pe_ratio", {"2023-12-31": _year(eps=2.0)}, price=30.0, max_pe=15) == "FAIL"
+    def test_exact_maximum_passes(self):
+        assert _run("_test_pe_ratio", _three_years([2.0, 2.0, 2.0]), price=30.0, max_pe=15) == "PASS"
 
-    @pytest.mark.parametrize("eps", [0.0, -1.0])
-    def test_non_positive_eps_fails(self, eps):
-        assert _run("_test_pe_ratio", {"2023-12-31": _year(eps=eps)}, price=10.0) == "FAIL"
+    def test_one_good_year_does_not_pass(self):
+        """Latest EPS alone gives P/E 10; the three-year average (2.0) gives 30."""
+        assert _run("_test_pe_ratio", _three_years([4.5, 1.0, 0.5]), price=45.0, max_pe=15) == "FAIL"
+
+    def test_fewer_than_three_reported_years_fails(self):
+        assert _run("_test_pe_ratio", _three_years([2.0, 2.0]), price=10.0) == "FAIL"
+
+    def test_non_positive_average_fails(self):
+        assert _run("_test_pe_ratio", _three_years([1.0, -2.0, -1.0]), price=10.0) == "FAIL"
 
     def test_zero_price_or_no_financial_year_fails(self):
-        assert _run("_test_pe_ratio", {"2023-12-31": _year()}, price=0.0) == "FAIL"
+        assert _run("_test_pe_ratio", _three_years([2.0, 2.0, 2.0]), price=0.0) == "FAIL"
         assert _run("_test_pe_ratio", {"2024-12-31": {"dividend": 1.0}}, price=10.0) == "FAIL"
 
 

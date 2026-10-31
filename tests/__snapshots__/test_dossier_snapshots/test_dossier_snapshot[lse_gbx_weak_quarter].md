@@ -380,8 +380,8 @@ TTM calculations provide more current financial metrics by using the most recent
    - Criterion: Uninterrupted dividend payments for at least 20 years
 5. **Earnings Growth**: PASS
    - Criterion: Earnings growth ≥ 33% over 10 years
-6. **P/E Ratio**: PASS
-   - Criterion: P/E Ratio < 15
+6. **P/E Ratio**: FAIL
+   - Criterion: Price ≤ 15 × average EPS of the last 3 reported years
 7. **P/B Ratio**: FAIL
    - Criterion: Price/Book Ratio < 1.5
 8. **Combined P/E × P/B Test**: FAIL

@@ -5,6 +5,7 @@ Moved verbatim from GrahamCalculator (M4.4); the Graham alignment of each criter
 """
 
 from config.investor_thresholds import DEFENSIVE
+from core.financial_data_processor import FinancialDataProcessor
 from core.investor_tests.criteria import current_ratio_test, earnings_stability, latest_financial_year
 
 
@@ -51,16 +52,20 @@ def earnings_growth(history: dict, years: list, num_years: int) -> str:
 
 
 def pe_ratio(history: dict, years: list, price: float, max_pe: float = 15) -> str:
-    """Price / latest EPS below max_pe."""
+    """
+    Criterion 4.6: "current price should not be more than 15 times average earnings of the past
+    three years" — price / mean EPS of the three latest reported years ≤ max_pe. Fewer than three
+    reported years, or a non-positive average: the criterion is not met.
+    """
     if not years or price == 0:
         return 'FAIL'
-    latest_year = latest_financial_year(history, years)
-    if not latest_year:
+    eps_data = FinancialDataProcessor.extract_3year_eps_data(history)
+    if not eps_data['valid']:
         return 'FAIL'
-    eps = history[latest_year].get('eps', 0.0)
-    if eps <= 0:
+    average_eps = sum(eps_data['eps_values']) / len(eps_data['eps_values'])
+    if average_eps <= 0:
         return 'FAIL'
-    return 'PASS' if price / eps < max_pe else 'FAIL'
+    return 'PASS' if price / average_eps <= max_pe else 'FAIL'
 
 
 def pb_ratio(history: dict, years: list, price: float, max_pb: float = 1.5) -> str:

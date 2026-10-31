@@ -86,7 +86,7 @@ class GrahamTestsSection:
         # Test 6: P/E Ratio
         pe_ratio = defensive_tests.get('pe_ratio', 'N/A')
         lines.append(f"6. **P/E Ratio**: {pe_ratio}")
-        lines.append(f"   - Criterion: P/E Ratio < {DEFENSIVE.MAX_PE_RATIO:g}")
+        lines.append(f"   - Criterion: Price ≤ {DEFENSIVE.MAX_PE_RATIO:g} × average EPS of the last 3 reported years")
         
         # Test 7: P/B Ratio
         pb_ratio = defensive_tests.get('pb_ratio', 'N/A')

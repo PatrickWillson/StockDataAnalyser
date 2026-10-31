@@ -360,7 +360,7 @@ TTM calculations provide more current financial metrics by using the most recent
 5. **Earnings Growth**: PASS
    - Criterion: Earnings growth ≥ 33% over 10 years
 6. **P/E Ratio**: FAIL
-   - Criterion: P/E Ratio < 15
+   - Criterion: Price ≤ 15 × average EPS of the last 3 reported years
 7. **P/B Ratio**: FAIL
    - Criterion: Price/Book Ratio < 1.5
 8. **Combined P/E × P/B Test**: FAIL
