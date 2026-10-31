@@ -233,8 +233,12 @@ class CalculationDetailsSection:
             if current_assets > 0 and total_liabilities > 0 and shares_used > 0:
                 lines.append(f"- **Current Assets**: {unified_currency}{current_assets:,.0f}")
                 lines.append(f"- **Total Liabilities**: {unified_currency}{total_liabilities:,.0f}")
+                claims_outside_equity = latest_data.get('claims_outside_equity', 0.0)
+                if claims_outside_equity > 0:
+                    lines.append(f"- **Less: Minority Interest and Other Claims Outside Common Equity**: "
+                                 f"{unified_currency}{claims_outside_equity:,.0f}")
                 
-                net_current_assets = net_current_asset_value(current_assets, total_liabilities)
+                net_current_assets = net_current_asset_value(current_assets, total_liabilities, claims_outside_equity)
                 lines.append(f"- **Net Current Assets**: {unified_currency}{net_current_assets:,.0f}")
                 lines.append(f"- **Divided by Shares**: {shares_used:,.0f}")
                 lines.append(f"- **Net-Net Value Per Share**: {unified_currency}{net_net:.2f}")

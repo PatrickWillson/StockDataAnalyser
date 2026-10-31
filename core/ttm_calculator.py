@@ -112,7 +112,7 @@ class TTMCalculator:
         # Monetary fields in balance sheet
         balance_monetary_fields = [
             'total_equity', 'intangible_assets', 'goodwill',
-            'current_assets', 'total_liabilities'
+            'current_assets', 'total_liabilities', 'claims_outside_equity'
         ]
         
         # Convert income statement data
@@ -453,6 +453,7 @@ class TTMCalculator:
         goodwill = most_recent_balance.get('goodwill', 0.0)
         current_assets = most_recent_balance.get('current_assets', 0.0)
         total_liabilities = most_recent_balance.get('total_liabilities', 0.0)
+        claims_outside_equity = most_recent_balance.get('claims_outside_equity', 0.0)
         shares_outstanding = most_recent_balance.get('shares_outstanding', 0.0)
         
         # Calculate TTM EPS: Sum(Net Income) / Most Recent Shares Outstanding
@@ -471,6 +472,7 @@ class TTMCalculator:
             'goodwill': goodwill,
             'current_assets': current_assets,
             'total_liabilities': total_liabilities,
+            'claims_outside_equity': claims_outside_equity,
             'shares_outstanding': shares_outstanding,
             'reporting_frequency': frequency,
             'periods_used': selected_periods,
@@ -653,7 +655,8 @@ class TTMCalculator:
             return "N/A"
         
         # Calculate net-net value
-        net_net_value = net_current_asset_value(current_assets, total_liabilities) / shares_outstanding
+        claims_outside_equity = ttm_metrics.get('claims_outside_equity', 0.0)
+        net_net_value = net_current_asset_value(current_assets, total_liabilities, claims_outside_equity) / shares_outstanding
         
         return round(net_net_value, 2)
     

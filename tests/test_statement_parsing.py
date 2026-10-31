@@ -33,7 +33,29 @@ def test_balance_sheet_field_mapping():
     assert BalanceSheetRow.from_eodhd("2023-12-31", raw).as_history_fields() == {
         "total_equity": 500.0, "intangible_assets": 10.0, "goodwill": 20.0, "current_assets": 300.0,
         "current_liabilities": 100.0, "total_liabilities": 250.0, "long_term_debt": 80.0,
-        "total_assets": 750.0, "total_debt": 80.0, "shares_outstanding": 50.0, "inventory": 40.0}
+        "total_assets": 750.0, "total_debt": 80.0, "shares_outstanding": 50.0, "inventory": 40.0,
+        "claims_outside_equity": 0.0}  # 750 - 250 - 500
+
+
+def test_claims_outside_equity_from_balance_sheet_gap():
+    """WLKP 2024 (real EODHD data): minority-interest field null, TA - TL - equity = 310.6M."""
+    row = BalanceSheetRow.from_eodhd("2024-12-31", {"totalAssets": "1287956000.00", "totalLiab": "458642000.00",
+                                                    "totalStockholderEquity": "518701000.00",
+                                                    "noncontrollingInterestInConsolidatedEntity": None})
+    assert row.claims_outside_common_equity == 310_613_000.0
+
+
+def test_explicit_minority_interest_preferred_over_gap():
+    row = BalanceSheetRow.from_eodhd("d", {"totalAssets": 1000, "totalLiab": 600, "totalStockholderEquity": 300,
+                                           "noncontrollingInterestInConsolidatedEntity": 80})
+    assert row.claims_outside_common_equity == 80.0
+
+
+def test_claims_never_negative_and_zero_when_unreported():
+    assert BalanceSheetRow.from_eodhd("d", {"totalAssets": 100, "totalLiab": 80, "totalStockholderEquity": 30}
+                                      ).claims_outside_common_equity == 0.0
+    assert BalanceSheetRow.from_eodhd("d", {"totalAssets": 100, "totalStockholderEquity": 30}
+                                      ).claims_outside_common_equity == 0.0
 
 
 def test_unreported_inventory_is_none_not_zero():

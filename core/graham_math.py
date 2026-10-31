@@ -250,7 +250,8 @@ class GrahamCalculator:
             return "N/A"
         
         # Calculate Net-Net Value
-        net_net = net_current_asset_value(current_assets, total_liabilities) / shares_outstanding
+        claims_outside_equity = year_data.get('claims_outside_equity', 0.0)
+        net_net = net_current_asset_value(current_assets, total_liabilities, claims_outside_equity) / shares_outstanding
         
         return round(net_net, 2) if round_result else net_net
     

@@ -24,6 +24,7 @@
     "historical_fx_rates": {},
     "history": {
       "2014-12-31": {
+        "claims_outside_equity": 1.0,
         "current_assets": 66342043.0,
         "current_liabilities": 53073635.0,
         "dividend": 0.0,
@@ -44,6 +45,7 @@
         "year_end_price": 7.790662
       },
       "2015-12-31": {
+        "claims_outside_equity": 0.0,
         "current_assets": 69833730.0,
         "current_liabilities": 55866984.0,
         "dividend": 0.0,
@@ -64,6 +66,7 @@
         "year_end_price": 8.468111
       },
       "2016-12-31": {
+        "claims_outside_equity": 0.0,
         "current_assets": 73509189.0,
         "current_liabilities": 58807351.0,
         "dividend": 0.0,
@@ -84,6 +87,7 @@
         "year_end_price": 9.204469
       },
       "2017-12-31": {
+        "claims_outside_equity": 1.0,
         "current_assets": 77378094.0,
         "current_liabilities": 61902475.0,
         "dividend": 0.0,
@@ -104,6 +108,7 @@
         "year_end_price": 10.004858
       },
       "2018-12-31": {
+        "claims_outside_equity": 0.0,
         "current_assets": 81450625.0,
         "current_liabilities": 65160500.0,
         "dividend": 0.0,
@@ -124,6 +129,7 @@
         "year_end_price": 10.874845
       },
       "2019-12-31": {
+        "claims_outside_equity": 0.0,
         "current_assets": 85737500.0,
         "current_liabilities": 68590000.0,
         "dividend": 0.0,
@@ -144,6 +150,7 @@
         "year_end_price": 11.820483999999999
       },
       "2020-12-31": {
+        "claims_outside_equity": 0.0,
         "current_assets": 90250000.0,
         "current_liabilities": 72200000.0,
         "dividend": 0.0,
@@ -164,6 +171,7 @@
         "year_end_price": 12.848352
       },
       "2021-12-31": {
+        "claims_outside_equity": 0.0,
         "current_assets": 95000000.0,
         "current_liabilities": 76000000.0,
         "dividend": 0.0,
@@ -184,6 +192,7 @@
         "year_end_price": 13.9656
       },
       "2022-12-31": {
+        "claims_outside_equity": 0.0,
         "current_assets": 100000000.0,
         "current_liabilities": 80000000.0,
         "dividend": 0.0,
@@ -204,6 +213,7 @@
         "year_end_price": 15.18
       },
       "2023-12-31": {
+        "claims_outside_equity": 0.0,
         "current_assets": 110000000.0,
         "current_liabilities": 85000000.0,
         "dividend": 0.5833333333333334,

@@ -16,7 +16,7 @@
 - Graham Number (Single-Year EPS): 23.68 CAD
 - Graham Number (3-Year Avg EPS): 23.40 CAD
 - Intrinsic Value (EPV per share): 53.64 CAD (10-year average earnings)
-- Net-Net Value: -9.45 CAD
+- Net-Net Value: -9.46 CAD
 - Margin of Safety: -990.2% (Capped by Normalized Graham Number)
   - Conservative Intrinsic Value: 23.40 CAD
 - Current Price: 255.10 CAD

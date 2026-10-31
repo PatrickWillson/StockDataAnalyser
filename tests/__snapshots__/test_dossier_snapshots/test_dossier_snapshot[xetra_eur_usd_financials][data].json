@@ -51,6 +51,7 @@
     },
     "history": {
       "2014-09-25": {
+        "claims_outside_equity": 0.0,
         "current_assets": 94161007656.0,
         "current_liabilities": 87628062251.0,
         "dividend": 0.514853283973929,
@@ -71,6 +72,7 @@
         "year_end_price": 94.04504499999999
       },
       "2014-09-30": {
+        "claims_outside_equity": 0.0,
         "current_assets": 0.0,
         "current_liabilities": 0.0,
         "dividend": 0.514853283973929,
@@ -91,6 +93,7 @@
         "year_end_price": 94.04504499999999
       },
       "2015-09-25": {
+        "claims_outside_equity": 0.0,
         "current_assets": 99116850164.0,
         "current_liabilities": 92240065528.0,
         "dividend": 0.5527898417276331,
@@ -111,6 +114,7 @@
         "year_end_price": 104.88960999999999
       },
       "2015-09-30": {
+        "claims_outside_equity": 0.0,
         "current_assets": 0.0,
         "current_liabilities": 0.0,
         "dividend": 0.5527898417276331,
@@ -131,6 +135,7 @@
         "year_end_price": 104.88960999999999
       },
       "2016-09-25": {
+        "claims_outside_equity": 0.0,
         "current_assets": 104333526489.0,
         "current_liabilities": 97094805818.0,
         "dividend": 0.593521724790227,
@@ -151,6 +156,7 @@
         "year_end_price": 96.619
       },
       "2016-09-30": {
+        "claims_outside_equity": 0.0,
         "current_assets": 0.0,
         "current_liabilities": 0.0,
         "dividend": 0.593521724790227,
@@ -171,6 +177,7 @@
         "year_end_price": 96.619
       },
       "2017-09-25": {
+        "claims_outside_equity": 0.0,
         "current_assets": 109824764725.0,
         "current_liabilities": 102205058756.0,
         "dividend": 0.6372549045232432,
@@ -191,6 +198,7 @@
         "year_end_price": 108.171321
       },
       "2017-09-30": {
+        "claims_outside_equity": 0.0,
         "current_assets": 0.0,
         "current_liabilities": 0.0,
         "dividend": 0.6372549045232432,
@@ -211,6 +219,7 @@
         "year_end_price": 108.171321
       },
       "2018-09-25": {
+        "claims_outside_equity": 0.0,
         "current_assets": 115605015500.0,
         "current_liabilities": 107584272375.0,
         "dividend": 0.6842105290303433,
@@ -231,6 +240,7 @@
         "year_end_price": 121.00207400000001
       },
       "2018-09-30": {
+        "claims_outside_equity": 0.0,
         "current_assets": 0.0,
         "current_liabilities": 0.0,
         "dividend": 0.6842105290303433,
@@ -251,6 +261,7 @@
         "year_end_price": 121.00207400000001
       },
       "2019-09-25": {
+        "claims_outside_equity": 0.0,
         "current_assets": 121689490000.0,
         "current_liabilities": 113246602500.0,
         "dividend": 0.7346260416957371,
@@ -271,6 +282,7 @@
         "year_end_price": 135.24643700000001
       },
       "2019-09-30": {
+        "claims_outside_equity": 0.0,
         "current_assets": 0.0,
         "current_liabilities": 0.0,
         "dividend": 0.7346260416957371,
@@ -291,6 +303,7 @@
         "year_end_price": 135.24643700000001
       },
       "2020-09-25": {
+        "claims_outside_equity": 0.0,
         "current_assets": 128094200000.0,
         "current_liabilities": 119206950000.0,
         "dividend": 0.8095565685873096,
@@ -311,6 +324,7 @@
         "year_end_price": 151.053056
       },
       "2020-09-30": {
+        "claims_outside_equity": 0.0,
         "current_assets": 0.0,
         "current_liabilities": 0.0,
         "dividend": 0.8095565685873096,
@@ -331,6 +345,7 @@
         "year_end_price": 151.053056
       },
       "2021-09-25": {
+        "claims_outside_equity": 0.0,
         "current_assets": 134836000000.0,
         "current_liabilities": 125481000000.0,
         "dividend": 0.8806957124783874,
@@ -351,6 +366,7 @@
         "year_end_price": 168.585975
       },
       "2021-09-30": {
+        "claims_outside_equity": 0.0,
         "current_assets": 0.0,
         "current_liabilities": 0.0,
         "dividend": 0.8806957124783874,
@@ -371,6 +387,7 @@
         "year_end_price": 168.585975
       },
       "2022-09-24": {
+        "claims_outside_equity": 0.0,
         "current_assets": 135405000000.0,
         "current_liabilities": 153982000000.0,
         "dividend": 0.927843295904111,
@@ -391,6 +408,7 @@
         "year_end_price": 188.02591999999999
       },
       "2022-09-30": {
+        "claims_outside_equity": 0.0,
         "current_assets": 0.0,
         "current_liabilities": 0.0,
         "dividend": 0.927843295904111,
@@ -411,6 +429,7 @@
         "year_end_price": 188.02591999999999
       },
       "2023-09-30": {
+        "claims_outside_equity": 172000000.0,
         "current_assets": 143566000000.0,
         "current_liabilities": 145308000000.0,
         "dividend": 0.9544014007404859,
@@ -554,7 +573,7 @@
         "NCA is zero or negative - cannot calculate debt coverage ratio"
       ]
     },
-    "net_net_value": -9.45,
+    "net_net_value": -9.46,
     "normalized_graham_number": 23.4,
     "quick_ratio": 0.94,
     "three_year_avg_pe": {

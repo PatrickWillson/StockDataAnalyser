@@ -44,6 +44,7 @@ class BalanceSheetRow:
     total_debt_reported: Optional[float]
     total_assets: Optional[float]
     inventory: Optional[float]
+    noncontrolling_interest: Optional[float]
     shares_outstanding: Optional[float]
 
     @classmethod
@@ -64,6 +65,7 @@ class BalanceSheetRow:
             total_debt_reported=optional_float(raw.get('shortLongTermDebtTotal', 0)),
             total_assets=optional_float(raw.get('totalAssets')),
             inventory=optional_float(raw.get('inventory')),
+            noncontrolling_interest=optional_float(raw.get('noncontrollingInterestInConsolidatedEntity')),
             shares_outstanding=optional_float(shares_raw),
         )
 
@@ -80,6 +82,22 @@ class BalanceSheetRow:
             return reported
         return _zero_if_missing(self.long_term_debt) + _zero_if_missing(self.short_term_debt)
 
+    @property
+    def claims_outside_common_equity(self) -> float:
+        """
+        Claims on the consolidated assets that rank ahead of the common but sit in neither
+        liabilities nor equity: minority (noncontrolling) interests, redeemable / temporary equity.
+        EODHD's explicit minority-interest field when reported; otherwise the balance-sheet gap
+        total assets − total liabilities − equity (WLKP 2024: field null, gap 310.6M = its
+        minority interest). Never negative; 0 when any of the three is not reported.
+        """
+        explicit = _zero_if_missing(self.noncontrolling_interest)
+        if explicit > 0:
+            return explicit
+        if None in (self.total_assets, self.total_liabilities, self.total_equity):
+            return 0.0
+        return max(0.0, self.total_assets - self.total_liabilities - self.total_equity)
+    
     def as_history_fields(self) -> Dict[str, Optional[float]]:
         """
         Balance-sheet fields of a history row (missing values as 0.0, except inventory: None when
@@ -96,6 +114,7 @@ class BalanceSheetRow:
             'total_assets': _zero_if_missing(self.total_assets),
             'total_debt': self.total_debt,
             'inventory': self.inventory,
+            'claims_outside_equity': self.claims_outside_common_equity,
             'shares_outstanding': _zero_if_missing(self.shares_outstanding),
         }
 

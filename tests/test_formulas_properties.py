@@ -28,3 +28,12 @@ def test_ncav_is_current_assets_less_all_liabilities(current_assets, total_liabi
 def test_formulas_accept_decimals():
     assert tangible_equity(Decimal("100"), Decimal("-10"), Decimal("5")) == Decimal("85")
     assert net_current_asset_value(Decimal("50"), Decimal("20")) == Decimal("30")
+
+
+@settings(max_examples=200)
+@given(current_assets=amounts, total_liabilities=amounts,
+       claims=st.floats(min_value=0, max_value=1e12, allow_nan=False, allow_infinity=False))
+def test_ncav_deducts_claims_ahead_of_the_common(current_assets, total_liabilities, claims):
+    ncav = net_current_asset_value(current_assets, total_liabilities, claims)
+    assert ncav == current_assets - total_liabilities - claims
+    assert ncav <= net_current_asset_value(current_assets, total_liabilities)

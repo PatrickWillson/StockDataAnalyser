@@ -16,7 +16,7 @@
 - Graham Number (Single-Year EPS): 23.68 USD
 - Graham Number (3-Year Avg EPS): 23.40 USD
 - Intrinsic Value (EPV per share): 53.64 USD (10-year average earnings)
-- Net-Net Value: -9.45 USD
+- Net-Net Value: -9.46 USD
 - Margin of Safety: -701.2% (Capped by Normalized Graham Number)
   - Conservative Intrinsic Value: 23.40 USD
 - Current Price: 187.49 USD

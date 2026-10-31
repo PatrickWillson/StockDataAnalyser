@@ -650,6 +650,7 @@ class FinancialDataProcessor:
                 'total_assets': bs_data.get('total_assets', 0.0),
                 'total_debt': bs_data.get('total_debt', 0.0),  # NEW: Total debt for Graham analysis
                 'inventory': bs_data.get('inventory'),  # None = not reported (quick ratio N/A)
+                'claims_outside_equity': bs_data.get('claims_outside_equity', 0.0),  # minority / redeemable equity (NCAV)
                 'wcps': wcps,  # NEW: Working Capital Per Share
                 'payout_ratio': payout_ratio,  # NEW: Payout Ratio
             }
@@ -1009,7 +1010,7 @@ class FinancialDataProcessor:
             'revenue', 'net_income', 'eps', 'dividend',
             'total_equity', 'intangible_assets', 'goodwill',
             'current_assets', 'current_liabilities', 'total_liabilities',
-            'long_term_debt', 'total_assets', 'total_debt', 'inventory',
+            'long_term_debt', 'total_assets', 'total_debt', 'inventory', 'claims_outside_equity',
             'year_end_price'
         ]
         

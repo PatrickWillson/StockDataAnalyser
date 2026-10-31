@@ -16,9 +16,13 @@ def tangible_equity(total_equity, intangible_assets, goodwill):
     return total_equity - abs(intangible_assets) - abs(goodwill)
 
 
-def net_current_asset_value(current_assets, total_liabilities):
+def net_current_asset_value(current_assets, total_liabilities, claims_outside_equity=0):
     """
     Net current asset value: "current assets alone, minus all liabilities and claims ahead of
-    the issue" (GRAHAM_METHODOLOGY §3.3). Not working capital (current assets − current liabilities).
+    the issue" (GRAHAM_METHODOLOGY §3.3). claims_outside_equity covers minority interests and
+    redeemable equity; Graham excluded "the interest of the minority stockholders of a
+    subsidiary" from working capital. Deducting the whole minority interest (not just its share
+    of subsidiary current assets) is the conservative reading (§8.4).
+    Not working capital (current assets − current liabilities).
     """
-    return current_assets - total_liabilities
+    return current_assets - total_liabilities - claims_outside_equity

@@ -16,7 +16,7 @@
 - Graham Number (Single-Year EPS): 23.68 USD
 - Graham Number (3-Year Avg EPS): 23.40 USD
 - Intrinsic Value (EPV per share): 53.64 USD (10-year average earnings)
-- Net-Net Value: -9.45 USD
+- Net-Net Value: -9.46 USD
 - Margin of Safety: -701.1% (Capped by Normalized Graham Number)
   - Conservative Intrinsic Value: 23.40 USD
 - Current Price: 187.45 USD
@@ -37,7 +37,7 @@
 
 - TTM Graham Number: 23.69 USD (Annual: 23.68 USD, Diff: +0.0%)
 - TTM Tangible Book Value Per Share: 4.00 USD
-- TTM Net-Net Value: -9.45 USD (Annual: -9.45 USD, Diff: 0.0%)
+- TTM Net-Net Value: -9.46 USD (Annual: -9.46 USD, Diff: 0.0%)
 - TTM Margin of Safety: -691.3% (Annual: -701.1%, Diff: +1.4%)
 - TTM P/E Ratio: 30.05
 - TTM P/B Ratio: 46.90
