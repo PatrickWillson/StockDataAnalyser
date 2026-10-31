@@ -8,8 +8,6 @@ engineering choices, not Graham's criteria.
 
 from typing import Final
 
-# London Fix: an LSE price with P/E above this is assumed to be quoted in pence (÷100)
-LONDON_FIX_PE_THRESHOLD: Final[float] = 500
 
 # Cross-validation against EODHD pre-computed values: warn when our figure differs by more than X%
 SHARE_COUNT_MAX_DIFF_PCT: Final[float] = 5

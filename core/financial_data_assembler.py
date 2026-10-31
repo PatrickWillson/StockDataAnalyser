@@ -12,9 +12,9 @@ from core.currency_converter import CurrencyConverter
 from core.errors import PriceUnavailableError
 from core.financial_data_processor import FinancialDataProcessor
 from core.history import has_statement_data
-from core.price_quote import PriceQuote
+from core.price_quote import PriceQuote, to_major_unit
 from config.data_quality_config import (API_DATA_MAX_AGE_DAYS, BVPS_MAX_DIFF_PCT, DIVIDEND_SOURCE_MAX_DIFF_PCT,
-                                         LONDON_FIX_PE_THRESHOLD, PE_MAX_DIFF_PCT, PROFITABILITY_MAX_DIFF_PCT,
+                                         PE_MAX_DIFF_PCT, PROFITABILITY_MAX_DIFF_PCT,
                                          SHARE_COUNT_MAX_DIFF_PCT)
 
 logger = logging.getLogger(__name__)
@@ -183,7 +183,7 @@ class FinancialDataAssembler:
         
         logger.info(f"Current Price: {price} (Source: {price_source})")
         
-        # Get most recent EPS for London Fix and P/E calculation
+        # Get most recent EPS for the P/E calculation
         # Need to find the most recent year with actual financial data (not just dividend data)
         most_recent_eps = 0.0
         if history:
@@ -196,38 +196,12 @@ class FinancialDataAssembler:
                     most_recent_eps = year_data.get('eps', 0.0)
                     break
         
-        # Determine if London Fix is needed BEFORE applying it
-        price_currency = currency
-        london_fix_needed = False
-        if exchange == "LSE" and most_recent_eps and most_recent_eps > 0 and price > 0:
-            pe_ratio = price / most_recent_eps
-            if pe_ratio > LONDON_FIX_PE_THRESHOLD:
-                london_fix_needed = True
-        
-        # Apply London Fix if needed (converts GBp to GBP)
-        if london_fix_needed:
-            price, fix_applied = self.currency_converter.apply_london_fix(price, most_recent_eps, exchange)
-            if fix_applied:
-                price_currency = "GBP"  # After London Fix, price is in GBP
-                # Also apply London Fix to 52-week high/low
-                if week_52_high > 0:
-                    week_52_high = week_52_high / 100
-                    logger.info(f"London Fix applied to 52-week high: {week_52_high:.2f} GBP")
-                if week_52_low > 0:
-                    week_52_low = week_52_low / 100
-                    logger.info(f"London Fix applied to 52-week low: {week_52_low:.2f} GBP")
-        elif exchange == "LSE" and currency == "GBX":
-            # No London Fix needed, but currency is GBX, so convert to GBP
-            price = price / 100
-            price_currency = "GBP"
-            logger.info(f"Converted GBX to GBP: {price:.2f} GBP")
-            # Also convert 52-week high/low from GBX to GBP
-            if week_52_high > 0:
-                week_52_high = week_52_high / 100
-                logger.info(f"Converted 52-week high from GBX to GBP: {week_52_high:.2f} GBP")
-            if week_52_low > 0:
-                week_52_low = week_52_low / 100
-                logger.info(f"Converted 52-week low from GBX to GBP: {week_52_low:.2f} GBP")
+        # The price unit follows the yfinance quote currency code (F6): GBp = pence -> ÷100, the
+        # London Fix. EODHD's 52-week range comes from the same exchange prices, so it shares the unit
+        price_quote_currency = quote.currency
+        price, price_currency = self.currency_converter.normalise_quote_unit(price, price_quote_currency)
+        week_52_high, _ = to_major_unit(week_52_high, price_quote_currency)
+        week_52_low, _ = to_major_unit(week_52_low, price_quote_currency)
         
         # Convert price to financials currency if they differ
         fx_rate_used = None
@@ -458,7 +432,8 @@ class FinancialDataAssembler:
             'dividend_source': dividend_source,  # NEW: Track dividend source for data quality assessment
             'fx_rate_used': fx_rate_used,  # NEW: FX rate used for price conversion (for historical prices)
             'historical_fx_rates': historical_fx_rates,  # NEW: Historical FX rates for date-matched conversion
-            'price_currency_before_fx': price_currency,  # NEW: Price currency before FX conversion (GBP for LSE after London Fix)
+            'price_currency_before_fx': price_currency,  # major currency of the quote, before FX (GBP for GBp)
+            'price_quote_currency': price_quote_currency,  # as yfinance quoted it (e.g. GBp); historical prices share it
             'ceo_name': ceo_name,
             'sector': sector,
             'industry': industry,

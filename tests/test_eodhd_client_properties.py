@@ -68,47 +68,6 @@ def test_ticker_suffix_preservation(base_ticker, suffix):
 
 
 
-# Feature: stock-data-analyser, Property 3: London Fix application
-@settings(max_examples=100)
-@given(
-    price=st.floats(min_value=1.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
-    eps=st.floats(min_value=0.01, max_value=100.0, allow_nan=False, allow_infinity=False),
-    exchange=st.sampled_from(['LSE', 'NASDAQ', 'NYSE', 'TSX'])
-)
-def test_london_fix_application(price, eps, exchange):
-    """
-    Property 3: London Fix application
-    
-    For any LSE ticker data with varying P/E ratios:
-    - Verify price is divided by 100 when P/E > 500
-    - Verify price is unchanged when P/E <= 500
-    
-    **Validates: Requirements 3.2**
-    """
-    from core.currency_converter import CurrencyConverter
-    
-    converter = CurrencyConverter()
-    
-    # Calculate P/E ratio
-    pe_ratio = price / eps
-    
-    # Apply London Fix
-    adjusted_price, fix_applied = converter.apply_london_fix(price, eps, exchange)
-    
-    if exchange == "LSE" and pe_ratio > 500:
-        # Price should be divided by 100
-        expected_price = price / 100
-        assert abs(adjusted_price - expected_price) < 0.01, \
-            f"London Fix should divide price by 100 when P/E > 500 (P/E={pe_ratio:.2f})"
-        assert fix_applied, "London Fix should be marked as applied"
-    else:
-        # Price should remain unchanged
-        assert adjusted_price == price, \
-            f"Price should not change when exchange is not LSE or P/E <= 500 (exchange={exchange}, P/E={pe_ratio:.2f})"
-        assert not fix_applied, "London Fix should not be marked as applied"
-
-
-
 # Feature: stock-data-analyser, Property 2: Currency conversion application
 @settings(max_examples=100)
 @given(

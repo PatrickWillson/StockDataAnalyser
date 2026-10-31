@@ -34,6 +34,30 @@ def test_lse_gbx_prices_are_divided_by_100():
     assert fd["history"]["2022-12-31"]["year_end_price"] is None
 
 
+def test_pence_quote_divides_history_even_when_eodhd_labels_gbp():
+    """F6: the Yahoo quote currency (GBp) decides the unit, not EODHD's GBP label."""
+    fd = _financial_data(trading="GBP", financials="GBP", exchange="LSE")
+    fd["price_quote_currency"] = "GBp"
+    apply_year_end_prices(fd, {"2023-12-31": 1650.0, "2022-12-31": 1500.0})
+    assert fd["history"]["2023-12-31"]["year_end_price"] == 16.5
+    assert fd["history"]["2022-12-31"]["year_end_price"] == 15.0
+
+
+def test_pounds_quote_is_not_divided_even_when_eodhd_labels_gbx():
+    fd = _financial_data(trading="GBX", financials="GBP", exchange="LSE")
+    fd["price_quote_currency"] = "GBP"
+    apply_year_end_prices(fd, {"2023-12-31": 16.5, "2022-12-31": None})
+    assert fd["history"]["2023-12-31"]["year_end_price"] == 16.5
+
+
+def test_cents_quote_divided_then_fx_converted():
+    fd = _financial_data(trading="ZAC", financials="USD", exchange="JSE", fx_rate=0.055)
+    fd["price_quote_currency"] = "ZAc"
+    apply_year_end_prices(fd, {"2023-12-31": 5000.0, "2022-12-31": None})
+    assert fd["history"]["2023-12-31"]["year_end_price"] == pytest.approx(50.0 * 0.055)
+    assert any("from ZAR to USD" in w for w in fd["warnings"])
+
+
 def test_historical_rates_used_with_current_rate_fallback():
     fd = _financial_data(trading="EUR", financials="USD", fx_rate=1.10, historical={"2023-12-31": 1.05})
     apply_year_end_prices(fd, {"2023-12-31": 100.0, "2022-12-31": 100.0})

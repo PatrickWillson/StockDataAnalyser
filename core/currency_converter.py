@@ -7,7 +7,7 @@ Centralizes currency logic for maintainability and testability.
 
 import logging
 from typing import List, Tuple, Optional, Dict, Protocol
-from config.data_quality_config import LONDON_FIX_PE_THRESHOLD
+from core.price_quote import is_minor_unit, to_major_unit
 
 logger = logging.getLogger(__name__)
 
@@ -97,41 +97,26 @@ class CurrencyConverter:
             logger.warning(f"Could not get FX rate for {from_currency}/{to_currency}")
             return amount, False
     
-    def apply_london_fix(self, price: float, eps: float, 
-                        exchange: str) -> Tuple[float, bool]:
+    def normalise_quote_unit(self, price: float, quote_currency: Optional[str]) -> Tuple[float, Optional[str]]:
         """
-        Apply London Fix for LSE stocks (GBp → GBP).
+        Express a quoted price in its major currency, driven by the quote currency code.
         
-        The London Stock Exchange quotes prices in pence (GBp) but financial
-        statements are in pounds (GBP). When P/E ratio exceeds 500, it indicates
-        a currency mismatch that needs correction.
+        LSE prices are quoted in pence (Yahoo "GBp", EODHD "GBX") while statements are in
+        pounds: the London Fix divides by 100. Other minor units (ZAc, ILA) work the same way.
         
-        Args:
-            price: Current stock price
-            eps: Earnings per share
-            exchange: Stock exchange code
-            
         Returns:
-            Tuple of (adjusted_price, fix_applied)
-            - adjusted_price: Price after London Fix (or original if not needed)
-            - fix_applied: True if London Fix was applied, False otherwise
+            (price in the major currency, major currency code)
             
         Example:
-            >>> converter = CurrencyConverter()
-            >>> price, applied = converter.apply_london_fix(1500.0, 2.5, 'LSE')
-            >>> if applied:
-            ...     print(f"London Fix applied: {price:.2f} GBP")
+            >>> CurrencyConverter().normalise_quote_unit(1650.0, 'GBp')
+            (16.5, 'GBP')
         """
-        if exchange == "LSE" and eps > 0 and price > 0:
-            pe_ratio = price / eps
-            if pe_ratio > LONDON_FIX_PE_THRESHOLD:
-                # Price is in pence, convert to pounds
-                adjusted_price = price / 100
-                self.conversion_history.append("London Fix applied (GBp → GBP)")
-                logger.info(f"London Fix applied: {price:.2f} GBp → {adjusted_price:.2f} GBP")
-                return adjusted_price, True
-        
-        return price, False
+        converted, major = to_major_unit(price, quote_currency)
+        if is_minor_unit(quote_currency):
+            label = "London Fix applied" if major == "GBP" else "Minor-unit quote converted"
+            self.conversion_history.append(f"{label} ({quote_currency} → {major})")
+            logger.info(f"{label}: {price:.2f} {quote_currency} → {converted:.2f} {major}")
+        return converted, major
     
     def convert_batch(self, amounts: Dict[str, float], 
                      from_currency: str, to_currency: str) -> Dict[str, float]:

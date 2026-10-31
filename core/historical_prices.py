@@ -2,7 +2,8 @@
 Historical year-end prices: currency handling and merge into the financial history.
 
 The CLI fetches daily prices and matches them to fiscal year-ends (I/O, yfinance client);
-this module converts them to the financials currency (GBX -> GBP, then date-matched
+this module converts them to the financials currency (minor units such as GBp -> GBP, driven by
+the current quote's currency code since both come from the same Yahoo listing; then date-matched
 historical FX with the current rate as fallback), stores them as history[date]['year_end_price']
 and records what was done in financial_data['warnings']. Moved from main() (M3.5).
 """
@@ -11,6 +12,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from config.data_quality_config import FISCAL_YEAR_END_LOOKBACK_DAYS
+from core.price_quote import is_minor_unit, major_currency, to_major_unit
 
 logger = logging.getLogger(__name__)
 
@@ -42,25 +44,17 @@ def apply_year_end_prices(financial_data: Dict[str, Any],
 
     logger.debug(f"Matched prices to {len([p for p in year_end_prices.values() if p is not None])} fiscal year ends")
     
-    # Convert currency if needed
-    stock_currency = financial_data.get('original_stock_currency', '')
+    # Historical closes come from the same Yahoo listing as the current quote, so they share its
+    # currency code (F6); without one, fall back to EODHD's trading currency
+    quote_currency = financial_data.get('price_quote_currency') or financial_data.get('original_stock_currency', '')
     financials_currency = financial_data.get('financials_currency', '')
-    exchange = financial_data.get('exchange', '')
+    stock_currency = major_currency(quote_currency) or ''
     
-    # For LSE stocks, yfinance returns prices in GBX (pence), not GBP
-    # We need to convert GBX → GBP first, then GBP → USD (if needed)
-    if exchange == "LSE" and stock_currency == "GBX":
-        logger.debug("Converting historical prices from GBX (pence) to GBP (pounds)")
-        gbp_prices = {}
-        for date_key, price_value in year_end_prices.items():
-            if price_value is not None:
-                gbp_prices[date_key] = price_value / 100  # GBX → GBP
-            else:
-                gbp_prices[date_key] = None
-        year_end_prices = gbp_prices
-        # Update currency for next conversion step
-        stock_currency = "GBP"
-        logger.debug(f"Converted {len([p for p in gbp_prices.values() if p is not None])} prices from GBX to GBP")
+    # Minor units (e.g. GBp pence) → major currency first, then FX (if needed)
+    if is_minor_unit(quote_currency):
+        logger.debug(f"Converting historical prices from {quote_currency} to {stock_currency}")
+        year_end_prices = {date_key: (None if price_value is None else to_major_unit(price_value, quote_currency)[0])
+                           for date_key, price_value in year_end_prices.items()}
     
     if stock_currency and financials_currency and stock_currency != financials_currency:
         logger.debug(f"Converting historical prices from {stock_currency} to {financials_currency}")

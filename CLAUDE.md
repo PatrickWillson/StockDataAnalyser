@@ -85,7 +85,7 @@ claude-output/ (Agent-generated markdown notes - gitignored)
 Stocks can trade in one currency (e.g., GBX for LSE stocks) while financial statements use another (GBP), and companies may have financials in yet another currency (USD). The system handles this with:
 
 1. **Extract currencies**: Trading currency (from API), financials currency (from balance sheet)
-2. **Apply London Fix**: For LSE stocks where P/E > 500, divide price by 100 (GBp→GBP conversion)
+2. **Apply London Fix**: When the yfinance quote currency is a minor unit (GBp pence; also ZAc, ILA), divide the price, 52-week range and historical prices by 100 (GBp→GBP). Driven by the currency code, never by P/E
 3. **Convert all data to unified currency** using live FX rates
 4. **Document everything** - Every conversion is logged in warnings for transparency
 
@@ -160,7 +160,7 @@ This saves the raw API response to `data/[TICKER]_raw_api_response.json` and pri
 | Issue | Solution |
 |-------|----------|
 | Wrong CEO name | Check Officers structure in API response - it's a dict with numeric keys ('0', '1'), not a list |
-| Currency mismatch | Verify stock_currency vs financials_currency; if P/E > 500 on LSE, London Fix needed |
+| Currency mismatch | Verify stock_currency vs financials_currency and `price_quote_currency` (GBp = pence → London Fix) |
 | Missing dividend data | Check ForwardAnnualDividendRate first, then Cash_Flow yearly data |
 | TTM vs Annual mismatch | TTM uses 12-month rolling data; Graham uses annual audited data |
 

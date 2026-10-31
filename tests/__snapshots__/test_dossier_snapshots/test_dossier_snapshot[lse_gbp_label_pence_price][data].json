@@ -40,7 +40,7 @@
         "total_equity": 49756532.0,
         "total_liabilities": 69659145.0,
         "wcps": 0.64,
-        "year_end_price": 779.0662
+        "year_end_price": 7.790662
       },
       "2015-12-31": {
         "current_assets": 69833730.0,
@@ -59,7 +59,7 @@
         "total_equity": 52375297.0,
         "total_liabilities": 73325416.0,
         "wcps": 0.69,
-        "year_end_price": 846.8111
+        "year_end_price": 8.468111
       },
       "2016-12-31": {
         "current_assets": 73509189.0,
@@ -78,7 +78,7 @@
         "total_equity": 55131892.0,
         "total_liabilities": 77184649.0,
         "wcps": 0.74,
-        "year_end_price": 920.4469
+        "year_end_price": 9.204469
       },
       "2017-12-31": {
         "current_assets": 77378094.0,
@@ -97,7 +97,7 @@
         "total_equity": 58033570.0,
         "total_liabilities": 81246998.0,
         "wcps": 0.79,
-        "year_end_price": 1000.4858
+        "year_end_price": 10.004858
       },
       "2018-12-31": {
         "current_assets": 81450625.0,
@@ -116,7 +116,7 @@
         "total_equity": 61087969.0,
         "total_liabilities": 85523156.0,
         "wcps": 0.85,
-        "year_end_price": 1087.4845
+        "year_end_price": 10.874845
       },
       "2019-12-31": {
         "current_assets": 85737500.0,
@@ -135,7 +135,7 @@
         "total_equity": 64303125.0,
         "total_liabilities": 90024375.0,
         "wcps": 0.92,
-        "year_end_price": 1182.0484
+        "year_end_price": 11.820483999999999
       },
       "2020-12-31": {
         "current_assets": 90250000.0,
@@ -154,7 +154,7 @@
         "total_equity": 67687500.0,
         "total_liabilities": 94762500.0,
         "wcps": 0.98,
-        "year_end_price": 1284.8352
+        "year_end_price": 12.848352
       },
       "2021-12-31": {
         "current_assets": 95000000.0,
@@ -173,7 +173,7 @@
         "total_equity": 71250000.0,
         "total_liabilities": 99750000.0,
         "wcps": 1.06,
-        "year_end_price": 1396.56
+        "year_end_price": 13.9656
       },
       "2022-12-31": {
         "current_assets": 100000000.0,
@@ -192,7 +192,7 @@
         "total_equity": 75000000.0,
         "total_liabilities": 105000000.0,
         "wcps": 1.11,
-        "year_end_price": 1518.0
+        "year_end_price": 15.18
       },
       "2023-12-31": {
         "current_assets": 110000000.0,
@@ -211,7 +211,7 @@
         "total_equity": 81000000.0,
         "total_liabilities": 109000000.0,
         "wcps": 1.39,
-        "year_end_price": 1650.0
+        "year_end_price": 16.5
       }
     },
     "industry": "Utilities - Diversified",
@@ -222,6 +222,7 @@
     "pe_ratio": 9.624108878807517,
     "price": 16.5,
     "price_currency_before_fx": "GBP",
+    "price_quote_currency": "GBp",
     "price_source": "yfinance",
     "price_to_book": 3.6666666666666665,
     "profit_margin": 0.049774193548387094,

@@ -8,6 +8,7 @@ Net-Net Value calculation, currency conversion details, and EPV methodology clar
 
 from typing import List, Dict, Any
 from core.history import has_statement_data
+from core.price_quote import is_minor_unit, major_currency
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
 from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 
@@ -254,23 +255,22 @@ class CalculationDetailsSection:
             original_stock_currency: Original stock trading currency
             unified_currency: Unified currency for analysis
         """
-        if original_stock_currency != unified_currency:
+        # The price unit follows the quote currency code (F6), e.g. GBp = pence
+        quote_currency = self.financial_data.get('price_quote_currency') or original_stock_currency
+        minor_unit_quote = is_minor_unit(quote_currency)
+        if original_stock_currency != unified_currency or minor_unit_quote:
             lines.append("### Currency Conversion Details:")
             fx_rate = self.financial_data.get('fx_rate_used', 0)
             
-            # Check if London Fix was applied
-            exchange = self.financial_data.get('exchange', '')
-            london_fix_applied = False
-            if exchange == "LSE" and original_stock_currency == "GBX":
-                london_fix_applied = True
-            
-            if london_fix_applied:
-                lines.append(f"- **Stock Trading Currency**: {original_stock_currency} (pence)")
+            if minor_unit_quote:
+                major = major_currency(quote_currency)
+                name = "London Fix" if major == "GBP" else "Minor-Unit Conversion"
+                lines.append(f"- **Stock Trading Currency**: {original_stock_currency} (price quoted in {quote_currency})")
                 lines.append(f"- **Financial Statements Currency**: {unified_currency}")
-                lines.append("- **London Fix Applied**: Yes (GBX → GBP conversion)")
-                lines.append("  - LSE stocks trade in pence (GBX) but financials are in pounds (GBP)")
-                lines.append("  - Price divided by 100 when P/E ratio > 500 (indicates pence vs pounds mismatch)")
-                lines.append("  - Example: 1,650 GBX = 16.50 GBP")
+                lines.append(f"- **{name} Applied**: Yes ({quote_currency} → {major} conversion)")
+                lines.append(f"  - The quote currency {quote_currency} is a minor unit (1/100 of {major})")
+                lines.append("  - Current price, 52-week range and historical prices divided by 100")
+                lines.append(f"  - Example: 1,650 {quote_currency} = 16.50 {major}")
             
             if fx_rate is not None and fx_rate > 0 and fx_rate != 1.0:
                 lines.append(f"- **FX Conversion Rate**: {fx_rate:.4f} ({original_stock_currency} → {unified_currency})")

@@ -223,6 +223,7 @@
     "pe_ratio": 9.624108878807517,
     "price": 16.5,
     "price_currency_before_fx": "GBP",
+    "price_quote_currency": "GBp",
     "price_source": "yfinance",
     "price_to_book": 3.6666666666666665,
     "profit_margin": 0.049774193548387094,

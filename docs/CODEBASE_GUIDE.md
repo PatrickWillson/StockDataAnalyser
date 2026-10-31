@@ -31,7 +31,7 @@ Requires `EODHD_API_KEY` in `.env`. `--debug` sets DEBUG logging and dumps raw E
 | 1 | `main()` | argparse (`ticker` upper-cased, `--debug`); `configure_logging(debug, secrets=[API_KEY])` (urllib3 logger pinned to WARNING; `SecretRedactingFilter` on root handlers); exit 1 if no key |
 | 2 | `ClientFactory` | builds `EODHDClient(api_key, FXClient())` and `YFinanceClient` |
 | 3 | `EODHDClient.fetch_all_data(ticker, yf_client)` | client fetches fundamentals + dividend endpoint, then `core.financial_data_assembler.FinancialDataAssembler.assemble(data, dividend_api_data, ticker, yf_client)` parses, currency-normalises, calculates and validates → `financial_data` dict (§4.1); data-quality warnings include `validate_data_quality` and `check_data_staleness` (latest annual report > 9 months old; dividend-only years ignored) |
-| 4 | `main()` + `core.historical_prices.apply_year_end_prices` | CLI fetches daily yfinance prices and matches them to fiscal year-ends; `apply_year_end_prices` divides GBX by 100 (LSE), applies historical FX (current-rate fallback), writes `history[date]['year_end_price']` and adds warnings |
+| 4 | `main()` + `core.historical_prices.apply_year_end_prices` | CLI fetches daily yfinance prices and matches them to fiscal year-ends; `apply_year_end_prices` divides minor-unit prices by 100 (per `price_quote_currency`, e.g. GBp), applies historical FX (current-rate fallback), writes `history[date]['year_end_price']` and adds warnings |
 | 5 | `GrahamCalculator(financial_data).compute_all()` | → `metrics` dict (§4.3) |
 | 6 | `TTMCalculator(...).compute_all(annual_metrics=metrics)` | only if `quarterly_data` present; wrapped in try/except → `ttm_metrics` (§4.4) |
 | 7 | `AnomalyDetector(financial_data).scan()` | → `anomalies: List[str]` |
@@ -60,7 +60,7 @@ core/
   financial_data_assembler.py  FinancialDataAssembler: raw fundamentals + dividends → financial_data (price, London Fix, FX, ratios, cross-validation, data-quality warnings)
   errors.py                 DataSourceError hierarchy (EODHDAuthError, EODHDRateLimitError, EODHDRequestError, PriceUnavailableError) — raised instead of exiting
   financial_data_processor.py  FinancialDataProcessor: raw JSON → per-year history, dividends, price, validation
-  currency_converter.py     CurrencyConverter: convert / convert_batch / try_convert_batch (None = no rate) / apply_london_fix, conversion log
+  currency_converter.py     CurrencyConverter: convert / convert_batch / try_convert_batch (None = no rate) / normalise_quote_unit (minor-unit quote → major ccy, the London Fix), conversion log
   graham_math.py            GrahamCalculator: all Graham formulas, investor tests, verdict
   history.py                predicates for "this year has real data" (skip dividend-only years) + latest_year()
   ttm_calculator.py         TTMCalculator: frequency detection, period selection, TTM metrics
@@ -69,7 +69,7 @@ core/
 config/
   graham_constants.py       GRAHAM_MULTIPLIER=22.5, COST_OF_CAPITAL=0.10 (immutable)
   investor_thresholds.py    DEFENSIVE / ENTERPRISING frozen dataclasses (test thresholds and windows: earnings stability, dividend record, earnings growth)
-  data_quality_config.py    data-check settings: London Fix P/E 500, cross-validation % limits, staleness (7 days API, 9 months report), FYE lookback 7 days, min history 10 years, missing-years limit 3, anomaly Z-score 2.0
+  data_quality_config.py    data-check settings: cross-validation % limits, staleness (7 days API, 9 months report), FYE lookback 7 days, min history 10 years, missing-years limit 3, anomaly Z-score 2.0
   risk_thresholds.py        Risk Factors display bands (beta, liquidity, debt/assets, margin volatility, ROE, payout, dividend coverage, MoS, history window); labels only — no calculation, test or verdict uses them
   ttm_config.py             TTM settings: frequency bands (75–105 / 150–210 days), gap tolerances, span checks, period-date limits, TTM-vs-annual warning limits (20% EPS, 50% revenue/NI)
   valuation_config.py       project valuation settings: NORMALIZED_EPS_YEARS (3), EPV_MIN/MAX_YEARS (7/10), DEEP_VALUE_MIN_DISCOUNT_PCT (2.0), STRONG_BUY_MIN_MOS_PCT (20)
@@ -100,6 +100,7 @@ claude-output/              agent-written markdown (gitignored)
 | `currency` | unified calculation currency = financials currency |
 | `original_stock_currency`, `financials_currency` | trading ccy (`General.CurrencyCode`), balance-sheet `currency_symbol` |
 | `price`, `price_source` | current price **in financials ccy**; always `'yfinance'` (no price → `PriceUnavailableError`, no dossier) |
+| `price_quote_currency`, `price_currency_before_fx` | quote currency as yfinance reported it (e.g. `GBp`); its major currency (`GBP`), the price's currency before FX |
 | `fx_rate_used`, `historical_fx_rates` | price ccy → financials ccy rate; `{fye_date: rate or None}` |
 | `history` | `{ 'YYYY-MM-DD': row }` — see §4.2 |
 | `warnings` | `List[str]`, appended to by client, CLI; shown in Critical Alerts |
@@ -110,7 +111,7 @@ claude-output/              agent-written markdown (gitignored)
 | `forward_dividend_rate`, `dividend_source`, `dividend_sources`, `is_dividend_amounts` | dividend info (`is_dividend_amounts=False` means values are payment counts) |
 | `ttm_dividend`, `ttm_dividend_payments` | last-365-day dividend sum |
 | `quarterly_data` | `{'balance_sheet': {date: row}, 'income_statement': {date: row}}` for TTM |
-| unused by consumers | `dividend_currency`, `price_currency_before_fx`, `ttm_dividend_currency`, `dividend_per_share`, `dividend_yield`, `enterprise_value`, `api_last_update` |
+| unused by consumers | `dividend_currency`, `ttm_dividend_currency`, `dividend_per_share`, `dividend_yield`, `enterprise_value`, `api_last_update` |
 
 ### 4.2 `history` row (built by `FinancialDataProcessor.merge_financial_data`; statement fields come from `core.statement_parsing` rows via `as_history_fields()`)
 `revenue, net_income, eps, dividend, total_equity, intangible_assets, goodwill, current_assets, current_liabilities, total_liabilities, long_term_debt, total_assets, total_debt, shares_outstanding, wcps, payout_ratio, year_end_price`
@@ -190,15 +191,14 @@ YoY EPS growth % (skip prev EPS ≤ 0), population SD, flag |z| > 2.0. Needs ≥
 1. Trading ccy = `General.CurrencyCode`; financials ccy = balance-sheet `currency_symbol`; unified = financials.
 2. Dividends: `try_convert_batch` to financials ccy at **current** rate; the "Could not convert dividends" warning is added only when it returns None (no FX rate).
 3. Price: `EODHDClient.fetch_all_data` fetches the yfinance `PriceQuote` (I/O); `FinancialDataProcessor.get_current_price(quote, trading_ccy, warnings)` accepts it only if the price is positive **and** the quote currency matches EODHD's `General.CurrencyCode` (`same_currency`, any unit); otherwise it returns a reason and the assembler raises `PriceUnavailableError` (no EODHD price fallback: no price, no dossier). No I/O in core. Then:
-   - LSE & P/E > 500 → ÷100, label GBP (London Fix, also adjusts 52-week range)
-   - else GBX → ÷100
+   - unit from the **quote currency code** (F6): minor unit (GBp/GBX, ZAc, ILA) → ÷100 to the major currency (London Fix for GBP), logged in the conversion history; no P/E heuristic. EODHD's 52-week range is divided the same way (same exchange prices, same unit)
    - then convert to financials ccy; `fx_rate_used` recorded; historical FX fetched for fiscal year-ends.
 4. Highlights dividend/BVPS, forward dividend, TTM dividend: GBX relabelled GBP, then converted.
-5. `core.historical_prices.apply_year_end_prices` converts historical year-end prices (GBX÷100 for LSE, then historical FX, fallback to current).
-6. Executive Summary converts the 52-week range with `fx_rate_used` (the rate already used for the price); no FX calls happen in the output layer.
-7. All conversions are logged into `warnings` via `CurrencyConverter.get_consolidated_warning()` (except the plain GBX÷100 path).
+5. `core.historical_prices.apply_year_end_prices` converts historical year-end prices: same Yahoo listing, so the quote's unit applies (÷100 for a minor unit, falling back to EODHD's trading code when `price_quote_currency` is absent), then historical FX with current-rate fallback.
+6. Executive Summary treats the 52-week range as `price_currency_before_fx` and converts it with `fx_rate_used` (the rate already used for the price); no FX calls happen in the output layer.
+7. All conversions are logged into `warnings` via `CurrencyConverter.get_consolidated_warning()`.
 
-GBX logic lives in several places: `CurrencyConverter.convert` (÷100), `FXClient.get_rate` (GBX treated as GBP, no factor), `convert_batch` (no special case), the assembler, `core.historical_prices`. Change one → check all.
+Price-unit logic lives in `core/price_quote.py` (`is_minor_unit`, `to_major_unit`). Other GBX logic: `CurrencyConverter.convert` (÷100), `FXClient.get_rate` (GBX treated as GBP, no factor), `convert_batch` (no special case), the assembler, `core.historical_prices`. Change one → check all.
 
 **GBX units (verified against 30 real LSE dossiers in `data/`, 2026-10-31):** EODHD reports LSE *prices* in pence but dividend amounts (Dividend API `value`, Highlights `DividendShare`, `ForwardAnnualDividendRate`) in **pounds** even when labelled GBX (e.g. ABF: £0.90 trailing at £18.73; YU: £0.56 at £17.40). Hence prices are ÷100 while dividend paths treat GBX as GBP with no factor — do not "unify" them.
 

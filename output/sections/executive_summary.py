@@ -197,14 +197,11 @@ class ExecutiveSummarySection(DossierSection):
         """
         week_52_high = self.financial_data.get('week_52_high', 0)
         week_52_low = self.financial_data.get('week_52_low', 0)
-        exchange = self.financial_data.get('exchange', '')
         
         if week_52_high > 0 and week_52_low > 0:
-            # For LSE stocks, the 52-week values have already been converted from GBX to GBP
-            # in the EODHD client (London Fix), so we need to use GBP as the trading currency
-            trading_currency = original_stock_currency
-            if exchange == "LSE" and original_stock_currency == "GBX":
-                trading_currency = "GBP"  # Values are already in GBP after London Fix
+            # Core already expressed the 52-week values in the quote's major currency
+            # (e.g. pence -> GBP), the same currency as the price before FX
+            trading_currency = self.financial_data.get('price_currency_before_fx') or original_stock_currency
             
             # Convert to unified currency if needed, with the rate core already used for the price
             # (fx_rate_used: price currency -> financials currency; same pair as trading_currency here)

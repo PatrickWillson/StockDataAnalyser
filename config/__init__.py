@@ -34,7 +34,6 @@ from config.ttm_config import (
     TTM_REVENUE_MAX_DIFF_PCT,
 )
 from config.data_quality_config import (
-    LONDON_FIX_PE_THRESHOLD,
     SHARE_COUNT_MAX_DIFF_PCT,
     PE_MAX_DIFF_PCT,
     BVPS_MAX_DIFF_PCT,
@@ -84,7 +83,6 @@ __all__ = [
     'TTM_EPS_MAX_DIFF_PCT',
     'TTM_NET_INCOME_MAX_DIFF_PCT',
     'TTM_REVENUE_MAX_DIFF_PCT',
-    'LONDON_FIX_PE_THRESHOLD',
     'SHARE_COUNT_MAX_DIFF_PCT',
     'PE_MAX_DIFF_PCT',
     'BVPS_MAX_DIFF_PCT',

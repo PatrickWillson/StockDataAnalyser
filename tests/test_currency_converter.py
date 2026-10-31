@@ -87,50 +87,32 @@ def test_conversion_history_tracking_failure():
     assert 'Failed to convert' in converter.conversion_history[0]
 
 
-def test_apply_london_fix_needed():
-    """Test London Fix application when P/E > 500."""
+def test_london_fix_driven_by_pence_quote_currency():
+    """GBp (Yahoo) / GBX (EODHD) are pence: ÷100 to GBP, logged as the London Fix."""
     converter = CurrencyConverter()
-    
-    # Price in pence, EPS in pounds -> P/E = 1500 / 2.5 = 600
-    price, applied = converter.apply_london_fix(1500.0, 2.5, 'LSE')
-    
-    assert price == 15.0  # 1500 / 100
-    assert applied is True
-    assert len(converter.conversion_history) == 1
-    assert 'London Fix applied' in converter.conversion_history[0]
+    assert converter.normalise_quote_unit(1650.0, 'GBp') == (16.5, 'GBP')
+    assert converter.normalise_quote_unit(1650.0, 'GBX') == (16.5, 'GBP')
+    assert converter.conversion_history == ["London Fix applied (GBp → GBP)", "London Fix applied (GBX → GBP)"]
 
 
-def test_apply_london_fix_not_needed():
-    """Test London Fix not applied when P/E < 500."""
+def test_pounds_quote_is_unchanged_whatever_the_pe():
+    """A GBP quote is never divided, even if price / EPS is huge (no P/E heuristic)."""
     converter = CurrencyConverter()
-    
-    # Price in pounds, EPS in pounds -> P/E = 15.0 / 2.5 = 6
-    price, applied = converter.apply_london_fix(15.0, 2.5, 'LSE')
-    
-    assert price == 15.0  # Unchanged
-    assert applied is False
-    assert len(converter.conversion_history) == 0
+    assert converter.normalise_quote_unit(1500.0, 'GBP') == (1500.0, 'GBP')
+    assert converter.conversion_history == []
 
 
-def test_apply_london_fix_non_lse_exchange():
-    """Test London Fix not applied for non-LSE exchanges."""
+def test_other_minor_units_convert_to_major():
     converter = CurrencyConverter()
-    
-    # High P/E but not LSE
-    price, applied = converter.apply_london_fix(1500.0, 2.5, 'NYSE')
-    
-    assert price == 1500.0  # Unchanged
-    assert applied is False
+    assert converter.normalise_quote_unit(5000.0, 'ZAc') == (50.0, 'ZAR')
+    assert converter.normalise_quote_unit(1200.0, 'ILA') == (12.0, 'ILS')
+    assert converter.conversion_history == ["Minor-unit quote converted (ZAc → ZAR)",
+                                            "Minor-unit quote converted (ILA → ILS)"]
 
 
-def test_apply_london_fix_zero_eps():
-    """Test London Fix not applied when EPS is zero."""
+def test_major_currency_quote_unchanged():
     converter = CurrencyConverter()
-    
-    price, applied = converter.apply_london_fix(1500.0, 0.0, 'LSE')
-    
-    assert price == 1500.0  # Unchanged
-    assert applied is False
+    assert converter.normalise_quote_unit(1500.0, 'USD') == (1500.0, 'USD')
 
 
 def test_convert_batch_same_currency():
@@ -251,7 +233,7 @@ def test_multiple_conversions_accumulate():
     
     converter.convert(100.0, 'GBP', 'USD')
     converter.convert(50.0, 'EUR', 'USD')
-    converter.apply_london_fix(1500.0, 2.5, 'LSE')
+    converter.normalise_quote_unit(1500.0, 'GBp')
     
     assert len(converter.conversion_history) == 3
 

@@ -165,7 +165,7 @@ def lse_gbx_london_fix_semi_annual() -> Scenario:
     return Scenario(
         "lse_gbx_london_fix_semi_annual", "YU.LSE", raw,
         yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw), currency="GBp"),
-        description="LSE, trades in GBX, financials GBP, P/E > 500 in pence -> London Fix, semi-annual TTM",
+        description="LSE, trades in GBX, financials GBP, quoted in GBp -> London Fix, semi-annual TTM",
     )
 
 
@@ -187,7 +187,7 @@ def lse_gbx_low_pe() -> Scenario:
     return Scenario(
         "lse_gbx_low_pe", "YU.LSE", raw,
         yahoo=yahoo_symbol("YU.L", 150.0, fiscal_year_ends(raw), currency="GBp"),
-        description="LSE, GBX price with P/E < 500 -> plain GBX/100 branch",
+        description="LSE, GBp quote with a low P/E -> London Fix still applied (driven by the currency code)",
     )
 
 
@@ -196,7 +196,7 @@ def lse_gbp_label_pence_price() -> Scenario:
     return Scenario(
         "lse_gbp_label_pence_price", "YU.LSE", raw,
         yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw), currency="GBp"),
-        description="LSE labelled GBP but price quoted in pence -> London Fix via P/E heuristic",
+        description="LSE labelled GBP by EODHD but quoted in GBp -> London Fix for the price, 52-week range and history",
     )
 
 

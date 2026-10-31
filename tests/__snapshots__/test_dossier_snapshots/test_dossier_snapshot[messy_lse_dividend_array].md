@@ -308,12 +308,12 @@ TTM calculations provide more current financial metrics by using the most recent
     - We use NCAV for consistency with common practice
 
 ### Currency Conversion Details:
-- **Stock Trading Currency**: GBX (pence)
+- **Stock Trading Currency**: GBX (price quoted in GBp)
 - **Financial Statements Currency**: GBP
-- **London Fix Applied**: Yes (GBX → GBP conversion)
-  - LSE stocks trade in pence (GBX) but financials are in pounds (GBP)
-  - Price divided by 100 when P/E ratio > 500 (indicates pence vs pounds mismatch)
-  - Example: 1,650 GBX = 16.50 GBP
+- **London Fix Applied**: Yes (GBp → GBP conversion)
+  - The quote currency GBp is a minor unit (1/100 of GBP)
+  - Current price, 52-week range and historical prices divided by 100
+  - Example: 1,650 GBp = 16.50 GBP
 - **Why Currency Unification Matters**:
   - Ensures all per-share calculations use the same currency
   - Prevents mixing GBX prices with GBP financials (100x error)

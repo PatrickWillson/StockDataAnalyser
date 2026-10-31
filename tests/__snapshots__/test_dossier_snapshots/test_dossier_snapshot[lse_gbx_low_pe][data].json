@@ -222,6 +222,7 @@
     "pe_ratio": 0.8749189889825016,
     "price": 1.5,
     "price_currency_before_fx": "GBP",
+    "price_quote_currency": "GBp",
     "price_source": "yfinance",
     "price_to_book": 0.3333333333333333,
     "profit_margin": 0.049774193548387094,
@@ -238,6 +239,7 @@
     "ttm_dividend_payments": [],
     "warnings": [
       "Price Source: yfinance (primary source)",
+      "Currency Conversions: London Fix applied (GBp → GBP)",
       "[VALIDATION] P/E Ratio Difference: API shows 8.46 (TTM basis), calculated 0.87 (annual basis) (89.7% difference). Using annual EPS from audited financials per Graham methodology.",
       "[VALIDATION] API data is 46 days old (last update: 2024-01-15). Price and market data may be stale.",
       "[VALIDATION] ROE Difference: API shows 53.08% (TTM basis), calculated 38.10% (annual basis) (28.2% difference). Using annual data from audited financials per Graham methodology.",

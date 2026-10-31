@@ -371,7 +371,7 @@ class TestCalculationDetailsSection:
         assert "### Currency Conversion Details:" in lines
         
         # Check for stock trading currency
-        trading_lines = [line for line in lines if "Stock Trading Currency" in line and "GBX" in line and "pence" in line]
+        trading_lines = [line for line in lines if "Stock Trading Currency" in line and "price quoted in GBX" in line]
         assert len(trading_lines) >= 1
         
         # Check for financial statements currency
@@ -383,9 +383,10 @@ class TestCalculationDetailsSection:
         assert len(london_lines) >= 1
         
         # Check for explanation
-        assert any("LSE stocks trade in pence" in line for line in lines)
-        assert any("Price divided by 100" in line for line in lines)
+        assert any("GBX is a minor unit (1/100 of GBP)" in line for line in lines)
+        assert any("divided by 100" in line for line in lines)
         assert any("1,650 GBX = 16.50 GBP" in line for line in lines)
+        assert not any("P/E ratio > 500" in line for line in lines)  # F6: no P/E heuristic
     
     def test_currency_conversion_details_with_fx_rate(self):
         """Test currency conversion details with FX rate conversion."""

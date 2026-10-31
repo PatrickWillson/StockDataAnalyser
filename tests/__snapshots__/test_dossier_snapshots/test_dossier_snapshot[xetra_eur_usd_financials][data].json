@@ -420,6 +420,7 @@
     "pe_ratio": 30.057893570070622,
     "price": 187.489,
     "price_currency_before_fx": "EUR",
+    "price_quote_currency": "EUR",
     "price_source": "yfinance",
     "price_to_book": 46.91316234076208,
     "profit_margin": 0.2530623426432028,

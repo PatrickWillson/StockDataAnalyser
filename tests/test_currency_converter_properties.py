@@ -198,30 +198,13 @@ def test_property_conversion_scales_linearly(amount, rate):
 @settings(max_examples=100)
 @given(
     price=st.floats(min_value=1.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
-    eps=st.floats(min_value=0.01, max_value=50.0, allow_nan=False, allow_infinity=False)
+    code=st.sampled_from(['GBp', 'GBX', 'ZAc', 'ILA'])
 )
-def test_property_london_fix_reduces_price_by_100(price, eps):
-    """
-    Property: When London Fix is applied, price is divided by 100.
-    
-    For any price and EPS where P/E > 500, the London Fix should divide
-    the price by exactly 100.
-    """
-    converter = CurrencyConverter()
-    
-    # Calculate P/E ratio
-    pe_ratio = price / eps
-    
-    result, applied = converter.apply_london_fix(price, eps, 'LSE')
-    
-    if pe_ratio > 500:
-        # London Fix should be applied
-        assert applied is True
-        assert result == pytest.approx(price / 100, rel=1e-9)
-    else:
-        # London Fix should not be applied
-        assert applied is False
-        assert result == price
+def test_property_minor_unit_quote_divided_by_100(price, code):
+    """Property: a price quoted in a minor unit is divided by exactly 100."""
+    result, major = CurrencyConverter().normalise_quote_unit(price, code)
+    assert result == pytest.approx(price / 100, rel=1e-9)
+    assert major in ('GBP', 'ZAR', 'ILS')
 
 
 @settings(max_examples=100)
@@ -271,19 +254,10 @@ def test_property_conversion_history_grows(amount, rate):
 @settings(max_examples=100)
 @given(
     price=st.floats(min_value=1.0, max_value=10000.0, allow_nan=False, allow_infinity=False),
-    eps=st.floats(min_value=0.01, max_value=50.0, allow_nan=False, allow_infinity=False)
+    code=st.sampled_from(['USD', 'GBP', 'EUR', 'JPY', 'CAD'])
 )
-def test_property_london_fix_only_for_lse(price, eps):
-    """
-    Property: London Fix is only applied for LSE exchange.
-    
-    For any price and EPS, London Fix should never be applied for non-LSE exchanges,
-    regardless of P/E ratio.
-    """
+def test_property_major_currency_quote_never_divided(price, code):
+    """Property: a price quoted in a major currency is never changed (no P/E heuristic)."""
     converter = CurrencyConverter()
-    
-    # Test various non-LSE exchanges
-    for exchange in ['NYSE', 'NASDAQ', 'TSE', 'XETRA', 'PA']:
-        result, applied = converter.apply_london_fix(price, eps, exchange)
-        assert applied is False
-        assert result == price
+    assert converter.normalise_quote_unit(price, code) == (price, code)
+    assert converter.conversion_history == []

@@ -191,6 +191,7 @@
     "pe_ratio": 32.522190913603716,
     "price": 187.45,
     "price_currency_before_fx": "USD",
+    "price_quote_currency": "USD",
     "price_source": "yfinance",
     "price_to_book": 48.80648336820415,
     "profit_margin": 0.2588179335569424,

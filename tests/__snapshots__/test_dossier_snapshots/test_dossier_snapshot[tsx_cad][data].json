@@ -400,6 +400,7 @@
     "pe_ratio": 40.89716543223877,
     "price": 255.1,
     "price_currency_before_fx": "CAD",
+    "price_quote_currency": "CAD",
     "price_source": "yfinance",
     "price_to_book": 63.83066586908248,
     "profit_margin": 0.2530623426432028,
