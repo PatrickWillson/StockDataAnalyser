@@ -26,6 +26,10 @@ from config.valuation_config import (DEEP_VALUE_MIN_DISCOUNT_PCT, EPV_MAX_YEARS,
 # Default for "not precomputed by compute_all" (None and "N/A" are real results)
 _UNSET = object()
 
+# compute_epv_normalized's reason when average earnings over the cycle are not positive: a real
+# finding (no earning power, EPV 0), unlike missing data (EPV "N/A")
+NEGATIVE_EARNINGS_REASON = "N/A - Negative normalized earnings (company unprofitable over cycle)"
+
 
 class GrahamCalculator:
     """
@@ -703,12 +707,24 @@ class GrahamCalculator:
             else:
                 mos_percentage = round(margin_of_safety_pct(intrinsic_value, current_price), 1)
         
+        # Why the margin of safety is limited or missing, for the dossier
+        epv_reason = epv_data.get('unavailable_reason')
+        if intrinsic_value == "N/A":
+            note = "normalized Graham Number and EPV both unavailable"
+        elif intrinsic_value == 0.00:
+            note = f"no earning power: {epv_reason}" if epv_reason else "intrinsic value is zero"
+        elif not epv_valid and epv_reason:
+            note = f"EPV unavailable: {epv_reason}"
+        else:
+            note = None
+        
         return {
             'mos_percentage': mos_percentage,
             'intrinsic_value_used': intrinsic_value,
             'limiting_factor': limiting_factor,
             'normalized_graham_number': normalized_gn,
-            'epv_per_share': epv_per_share
+            'epv_per_share': epv_per_share,
+            'note': note,
         }
     
     def compute_epv_normalized(self, history: Dict[str, Dict[str, float]], 
@@ -771,7 +787,7 @@ class GrahamCalculator:
         
         # If average is negative, company is unprofitable over the cycle
         if normalized_earnings <= 0:
-            return "N/A - Negative normalized earnings (company unprofitable over cycle)"
+            return NEGATIVE_EARNINGS_REASON
         
         # Calculate EPV
         epv = normalized_earnings / COST_OF_CAPITAL
@@ -782,11 +798,12 @@ class GrahamCalculator:
             return "N/A - No financial data available"
         
         shares = history[latest_year].get('shares_outstanding', 0)
-        epv_per_share = epv / shares if shares > 0 else 0.0
+        epv_per_share = epv / shares if shares > 0 else "N/A"  # no share count: unknown, not zero
         
         result = {
             'epv': round(epv, 2) if round_result else epv,
-            'epv_per_share': round(epv_per_share, 2) if round_result else epv_per_share,
+            'epv_per_share': (round(epv_per_share, 2) if round_result else epv_per_share)
+                             if isinstance(epv_per_share, float) else epv_per_share,
             'normalized_earnings': round(normalized_earnings, 2) if round_result else normalized_earnings,
             'years_used': len(years_to_use),
             'years_included': years_to_use,
@@ -819,14 +836,18 @@ class GrahamCalculator:
         # Call the new normalized method
         result = self.compute_epv_normalized(history, round_result=True)
         
-        # Handle string return (N/A cases)
+        # Unavailable (too little history, no data): "N/A", never 0, so the margin of safety
+        # falls back to the normalized Graham Number (F3). Negative average earnings over the
+        # cycle are a real finding: no earning power, EPV 0 (GRAHAM_METHODOLOGY §2.1-2.3)
         if isinstance(result, str):
+            value = 0.0 if result == NEGATIVE_EARNINGS_REASON else "N/A"
             return {
-                'epv': 0.0,
-                'normalized_earnings': 0.0,
+                'epv': value,
+                'normalized_earnings': "N/A",
                 'years_used': 0,
                 'cost_of_capital': COST_OF_CAPITAL,
-                'epv_per_share': 0.0
+                'epv_per_share': value,
+                'unavailable_reason': result.removeprefix("N/A - "),
             }
         
         # Add cost_of_capital for backward compatibility

@@ -538,7 +538,8 @@
       "intrinsic_value_used": 53.64,
       "limiting_factor": "EPV",
       "mos_percentage": -249.5,
-      "normalized_graham_number": "N/A"
+      "normalized_graham_number": "N/A",
+      "note": null
     },
     "nca_details": {
       "current_assets": 143566000000.0,

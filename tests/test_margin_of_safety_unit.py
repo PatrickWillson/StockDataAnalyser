@@ -132,17 +132,14 @@ class TestMarginOfSafetyEdgeCases:
         assert isinstance(result['normalized_graham_number'], float), \
             f"Expected float for normalized_graham_number, got {type(result['normalized_graham_number'])}"
         
-        # EPV should be 0.0 (insufficient data)
-        assert result['epv_per_share'] == 0.0, \
-            f"Expected 0.0 for epv_per_share (insufficient data), got {result['epv_per_share']}"
+        # F3: EPV is unavailable (insufficient history), not zero
+        assert result['epv_per_share'] == "N/A"
         
-        # CRITICAL: EPV = 0.0 is a valid value, so min(normalized_gn, 0.0) = 0.0
-        # This is correct behavior - EPV of 0.0 means value destroyer
-        assert result['intrinsic_value_used'] == 0.0, \
-            "Expected intrinsic_value_used to be 0.0 (min of normalized_gn and EPV=0.0)"
-        
-        assert result['limiting_factor'] == "EPV", \
-            "Expected limiting_factor 'EPV' (0.0 < normalized_gn)"
+        # So the normalized Graham Number alone is the intrinsic value, with the reason
+        assert result['intrinsic_value_used'] == result['normalized_graham_number']
+        assert result['limiting_factor'] == "Normalized Graham Number"
+        assert isinstance(result['mos_percentage'], float)
+        assert result['note'].startswith("EPV unavailable: Insufficient history")
     
     def test_only_epv_valid(self):
         """
@@ -257,20 +254,12 @@ class TestMarginOfSafetyEdgeCases:
         assert result['normalized_graham_number'] == "N/A", \
             "Expected 'N/A' for normalized_graham_number"
         
-        # EPV should be 0.0 (insufficient data)
-        assert result['epv_per_share'] == 0.0, \
-            "Expected 0.0 for epv_per_share (insufficient data)"
-        
-        # CRITICAL: EPV = 0.0 is a valid value, not "N/A"
-        # So intrinsic_value_used = 0.0, and MoS = "N/A" (cannot divide by zero)
-        assert result['intrinsic_value_used'] == 0.0, \
-            "Expected intrinsic_value_used to be 0.0"
-        
-        assert result['mos_percentage'] == "N/A", \
-            "Expected 'N/A' for mos_percentage (cannot divide by zero)"
-        
-        assert result['limiting_factor'] == "EPV", \
-            "Expected limiting_factor 'EPV' (0.0 is the limiting value)"
+        # F3: EPV is unavailable (insufficient history), not zero, so both anchors are N/A
+        assert result['epv_per_share'] == "N/A"
+        assert result['intrinsic_value_used'] == "N/A"
+        assert result['mos_percentage'] == "N/A"
+        assert result['limiting_factor'] == "N/A"
+        assert result['note'] == "normalized Graham Number and EPV both unavailable"
     
     def test_epv_zero_vs_na_distinction(self):
         """
@@ -371,20 +360,16 @@ class TestMarginOfSafetyEdgeCases:
         calculator_case2 = GrahamCalculator(financial_data_case2)
         result_case2 = calculator_case2.compute_margin_of_safety(30.00)
         
-        # Assert Case 2: EPV = 0.0 (insufficient data)
+        # Assert Case 2: EPV = "N/A" (insufficient data), so the normalized GN is used (F3)
         assert isinstance(result_case2['normalized_graham_number'], float), \
             "Case 2: Expected float for normalized_graham_number"
+        assert result_case2['epv_per_share'] == "N/A"
+        assert result_case2['intrinsic_value_used'] == result_case2['normalized_graham_number']
+        assert result_case2['limiting_factor'] == "Normalized Graham Number"
+        assert isinstance(result_case2['mos_percentage'], float)
         
-        assert result_case2['epv_per_share'] == 0.0, \
-            "Case 2: Expected 0.0 for epv_per_share (insufficient data)"
-        
-        # CRITICAL: EPV = 0.0 is treated as a valid value (not "N/A")
-        # So min(normalized_gn, 0.0) = 0.0
-        assert result_case2['intrinsic_value_used'] == 0.0, \
-            "Case 2: Expected intrinsic_value_used to be 0.0 (min of normalized_gn and EPV=0.0)"
-        
-        assert result_case2['limiting_factor'] == "EPV", \
-            "Case 2: Expected limiting_factor 'EPV' (0.0 < normalized_gn)"
+        # Case 1 (negative cycle earnings) keeps EPV 0: no earning power, with the reason
+        assert result_case1['note'].startswith("no earning power")
     
     def test_intrinsic_value_zero_mos_na(self):
         """

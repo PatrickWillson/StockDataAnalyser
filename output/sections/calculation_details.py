@@ -300,7 +300,7 @@ class CalculationDetailsSection:
         """
         epv_value = self.metrics.get('epv', 0)
         
-        if epv_value > 0:
+        if isinstance(epv_value, (int, float)) and epv_value > 0:
             epv_details = self.metrics.get('epv_details', {})
             cost_of_capital = epv_details.get('cost_of_capital', COST_OF_CAPITAL)
             

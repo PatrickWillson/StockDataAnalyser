@@ -296,7 +296,8 @@
       "intrinsic_value_used": 21.38,
       "limiting_factor": "Normalized Graham Number",
       "mos_percentage": -776.8,
-      "normalized_graham_number": 21.38
+      "normalized_graham_number": 21.38,
+      "note": null
     },
     "nca_details": {
       "current_assets": 134836000000.0,

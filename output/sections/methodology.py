@@ -209,7 +209,7 @@ class MethodologySection:
         """
         epv_value = self.metrics.get('epv', 0)
         
-        if epv_value > 0:
+        if isinstance(epv_value, (int, float)) and epv_value > 0:
             ticker = self.financial_data.get('ticker', 'UNKNOWN')
             epv_per_share = epv_details.get('epv_per_share', 0)
             normalized_earnings = epv_details.get('normalized_earnings', 0)
@@ -365,8 +365,12 @@ class MethodologySection:
             
             lines.append("")
             
-            # Add interpretation based on limiting factor
-            if limiting_factor == "EPV":
+            # Add interpretation based on limiting factor (a comparison only when both exist)
+            mos_note = mos_details.get('note')
+            both_anchors = isinstance(normalized_gn, (int, float)) and isinstance(epv_per_share, (int, float))
+            if mos_note and not both_anchors:
+                lines.append(f"  **Interpretation**: Only the {limiting_factor} is available ({mos_note}).")
+            elif limiting_factor == "EPV":
                 lines.append("  **Interpretation**: EPV is lower than Normalized Graham Number, indicating")
                 lines.append("  that long-term earnings power is weaker than asset-based valuation suggests.")
                 lines.append("  This is a red flag - the company may be destroying value over the full cycle.")

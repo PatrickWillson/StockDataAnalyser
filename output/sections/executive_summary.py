@@ -64,10 +64,16 @@ class ExecutiveSummarySection(DossierSection):
         mos_percentage = mos_details.get('mos_percentage', self.metrics.get('margin_of_safety', 'N/A'))
         limiting_factor = mos_details.get('limiting_factor', 'N/A')
         intrinsic_value_used = mos_details.get('intrinsic_value_used', 'N/A')
+        mos_note = mos_details.get('note')
         
         if mos_percentage != 'N/A':
             # Format the MoS display with limiting factor
-            if limiting_factor != 'N/A':
+            if mos_note:
+                lines.append(f"- Margin of Safety: {mos_percentage:.1f}% ({limiting_factor} only; {mos_note})")
+                if intrinsic_value_used != 'N/A':
+                    iv_display = format_price_display(float(intrinsic_value_used), unified_currency, unified_currency)
+                    lines.append(f"  - Conservative Intrinsic Value: {iv_display}")
+            elif limiting_factor != 'N/A':
                 lines.append(f"- Margin of Safety: {mos_percentage:.1f}% (Capped by {limiting_factor})")
                 
                 # Add explanatory note about which intrinsic value was used
@@ -76,6 +82,8 @@ class ExecutiveSummarySection(DossierSection):
                     lines.append(f"  - Conservative Intrinsic Value: {iv_display}")
             else:
                 lines.append(f"- Margin of Safety: {mos_percentage:.1f}%")
+        elif mos_note:
+            lines.append(f"- Margin of Safety: {mos_percentage} ({mos_note})")
         else:
             lines.append(f"- Margin of Safety: {mos_percentage}")
         

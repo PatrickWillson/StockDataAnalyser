@@ -12,12 +12,13 @@
 ## SECTION 1: EXECUTIVE SUMMARY
 *Current metrics (P/E, Price) reflect most recent available data*
 
-- Verdict: **PENDING**
+- Verdict: **OVERVALUED**
 - Graham Number (Single-Year EPS): 23.68 USD
 - Graham Number (3-Year Avg EPS): 23.40 USD
 - Intrinsic Value (EPV per share): N/A (requires 7+ years of annual earnings with a positive average)
 - Net-Net Value: -9.46 USD
-- Margin of Safety: N/A
+- Margin of Safety: -701.1% (Normalized Graham Number only; EPV unavailable: Insufficient history (3 complete years, minimum 7 required))
+  - Conservative Intrinsic Value: 23.40 USD
 - Current Price: 187.45 USD
 - 52-Week Range: 124.17 USD - 199.62 USD
 - Trailing Dividend: 0.95 USD (Yield: 0.51%) - Paid (Cash Flow) [2023]
@@ -67,7 +68,9 @@
 - **Dividend History: 5 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: N/A** - Cannot assess valuation risk
+- **Margin of Safety: -701.1%** - Trading above intrinsic value
+  - Graham's Standard: 20-30% minimum for defensive investors
+  - Assessment: **High valuation risk** - no margin for error
   - Intrinsic Value (Graham): 23.68 USD
   - Current Price: 187.45 USD
 
@@ -119,7 +122,7 @@
   **3-Year EPS**: [2023: 6.24 USD, 2022: 6.26 USD, 2021: 5.76 USD] → Avg: 6.09 USD
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
-  - **Value**: N/A
+  - **Value**: -701.1%
   - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
 
   **Conservative Dual-Anchor Methodology**:
@@ -138,12 +141,10 @@
 
   **For This Stock**:
   - Normalized Graham Number: 23.40 USD
-  - EPV per share: 0.00 USD
-  - **Intrinsic Value Used**: 0.00 USD (Capped by EPV)
+  - EPV per share: N/A
+  - **Intrinsic Value Used**: 23.40 USD (Capped by Normalized Graham Number)
 
-  **Interpretation**: EPV is lower than Normalized Graham Number, indicating
-  that long-term earnings power is weaker than asset-based valuation suggests.
-  This is a red flag - the company may be destroying value over the full cycle.
+  **Interpretation**: Only the Normalized Graham Number is available (EPV unavailable: Insufficient history (3 complete years, minimum 7 required)).
 
   **Graham's Principle**: *"The margin of safety is always dependent on the price paid."*
   Graham recommended a minimum 20-30% margin of safety for defensive investors.

@@ -105,7 +105,7 @@ The ordered verdict rules are in `claude-output/REFACTOR_SCOPE.md` (D8) and will
 | Normalized Graham Number EPS years | 3 reported years (§4.6) | Reported years only | **Fixed (F2)** |
 | EPV display | Per share, stated period (§2.1) | Per share with years | **Fixed (F1)** |
 | EPV per share | Average per-share earnings (§2.4) | Average total NI ÷ today's shares | F22 |
-| Missing EPV | N/A, not zero (§2) | Becomes 0.0 and forces MoS to N/A | F3 |
+| Missing EPV | N/A, not zero (§2) | "N/A" with the reason; MoS uses the normalized Graham Number alone and says why. Negative average earnings over the cycle stay a real 0 (no earning power), so MoS is N/A rather than resting on the last three years (§2.1–2.3) | **Fixed (F3)** |
 | Defensive P/E (4.6) | 15 × 3-year average EPS | Single-year EPS | F20 |
 | Defensive earnings growth (4.5) | Per-share, 3-year averages at both ends | Single-year total net income vs 10th year | F20 |
 | Defensive dividend record (4.4) | 20 uninterrupted years | Passes with fewer years if all paid | F20 |

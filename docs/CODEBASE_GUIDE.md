@@ -169,8 +169,8 @@ Where EODHD pre-computed values are used today:
 | Quick ratio | (CA − Inventory) / CL from the latest annual balance sheet (`inventory` parsed; a reported 0 counts). Inventory not reported → N/A with a warning, never imputed from the sector (F14) |
 | 3-yr avg P/E | price / mean(EPS of 3 latest complete years) |
 | Combined P/E×P/B | round(P/E) × round(P/B, BVPS-based) ≤ 22.5 |
-| EPV | mean(net income, up to 10 complete years, min 7) / COST_OF_CAPITAL; per share = EPV / latest shares. `compute_epv()` turns N/A into 0.0 |
-| Margin of Safety | IV = min(Normalized GN, EPV/share); MoS = (IV − Price)/IV × 100 |
+| EPV | mean(net income, up to 10 complete years, min 7) / COST_OF_CAPITAL; per share = EPV / latest shares. Unavailable (fewer than 7 complete years, no data, no share count) → `epv`/`epv_per_share` "N/A" with `unavailable_reason`; negative average earnings over the cycle → 0.0 (no earning power), also with the reason (F3) |
+| Margin of Safety | IV = min(Normalized GN, EPV/share) over the anchors that are available; MoS = (IV − Price)/IV × 100; IV 0 (no earning power) or both unavailable → "N/A". `margin_of_safety_details['note']` gives the reason when an anchor is missing or IV is 0, and the Executive Summary shows it |
 | Verdict | GN "N/A" → "Rely on EPV - Negative Equity"; defensive fail & enterprising pass → "ENTERPRISING BUY"; MoS ≥ 20 → "STRONG BUY (Undervalued)"; > 0 → "UNDERVALUED"; else "OVERVALUED" |
 
 **Defensive tests** (`DEFENSIVE` thresholds): current ratio ≥ 2.0; LTD < CA − CL; earnings stability (positive NI in last 10 years); dividend record (dividend every year up to 20); earnings growth (latest NI / NI 10 financial years ago ≥ 1.33, else "N/A (Too Young)"); P/E < 15; P/B < 1.5.

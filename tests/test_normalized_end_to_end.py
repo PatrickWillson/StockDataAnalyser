@@ -434,20 +434,16 @@ class TestScenario5EPVZeroVsNA:
         calculator_young = GrahamCalculator(financial_data_young)
         metrics_young = calculator_young.compute_all()
         
-        # Assert: Verify EPV is "N/A" or 0.0 (insufficient history)
+        # Assert: EPV is "N/A" (insufficient history), never 0.0 (F3)
         epv_details_young = metrics_young['epv_details']
-        assert epv_details_young['epv_per_share'] == 0.0  # Insufficient data
+        assert epv_details_young['epv_per_share'] == "N/A"
         
-        # Assert: Verify MoS falls back to normalized GN
+        # Assert: MoS falls back to the normalized GN
         mos_details_young = metrics_young['margin_of_safety_details']
-        if isinstance(mos_details_young['normalized_graham_number'], float):
-            # EPV is 0.0 (insufficient data), but it's still numeric
-            # The system will use min(normalized_gn, 0.0) = 0.0
-            # So limiting factor will be EPV even though it's from insufficient data
-            assert mos_details_young['limiting_factor'] in ["EPV", "Normalized Graham Number"]
-            # If EPV is 0.0, intrinsic value will be 0.0
-            if mos_details_young['epv_per_share'] == 0.0:
-                assert mos_details_young['intrinsic_value_used'] == 0.0
+        assert isinstance(mos_details_young['normalized_graham_number'], float)
+        assert mos_details_young['limiting_factor'] == "Normalized Graham Number"
+        assert mos_details_young['intrinsic_value_used'] == mos_details_young['normalized_graham_number']
+        assert isinstance(mos_details_young['mos_percentage'], float)
 
 
 class TestCompleteDossierGeneration:
