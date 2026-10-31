@@ -136,6 +136,15 @@ class CurrencyConverter:
     def convert_batch(self, amounts: Dict[str, float], 
                      from_currency: str, to_currency: str) -> Dict[str, float]:
         """
+        Convert multiple amounts (e.g., historical dividends); unconverted copies when no rate.
+        Use try_convert_batch to tell a failed conversion apart.
+        """
+        converted = self.try_convert_batch(amounts, from_currency, to_currency)
+        return converted if converted is not None else amounts.copy()
+    
+    def try_convert_batch(self, amounts: Dict[str, float], 
+                          from_currency: str, to_currency: str) -> Optional[Dict[str, float]]:
+        """
         Convert multiple amounts (e.g., historical dividends).
         
         Args:
@@ -144,12 +153,12 @@ class CurrencyConverter:
             to_currency: Target currency code
             
         Returns:
-            Dictionary with same keys and converted amounts
+            Dictionary with same keys and converted amounts, or None when no FX rate is available
             
         Example:
             >>> converter = CurrencyConverter()
             >>> dividends = {'2020': 1.5, '2021': 1.6, '2022': 1.7}
-            >>> converted = converter.convert_batch(dividends, 'GBP', 'USD')
+            >>> converted = converter.try_convert_batch(dividends, 'GBP', 'USD')
         """
         # Same currency - no conversion needed
         if from_currency == to_currency:
@@ -166,12 +175,11 @@ class CurrencyConverter:
             logger.info(f"Batch converted {len(amounts)} values from {from_currency} to {to_currency} at rate {fx_rate:.4f}")
             return converted
         else:
-            # Conversion failed - return original amounts
             self.conversion_history.append(
                 f"Failed batch conversion: {from_currency} → {to_currency} (rate unavailable)"
             )
             logger.warning(f"Could not get FX rate for batch conversion {from_currency}/{to_currency}")
-            return amounts.copy()
+            return None
     
     def get_consolidated_warning(self) -> str:
         """

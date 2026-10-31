@@ -155,19 +155,17 @@ class FinancialDataAssembler:
         # This is critical for Dividend API data which comes in the stock's trading currency
         if dividend_currency != financials_currency:
             logger.info(f"Converting dividends from {dividend_currency} to {financials_currency}...")
-            converted_dividends = self.currency_converter.convert_batch(
+            converted_dividends = self.currency_converter.try_convert_batch(
                 dividend_history, dividend_currency, financials_currency
             )
             
-            if converted_dividends != dividend_history:
-                # Conversion succeeded
+            if converted_dividends is not None:
                 dividend_history = converted_dividends
                 logger.info(f"Historical dividends converted from {dividend_currency} to {financials_currency}")
                 if self.debug:
                     for year_key in list(dividend_history.keys())[:3]:  # Show first 3 for debug
                         logger.debug(f"Converted {year_key} dividend: {dividend_history[year_key]:.4f} {financials_currency}")
             else:
-                # Conversion failed
                 warnings.append(f"WARNING: Could not convert dividends from {dividend_currency} to {financials_currency} - FX rate unavailable")
                 logger.warning(f"Could not get FX rate for {dividend_currency}/{financials_currency}")
         

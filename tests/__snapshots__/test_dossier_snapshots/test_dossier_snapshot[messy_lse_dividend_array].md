@@ -428,7 +428,6 @@ TTM calculations provide more current financial metrics by using the most recent
 ## SECTION 3: CRITICAL ALERTS
 
 ### Data Quality & Limitations:
-- WARNING: Could not convert dividends from GBX to GBP - FX rate unavailable
 - Price Source: yfinance (primary source)
 - Currency Conversions: Batch conversion: 2 values from GBX → GBP at rate 1.0000; London Fix applied (GBp → GBP)
 - [VALIDATION] API data is 46 days old (last update: 2024-01-15). Price and market data may be stale.

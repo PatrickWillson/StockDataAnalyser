@@ -172,6 +172,22 @@ def test_convert_batch_different_currency_failure():
     assert 'Failed batch conversion' in converter.conversion_history[0]
 
 
+def test_try_convert_batch_reports_failure_as_none():
+    converter = CurrencyConverter(fx_client=MockFXClient(rates={}))
+    assert converter.try_convert_batch({'2020': 1.5}, 'GBP', 'USD') is None
+
+
+def test_try_convert_batch_succeeds_at_rate_one():
+    """A rate of 1.0 (e.g. GBX dividends already in pounds -> GBP) is a success, not a failure."""
+    converter = CurrencyConverter(fx_client=MockFXClient(rates={('GBX', 'GBP'): 1.0}))
+    assert converter.try_convert_batch({'2020': 0.56}, 'GBX', 'GBP') == {'2020': 0.56}
+
+
+def test_try_convert_batch_succeeds_with_nothing_to_convert():
+    converter = CurrencyConverter(fx_client=MockFXClient(rates={('GBX', 'USD'): 1.37}))
+    assert converter.try_convert_batch({}, 'GBX', 'USD') == {}
+
+
 def test_get_consolidated_warning_empty():
     """Test consolidated warning when no conversions performed."""
     converter = CurrencyConverter()
