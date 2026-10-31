@@ -65,6 +65,7 @@ config/
   graham_constants.py       GRAHAM_MULTIPLIER=22.5, COST_OF_CAPITAL=0.10 (immutable)
   investor_thresholds.py    DEFENSIVE / ENTERPRISING frozen dataclasses (test thresholds and windows: earnings stability, dividend record, earnings growth)
   data_quality_config.py    data-check settings: London Fix P/E 500, cross-validation % limits, staleness (7 days API, 9 months report), FYE lookback 7 days, min history 10 years, gap limit 3, anomaly Z-score 2.0
+  risk_thresholds.py        Risk Factors display bands (beta, liquidity, debt/assets, margin volatility, ROE, payout, dividend coverage, MoS, history window); labels only — no calculation, test or verdict uses them
   ttm_config.py             TTM settings: frequency bands (75–105 / 150–210 days), gap tolerances, span checks, period-date limits, TTM-vs-annual warning limits (20% EPS, 50% revenue/NI)
   valuation_config.py       project valuation settings: NORMALIZED_EPS_YEARS (3), EPV_MIN/MAX_YEARS (7/10), DEEP_VALUE_MIN_DISCOUNT_PCT (2.0), STRONG_BUY_MIN_MOS_PCT (20)
   api_config.py             APIConfig (unused in production)

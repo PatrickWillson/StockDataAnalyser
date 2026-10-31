@@ -9,6 +9,34 @@ from typing import List, Dict, Any
 from output.sections.base import DossierSection
 from output.formatting import format_price_display
 from core.history import has_statement_data
+from config.data_quality_config import MIN_HISTORY_YEARS_RECOMMENDED
+from config.investor_thresholds import DEFENSIVE, ENTERPRISING
+from config.risk_thresholds import (
+    BETA_HIGH,
+    BETA_LOW,
+    BETA_MARKET,
+    CURRENT_RATIO_CRITICAL,
+    DIVIDEND_COVERAGE_ADEQUATE,
+    DIVIDEND_COVERAGE_MIN,
+    DIVIDEND_COVERAGE_STRONG,
+    DIVIDEND_MOSTLY_CONSISTENT_FRACTION,
+    INSTITUTIONAL_HIGH_PCT,
+    LIQUIDITY_LOW_PCT,
+    LIQUIDITY_MODERATE_PCT,
+    LT_DEBT_TO_ASSETS_LOW_PCT,
+    LT_DEBT_TO_ASSETS_MODERATE_PCT,
+    MARGIN_VOLATILITY_LOW_PCT,
+    MARGIN_VOLATILITY_MODERATE_PCT,
+    MOS_ACCEPTABLE_PCT,
+    MOS_EXCELLENT_PCT,
+    PAYOUT_CONSERVATIVE_PCT,
+    PAYOUT_MAX_PCT,
+    PAYOUT_MODERATE_PCT,
+    PROFIT_MARGIN_SANITY_LIMIT_PCT,
+    RISK_HISTORY_WINDOW_YEARS,
+    ROE_ADEQUATE,
+    ROE_STRONG,
+)
 
 
 class RiskFactorsSection(DossierSection):
@@ -122,13 +150,13 @@ class RiskFactorsSection(DossierSection):
         if beta is None:
             beta = 0
         if beta > 0:
-            if beta < 0.5:
+            if beta < BETA_LOW:
                 lines.append(f"- **Beta: {beta:.3f}** - Low volatility relative to market")
                 lines.append("  - Note: Beta varies by calculation period and benchmark. Market sources report 0.33-0.50 range.")
                 lines.append("  - Low beta may reflect limited liquidity and defensive sector characteristics")
-            elif beta < 1.0:
+            elif beta < BETA_MARKET:
                 lines.append(f"- **Beta: {beta:.3f}** - Below-market volatility")
-            elif beta < 1.5:
+            elif beta < BETA_HIGH:
                 lines.append(f"- **Beta: {beta:.3f}** - Above-market volatility")
             else:
                 lines.append(f"- **Beta: {beta:.3f}** - High volatility (⚠️ Risk)")
@@ -139,9 +167,9 @@ class RiskFactorsSection(DossierSection):
         self.financial_data.get('price', 0)
         if avg_volume > 0 and shares > 0:
             liquidity_pct = (avg_volume / shares) * 100
-            if liquidity_pct < 0.1:
+            if liquidity_pct < LIQUIDITY_LOW_PCT:
                 lines.append(f"- **Daily Liquidity: {liquidity_pct:.3f}%** of shares outstanding (⚠️ Low liquidity - may be difficult to exit large positions)")
-            elif liquidity_pct < 0.5:
+            elif liquidity_pct < LIQUIDITY_MODERATE_PCT:
                 lines.append(f"- **Daily Liquidity: {liquidity_pct:.3f}%** of shares outstanding (Moderate)")
             else:
                 lines.append(f"- **Daily Liquidity: {liquidity_pct:.3f}%** of shares outstanding (Good)")
@@ -164,12 +192,12 @@ class RiskFactorsSection(DossierSection):
         current_liabilities = latest_data.get('current_liabilities', 0.0)
         if current_liabilities > 0:
             current_ratio = current_assets / current_liabilities
-            if current_ratio >= 2.0:
-                lines.append(f"- **Current Ratio: {current_ratio:.2f}x** - Strong liquidity (meets Graham's 2.0x defensive standard)")
-            elif current_ratio >= 1.5:
-                lines.append(f"- **Current Ratio: {current_ratio:.2f}x** - Adequate liquidity (meets enterprising 1.5x minimum)")
-            elif current_ratio >= 1.0:
-                lines.append(f"- **Current Ratio: {current_ratio:.2f}x** - ⚠️ Below Graham's standards (defensive requires 2.0x)")
+            if current_ratio >= DEFENSIVE.MIN_CURRENT_RATIO:
+                lines.append(f"- **Current Ratio: {current_ratio:.2f}x** - Strong liquidity (meets Graham's {DEFENSIVE.MIN_CURRENT_RATIO:.1f}x defensive standard)")
+            elif current_ratio >= ENTERPRISING.MIN_CURRENT_RATIO:
+                lines.append(f"- **Current Ratio: {current_ratio:.2f}x** - Adequate liquidity (meets enterprising {ENTERPRISING.MIN_CURRENT_RATIO:.1f}x minimum)")
+            elif current_ratio >= CURRENT_RATIO_CRITICAL:
+                lines.append(f"- **Current Ratio: {current_ratio:.2f}x** - ⚠️ Below Graham's standards (defensive requires {DEFENSIVE.MIN_CURRENT_RATIO:.1f}x)")
             else:
                 lines.append(f"- **Current Ratio: {current_ratio:.2f}x** - ⚠️ Critical liquidity risk")
         
@@ -185,9 +213,9 @@ class RiskFactorsSection(DossierSection):
             total_debt_to_assets = (total_debt / total_assets) * 100
             
             # Determine assessment based on long-term debt
-            if lt_debt_to_assets < 10:
+            if lt_debt_to_assets < LT_DEBT_TO_ASSETS_LOW_PCT:
                 assessment = "Conservative"
-            elif lt_debt_to_assets < 30:
+            elif lt_debt_to_assets < LT_DEBT_TO_ASSETS_MODERATE_PCT:
                 assessment = "Moderate"
             else:
                 assessment = "⚠️ High leverage"
@@ -227,7 +255,7 @@ class RiskFactorsSection(DossierSection):
         # Earnings volatility (last 10 years)
         profit_margins = []
         loss_years = 0
-        years_to_check = sorted_years[:10] if len(sorted_years) >= 10 else sorted_years
+        years_to_check = sorted_years[:RISK_HISTORY_WINDOW_YEARS] if len(sorted_years) >= RISK_HISTORY_WINDOW_YEARS else sorted_years
         
         for year in years_to_check:
             year_data = history[year]
@@ -237,7 +265,7 @@ class RiskFactorsSection(DossierSection):
             if revenue > 0:
                 margin = (net_income / revenue) * 100
                 # Validate margin is finite (avoid infinity from near-zero revenue)
-                if abs(margin) < 1e6:  # Reasonable profit margin range
+                if abs(margin) < PROFIT_MARGIN_SANITY_LIMIT_PCT:  # Reasonable profit margin range
                     profit_margins.append(margin)
                 if net_income < 0:
                     loss_years += 1
@@ -248,9 +276,9 @@ class RiskFactorsSection(DossierSection):
             if len(profit_margins) > 1:
                 margin_volatility = statistics.stdev(profit_margins)
                 lines.append(f"- **Profit Margin Stability: {avg_margin:.1f}% average, {margin_volatility:.1f}% std dev** over {len(profit_margins)} years")
-                if margin_volatility < 5:
+                if margin_volatility < MARGIN_VOLATILITY_LOW_PCT:
                     lines.append("  - Low volatility indicates stable operations")
-                elif margin_volatility < 10:
+                elif margin_volatility < MARGIN_VOLATILITY_MODERATE_PCT:
                     lines.append("  - Moderate volatility")
                 else:
                     lines.append("  - ⚠️ High volatility indicates cyclical or unstable business")
@@ -266,12 +294,12 @@ class RiskFactorsSection(DossierSection):
         # ROE consistency
         roe = self.financial_data.get('roe', 0)
         if roe > 0:
-            if roe > 0.15:
+            if roe > ROE_STRONG:
                 lines.append(f"- **Return on Equity: {roe*100:.1f}%** - Strong capital efficiency")
-            elif roe > 0.10:
+            elif roe > ROE_ADEQUATE:
                 lines.append(f"- **Return on Equity: {roe*100:.1f}%** - Adequate returns")
             else:
-                lines.append(f"- **Return on Equity: {roe*100:.1f}%** - ⚠️ Below 10% threshold")
+                lines.append(f"- **Return on Equity: {roe*100:.1f}%** - ⚠️ Below {ROE_ADEQUATE:.0%} threshold")
         
         lines.append("")
     
@@ -293,11 +321,11 @@ class RiskFactorsSection(DossierSection):
             eps = latest_data.get('eps', 0.0)
             if eps > 0:
                 payout_ratio = (forward_div / eps) * 100
-                if payout_ratio < 50:
+                if payout_ratio < PAYOUT_CONSERVATIVE_PCT:
                     lines.append(f"- **Payout Ratio: {payout_ratio:.1f}%** - Conservative (sustainable)")
-                elif payout_ratio < 75:
+                elif payout_ratio < PAYOUT_MODERATE_PCT:
                     lines.append(f"- **Payout Ratio: {payout_ratio:.1f}%** - Moderate")
-                elif payout_ratio < 100:
+                elif payout_ratio < PAYOUT_MAX_PCT:
                     lines.append(f"- **Payout Ratio: {payout_ratio:.1f}%** - ⚠️ High (limited room for growth)")
                 else:
                     lines.append(f"- **Payout Ratio: {payout_ratio:.1f}%** - ⚠️ Unsustainable (paying more than earnings)")
@@ -308,17 +336,17 @@ class RiskFactorsSection(DossierSection):
             if operating_cash_flow > 0 and shares > 0:
                 cash_per_share = operating_cash_flow / shares
                 dividend_coverage = cash_per_share / forward_div if forward_div > 0 else 0
-                if dividend_coverage >= 2.0:
+                if dividend_coverage >= DIVIDEND_COVERAGE_STRONG:
                     lines.append(f"- **Dividend Coverage: {dividend_coverage:.1f}x** from operating cash flow - Well covered")
-                elif dividend_coverage >= 1.5:
+                elif dividend_coverage >= DIVIDEND_COVERAGE_ADEQUATE:
                     lines.append(f"- **Dividend Coverage: {dividend_coverage:.1f}x** from operating cash flow - Adequate")
-                elif dividend_coverage >= 1.0:
+                elif dividend_coverage >= DIVIDEND_COVERAGE_MIN:
                     lines.append(f"- **Dividend Coverage: {dividend_coverage:.1f}x** from operating cash flow - ⚠️ Tight coverage")
                 else:
                     lines.append(f"- **Dividend Coverage: {dividend_coverage:.1f}x** from operating cash flow - ⚠️ Not covered by cash flow")
             
             # Dividend history consistency
-            years_to_check = sorted_years[:10] if len(sorted_years) >= 10 else sorted_years
+            years_to_check = sorted_years[:RISK_HISTORY_WINDOW_YEARS] if len(sorted_years) >= RISK_HISTORY_WINDOW_YEARS else sorted_years
             dividend_years = 0
             for year in years_to_check:
                 if history[year].get('dividend', 0.0) > 0:
@@ -326,7 +354,7 @@ class RiskFactorsSection(DossierSection):
             
             if dividend_years == len(years_to_check):
                 lines.append(f"- **Dividend History: {dividend_years} consecutive years** - Uninterrupted record (excellent)")
-            elif dividend_years >= len(years_to_check) * 0.8:
+            elif dividend_years >= len(years_to_check) * DIVIDEND_MOSTLY_CONSISTENT_FRACTION:
                 lines.append(f"- **Dividend History: {dividend_years} of {len(years_to_check)} years** - Mostly consistent")
             else:
                 lines.append(f"- **Dividend History: {dividend_years} of {len(years_to_check)} years** - ⚠️ Inconsistent payment history")
@@ -347,11 +375,11 @@ class RiskFactorsSection(DossierSection):
         price = self.financial_data.get('price', 0)
         
         if isinstance(margin_of_safety, (int, float)):
-            if margin_of_safety >= 30:
+            if margin_of_safety >= MOS_EXCELLENT_PCT:
                 lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Excellent discount to intrinsic value")
                 lines.append("  - Graham's Standard: 20-30% minimum for defensive investors")
                 lines.append("  - Assessment: **Low valuation risk** - substantial cushion against estimation errors")
-            elif margin_of_safety >= 20:
+            elif margin_of_safety >= MOS_ACCEPTABLE_PCT:
                 lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Meets Graham's minimum standard")
                 lines.append("  - Graham's Standard: 20-30% minimum for defensive investors")
                 lines.append("  - Assessment: **Acceptable valuation risk** for defensive investors")
@@ -388,7 +416,7 @@ class RiskFactorsSection(DossierSection):
         # Institutional ownership verification
         institutional = self.financial_data.get('institutional_ownership', 0)
         if institutional > 0:
-            if institutional > 20:
+            if institutional > INSTITUTIONAL_HIGH_PCT:
                 lines.append(f"- **Institutional Ownership: {institutional:.2f}%** - Verify with regulatory filings")
             else:
                 lines.append(f"- **Institutional Ownership: {institutional:.2f}%** - Verify with regulatory filings")
@@ -400,7 +428,7 @@ class RiskFactorsSection(DossierSection):
         
         # Years of history
         years_available = len(sorted_years)
-        if years_available < 10:
+        if years_available < MIN_HISTORY_YEARS_RECOMMENDED:
             lines.append(f"- **Financial History: {years_available} years** - ⚠️ Limited track record (Graham preferred 10+ years)")
         
         lines.append("")
