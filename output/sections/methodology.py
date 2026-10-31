@@ -9,6 +9,7 @@ from typing import List, Dict, Any
 from output.formatting import format_price_display
 from core.history import has_statement_data
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
+from config.investor_thresholds import DEFENSIVE
 from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 
 
@@ -485,15 +486,13 @@ class MethodologySection:
             lines.append("")
             lines.append("### Combined P/E × P/B Test")
             lines.append("")
-            lines.append(f"Graham specified that for defensive investors, the product of P/E and P/B ratios should not exceed {GRAHAM_MULTIPLIER:g}. This rule provides flexibility in valuation:")
+            lines.append(f"Graham: \"a multiplier of earnings below {DEFENSIVE.MAX_PE_RATIO:g} could justify a correspondingly higher multiplier of assets ... the product of the multiplier times the ratio of price to book value should not exceed {GRAHAM_MULTIPLIER:g}\" (The Intelligent Investor, ch. 14). So criterion 7 (P/B ≤ {DEFENSIVE.MAX_PB_RATIO:g}) is also met when the product is within {GRAHAM_MULTIPLIER:g}:")
             lines.append("")
-            lines.append("- A company with P/E of 15 can have P/B up to 1.5 (15 × 1.5 = 22.5)")
-            lines.append("- A company with P/E of 10 can have P/B up to 2.25 (10 × 2.25 = 22.5)")
-            lines.append("- A company with P/B of 0.5 can have P/E up to 45 (45 × 0.5 = 22.5)")
+            lines.append(f"- P/E of {DEFENSIVE.MAX_PE_RATIO:g} allows P/B up to {GRAHAM_MULTIPLIER / DEFENSIVE.MAX_PE_RATIO:g}")
+            lines.append(f"- P/E of 9 allows P/B up to {GRAHAM_MULTIPLIER / 9:g} (Graham's example: \"9 times earnings and 2.5 times asset value\")")
+            lines.append(f"- It relaxes the P/B limit only: the P/E must still be ≤ {DEFENSIVE.MAX_PE_RATIO:g} (criterion 6)")
             lines.append("")
-            lines.append(f"**Formula**: Combined Test = P/E Ratio × P/B Ratio ≤ {GRAHAM_MULTIPLIER:g}")
-            lines.append("")
-            lines.append("This test recognizes that a low price relative to book value can compensate for higher earnings multiples, and vice versa.")
+            lines.append(f"**Formula**: P/E (3-year average EPS) × P/B (tangible book value per share) ≤ {GRAHAM_MULTIPLIER:g}")
         
         # WCPS and Payout Ratio (from financial history)
         history = self.financial_data.get('history', {})

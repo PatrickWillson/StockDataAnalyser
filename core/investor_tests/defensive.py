@@ -4,7 +4,9 @@ Graham's seven defensive-investor criteria (GRAHAM_METHODOLOGY §4; adequate siz
 Moved verbatim from GrahamCalculator (M4.4); the Graham alignment of each criterion is F20.
 """
 
+from config.graham_constants import GRAHAM_MULTIPLIER
 from config.investor_thresholds import DEFENSIVE
+from core.formulas import tangible_equity
 from core.financial_data_processor import FinancialDataProcessor
 from core.investor_tests.criteria import current_ratio_test, earnings_stability, latest_financial_year
 
@@ -68,19 +70,46 @@ def pe_ratio(history: dict, years: list, price: float, max_pe: float = 15) -> st
     return 'PASS' if price / average_eps <= max_pe else 'FAIL'
 
 
+def pe_pb_multiples(history: dict, years: list, price: float) -> dict:
+    """
+    The two multiples of criterion 4.7: P/E on the three-year average EPS (the 4.6 multiplier) and
+    P/B on the latest tangible book value per share (GRAHAM_METHODOLOGY §3.5). Unrounded; None
+    when not computable (fewer than three reported years, non-positive average EPS or tangible book).
+    """
+    pe, pb = None, None
+    if price > 0:
+        eps_data = FinancialDataProcessor.extract_3year_eps_data(history)
+        if eps_data['valid']:
+            average_eps = sum(eps_data['eps_values']) / len(eps_data['eps_values'])
+            if average_eps > 0:
+                pe = price / average_eps
+        latest_year = latest_financial_year(history, years)
+        if latest_year:
+            row = history[latest_year]
+            shares = row.get('shares_outstanding', 0.0)
+            book = tangible_equity(row.get('total_equity', 0.0), row.get('intangible_assets', 0.0),
+                                   row.get('goodwill', 0.0))
+            if shares > 0 and book > 0:
+                pb = price / (book / shares)
+    return {'pe': pe, 'pb': pb, 'product': pe * pb if pe is not None and pb is not None else None}
+
+
 def pb_ratio(history: dict, years: list, price: float, max_pb: float = 1.5) -> str:
-    """Price / latest (total-equity) book value per share below max_pb."""
+    """
+    Criterion 4.7: "current price should not be more than 1½ times the book value last reported",
+    or, since "a multiplier of earnings below 15 could justify a correspondingly higher multiplier
+    of assets", the product of the P/E (three-year average) and P/B not above 22.5. Book value is
+    tangible book value per share (§3.5).
+    """
     if not years or price == 0:
         return 'FAIL'
-    latest_year = latest_financial_year(history, years)
-    if not latest_year:
+    multiples = pe_pb_multiples(history, years, price)
+    if multiples['pb'] is None:
         return 'FAIL'
-    total_equity = history[latest_year].get('total_equity', 0.0)
-    shares_outstanding = history[latest_year].get('shares_outstanding', 0.0)
-    if shares_outstanding == 0 or total_equity <= 0:
-        return 'FAIL'
-    book_value_per_share = total_equity / shares_outstanding
-    return 'PASS' if price / book_value_per_share < max_pb else 'FAIL'
+    if multiples['pb'] <= max_pb:
+        return 'PASS'
+    product = multiples['product']
+    return 'PASS' if product is not None and product <= GRAHAM_MULTIPLIER else 'FAIL'
 
 
 def run_defensive_tests(history: dict, years: list, num_years: int, price: float) -> dict:

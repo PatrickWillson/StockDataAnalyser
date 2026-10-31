@@ -475,10 +475,10 @@
   },
   "metrics": {
     "combined_pe_pb_test": {
-      "pb_ratio": 46.9,
-      "pe_ratio": 30.05,
-      "product": 1409.35,
-      "result": "FAIL"
+      "pb_ratio": "N/A",
+      "pe_ratio": 30.79,
+      "product": "N/A",
+      "result": "N/A"
     },
     "current_ratio": {
       "fiscal_year_end": "2023-09-30",

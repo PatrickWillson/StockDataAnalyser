@@ -173,7 +173,7 @@ Where EODHD pre-computed values are used today:
 | Margin of Safety | IV = min(Normalized GN, EPV/share) over the anchors that are available; MoS = (IV − Price)/IV × 100; IV 0 (no earning power) or both unavailable → "N/A". `margin_of_safety_details['note']` gives the reason when an anchor is missing or IV is 0, and the Executive Summary shows it |
 | Verdict | GN "N/A" → "Rely on EPV - Negative Equity"; defensive fail & enterprising pass → "ENTERPRISING BUY"; MoS ≥ 20 → "STRONG BUY (Undervalued)"; > 0 → "UNDERVALUED"; else "OVERVALUED" |
 
-**Defensive tests** (`DEFENSIVE` thresholds): current ratio ≥ 2.0; LTD < CA − CL; earnings stability (positive NI in last 10 years); dividend record (dividend every year up to 20); earnings growth (latest NI / NI 10 financial years ago ≥ 1.33, else "N/A (Too Young)"); P/E: price ≤ 15 × mean EPS of the 3 latest reported years (`extract_3year_eps_data`; fewer years or average ≤ 0 → FAIL); P/B < 1.5.
+**Defensive tests** (`DEFENSIVE` thresholds): current ratio ≥ 2.0; LTD < CA − CL; earnings stability (positive NI in last 10 years); dividend record (dividend every year up to 20); earnings growth (latest NI / NI 10 financial years ago ≥ 1.33, else "N/A (Too Young)"); P/E: price ≤ 15 × mean EPS of the 3 latest reported years (`extract_3year_eps_data`; fewer years or average ≤ 0 → FAIL); P/B: price ≤ 1.5 × tangible BVPS, or P/E (3-year average) × P/B (tangible) ≤ 22.5 (`defensive.pe_pb_multiples`, also behind `metrics['combined_pe_pb_test']`).
 **Enterprising tests** (`ENTERPRISING`): current ratio ≥ 1.5; LTD < (CA − CL) × 1.10; earnings stability (5 of last 5); current dividend > 0; earnings growth; price: P/E < 10 OR price < TBVPS × 1.20.
 
 ### 5.2 TTM (`core/ttm_calculator.py`, `TTMCalculator`)
@@ -250,7 +250,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising criterion in `core/investor_tests/` and `core.verdict.determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1259 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1260 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

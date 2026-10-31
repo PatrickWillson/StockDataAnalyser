@@ -87,24 +87,23 @@ def test_property_11_combined_pe_pb_product_calculation(eps, total_equity, share
         message=f"P/B ratio {pb_ratio} does not match expected {expected_pb}"
     )
     
-    # Calculate expected product from the ROUNDED values
-    # This is important because the implementation rounds P/E and P/B first,
-    # then multiplies them, which can introduce small rounding differences
-    expected_product_from_rounded = to_decimal(pe_ratio) * to_decimal(pb_ratio)
+    # The product is computed from the unrounded multiples (the value the test decides on),
+    # then rounded for display
+    expected_product = expected_pe * expected_pb
     assert_decimal_equal(
         to_decimal(product),
-        expected_product_from_rounded,
-        tolerance=Decimal('0.02'),  # Slightly larger tolerance for compound rounding
-        message=f"Product {product} does not match expected {expected_product_from_rounded}"
+        expected_product,
+        tolerance=Decimal('0.01'),
+        message=f"Product {product} does not match expected {expected_product}"
     )
     
-    # Verify threshold comparison
-    if product <= 22.5:
+    # Verify threshold comparison (on the unrounded product)
+    if expected_product <= Decimal('22.5'):
         assert test_result == "PASS", \
-            f"Result should be PASS when product ({product}) ≤ 22.5"
+            f"Result should be PASS when product ({expected_product}) ≤ 22.5"
     else:
         assert test_result == "FAIL", \
-            f"Result should be FAIL when product ({product}) > 22.5"
+            f"Result should be FAIL when product ({expected_product}) > 22.5"
 
 
 @given(

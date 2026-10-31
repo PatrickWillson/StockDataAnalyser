@@ -91,7 +91,8 @@ class GrahamTestsSection:
         # Test 7: P/B Ratio
         pb_ratio = defensive_tests.get('pb_ratio', 'N/A')
         lines.append(f"7. **P/B Ratio**: {pb_ratio}")
-        lines.append(f"   - Criterion: Price/Book Ratio < {DEFENSIVE.MAX_PB_RATIO:g}")
+        lines.append(f"   - Criterion: Price ≤ {DEFENSIVE.MAX_PB_RATIO:g} × tangible book value per share, "
+                     f"or P/E (3-year average EPS) × P/B ≤ {GRAHAM_MULTIPLIER:g}")
         
         # Test 8: Combined P/E × P/B Test (NEW)
         combined_test = self.metrics.get('combined_pe_pb_test', {})
@@ -101,12 +102,12 @@ class GrahamTestsSection:
             pe = combined_test.get('pe_ratio')
             pb = combined_test.get('pb_ratio')
             
-            lines.append(f"8. **Combined P/E × P/B Test**: {result}")
+            lines.append(f"8. **Combined P/E × P/B Test** (criterion 7 alternative): {result}")
             if product != 'N/A' and pe != 'N/A' and pb != 'N/A':
-                lines.append(f"   - P/E Ratio: {pe:.2f}")
-                lines.append(f"   - P/B Ratio: {pb:.2f}")
+                lines.append(f"   - P/E Ratio (3-year average EPS): {pe:.2f}")
+                lines.append(f"   - P/B Ratio (tangible book): {pb:.2f}")
                 lines.append(f"   - Product: {product:.2f} (must be ≤ {GRAHAM_MULTIPLIER:g})")
-                lines.append(f"   - *Graham specified that P/E × P/B should not exceed {GRAHAM_MULTIPLIER:g}. This provides flexibility: a company can have a higher P/E if it has a low P/B, or vice versa.*")
+                lines.append(f"   - *Graham: \"a multiplier of earnings below {DEFENSIVE.MAX_PE_RATIO:g} could justify a correspondingly higher multiplier of assets\"; the product should not exceed {GRAHAM_MULTIPLIER:g}. It relaxes the P/B limit only; the P/E limit (criterion 6) still applies.*")
             else:
                 lines.append(f"   - Criterion: P/E × P/B ≤ {GRAHAM_MULTIPLIER:g}")
         

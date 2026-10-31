@@ -69,8 +69,8 @@ def test_methodology_with_all_new_metrics():
     
     # Assert - Combined P/E × P/B Test
     assert 'Combined P/E × P/B Test' in content
-    assert 'product of P/E and P/B ratios should not exceed 22.5' in content
-    assert 'Combined Test = P/E Ratio × P/B Ratio ≤ 22.5' in content
+    assert 'the product of the multiplier times the ratio of price to book value should not exceed 22.5' in content
+    assert 'P/E (3-year average EPS) × P/B (tangible book value per share) ≤ 22.5' in content
     
     # Assert - WCPS and Payout Ratio
     assert 'Historical Trend Metrics' in content
@@ -129,9 +129,11 @@ def test_methodology_combined_test_examples():
     content = '\n'.join(lines)
     
     # Assert
-    assert 'P/E of 15 can have P/B up to 1.5 (15 × 1.5 = 22.5)' in content
-    assert 'P/E of 10 can have P/B up to 2.25 (10 × 2.25 = 22.5)' in content
-    assert 'P/B of 0.5 can have P/E up to 45 (45 × 0.5 = 22.5)' in content
+    assert 'P/E of 15 allows P/B up to 1.5' in content
+    assert 'P/E of 9 allows P/B up to 2.5' in content
+    # Graham's product rule relaxes P/B only; it never admits a P/E above 15
+    assert 'can have P/E up to 45' not in content
+    assert 'It relaxes the P/B limit only' in content
 
 
 def test_methodology_nca_sector_note():

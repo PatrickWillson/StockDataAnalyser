@@ -543,99 +543,30 @@ class GrahamCalculator:
     
     def compute_combined_pe_pb_test(self) -> Dict[str, Union[float, str]]:
         """
-        Calculate combined P/E × P/B test.
-        
-        Graham's Rule: P/E × P/B should not exceed 22.5
-        
-        This test provides flexibility in valuation:
-        - A company with P/E of 15 can have P/B up to 1.5 (15 × 1.5 = 22.5)
-        - A company with P/E of 10 can have P/B up to 2.25 (10 × 2.25 = 22.5)
-        - A company with P/B of 0.5 can have P/E up to 45 (45 × 0.5 = 22.5)
+        The multiples behind defensive criterion 4.7, as tested: P/E on the three-year average
+        EPS, P/B on tangible book value, and their product against 22.5
+        (investor_tests.defensive.pe_pb_multiples; GRAHAM_METHODOLOGY §4.7).
         
         Returns:
             Dictionary with:
-                - pe_ratio: Union[float, str] - P/E ratio or "N/A"
-                - pb_ratio: Union[float, str] - P/B ratio or "N/A"
+                - pe_ratio: Union[float, str] - P/E (three-year average EPS) or "N/A"
+                - pb_ratio: Union[float, str] - P/B (tangible book) or "N/A"
                 - product: Union[float, str] - P/E × P/B or "N/A"
-                - result: str - "PASS", "FAIL", or "N/A"
+                - result: str - "PASS" (product ≤ 22.5), "FAIL", or "N/A"
         """
         history = self.data.get('history', {})
         price = self.data.get('price', 0.0)
+        multiples = defensive.pe_pb_multiples(history, sorted(history.keys(), reverse=True), price)
         
-        if not history or price == 0:
-            return {
-                'pe_ratio': "N/A",
-                'pb_ratio': "N/A",
-                'product': "N/A",
-                'result': "N/A"
-            }
+        def shown(value):
+            return round(value, 2) if value is not None else "N/A"
         
-        # Get sorted years (most recent first)
-        sorted_years = sorted(history.keys(), reverse=True)
-        if not sorted_years:
-            return {
-                'pe_ratio': "N/A",
-                'pb_ratio': "N/A",
-                'product': "N/A",
-                'result': "N/A"
-            }
-        
-        # Get most recent year with financial data
-        latest_year = self._get_latest_financial_year(history, sorted_years)
-        if not latest_year:
-            return {
-                'pe_ratio': "N/A",
-                'pb_ratio': "N/A",
-                'product': "N/A",
-                'result': "N/A"
-            }
-        
-        year_data = history[latest_year]
-        
-        # Calculate P/E ratio
-        eps = year_data.get('eps', 0.0)
-        if eps <= 0:
-            pe_ratio = "N/A"
-        else:
-            price_dec = Decimal(str(price))
-            eps_dec = Decimal(str(eps))
-            pe_ratio_dec = price_dec / eps_dec
-            pe_ratio = float(pe_ratio_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
-        
-        # Calculate P/B ratio
-        total_equity = year_data.get('total_equity', 0.0)
-        shares_outstanding = year_data.get('shares_outstanding', 0.0)
-        
-        if shares_outstanding == 0 or total_equity <= 0:
-            pb_ratio = "N/A"
-        else:
-            total_equity_dec = Decimal(str(total_equity))
-            shares_dec = Decimal(str(shares_outstanding))
-            price_dec = Decimal(str(price))
-            
-            book_value_per_share_dec = total_equity_dec / shares_dec
-            pb_ratio_dec = price_dec / book_value_per_share_dec
-            pb_ratio = float(pb_ratio_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
-        
-        # Calculate product and determine result
-        if pe_ratio == "N/A" or pb_ratio == "N/A":
-            product = "N/A"
-            result = "N/A"
-        else:
-            pe_dec = Decimal(str(pe_ratio))
-            pb_dec = Decimal(str(pb_ratio))
-            product_dec = pe_dec * pb_dec
-            product = float(product_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
-            
-            # Compare to Graham's threshold of 22.5
-            threshold = Decimal(str(GRAHAM_MULTIPLIER))
-            result = "PASS" if product_dec <= threshold else "FAIL"
-        
+        product = multiples['product']
         return {
-            'pe_ratio': pe_ratio,
-            'pb_ratio': pb_ratio,
-            'product': product,
-            'result': result
+            'pe_ratio': shown(multiples['pe']),
+            'pb_ratio': shown(multiples['pb']),
+            'product': shown(product),
+            'result': "N/A" if product is None else ("PASS" if product <= GRAHAM_MULTIPLIER else "FAIL"),
         }
     
     def compute_margin_of_safety(self, current_price: float, normalized_gn=_UNSET,

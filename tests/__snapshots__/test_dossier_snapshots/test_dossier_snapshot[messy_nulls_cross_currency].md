@@ -205,15 +205,13 @@ Graham's defensive investor test requires long-term debt to be less than NCA (ra
 
 ### Combined P/E × P/B Test
 
-Graham specified that for defensive investors, the product of P/E and P/B ratios should not exceed 22.5. This rule provides flexibility in valuation:
+Graham: "a multiplier of earnings below 15 could justify a correspondingly higher multiplier of assets ... the product of the multiplier times the ratio of price to book value should not exceed 22.5" (The Intelligent Investor, ch. 14). So criterion 7 (P/B ≤ 1.5) is also met when the product is within 22.5:
 
-- A company with P/E of 15 can have P/B up to 1.5 (15 × 1.5 = 22.5)
-- A company with P/E of 10 can have P/B up to 2.25 (10 × 2.25 = 22.5)
-- A company with P/B of 0.5 can have P/E up to 45 (45 × 0.5 = 22.5)
+- P/E of 15 allows P/B up to 1.5
+- P/E of 9 allows P/B up to 2.5 (Graham's example: "9 times earnings and 2.5 times asset value")
+- It relaxes the P/B limit only: the P/E must still be ≤ 15 (criterion 6)
 
-**Formula**: Combined Test = P/E Ratio × P/B Ratio ≤ 22.5
-
-This test recognizes that a low price relative to book value can compensate for higher earnings multiples, and vice versa.
+**Formula**: P/E (3-year average EPS) × P/B (tangible book value per share) ≤ 22.5
 
 ### Historical Trend Metrics
 
@@ -351,12 +349,12 @@ TTM calculations provide more current financial metrics by using the most recent
 6. **P/E Ratio**: FAIL
    - Criterion: Price ≤ 15 × average EPS of the last 3 reported years
 7. **P/B Ratio**: FAIL
-   - Criterion: Price/Book Ratio < 1.5
-8. **Combined P/E × P/B Test**: FAIL
-   - P/E Ratio: 30.06
-   - P/B Ratio: 46.91
-   - Product: 1410.11 (must be ≤ 22.5)
-   - *Graham specified that P/E × P/B should not exceed 22.5. This provides flexibility: a company can have a higher P/E if it has a low P/B, or vice versa.*
+   - Criterion: Price ≤ 1.5 × tangible book value per share, or P/E (3-year average EPS) × P/B ≤ 22.5
+8. **Combined P/E × P/B Test** (criterion 7 alternative): FAIL
+   - P/E Ratio (3-year average EPS): 30.80
+   - P/B Ratio (tangible book): 46.91
+   - Product: 1444.98 (must be ≤ 22.5)
+   - *Graham: "a multiplier of earnings below 15 could justify a correspondingly higher multiplier of assets"; the product should not exceed 22.5. It relaxes the P/B limit only; the P/E limit (criterion 6) still applies.*
 
 ---
 

@@ -256,20 +256,19 @@ class GrahamMetricsFixtures:
             net_income=eps * shares_outstanding
         )
         
-        year_data = generate_financial_year_data(
-            year='2023-12-31',
-            balance_sheet=balance_sheet,
-            income_statement=income_statement
-        )
+        # Three identical years: the defensive P/E uses the three-year average EPS (= eps here)
+        history = {
+            year: generate_financial_year_data(year=year, balance_sheet=balance_sheet,
+                                               income_statement=income_statement)
+            for year in ('2023-12-31', '2022-12-31', '2021-12-31')
+        }
         
         return {
             'ticker': 'TEST.US',
             'price': float(price),
             'currency': 'USD',
             'sector': 'Technology',
-            'history': {
-                '2023-12-31': year_data
-            }
+            'history': history
         }
     
     @staticmethod

@@ -36,11 +36,12 @@ def test_defensive_tests_with_combined_test():
     content = '\n'.join(lines)
     
     # Assert
-    assert '8. **Combined P/E × P/B Test**: PASS' in content
-    assert 'P/E Ratio: 12.50' in content
-    assert 'P/B Ratio: 1.20' in content
+    assert '8. **Combined P/E × P/B Test** (criterion 7 alternative): PASS' in content
+    assert 'P/E Ratio (3-year average EPS): 12.50' in content
+    assert 'P/B Ratio (tangible book): 1.20' in content
     assert 'Product: 15.00 (must be ≤ 22.5)' in content
-    assert 'P/E × P/B should not exceed 22.5' in content
+    assert 'the product should not exceed 22.5' in content
+    assert 'the P/E limit (criterion 6) still applies' in content
 
 
 def test_defensive_tests_earnings_stability_text():
@@ -123,7 +124,7 @@ def test_combined_test_with_na_values():
     content = '\n'.join(lines)
     
     # Assert
-    assert '8. **Combined P/E × P/B Test**: N/A' in content
+    assert '8. **Combined P/E × P/B Test** (criterion 7 alternative): N/A' in content
     assert 'Criterion: P/E × P/B ≤ 22.5' in content
 
 
@@ -156,7 +157,7 @@ def test_combined_test_fail():
     content = '\n'.join(lines)
     
     # Assert
-    assert '8. **Combined P/E × P/B Test**: FAIL' in content
+    assert '8. **Combined P/E × P/B Test** (criterion 7 alternative): FAIL' in content
     assert 'Product: 40.00 (must be ≤ 22.5)' in content
 
 
@@ -203,7 +204,7 @@ def test_all_test_criteria_present():
     assert '5. **Earnings Growth**: PASS' in content
     assert '6. **P/E Ratio**: PASS' in content
     assert '7. **P/B Ratio**: PASS' in content
-    assert '8. **Combined P/E × P/B Test**: PASS' in content
+    assert '8. **Combined P/E × P/B Test** (criterion 7 alternative): PASS' in content
     
     # Assert - Enterprising tests
     assert 'SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS' in content

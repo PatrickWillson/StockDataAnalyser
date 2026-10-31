@@ -474,8 +474,8 @@
   "metrics": {
     "combined_pe_pb_test": {
       "pb_ratio": 46.91,
-      "pe_ratio": 30.06,
-      "product": 1410.11,
+      "pe_ratio": 30.8,
+      "product": 1444.98,
       "result": "FAIL"
     },
     "current_ratio": {

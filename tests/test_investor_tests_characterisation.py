@@ -213,20 +213,27 @@ class TestPeRatio:
 
 
 class TestPbRatio:
-    """Defensive: price / (total equity / shares) < 1.5."""
+    """Defensive 4.7 (F20): price ≤ 1.5 × tangible BVPS, or P/E (3-year average) × P/B ≤ 22.5."""
 
     @settings(max_examples=200)
     @given(pb=st.floats(min_value=0.1, max_value=5.0, allow_nan=False))
-    def test_passes_strictly_below_maximum(self, pb):
-        price = 10.0 * pb  # BVPS = 500 / 50 = 10
-        expected = "PASS" if price / 10.0 < DEFENSIVE.MAX_PB_RATIO else "FAIL"
+    def test_single_year_passes_at_or_below_maximum(self, pb):
+        price = 10.0 * pb  # TBVPS = 500 / 50 = 10; one year, so no three-year P/E for the product rule
+        expected = "PASS" if price / 10.0 <= DEFENSIVE.MAX_PB_RATIO else "FAIL"
         assert _run("_test_pb_ratio", {"2023-12-31": _year()}, price=price,
                     max_pb=DEFENSIVE.MAX_PB_RATIO) == expected
 
-    def test_known_defect_uses_book_value_not_tangible_book_value(self):
-        # Known defect: goodwill is ignored here (BVPS), unlike the Graham Number (TBVPS)
+    def test_uses_tangible_book_value(self):
+        # TBVPS = (500 - 450) / 50 = 1, so P/B = 14 (it was 1.4 on total equity, a pass)
         history = {"2023-12-31": _year(goodwill=450.0)}
-        assert _run("_test_pb_ratio", history, price=14.0, max_pb=1.5) == "PASS"
+        assert _run("_test_pb_ratio", history, price=14.0, max_pb=1.5) == "FAIL"
+
+    def test_product_rule_admits_higher_pb_with_lower_pe(self):
+        # Average EPS 2.0 -> P/E 9; TBVPS 10 -> P/B 1.8 > 1.5; product 16.2 <= 22.5
+        history = _three_years([2.0, 2.0, 2.0])
+        assert _run("_test_pb_ratio", history, price=18.0, max_pb=1.5) == "PASS"
+        # P/E 13 x P/B 2.6 = 33.8 > 22.5
+        assert _run("_test_pb_ratio", history, price=26.0, max_pb=1.5) == "FAIL"
 
     @pytest.mark.parametrize("fields", [{"shares_outstanding": 0.0}, {"total_equity": -1.0}])
     def test_zero_shares_or_non_positive_equity_fails(self, fields):
