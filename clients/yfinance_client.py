@@ -9,6 +9,7 @@ ticker formats to yfinance formats and fetches current prices from Yahoo Finance
 from typing import Optional, Tuple, Dict, List
 from datetime import datetime, timedelta
 import logging
+from config.data_quality_config import FISCAL_YEAR_END_LOOKBACK_DAYS
 
 
 class YFinanceClient:
@@ -373,7 +374,7 @@ class YFinanceClient:
                 target = datetime.strptime(fiscal_end, '%Y-%m-%d')
                 found = False
                 
-                for days_back in range(1, 8):
+                for days_back in range(1, FISCAL_YEAR_END_LOOKBACK_DAYS + 1):
                     search_date = (target - timedelta(days=days_back)).strftime('%Y-%m-%d')
                     if search_date in price_data:
                         result[fiscal_end] = price_data[search_date]

@@ -8,6 +8,7 @@ Centralizes currency logic for maintainability and testability.
 import logging
 from typing import List, Tuple, Optional, Dict
 from clients.fx_client import FXClient
+from config.data_quality_config import LONDON_FIX_PE_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ class CurrencyConverter:
         """
         if exchange == "LSE" and eps > 0 and price > 0:
             pe_ratio = price / eps
-            if pe_ratio > 500:
+            if pe_ratio > LONDON_FIX_PE_THRESHOLD:
                 # Price is in pence, convert to pounds
                 adjusted_price = price / 100
                 self.conversion_history.append("London Fix applied (GBp → GBP)")

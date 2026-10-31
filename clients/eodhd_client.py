@@ -14,6 +14,9 @@ from clients.fx_client import FXClient
 from core.currency_converter import CurrencyConverter
 from core.financial_data_processor import FinancialDataProcessor
 from core.history import has_statement_data
+from config.data_quality_config import (API_DATA_MAX_AGE_DAYS, BVPS_MAX_DIFF_PCT, DIVIDEND_SOURCE_MAX_DIFF_PCT,
+                                         LONDON_FIX_PE_THRESHOLD, PE_MAX_DIFF_PCT, PROFITABILITY_MAX_DIFF_PCT,
+                                         SHARE_COUNT_MAX_DIFF_PCT)
 
 logger = logging.getLogger(__name__)
 
@@ -336,7 +339,7 @@ class EODHDClient(BaseAPIClient):
         london_fix_needed = False
         if exchange == "LSE" and most_recent_eps and most_recent_eps > 0 and price > 0:
             pe_ratio = price / most_recent_eps
-            if pe_ratio > 500:
+            if pe_ratio > LONDON_FIX_PE_THRESHOLD:
                 london_fix_needed = True
         
         # Apply London Fix if needed (converts GBp to GBP)
@@ -567,7 +570,7 @@ class EODHDClient(BaseAPIClient):
                         most_recent_div = history[sorted_years[0]].get('dividend', 0.0)
                         if most_recent_div > 0:
                             diff_pct = abs(most_recent_div - forward_dividend_rate) / forward_dividend_rate * 100
-                            if diff_pct > 10:
+                            if diff_pct > DIVIDEND_SOURCE_MAX_DIFF_PCT:
                                 warnings.append(f"Dividend Data Quality: {most_recent_year} Cash Flow shows {most_recent_div:.2f} vs Forward Rate {forward_dividend_rate:.2f} ({diff_pct:.1f}% difference) - most recent year may be incomplete due to payment timing")
         
         if warnings:
@@ -668,7 +671,7 @@ class EODHDClient(BaseAPIClient):
         # Compare share counts if they differ significantly
         if shares_stats > 0 and outstanding_shares_annual > 0:
             diff_pct = abs(outstanding_shares_annual - shares_stats) / shares_stats * 100
-            if diff_pct > 5:  # More than 5% difference
+            if diff_pct > SHARE_COUNT_MAX_DIFF_PCT:
                 warnings.append(
                     f"[VALIDATION] Share Count: Using {outstanding_shares_annual:,.0f} shares from financial statements. "
                     f"Market data (SharesStats) shows {shares_stats:,.0f} shares ({diff_pct:.1f}% difference). "
@@ -687,7 +690,7 @@ class EODHDClient(BaseAPIClient):
         
         if api_pe > 0 and calculated_pe > 0:
             pe_diff_pct = abs(calculated_pe - api_pe) / api_pe * 100
-            if pe_diff_pct > 20:  # More than 20% difference
+            if pe_diff_pct > PE_MAX_DIFF_PCT:
                 warnings.append(
                     f"[VALIDATION] P/E Ratio Difference: API shows {api_pe:.2f} (TTM basis), "
                     f"calculated {calculated_pe:.2f} (annual basis) ({pe_diff_pct:.1f}% difference). "
@@ -706,7 +709,7 @@ class EODHDClient(BaseAPIClient):
         
         if api_bvps > 0 and calculated_bvps > 0:
             bvps_diff_pct = abs(calculated_bvps - api_bvps) / api_bvps * 100
-            if bvps_diff_pct > 15:  # More than 15% difference
+            if bvps_diff_pct > BVPS_MAX_DIFF_PCT:
                 warnings.append(
                     f"[VALIDATION] Book Value Discrepancy: API shows ${api_bvps:.2f}, "
                     f"calculated ${calculated_bvps:.2f} ({bvps_diff_pct:.1f}% difference). "
@@ -731,7 +734,7 @@ class EODHDClient(BaseAPIClient):
                 now = datetime.now(timezone.utc)
                 days_old = (now - update_date).days
                 
-                if days_old > 7:
+                if days_old > API_DATA_MAX_AGE_DAYS:
                     warnings.append(
                         f"[VALIDATION] API data is {days_old} days old (last update: {last_update[:10]}). "
                         f"Price and market data may be stale."
@@ -764,7 +767,7 @@ class EODHDClient(BaseAPIClient):
         # Validate ROE
         if api_roe > 0 and calculated_roe > 0:
             roe_diff_pct = abs(calculated_roe - api_roe) / api_roe * 100
-            if roe_diff_pct > 20:
+            if roe_diff_pct > PROFITABILITY_MAX_DIFF_PCT:
                 warnings.append(
                     f"[VALIDATION] ROE Difference: API shows {api_roe*100:.2f}% (TTM basis), "
                     f"calculated {calculated_roe*100:.2f}% (annual basis) ({roe_diff_pct:.1f}% difference). "
@@ -775,7 +778,7 @@ class EODHDClient(BaseAPIClient):
         # Validate ROA
         if api_roa > 0 and calculated_roa > 0:
             roa_diff_pct = abs(calculated_roa - api_roa) / api_roa * 100
-            if roa_diff_pct > 20:
+            if roa_diff_pct > PROFITABILITY_MAX_DIFF_PCT:
                 warnings.append(
                     f"[VALIDATION] ROA Difference: API shows {api_roa*100:.2f}% (TTM basis), "
                     f"calculated {calculated_roa*100:.2f}% (annual basis) ({roa_diff_pct:.1f}% difference). "
@@ -786,7 +789,7 @@ class EODHDClient(BaseAPIClient):
         # Validate Profit Margin
         if api_profit_margin > 0 and calculated_profit_margin > 0:
             margin_diff_pct = abs(calculated_profit_margin - api_profit_margin) / api_profit_margin * 100
-            if margin_diff_pct > 20:
+            if margin_diff_pct > PROFITABILITY_MAX_DIFF_PCT:
                 warnings.append(
                     f"[VALIDATION] Profit Margin Difference: API shows {api_profit_margin*100:.2f}% (TTM basis), "
                     f"calculated {calculated_profit_margin*100:.2f}% (annual basis) ({margin_diff_pct:.1f}% difference). "

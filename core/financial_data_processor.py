@@ -10,6 +10,8 @@ from typing import Dict, Any, List, Optional
 from core.currency_converter import CurrencyConverter
 from core.history import has_statement_data
 from config.valuation_config import NORMALIZED_EPS_YEARS
+from config.data_quality_config import (ANNUAL_REPORT_MAX_AGE_MONTHS, DAYS_PER_MONTH, MAX_CONSECUTIVE_YEAR_GAPS,
+                                         MIN_HISTORY_YEARS_RECOMMENDED)
 
 logger = logging.getLogger(__name__)
 
@@ -925,8 +927,9 @@ class FinancialDataProcessor:
             return
         
         # Check for insufficient history
-        if len(history) < 10:
-            warnings.append(f"Insufficient History Warning: Only {len(history)} years of data available (minimum 10 recommended)")
+        if len(history) < MIN_HISTORY_YEARS_RECOMMENDED:
+            warnings.append(f"Insufficient History Warning: Only {len(history)} years of data available "
+                            f"(minimum {MIN_HISTORY_YEARS_RECOMMENDED} recommended)")
         
         # Check for missing required fields
         required_fields = ['revenue', 'net_income', 'eps', 'total_equity']
@@ -939,7 +942,7 @@ class FinancialDataProcessor:
                 warnings.append(f"Year {year}: Incomplete data (missing: {', '.join(missing_fields)})")
         
         # Check for data gaps (3+ consecutive years)
-        if len(sorted_years) > 3:
+        if len(sorted_years) > MAX_CONSECUTIVE_YEAR_GAPS:
             years_as_int = [int(y.split('-')[0]) for y in sorted_years if y.split('-')[0].isdigit()]
             years_as_int.sort(reverse=True)
             
@@ -947,7 +950,7 @@ class FinancialDataProcessor:
             for i in range(len(years_as_int) - 1):
                 if years_as_int[i] - years_as_int[i + 1] > 1:
                     gap_count += 1
-                    if gap_count >= 3:
+                    if gap_count >= MAX_CONSECUTIVE_YEAR_GAPS:
                         warnings.append("Data Gap Warning: Multiple consecutive years missing")
                         break
                 else:
@@ -1214,10 +1217,10 @@ class FinancialDataProcessor:
         # Calculate months difference
         # Using 30.44 days per month (365.25 / 12) for accurate calculation
         days_diff = (current_date - report_date).days
-        months_diff = days_diff / 30.44
+        months_diff = days_diff / DAYS_PER_MONTH
         
         # Check if data is stale (>9 months old)
-        if months_diff > 9:
+        if months_diff > ANNUAL_REPORT_MAX_AGE_MONTHS:
             return (
                 f"Potentially Stale Data: Most recent annual report is from {most_recent_year} "
                 f"({int(months_diff)} months old)"

@@ -7,6 +7,7 @@ Anomalies are flagged when EPS growth rates deviate significantly from the mean.
 
 import math
 from typing import List
+from config.data_quality_config import ANOMALY_MIN_DATA_POINTS, ANOMALY_Z_SCORE_THRESHOLD
 
 
 class AnomalyDetector:
@@ -17,7 +18,7 @@ class AnomalyDetector:
     """
     
     # Z-Score threshold for anomaly detection
-    Z_SCORE_THRESHOLD = 2.0
+    Z_SCORE_THRESHOLD = ANOMALY_Z_SCORE_THRESHOLD
     
     def __init__(self, financial_data: dict):
         """
@@ -70,7 +71,7 @@ class AnomalyDetector:
         years = sorted(history.keys(), reverse=True)
         
         # Need at least 3 years to detect anomalies
-        if len(years) < 3:
+        if len(years) < ANOMALY_MIN_DATA_POINTS:
             return anomalies
         
         # Calculate EPS growth rates year-over-year
@@ -94,7 +95,7 @@ class AnomalyDetector:
             growth_years.append(current_year)
         
         # Need at least 3 growth rates to calculate meaningful statistics
-        if len(growth_rates) < 3:
+        if len(growth_rates) < ANOMALY_MIN_DATA_POINTS:
             return anomalies
         
         # Compute mean and standard deviation
