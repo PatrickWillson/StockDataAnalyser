@@ -417,9 +417,6 @@ TTM calculations provide more current financial metrics by using the most recent
 - Year 2014-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - TTM Analysis: Periodic data not available from API
 - Negative Tangible Book Value - Company has negative equity
-- Negative Tangible Book Value - Company has negative equity
-- Negative Tangible Book Value - Company has negative equity
-- Negative Tangible Book Value - Company has negative equity
 
 ### Normalized Graham Number Requirements:
 - **3-Year Data Requirement**: Normalized Graham Number calculation requires 3 consecutive years of annual EPS data

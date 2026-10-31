@@ -21,6 +21,10 @@ from config.valuation_config import (DEEP_VALUE_MIN_DISCOUNT_PCT, EPV_MAX_YEARS,
                                      NORMALIZED_EPS_YEARS, STRONG_BUY_MIN_MOS_PCT)
 
 
+# Default for "not precomputed by compute_all" (None and "N/A" are real results)
+_UNSET = object()
+
+
 class GrahamCalculator:
     """
     Performs all Graham methodology calculations with strict formulas.
@@ -111,17 +115,21 @@ class GrahamCalculator:
         
         return round(tbvps, 2) if round_result else tbvps
     
-    def compute_graham_number(self) -> Union[float, str]:
+    def compute_graham_number(self, tbvps=_UNSET) -> Union[float, str]:
         """
         Calculate Graham Number (intrinsic value estimate).
         
         Formula: sqrt(22.5 × EPS × TBVPS)
         
+        Args:
+            tbvps: Unrounded TBVPS already computed by compute_all (computed here if omitted)
+        
         Returns:
             float: Graham Number rounded to 2 decimals, or "N/A" if invalid inputs
         """
         # Get TBVPS (unrounded for calculation accuracy)
-        tbvps = self.compute_tbvps(round_result=False)
+        if tbvps is _UNSET:
+            tbvps = self.compute_tbvps(round_result=False)
         if tbvps == "N/A":
             return "N/A"
         
@@ -146,7 +154,7 @@ class GrahamCalculator:
         
         return round(graham_number(eps, tbvps), 2)
     
-    def compute_normalized_graham_number(self, round_result: bool = True) -> Union[float, str]:
+    def compute_normalized_graham_number(self, round_result: bool = True, tbvps=_UNSET) -> Union[float, str]:
         """
         Calculate normalized Graham Number using 3-year average EPS.
         
@@ -158,6 +166,7 @@ class GrahamCalculator:
         
         Args:
             round_result: If True, round to 2 decimals. If False, return raw value.
+            tbvps: Unrounded TBVPS already computed by compute_all (computed here if omitted)
         
         Returns:
             float: Normalized Graham Number rounded to 2 decimals
@@ -166,7 +175,8 @@ class GrahamCalculator:
         from core.financial_data_processor import FinancialDataProcessor
         
         # Get TBVPS (unrounded for calculation accuracy)
-        tbvps = self.compute_tbvps(round_result=False)
+        if tbvps is _UNSET:
+            tbvps = self.compute_tbvps(round_result=False)
         if tbvps == "N/A":
             return "N/A"
         
@@ -622,7 +632,8 @@ class GrahamCalculator:
             'result': result
         }
     
-    def compute_margin_of_safety(self, current_price: float) -> Dict[str, Union[float, str]]:
+    def compute_margin_of_safety(self, current_price: float, normalized_gn=_UNSET,
+                                 epv_data=_UNSET) -> Dict[str, Union[float, str]]:
         """
         Calculate Margin of Safety using conservative dual-anchor approach.
         
@@ -633,6 +644,8 @@ class GrahamCalculator:
         
         Args:
             current_price: Current stock price
+            normalized_gn: Rounded normalized Graham Number from compute_all (computed if omitted)
+            epv_data: compute_epv() result from compute_all (computed if omitted)
         
         Returns:
             dict: {
@@ -643,11 +656,11 @@ class GrahamCalculator:
                 'epv_per_share': float or "N/A" - EPV per share value
             }
         """
-        # Get normalized Graham Number
-        normalized_gn = self.compute_normalized_graham_number()
-        
-        # Get EPV per share
-        epv_data = self.compute_epv()
+        # Normalized Graham Number and EPV, unless compute_all already has them
+        if normalized_gn is _UNSET:
+            normalized_gn = self.compute_normalized_graham_number()
+        if epv_data is _UNSET:
+            epv_data = self.compute_epv()
         epv_per_share = epv_data.get('epv_per_share', 0.0)
         
         # Determine which values are valid
@@ -819,12 +832,13 @@ class GrahamCalculator:
         
         return result
     
-    def run_investor_tests(self, investor_type: str = "defensive") -> dict:
+    def run_investor_tests(self, investor_type: str = "defensive", tbvps=_UNSET) -> dict:
         """
         Run Graham Investor tests based on investor type.
         
         Args:
             investor_type: "defensive" or "enterprising"
+            tbvps: Unrounded TBVPS from compute_all, for the enterprising price test
         
         Returns:
             Dictionary with test names as keys and PASS/FAIL/"N/A" as values
@@ -839,7 +853,7 @@ class GrahamCalculator:
         num_years = len(years)
         
         if investor_type == "enterprising":
-            return self._run_enterprising_tests(history, years, num_years, price)
+            return self._run_enterprising_tests(history, years, num_years, price, tbvps)
         else:
             return self._run_defensive_tests(history, years, num_years, price)
     
@@ -898,7 +912,8 @@ class GrahamCalculator:
             'pb_ratio': pb_test
         }
     
-    def _run_enterprising_tests(self, history: dict, years: list, num_years: int, price: float) -> dict:
+    def _run_enterprising_tests(self, history: dict, years: list, num_years: int, price: float,
+                                tbvps=_UNSET) -> dict:
         """Run Graham Enterprising Investor tests."""
         # Test 1: Earnings stability - positive earnings for last 5 years
         earnings_stability = self._test_earnings_stability(history, years, min_years=ENTERPRISING.MIN_EARNINGS_YEARS, period=ENTERPRISING.EARNINGS_STABILITY_YEARS)
@@ -916,7 +931,7 @@ class GrahamCalculator:
         earnings_growth_test = 'N/A - Not Required'
         
         # Test 6: Price test - P/E < 10 OR Price < 120% of Net Tangible Assets
-        price_test = self._test_enterprising_price(history, years, price)
+        price_test = self._test_enterprising_price(history, years, price, tbvps)
         
         return {
             'earnings_stability': earnings_stability,
@@ -1148,7 +1163,7 @@ class GrahamCalculator:
         
         return 'PASS' if dividend > 0 else 'FAIL'
     
-    def _test_enterprising_price(self, history: dict, years: list, price: float) -> str:
+    def _test_enterprising_price(self, history: dict, years: list, price: float, tbvps=_UNSET) -> str:
         """Test if P/E < 10 OR Price < 120% of Net Tangible Assets."""
         if not years or price == 0:
             return 'FAIL'
@@ -1166,7 +1181,8 @@ class GrahamCalculator:
         
         # Test 2: Price < 120% of Tangible Book Value (not Net-Net)
         # Graham's standard rule: buy at discount to book value
-        tbvps = self.compute_tbvps(round_result=False)
+        if tbvps is _UNSET:
+            tbvps = self.compute_tbvps(round_result=False)
         if isinstance(tbvps, float) and tbvps > 0:
             max_price = tbvps * ENTERPRISING.MAX_PB_RATIO
             if price < max_price:
@@ -1181,9 +1197,10 @@ class GrahamCalculator:
         Returns:
             Dictionary containing all calculated metrics and test results
         """
-        # Calculate all metrics
-        graham_number = self.compute_graham_number()  # Legacy single-year
-        normalized_graham_number = self.compute_normalized_graham_number()  # New 3-year average
+        # Shared inputs computed once, so each warning is raised once (M4.3)
+        tbvps = self.compute_tbvps(round_result=False)
+        graham_number = self.compute_graham_number(tbvps=tbvps)  # Legacy single-year
+        normalized_graham_number = self.compute_normalized_graham_number(tbvps=tbvps)  # New 3-year average
         net_net_value = self.compute_net_net()  # Rounded for display
         net_net_value_raw = self.compute_net_net(round_result=False)  # Unrounded for comparison
         epv_data = self.compute_epv()  # Now returns dict
@@ -1194,7 +1211,8 @@ class GrahamCalculator:
         combined_pe_pb_test = self.compute_combined_pe_pb_test()
         
         price = self.data.get('price', 0.0)
-        margin_of_safety_data = self.compute_margin_of_safety(price)
+        margin_of_safety_data = self.compute_margin_of_safety(price, normalized_gn=normalized_graham_number,
+                                                              epv_data=epv_data)
         
         # Check for deep value opportunity (use unrounded value for accurate comparison)
         # Use a small tolerance to avoid flagging when price and net-net are approximately equal
@@ -1207,7 +1225,7 @@ class GrahamCalculator:
         
         # Run both defensive and enterprising tests
         defensive_tests = self.run_investor_tests("defensive")
-        enterprising_tests = self.run_investor_tests("enterprising")
+        enterprising_tests = self.run_investor_tests("enterprising", tbvps=tbvps)
         
         # Determine verdict (use new MoS structure)
         verdict = self._determine_verdict(graham_number, margin_of_safety_data['mos_percentage'], epv_data['epv'], 
