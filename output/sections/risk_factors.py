@@ -314,14 +314,18 @@ class RiskFactorsSection(DossierSection):
             sorted_years: Sorted list of years
             latest_data: Most recent year's financial data
         """
-        forward_div = self.financial_data.get('forward_dividend_rate', 0)
-        if forward_div and forward_div > 0:
+        # The latest fiscal year's audited dividend per share, never EODHD's forward estimate (F21);
+        # history 'dividend' values are payment counts when is_dividend_amounts is False
+        is_amounts = self.financial_data.get('is_dividend_amounts', False)
+        latest_div = latest_data.get('dividend', 0.0) if is_amounts else 0.0
+        paid_any = any(history[year].get('dividend', 0.0) > 0 for year in sorted_years)
+        if latest_div > 0 or paid_any:
             lines.append("### Dividend Sustainability Risk:")
             
-            # Payout ratio
+            # Payout ratio (latest fiscal year: dividend per share / EPS)
             eps = latest_data.get('eps', 0.0)
-            if eps > 0:
-                payout_ratio = (forward_div / eps) * 100
+            if latest_div > 0 and eps > 0:
+                payout_ratio = (latest_div / eps) * 100
                 if payout_ratio < PAYOUT_CONSERVATIVE_PCT:
                     lines.append(f"- **Payout Ratio: {payout_ratio:.1f}%** - Conservative (sustainable)")
                 elif payout_ratio < PAYOUT_MODERATE_PCT:
@@ -334,9 +338,9 @@ class RiskFactorsSection(DossierSection):
             # Dividend coverage from cash flow
             operating_cash_flow = latest_data.get('operating_cash_flow', 0.0)
             shares = latest_data.get('shares_outstanding', 0)
-            if operating_cash_flow > 0 and shares > 0:
+            if latest_div > 0 and operating_cash_flow > 0 and shares > 0:
                 cash_per_share = operating_cash_flow / shares
-                dividend_coverage = cash_per_share / forward_div if forward_div > 0 else 0
+                dividend_coverage = cash_per_share / latest_div
                 if dividend_coverage >= DIVIDEND_COVERAGE_STRONG:
                     lines.append(f"- **Dividend Coverage: {dividend_coverage:.1f}x** from operating cash flow - Well covered")
                 elif dividend_coverage >= DIVIDEND_COVERAGE_ADEQUATE:

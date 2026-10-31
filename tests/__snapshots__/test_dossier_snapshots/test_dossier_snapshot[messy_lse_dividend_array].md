@@ -60,6 +60,10 @@
 - **Loss Years: 0 of 10** - Consistent profitability (excellent)
 - **Return on Equity: 38.1%** - Strong capital efficiency
 
+### Dividend Sustainability Risk:
+- **Payout Ratio: 16.3%** - Conservative (sustainable)
+- **Dividend History: 2 of 10 years** - ⚠️ Inconsistent payment history
+
 ### Valuation Risk (Margin of Safety):
 - **Margin of Safety: -349.6%** - Trading above intrinsic value
   - Graham's Standard: 20-30% minimum for defensive investors

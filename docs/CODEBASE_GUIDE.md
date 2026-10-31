@@ -146,7 +146,7 @@ Where EODHD pre-computed values are used today:
 | `Highlights.BookValue` | Shown only as "API BVPS" comparison in Calculation Details | Yes (labelled comparison) |
 | `Beta`, `52WeekHigh/Low`, `PercentInsiders/Institutions` | Display; Beta also drives a Risk Factors band | Display-only market data |
 | `DividendShare`, `DividendYield`, `EnterpriseValue` | Read, never used | Unused |
-| `ForwardAnnualDividendRate` (estimate) | Never written into `history` (F21); used for Risk Factors payout/coverage and the Executive Summary "Forward Rate" yield | **No** — known exception (Risk Factors payout/coverage) |
+| `ForwardAnnualDividendRate` (estimate) | Display only: the Executive Summary "Forward Rate" yield (labelled). Never in `history`; Risk Factors payout/coverage use the latest fiscal year's audited dividend per share (F21) | Yes |
 | `NumberDividendsByYear` (payment counts) | **Used as dividend amounts** when nothing else exists | **No** — known exception |
 | `MarketCapitalization`, `SharesOutstanding`, `SharePrice`, `LastPrice` | Never used for the price (removed by F21: yfinance is the only price source) | Yes |
 
@@ -247,7 +247,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising `_test_*` method and `_determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1236 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1238 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

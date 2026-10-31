@@ -63,7 +63,7 @@
 - **Return on Equity: 156.1%** - Strong capital efficiency
 
 ### Dividend Sustainability Risk:
-- **Payout Ratio: 15.4%** - Conservative (sustainable)
+- **Payout Ratio: 15.3%** - Conservative (sustainable)
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):

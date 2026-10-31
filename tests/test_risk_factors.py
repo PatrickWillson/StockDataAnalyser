@@ -21,6 +21,7 @@ def create_test_financial_data():
         'institutional_ownership': 25.5,
         'price_source': 'yfinance',
         'forward_dividend_rate': 2.50,
+        'is_dividend_amounts': True,
         'history': {
             '2023-12-31': {
                 'revenue': 100000000,
@@ -165,14 +166,15 @@ def test_dividend_risk_when_dividend_present():
     payout_lines = [line for line in lines if 'Payout Ratio' in line or 'payout ratio' in line]
     assert len(payout_lines) > 0, "Should display payout ratio"
     
-    # Verify payout ratio calculation (2.50 / 5.00 = 50%)
+    # Latest fiscal year's audited dividend / EPS (2.50 / 5.00 = 50%), not the forward estimate
     assert any('50.0%' in line for line in payout_lines), "Should calculate payout ratio correctly"
 
 
 def test_dividend_risk_when_no_dividend():
     """Test that dividend risk section is omitted when no dividend."""
     financial_data = create_test_financial_data()
-    financial_data['forward_dividend_rate'] = 0  # No dividend
+    for row in financial_data['history'].values():
+        row['dividend'] = 0.0  # No dividend paid in any year
     metrics = create_test_metrics()
     
     section = RiskFactorsSection(financial_data, metrics)
@@ -343,3 +345,21 @@ def test_loss_years_detection():
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+def test_payout_ignores_forward_estimate():
+    """F21: payout uses the audited latest-year dividend even when the forward estimate differs."""
+    financial_data = create_test_financial_data()
+    financial_data['forward_dividend_rate'] = 4.00  # estimate would give 80%
+    lines = RiskFactorsSection(financial_data, create_test_metrics()).generate()
+    payout_lines = [line for line in lines if 'Payout Ratio' in line]
+    assert any('50.0%' in line for line in payout_lines)
+    assert not any('80.0%' in line for line in payout_lines)
+
+
+def test_payout_not_computed_from_payment_counts():
+    """History 'dividend' values are payment counts when is_dividend_amounts is False."""
+    financial_data = create_test_financial_data()
+    financial_data['is_dividend_amounts'] = False
+    lines = RiskFactorsSection(financial_data, create_test_metrics()).generate()
+    assert not any('Payout Ratio' in line or 'Dividend Coverage' in line for line in lines)
