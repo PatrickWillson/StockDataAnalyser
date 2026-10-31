@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from core.currency_converter import CurrencyConverter
 from core.history import has_statement_data, is_dividend_only_year
+from core.price_quote import PriceQuote, same_currency
 from core.statement_parsing import parse_balance_sheet_rows, parse_income_statement_rows
 from config.valuation_config import NORMALIZED_EPS_YEARS
 from config.data_quality_config import (ANNUAL_REPORT_MAX_AGE_MONTHS, DAYS_PER_MONTH, MAX_MISSING_HISTORY_YEARS,
@@ -110,28 +111,36 @@ class FinancialDataProcessor:
             return {}
     
     @staticmethod
-    def get_current_price(yf_price: Optional[float] = None,
-                          warnings: Optional[List[str]] = None) -> tuple[float, str]:
+    def get_current_price(quote: Optional[PriceQuote], trading_currency: Optional[str],
+                          warnings: Optional[List[str]] = None) -> tuple[float, Optional[str]]:
         """
-        Current price from yfinance, the only price source.
+        Current price from the yfinance quote, the only price source.
         
         EODHD price fields and MarketCapitalization / SharesOutstanding are not used: their
-        date, basis and unit (pence or pounds) are opaque (GRAHAM_METHODOLOGY §8.1). Without
-        a usable price there is no valuation, so the caller stops (no price, no dossier).
+        date, basis and unit (pence or pounds) are opaque (GRAHAM_METHODOLOGY §8.1). The quote
+        is only accepted when its currency matches EODHD's trading currency (in any unit, e.g.
+        GBp for GBX), so a lookup that found another listing is rejected (F7). Without a usable
+        price there is no valuation, so the caller stops (no price, no dossier).
         
         Args:
-            yf_price: Current price already fetched from yfinance, or None
+            quote: Current price and its quote currency from yfinance, or None
+            trading_currency: EODHD General.CurrencyCode
             warnings: List to append the price-source note to
             
         Returns:
-            (price, 'yfinance'), or (0.0, 'Missing') when yfinance gave no positive price
+            (price, None) when usable, else (0.0, reason)
         """
         if warnings is None:
             warnings = []
-        if yf_price and yf_price > 0:
-            warnings.append("Price Source: yfinance (primary source)")
-            return yf_price, 'yfinance'
-        return 0.0, 'Missing'
+        if quote is None or not quote.price or quote.price <= 0:
+            return 0.0, "no price from yfinance"
+        if not quote.currency:
+            return 0.0, "yfinance did not report the quote currency, so the listing cannot be confirmed"
+        if not same_currency(quote.currency, trading_currency):
+            return 0.0, (f"yfinance quotes {quote.currency} but EODHD trades this ticker in "
+                         f"{trading_currency}: probably a different listing")
+        warnings.append("Price Source: yfinance (primary source)")
+        return quote.price, None
     
     def parse_balance_sheet(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
         """

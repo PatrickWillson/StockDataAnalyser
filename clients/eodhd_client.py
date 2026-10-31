@@ -136,7 +136,7 @@ class EODHDClient(BaseAPIClient):
         
         Args:
             ticker: Stock ticker with exchange suffix (e.g., AAPL.US, YU.LSE)
-            yf_client: Optional yfinance client for price fetching (primary source)
+            yf_client: Optional yfinance client for the current price quote (the only price source)
             
         Returns:
             financial_data dict (see FinancialDataAssembler.assemble)
@@ -160,6 +160,6 @@ class EODHDClient(BaseAPIClient):
         dividend_api_data = self._fetch_dividend_history(ticker)
         
         # Current price from yfinance (the only price source); assembly itself does no I/O
-        yf_price = yf_client.get_price(ticker) if yf_client else None
+        quote = yf_client.get_quote(ticker) if yf_client else None
         
-        return self.assembler.assemble(data, dividend_api_data, ticker, yf_price=yf_price)
+        return self.assembler.assemble(data, dividend_api_data, ticker, quote=quote)

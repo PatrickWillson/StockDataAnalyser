@@ -12,6 +12,7 @@ from core.currency_converter import CurrencyConverter
 from core.errors import PriceUnavailableError
 from core.financial_data_processor import FinancialDataProcessor
 from core.history import has_statement_data
+from core.price_quote import PriceQuote
 from config.data_quality_config import (API_DATA_MAX_AGE_DAYS, BVPS_MAX_DIFF_PCT, DIVIDEND_SOURCE_MAX_DIFF_PCT,
                                          LONDON_FIX_PE_THRESHOLD, PE_MAX_DIFF_PCT, PROFITABILITY_MAX_DIFF_PCT,
                                          SHARE_COUNT_MAX_DIFF_PCT)
@@ -37,7 +38,7 @@ class FinancialDataAssembler:
         self.debug = debug
     
     def assemble(self, data: Dict[str, Any], dividend_api_data: Optional[List[Dict[str, Any]]],
-                 ticker: str, yf_price: Optional[float] = None) -> Dict[str, Any]:
+                 ticker: str, quote: Optional[PriceQuote] = None) -> Dict[str, Any]:
         """
         Build the financial_data dict (see docs/CODEBASE_GUIDE.md §4.1).
 
@@ -45,10 +46,11 @@ class FinancialDataAssembler:
             data: Raw EODHD fundamentals JSON
             dividend_api_data: Records from the EODHD Dividend API, or None
             ticker: Ticker as given to the CLI (e.g. AAPL.US)
-            yf_price: Current price from yfinance (the only price source), fetched by the caller, or None
+            quote: Current price and quote currency from yfinance (the only price source),
+                   fetched by the caller, or None
 
         Raises:
-            PriceUnavailableError: no current price from yfinance
+            PriceUnavailableError: no usable current price from yfinance (missing, or quote currency mismatch)
         """
         warnings = []
         
@@ -174,11 +176,10 @@ class FinancialDataAssembler:
                                                       outstanding_shares_by_year=shares_by_year)
         
         # Get current price
-        price, price_source = self.processor.get_current_price(yf_price=yf_price, warnings=warnings)
-        
-        # Check if price is available
-        if price == 0.0 or price_source == 'Missing':
-            raise PriceUnavailableError(f"Current price unavailable from yfinance for {ticker}")
+        price, price_problem = self.processor.get_current_price(quote, currency, warnings=warnings)
+        if price_problem:
+            raise PriceUnavailableError(f"Current price unavailable for {ticker}: {price_problem}")
+        price_source = 'yfinance'
         
         logger.info(f"Current Price: {price} (Source: {price_source})")
         

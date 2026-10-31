@@ -6,6 +6,7 @@ Tests exchange code translation, API response parsing, error handling, and price
 
 from unittest.mock import patch, MagicMock
 from clients.yfinance_client import YFinanceClient
+from core.price_quote import PriceQuote
 
 
 class TestYFinanceClient:
@@ -66,29 +67,38 @@ class TestYFinanceClient:
         assert symbol is None
         assert exchange is None
     
-    def test_parse_ticker_invalid_multiple_dots(self):
-        """Test parsing invalid ticker with multiple dots."""
+    def test_parse_ticker_share_class_symbol(self):
+        """A symbol may contain dots (share classes): split on the last dot."""
         client = YFinanceClient()
-        symbol, exchange = client._parse_ticker("TEST.SOME.THING")
-        assert symbol is None
-        assert exchange is None
+        assert client._parse_ticker("BRK.B.US") == ("BRK.B", "US")
+        assert client._parse_ticker("BT.A.LSE") == ("BT.A", "LSE")
+    
+    def test_translate_share_class_uses_dash(self):
+        """Yahoo writes share classes with a dash: BRK.B -> BRK-B, BT.A on LSE -> BT-A.L."""
+        client = YFinanceClient()
+        assert client._translate_ticker("BRK.B", "US") == "BRK-B"
+        assert client._translate_ticker("BT.A", "LSE") == "BT-A.L"
+    
+    def test_saudi_and_london_international_suffixes(self):
+        client = YFinanceClient()
+        assert client._translate_ticker("2222", "SAU") == "2222.SR"
+        assert client._translate_ticker("SMSN", "IL") == "SMSN.IL"
     
     @patch('yfinance.Ticker')
-    def test_get_price_success(self, mock_ticker_class):
+    def test_get_quote_success(self, mock_ticker_class):
         """Test successful price fetch from yfinance."""
         client = YFinanceClient()
         
         # Mock yfinance.Ticker and fast_info
         mock_ticker = MagicMock()
-        mock_ticker.fast_info = {'last_price': 150.25}
+        mock_ticker.fast_info = {'last_price': 150.25, 'currency': 'USD'}
         mock_ticker_class.return_value = mock_ticker
         
-        price = client.get_price("AAPL.US")
-        assert price == 150.25
+        assert client.get_quote("AAPL.US") == PriceQuote(150.25, "USD")
         mock_ticker_class.assert_called_once_with("AAPL")
     
     @patch('yfinance.Ticker')
-    def test_get_price_no_price_in_response(self, mock_ticker_class):
+    def test_get_quote_no_price_in_response(self, mock_ticker_class):
         """Test handling of response without price data."""
         client = YFinanceClient(debug=False)
         
@@ -97,46 +107,44 @@ class TestYFinanceClient:
         mock_ticker.fast_info = {}
         mock_ticker_class.return_value = mock_ticker
         
-        price = client.get_price("AAPL.US")
+        price = client.get_quote("AAPL.US")
         assert price is None
     
     @patch('yfinance.Ticker')
-    def test_get_price_invalid_ticker_format(self, mock_ticker_class):
+    def test_get_quote_invalid_ticker_format(self, mock_ticker_class):
         """Test handling of invalid ticker format."""
         client = YFinanceClient(debug=False)
-        price = client.get_price("INVALID_TICKER")
+        price = client.get_quote("INVALID_TICKER")
         assert price is None
         # Should not make API request for invalid ticker
         mock_ticker_class.assert_not_called()
     
     @patch('yfinance.Ticker')
-    def test_get_price_unmapped_exchange(self, mock_ticker_class):
+    def test_get_quote_unmapped_exchange(self, mock_ticker_class):
         """Test handling of unmapped exchange code."""
         client = YFinanceClient(debug=False)
         
         # Mock yfinance.Ticker
         mock_ticker = MagicMock()
-        mock_ticker.fast_info = {'last_price': 100.0}
+        mock_ticker.fast_info = {'last_price': 100.0, 'currency': 'USD'}
         mock_ticker_class.return_value = mock_ticker
         
-        # Should still attempt to fetch with symbol only
-        price = client.get_price("TEST.UNKNOWN")
-        # Should return the price if yfinance can find it
-        assert price == 100.0
+        # Still attempts the bare symbol; core rejects the quote unless its currency matches
+        assert client.get_quote("TEST.UNKNOWN") == PriceQuote(100.0, "USD")
         mock_ticker_class.assert_called_once_with("TEST")
     
     @patch('yfinance.Ticker')
-    def test_get_price_network_error(self, mock_ticker_class):
+    def test_get_quote_network_error(self, mock_ticker_class):
         """Test handling of network errors."""
         client = YFinanceClient(debug=False)
         
         mock_ticker_class.side_effect = Exception("Network error")
         
-        price = client.get_price("AAPL.US")
+        price = client.get_quote("AAPL.US")
         assert price is None
     
     @patch('yfinance.Ticker')
-    def test_get_price_invalid_price_value(self, mock_ticker_class):
+    def test_get_quote_invalid_price_value(self, mock_ticker_class):
         """Test handling of invalid price values (negative or zero)."""
         client = YFinanceClient(debug=False)
         
@@ -145,16 +153,16 @@ class TestYFinanceClient:
         mock_ticker.fast_info = {'last_price': -10.0}
         mock_ticker_class.return_value = mock_ticker
         
-        price = client.get_price("AAPL.US")
+        price = client.get_quote("AAPL.US")
         assert price is None
         
         # Test zero price
         mock_ticker.fast_info = {'last_price': 0.0}
-        price = client.get_price("AAPL.US")
+        price = client.get_quote("AAPL.US")
         assert price is None
     
     @patch('yfinance.Ticker')
-    def test_get_price_none_price(self, mock_ticker_class):
+    def test_get_quote_none_price(self, mock_ticker_class):
         """Test handling of None price in fast_info."""
         client = YFinanceClient(debug=False)
         
@@ -162,7 +170,7 @@ class TestYFinanceClient:
         mock_ticker.fast_info = {'last_price': None}
         mock_ticker_class.return_value = mock_ticker
         
-        price = client.get_price("AAPL.US")
+        price = client.get_quote("AAPL.US")
         assert price is None
     
     def test_debug_mode_enabled(self):
@@ -176,20 +184,19 @@ class TestYFinanceClient:
         assert client.debug is False
     
     @patch('yfinance.Ticker')
-    def test_get_price_lse_ticker(self, mock_ticker_class):
+    def test_get_quote_lse_ticker(self, mock_ticker_class):
         """Test price fetching for LSE ticker."""
         client = YFinanceClient()
         
         mock_ticker = MagicMock()
-        mock_ticker.fast_info = {'last_price': 12.50}
+        mock_ticker.fast_info = {'last_price': 1250.0, 'currency': 'GBp'}
         mock_ticker_class.return_value = mock_ticker
         
-        price = client.get_price("YU.LSE")
-        assert price == 12.50
+        assert client.get_quote("YU.LSE") == PriceQuote(1250.0, "GBp")
         mock_ticker_class.assert_called_once_with("YU.L")
     
     @patch('yfinance.Ticker')
-    def test_get_price_toronto_ticker(self, mock_ticker_class):
+    def test_get_quote_toronto_ticker(self, mock_ticker_class):
         """Test price fetching for Toronto ticker."""
         client = YFinanceClient()
         
@@ -197,8 +204,8 @@ class TestYFinanceClient:
         mock_ticker.fast_info = {'last_price': 85.30}
         mock_ticker_class.return_value = mock_ticker
         
-        price = client.get_price("RY.TO")
-        assert price == 85.30
+        # Currency not reported -> None (core then rejects the quote)
+        assert client.get_quote("RY.TO") == PriceQuote(85.30, None)
         mock_ticker_class.assert_called_once_with("RY.TO")
     
     def test_parse_ticker_empty_string(self):

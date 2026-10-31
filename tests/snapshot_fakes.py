@@ -54,8 +54,8 @@ class FakeEODHDSession:
 class FakeTicker:
     """The subset of yfinance.Ticker the clients use: fast_info, info, history()."""
 
-    def __init__(self, last_price: Optional[float], closes: Dict[str, float]):
-        self.fast_info = {} if last_price is None else {"lastPrice": last_price}
+    def __init__(self, last_price: Optional[float], closes: Dict[str, float], currency: Optional[str] = None):
+        self.fast_info = {} if last_price is None else {"lastPrice": last_price, "currency": currency}
         self.info = {} if last_price is None else {"regularMarketPrice": last_price}
         self._closes = closes
 
@@ -72,7 +72,8 @@ class FakeYFinanceModule:
     Drop-in for the ``yfinance`` module.
 
     symbols maps a Yahoo symbol (e.g. "AAPL", "YU.L", "EURUSD=X") to
-    {"last": float, "closes": {"YYYY-MM-DD": float}}. Unknown symbols behave like
+    {"last": float, "currency": str, "closes": {"YYYY-MM-DD": float}}; currency is the quote
+    currency as Yahoo reports it (e.g. "USD", "GBp" for pence). Unknown symbols behave like
     yfinance for a missing ticker: no price and an empty history.
     """
 
@@ -85,7 +86,7 @@ class FakeYFinanceModule:
     def Ticker(self, symbol: str) -> FakeTicker:  # noqa: N802 (mirrors yfinance API)
         self.requested.append(symbol)
         entry = self._symbols.get(symbol, {})
-        return FakeTicker(entry.get("last"), entry.get("closes", {}))
+        return FakeTicker(entry.get("last"), entry.get("closes", {}), entry.get("currency"))
 
 
 def closes_around(dates: List[str], price_for, days_before: int = 4) -> Dict[str, float]:

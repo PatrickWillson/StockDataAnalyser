@@ -60,8 +60,8 @@ def test_swallowed_yfinance_call_still_fails_test(guarded):
         from clients.yfinance_client import YFinanceClient
 
         def test_inner():
-            # get_price swallows all exceptions and returns None
-            assert YFinanceClient().get_price("AAPL.US") is None
+            # get_quote swallows all exceptions and returns None
+            assert YFinanceClient().get_quote("AAPL.US") is None
     """)
     result = guarded.runpytest("-p", "no:cacheprovider")
     result.assert_outcomes(passed=1, errors=1)

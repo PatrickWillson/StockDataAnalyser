@@ -169,7 +169,8 @@ This saves the raw API response to `data/[TICKER]_raw_api_response.json` and pri
 ### Price Fetching Strategy
 1. **Only source**: yfinance (no API key required, real-time, no rate limits)
 2. **No fallback**: EODHD price fields and MarketCap/Shares are opaque (date, unit), so no yfinance price means no dossier (exit 1)
-3. **Unmapped exchanges**: Attempt without suffix, then fail gracefully
+3. **Currency match required**: the yfinance quote currency must match EODHD's trading currency (GBp/GBX/GBP count as one currency), else no dossier
+4. **Unmapped exchanges**: Attempt without suffix (accepted only if the currency matches)
 
 **Exchange code mapping** is in `clients/yfinance_client.py`:
 - `US` → '' (no suffix)

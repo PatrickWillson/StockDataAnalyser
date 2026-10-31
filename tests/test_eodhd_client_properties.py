@@ -5,6 +5,7 @@ These tests verify universal properties that should hold across all valid inputs
 Each test runs 100+ iterations with randomly generated data.
 """
 
+from core.price_quote import PriceQuote
 from hypothesis import given, strategies as st, settings
 from unittest.mock import Mock, patch
 from clients.eodhd_client import EODHDClient
@@ -52,7 +53,7 @@ def test_ticker_suffix_preservation(base_ticker, suffix):
         
         # Call the method
         try:
-            client.fetch_all_data(ticker, yf_client=Mock(get_price=Mock(return_value=100.0)))
+            client.fetch_all_data(ticker, yf_client=Mock(get_quote=Mock(return_value=PriceQuote(100.0, 'USD'))))
         except SystemExit:
             # Ignore system exits for this test
             pass

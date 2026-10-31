@@ -130,12 +130,13 @@ def set_currencies(raw: Dict[str, Any], exchange: str, trading: str, financials:
 
 
 def yahoo_symbol(symbol: str, last: float, anchors: List[str],
-                 price_for: Optional[Callable[[str], float]] = None) -> Dict[str, Dict[str, Any]]:
-    """One Yahoo symbol with a current price and closes around each anchor date."""
+                 price_for: Optional[Callable[[str], float]] = None,
+                 currency: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+    """One Yahoo symbol with a current price (in `currency`) and closes around each anchor date."""
     if price_for is None:
         latest_year = int(max(anchors)[:4])
         price_for = lambda d: last * (0.92 ** (latest_year - int(d[:4])))  # noqa: E731
-    return {symbol: {"last": last, "closes": closes_around(anchors, price_for)}}
+    return {symbol: {"last": last, "currency": currency, "closes": closes_around(anchors, price_for)}}
 
 
 # --- scenarios -------------------------------------------------------------------------
@@ -144,7 +145,7 @@ def us_mature_quarterly() -> Scenario:
     raw = add_periodic(extend_years(EODHDFixtures.get_aapl_fundamentals(), 12), 4, 6)
     return Scenario(
         "us_mature_quarterly", "AAPL.US", raw,
-        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw)),
+        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw), currency="USD"),
         dividends=EODHDFixtures.get_dividend_api_response(),
         description="US/USD, 12 years, quarterly TTM, dividend endpoint data",
     )
@@ -154,7 +155,7 @@ def us_young_company() -> Scenario:
     raw = EODHDFixtures.get_aapl_fundamentals()
     return Scenario(
         "us_young_company", "AAPL.US", raw,
-        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw)),
+        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw), currency="USD"),
         description="US/USD, only 3 annual years (EPV and 10-year tests unavailable), no TTM",
     )
 
@@ -163,7 +164,7 @@ def lse_gbx_london_fix_semi_annual() -> Scenario:
     raw = add_periodic(extend_years(EODHDFixtures.get_lse_stock_fundamentals(), 10), 2, 4)
     return Scenario(
         "lse_gbx_london_fix_semi_annual", "YU.LSE", raw,
-        yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw)),
+        yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw), currency="GBp"),
         description="LSE, trades in GBX, financials GBP, P/E > 500 in pence -> London Fix, semi-annual TTM",
     )
 
@@ -175,7 +176,7 @@ def lse_gbx_weak_quarter() -> Scenario:
         raw["Financials"]["Income_Statement"]["quarterly"][latest][field] = 500_000
     return Scenario(
         "lse_gbx_weak_quarter", "YU.LSE", raw,
-        yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw)),
+        yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw), currency="GBp"),
         description="LSE, quarterly TTM with one weak quarter (P/E on that quarter > 500): "
                     "TTM must not re-apply the London Fix to the already-converted price",
     )
@@ -185,7 +186,7 @@ def lse_gbx_low_pe() -> Scenario:
     raw = extend_years(EODHDFixtures.get_lse_stock_fundamentals(), 10)
     return Scenario(
         "lse_gbx_low_pe", "YU.LSE", raw,
-        yahoo=yahoo_symbol("YU.L", 150.0, fiscal_year_ends(raw)),
+        yahoo=yahoo_symbol("YU.L", 150.0, fiscal_year_ends(raw), currency="GBp"),
         description="LSE, GBX price with P/E < 500 -> plain GBX/100 branch",
     )
 
@@ -194,7 +195,7 @@ def lse_gbp_label_pence_price() -> Scenario:
     raw = set_currencies(extend_years(EODHDFixtures.get_lse_stock_fundamentals(), 10), "LSE", "GBP", "GBP")
     return Scenario(
         "lse_gbp_label_pence_price", "YU.LSE", raw,
-        yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw)),
+        yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw), currency="GBp"),
         description="LSE labelled GBP but price quoted in pence -> London Fix via P/E heuristic",
     )
 
@@ -203,7 +204,7 @@ def tsx_cad() -> Scenario:
     raw = set_currencies(extend_years(EODHDFixtures.get_aapl_fundamentals(), 10), "TO", "CAD", "CAD")
     return Scenario(
         "tsx_cad", "AAPL.TO", raw,
-        yahoo=yahoo_symbol("AAPL.TO", 255.10, fiscal_year_ends(raw)),
+        yahoo=yahoo_symbol("AAPL.TO", 255.10, fiscal_year_ends(raw), currency="CAD"),
         description="Toronto, CAD trading and financials",
     )
 
@@ -211,7 +212,7 @@ def tsx_cad() -> Scenario:
 def xetra_eur_usd_financials() -> Scenario:
     raw = set_currencies(extend_years(EODHDFixtures.get_aapl_fundamentals(), 10), "XETRA", "EUR", "USD")
     anchors = fiscal_year_ends(raw)
-    yahoo = yahoo_symbol("AAPL.DE", 173.20, anchors)
+    yahoo = yahoo_symbol("AAPL.DE", 173.20, anchors, currency="EUR")
     yahoo.update(yahoo_symbol("EURUSD=X", 1.0825, anchors,
                               price_for=lambda d: 1.0 + (int(d[:4]) % 7) * 0.03))
     return Scenario(
@@ -227,7 +228,7 @@ def negative_tangible_equity() -> Scenario:
         entry["goodWill"] = entry["totalStockholderEquity"] * 2
     return Scenario(
         "negative_tangible_equity", "AAPL.US", raw,
-        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw)),
+        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw), currency="USD"),
         description="Goodwill exceeds equity -> negative TBVPS, Graham Number unavailable",
     )
 
@@ -239,7 +240,7 @@ def dividend_counts_only() -> Scenario:
     raw["SplitsDividends"].pop("ForwardAnnualDividendRate", None)
     return Scenario(
         "dividend_counts_only", "AAPL.US", raw,
-        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw)),
+        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw), currency="USD"),
         description="No dividend amounts anywhere; only NumberDividendsByYear payment counts",
     )
 
@@ -253,7 +254,7 @@ def stale_annual_report() -> Scenario:
             del yearly[fye]
     return Scenario(
         "stale_annual_report", "AAPL.US", raw,
-        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw)),
+        yahoo=yahoo_symbol("AAPL", 187.45, fiscal_year_ends(raw), currency="USD"),
         description="Most recent annual report 2021-09-25: data staleness warning",
     )
 
@@ -287,7 +288,7 @@ def messy_lse_dividend_array() -> Scenario:
     ]
     return Scenario(
         "messy_lse_dividend_array", "YU.LSE", raw,
-        yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw)),
+        yahoo=yahoo_symbol("YU.L", 1650.0, fiscal_year_ends(raw), currency="GBp"),
         description="Null 52WeekHigh on LSE; dividends only from the Dividends array, one non-numeric amount",
     )
 

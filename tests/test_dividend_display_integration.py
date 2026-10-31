@@ -6,6 +6,7 @@ generation correctly displays dividend information with appropriate labels
 and warnings.
 """
 
+from core.price_quote import PriceQuote
 from unittest.mock import Mock, patch
 from clients.eodhd_client import EODHDClient
 from output.dossier_generator import DossierGenerator
@@ -101,7 +102,7 @@ class TestDividendDisplayIntegration:
         with patch('clients.eodhd_client.EODHDClient._make_eodhd_request', return_value=mock_data), \
              patch('clients.eodhd_client.EODHDClient._fetch_dividend_history', return_value=None):
             client = EODHDClient('test_key', debug=False)
-            financial_data = client.fetch_all_data('TEST.US', yf_client=Mock(get_price=Mock(return_value=100.0)))
+            financial_data = client.fetch_all_data('TEST.US', yf_client=Mock(get_quote=Mock(return_value=PriceQuote(100.0, 'USD'))))
         
         # Generate metrics
         calculator = GrahamCalculator(financial_data)
@@ -183,7 +184,7 @@ class TestDividendDisplayIntegration:
         with patch('clients.eodhd_client.EODHDClient._make_eodhd_request', return_value=mock_data), \
              patch('clients.eodhd_client.EODHDClient._fetch_dividend_history', return_value=None):
             client = EODHDClient('test_key', debug=False)
-            financial_data = client.fetch_all_data('TEST.US', yf_client=Mock(get_price=Mock(return_value=100.0)))
+            financial_data = client.fetch_all_data('TEST.US', yf_client=Mock(get_quote=Mock(return_value=PriceQuote(100.0, 'USD'))))
         
         # Generate metrics
         calculator = GrahamCalculator(financial_data)

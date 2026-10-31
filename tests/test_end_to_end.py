@@ -335,17 +335,20 @@ def test_yu_lse_complete_flow_with_yfinance_fallback():
     from clients.yfinance_client import YFinanceClient
     from core.financial_data_processor import FinancialDataProcessor
     
-    # Mock yfinance client that returns a price in GBX
+    from core.price_quote import PriceQuote
+    
+    # Mock yfinance client that returns a price in pence (yfinance reports LSE prices as GBp)
     mock_yf_client = Mock(spec=YFinanceClient)
-    mock_yf_client.get_price.return_value = 1650.0  # Price in GBX (yfinance returns LSE prices in pence)
+    mock_yf_client.get_quote.return_value = PriceQuote(1650.0, 'GBp')
     
     # Act: Process data through the complete workflow
     warnings = []
     
     # Step 1: Get price with yfinance
-    price, price_source = FinancialDataProcessor.get_current_price(
-        yf_price=mock_yf_client.get_price.return_value, warnings=warnings
+    price, price_problem = FinancialDataProcessor.get_current_price(
+        mock_yf_client.get_quote.return_value, 'GBX', warnings=warnings
     )
+    assert price_problem is None
     
     # Step 2: Create financial data dict (simulating what EODHDClient.fetch_all_data returns)
     # In the real system, fetch_all_data does all the parsing

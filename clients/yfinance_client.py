@@ -10,6 +10,7 @@ from typing import Optional, Tuple, Dict, List
 from datetime import datetime, timedelta
 import logging
 from config.data_quality_config import FISCAL_YEAR_END_LOOKBACK_DAYS
+from core.price_quote import PriceQuote
 
 
 class YFinanceClient:
@@ -36,7 +37,7 @@ class YFinanceClient:
         
         # Europe
         'LSE': '.L',        # London Stock Exchange
-        'IL': '.L',         # London International
+        'IL': '.IL',        # London International Order Book
         'XETRA': '.DE',     # XETRA (Germany)
         'F': '.F',          # Frankfurt
         'SG': '.SG',        # Stuttgart
@@ -83,7 +84,7 @@ class YFinanceClient:
         'BA': '.BA',        # Buenos Aires
         'SN': '.SN',        # Santiago
         'JSE': '.JO',       # Johannesburg
-        'SAU': '.SAU',      # Saudi Arabia (Tadawul)
+        'SAU': '.SR',       # Saudi Arabia (Tadawul)
         'TA': '.TA',        # Tel Aviv
     }
     
@@ -103,7 +104,8 @@ class YFinanceClient:
         """
         Parse EODHD ticker format into symbol and exchange code.
         
-        EODHD tickers are in the format "SYMBOL.EXCHANGE" (e.g., "AAPL.US", "YU.LSE").
+        EODHD tickers are in the format "SYMBOL.EXCHANGE" (e.g., "AAPL.US", "YU.LSE"); the
+        symbol itself may contain dots (share classes, e.g. "BRK.B.US"), so split on the last dot.
         
         Args:
             ticker: Ticker in EODHD format (e.g., "AAPL.US", "YU.LSE")
@@ -114,6 +116,7 @@ class YFinanceClient:
         Examples:
             "AAPL.US" → ("AAPL", "US")
             "YU.LSE" → ("YU", "LSE")
+            "BRK.B.US" → ("BRK.B", "US")
             "INVALID" → (None, None)
         """
         if not ticker or '.' not in ticker:
@@ -121,13 +124,7 @@ class YFinanceClient:
                 self.logger.debug(f"Invalid ticker format: {ticker}")
             return None, None
         
-        parts = ticker.split('.')
-        if len(parts) != 2:
-            if self.debug:
-                self.logger.debug(f"Invalid ticker format (expected SYMBOL.EXCHANGE): {ticker}")
-            return None, None
-        
-        symbol, exchange = parts[0], parts[1]
+        symbol, exchange = ticker.rsplit('.', 1)
         
         if not symbol or not exchange:
             if self.debug:
@@ -140,8 +137,10 @@ class YFinanceClient:
         """
         Translate EODHD ticker format to yfinance format.
         
-        Uses the EXCHANGE_MAPPING to convert EODHD exchange codes to yfinance suffixes.
-        For unmapped exchanges, logs a warning and returns the symbol without suffix.
+        Uses the EXCHANGE_MAPPING to convert EODHD exchange codes to yfinance suffixes; dots in
+        the symbol (share classes) become dashes, as Yahoo writes them (BRK.B → BRK-B).
+        For unmapped exchanges, logs a warning and returns the symbol without suffix; the quote
+        is then only used if its currency matches EODHD's trading currency.
         
         Args:
             symbol: Stock symbol (e.g., "AAPL", "YU")
@@ -155,11 +154,14 @@ class YFinanceClient:
             ("YU", "LSE") → "YU.L"
             ("VOD", "LSE") → "VOD.L"
             ("SHOP", "TO") → "SHOP.TO"
+            ("BRK.B", "US") → "BRK-B"
         """
         if not symbol or not eodhd_exchange:
             if self.debug:
                 self.logger.debug("Empty symbol or exchange provided")
             return None
+        
+        symbol = symbol.replace('.', '-')
         
         # Check if exchange is in our mapping
         if eodhd_exchange in self.EXCHANGE_MAPPING:
@@ -172,26 +174,27 @@ class YFinanceClient:
             return yf_ticker
         else:
             # Unmapped exchange - log warning and attempt without conversion
-            warning_msg = f"Unmapped exchange code '{eodhd_exchange}' for ticker {symbol}.{eodhd_exchange}. Attempting without suffix conversion."
+            warning_msg = f"Unmapped exchange code '{eodhd_exchange}' for ticker {symbol}.{eodhd_exchange}. Attempting without suffix conversion (accepted only if the quote currency matches)."
             self.logger.warning(warning_msg)
             
             return symbol
 
-    def get_price(self, ticker: str) -> Optional[float]:
+    def get_quote(self, ticker: str) -> Optional[PriceQuote]:
         """
-        Fetch current price for a ticker using yfinance.
+        Fetch the current price and its quote currency for a ticker using yfinance.
         
         This method:
         1. Parses the EODHD ticker format
         2. Translates it to yfinance format
-        3. Fetches the current price using yfinance.Ticker.fast_info
+        3. Fetches the current price and currency using yfinance.Ticker.fast_info
         4. Returns None on any failure (network errors, invalid tickers, missing data)
         
         Args:
             ticker: Ticker in EODHD format (e.g., "AAPL.US", "YU.LSE")
             
         Returns:
-            Current price as float, or None if unavailable
+            PriceQuote(price, currency) — currency as Yahoo reports it ("USD", "GBp" for pence,
+            None if unreported) — or None if no positive price is available
             
         Examples:
             "AAPL.US" → 150.25 (current Apple stock price)
@@ -244,7 +247,8 @@ class YFinanceClient:
             if self.debug:
                 self.logger.debug(f"Successfully fetched price for {yf_ticker}: {price}")
             
-            return float(price)
+            currency = ticker_obj.fast_info.get('currency')
+            return PriceQuote(float(price), currency or None)
             
         except Exception as e:
             # Catch all errors (network errors, invalid tickers, missing data, etc.)
