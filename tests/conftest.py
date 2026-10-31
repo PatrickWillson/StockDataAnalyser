@@ -16,6 +16,12 @@ import socket
 import sys
 
 import pytest
+from hypothesis import settings
+
+# Hypothesis' per-example deadline (200 ms) only measures speed; on slow file systems (WSL on a
+# Windows drive) it made correct property tests fail intermittently. Correctness is unaffected.
+settings.register_profile("project", deadline=None)
+settings.load_profile("project")
 
 # Make project packages importable from every test without per-file sys.path hacks
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
