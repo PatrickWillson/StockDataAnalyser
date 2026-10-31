@@ -1,6 +1,6 @@
 {
   "anomalies": [
-    "Year 2024-09-30: EPS growth Z-Score = -3.31 (Outlier)"
+    "Year 2023-09-30: EPS growth modified Z-Score = -5.21 (Outlier: -0.4% vs median +7.4%)"
   ],
   "financial_data": {
     "api_last_update": "2024-01-15",

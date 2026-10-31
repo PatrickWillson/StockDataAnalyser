@@ -6,6 +6,7 @@ per share, total debt, shares outstanding, historical prices, and valuation rati
 """
 
 from typing import List, Dict, Any, Optional
+from config.data_quality_config import FINANCIAL_HISTORY_YEARS
 from core.history import has_income_data
 
 
@@ -157,7 +158,7 @@ class FinancialHistorySection:
         
         # Get history and sort years descending (most recent first)
         history = self.financial_data.get('history', {})
-        sorted_years = sorted(history.keys(), reverse=True)[:20]
+        sorted_years = sorted(history.keys(), reverse=True)[:FINANCIAL_HISTORY_YEARS]
         
         # Track incomplete years for notes
         incomplete_years = []

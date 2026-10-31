@@ -1,183 +1,69 @@
 """
-Property-based tests for AnomalyDetector using Hypothesis.
-
-These tests verify universal properties that should hold across all valid inputs.
-Each test runs 100+ iterations with randomly generated data.
+AnomalyDetector (F17): modified Z-score of EPS growth, 0.6745 × (x − median) / MAD (MAD floored
+at ANOMALY_MIN_SPREAD_PP), flagged above 3.5; dividend-only years skipped; only table years.
 """
 
-from hypothesis import given, strategies as st, settings, HealthCheck
-import math
+import statistics
+
+from hypothesis import given, settings, strategies as st
+
+from config.data_quality_config import ANOMALY_MIN_SPREAD_PP, FINANCIAL_HISTORY_YEARS
 from core.anomaly_detector import AnomalyDetector
 
 
-# Feature: stock-data-analyser, Property 9: Anomaly detection correctness
-# Validates: Requirements 7.3
-@settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
-@given(
-    # Generate a list of "normal" EPS values
-    normal_eps=st.lists(
-        st.floats(min_value=1.0, max_value=10.0, allow_nan=False, allow_infinity=False),
-        min_size=5,
-        max_size=8
-    ),
-    # Generate outlier EPS values (much higher or lower)
-    outlier_eps=st.floats(min_value=50.0, max_value=100.0, allow_nan=False, allow_infinity=False),
-    # Position to insert the outlier
-    outlier_position=st.integers(min_value=1, max_value=4)
-)
-def test_anomaly_detection_correctness(normal_eps, outlier_eps, outlier_position):
-    """
-    Property: For any EPS history, if a year's EPS growth has |Z-Score| > 2.0, 
-    that year should be flagged as an anomaly.
-    
-    This test verifies the anomaly detection logic is correctly implemented.
-    """
-    # Arrange: Create EPS history with known outlier
-    # Insert outlier at specified position
-    eps_list = normal_eps.copy()
-    if outlier_position < len(eps_list):
-        eps_list[outlier_position] = outlier_eps
-    
-    # Create financial data with EPS history
-    history = {}
-    for i, eps in enumerate(eps_list):
-        year = str(2023 - i)
-        history[year] = {
-            'eps': eps,
-            'net_income': eps * 1000000,
-            'total_equity': 1000000.0,
-            'intangible_assets': 0.0,
-            'goodwill': 0.0,
-            'shares_outstanding': 1000000.0
-        }
-    
-    financial_data = {
-        'ticker': 'TEST.US',
-        'price': 100.0,
-        'currency': 'USD',
-        'history': history
-    }
-    
-    # Act: Scan for anomalies
-    detector = AnomalyDetector(financial_data)
-    anomalies = detector.scan()
-    
-    # Assert: Verify anomaly detection
-    # Calculate growth rates manually to verify
-    years = sorted(history.keys(), reverse=True)
-    growth_rates = []
-    
-    for i in range(len(years) - 1):
-        current_eps = history[years[i]]['eps']
-        previous_eps = history[years[i + 1]]['eps']
-        
-        if previous_eps > 0:
-            growth_rate = ((current_eps - previous_eps) / previous_eps) * 100
-            growth_rates.append(growth_rate)
-    
-    # Skip test if we don't have enough data points
-    if len(growth_rates) < 3:
-        return
-    
-    # Calculate mean and std dev
-    mean = sum(growth_rates) / len(growth_rates)
-    variance = sum((x - mean) ** 2 for x in growth_rates) / len(growth_rates)
-    std_dev = math.sqrt(variance)
-    
-    # Count how many growth rates should be flagged as anomalies
-    expected_anomaly_count = 0
-    for growth_rate in growth_rates:
-        if std_dev > 0:
-            z_score = (growth_rate - mean) / std_dev
-            if abs(z_score) > 2.0:
-                expected_anomaly_count += 1
-    
-    # Verify the number of detected anomalies matches expected
-    assert len(anomalies) == expected_anomaly_count, \
-        f"Expected {expected_anomaly_count} anomalies, got {len(anomalies)}"
-    
-    # Verify all anomalies contain the expected format
-    for anomaly in anomalies:
-        assert "Year" in anomaly, f"Anomaly should contain 'Year': {anomaly}"
-        assert "Z-Score" in anomaly, f"Anomaly should contain 'Z-Score': {anomaly}"
-        assert "Outlier" in anomaly, f"Anomaly should contain 'Outlier': {anomaly}"
+def _row(eps):
+    return {'eps': eps, 'net_income': eps * 1e6, 'revenue': 1e7, 'total_equity': 1e6, 'shares_outstanding': 1e6}
 
 
-# Feature: stock-data-analyser, Property 9: Anomaly detection correctness (normal values)
-# Validates: Requirements 7.3
-@settings(max_examples=100)
-@given(
-    # Generate a list of similar EPS values (no outliers)
-    eps_list=st.lists(
-        st.floats(min_value=4.0, max_value=6.0, allow_nan=False, allow_infinity=False),
-        min_size=5,
-        max_size=10
-    )
-)
-def test_no_anomalies_for_normal_values(eps_list):
-    """
-    Property: For any EPS history with normal (non-outlier) values, 
-    no anomalies should be flagged.
-    
-    This test verifies that normal values are not incorrectly flagged as anomalies.
-    """
-    # Arrange: Create financial data with normal EPS values
-    history = {}
-    for i, eps in enumerate(eps_list):
-        year = str(2023 - i)
-        history[year] = {
-            'eps': eps,
-            'net_income': eps * 1000000,
-            'total_equity': 1000000.0,
-            'intangible_assets': 0.0,
-            'goodwill': 0.0,
-            'shares_outstanding': 1000000.0
-        }
-    
-    financial_data = {
-        'ticker': 'TEST.US',
-        'price': 100.0,
-        'currency': 'USD',
-        'history': history
-    }
-    
-    # Act: Scan for anomalies
-    detector = AnomalyDetector(financial_data)
-    anomalies = detector.scan()
-    
-    # Assert: Verify no anomalies detected for normal values
-    # With values in a tight range (4.0-6.0), growth rates should be small
-    # and Z-scores should be < 2.0
-    # However, due to randomness, we might occasionally get a flagged anomaly
-    # So we'll verify the logic is correct by checking manually
-    
-    years = sorted(history.keys(), reverse=True)
-    growth_rates = []
-    
-    for i in range(len(years) - 1):
-        current_eps = history[years[i]]['eps']
-        previous_eps = history[years[i + 1]]['eps']
-        
-        if previous_eps > 0:
-            growth_rate = ((current_eps - previous_eps) / previous_eps) * 100
-            growth_rates.append(growth_rate)
-    
-    if len(growth_rates) < 3:
-        return
-    
-    # Calculate mean and std dev
-    mean = sum(growth_rates) / len(growth_rates)
-    variance = sum((x - mean) ** 2 for x in growth_rates) / len(growth_rates)
-    std_dev = math.sqrt(variance)
-    
-    # Count expected anomalies
-    expected_anomaly_count = 0
-    if std_dev > 0:
-        for growth_rate in growth_rates:
-            z_score = (growth_rate - mean) / std_dev
-            if abs(z_score) > 2.0:
-                expected_anomaly_count += 1
-    
-    # Verify the detector matches our manual calculation
-    assert len(anomalies) == expected_anomaly_count, \
-        f"Expected {expected_anomaly_count} anomalies, got {len(anomalies)}"
+def _history(eps_newest_first, start_year=2023):
+    return {f"{start_year - i}-12-31": _row(eps) for i, eps in enumerate(eps_newest_first)}
+
+
+def _scan(history):
+    return AnomalyDetector({'history': history}).scan()
+
+
+def _steady(n, growth_pct=8.0, base=1.0):
+    """EPS growing by growth_pct a year, newest first."""
+    return [base * (1 + growth_pct / 100) ** (n - 1 - i) for i in range(n)]
+
+
+@settings(max_examples=150)
+@given(n=st.integers(min_value=4, max_value=12), jump=st.floats(min_value=1.0, max_value=5.0),
+       growth=st.floats(min_value=0.0, max_value=15.0))
+def test_single_extreme_year_is_flagged_even_in_short_histories(n, jump, growth):
+    """Steady growth plus one year whose EPS doubles to sextuples: that year alone is flagged.
+    (The old mean/SD test could never flag anything with fewer than 6 growth rates.)"""
+    eps = _steady(n, growth)
+    eps[0] = eps[1] * (1 + jump)  # newest year jumps by 100-500%
+    anomalies = _scan(_history(eps))
+    assert len(anomalies) == 1
+    assert anomalies[0].startswith("Year 2023-12-31: EPS growth modified Z-Score")
+
+
+@settings(max_examples=150)
+@given(eps=st.lists(st.floats(min_value=4.0, max_value=6.0, allow_nan=False), min_size=5, max_size=12))
+def test_flags_match_the_modified_z_rule(eps):
+    history = _history(eps)
+    years = sorted(history, reverse=True)
+    rates = [(history[a]['eps'] - history[b]['eps']) / history[b]['eps'] * 100 for a, b in zip(years, years[1:])]
+    median = statistics.median(rates)
+    mad = max(statistics.median(abs(r - median) for r in rates), ANOMALY_MIN_SPREAD_PP)
+    expected = sum(1 for r in rates if abs(0.6745 * (r - median) / mad) > 3.5)
+    assert len(_scan(history)) == expected
+
+
+def test_steady_growth_has_no_anomalies():
+    assert _scan(_history(_steady(10))) == []
+
+
+def test_dividend_only_placeholder_year_is_not_a_minus_100_percent_outlier():
+    history = _history(_steady(10), start_year=2023)
+    history['2024-12-31'] = {'eps': 0.0, 'net_income': 0.0, 'revenue': 0.0, 'total_equity': 0.0, 'dividend': 0.5}
+    assert _scan(history) == []
+
+
+def test_only_years_in_the_financial_history_table_are_considered():
+    eps = _steady(FINANCIAL_HISTORY_YEARS + 3)
+    eps[-1] = eps[-2] / 6  # an extreme year older than the table (its successor's growth is +500%)
+    assert _scan(_history(eps)) == []

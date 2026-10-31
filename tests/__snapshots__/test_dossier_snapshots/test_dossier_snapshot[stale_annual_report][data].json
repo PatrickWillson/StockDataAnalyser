@@ -1,7 +1,5 @@
 {
-  "anomalies": [
-    "Year 2020-09-25: EPS growth Z-Score = 2.16 (Outlier)"
-  ],
+  "anomalies": [],
   "financial_data": {
     "api_last_update": "2024-01-15",
     "beta": 1.29,

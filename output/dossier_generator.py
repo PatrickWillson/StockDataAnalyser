@@ -218,7 +218,7 @@ class DossierGenerator:
         - Data quality warnings
         - Currency conversion details
         - Validation discrepancies
-        - Statistical anomalies (Z-Score outliers)
+        - Statistical anomalies (modified Z-Score outliers)
         - Data requirements for normalized calculations
         
         Returns:
@@ -252,7 +252,7 @@ class DossierGenerator:
         
         # Display anomalies
         if self.anomalies:
-            lines.append("### Statistical Anomalies (Z-Score Analysis):")
+            lines.append("### Statistical Anomalies (EPS growth, modified Z-Score > 3.5):")
             lines.append("*Metrics that deviate significantly from historical patterns*")
             lines.append("")
             for anomaly in self.anomalies:

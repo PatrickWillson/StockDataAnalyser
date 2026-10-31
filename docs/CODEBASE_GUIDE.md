@@ -72,7 +72,7 @@ core/
 config/
   graham_constants.py       GRAHAM_MULTIPLIER=22.5, COST_OF_CAPITAL=0.10 (immutable)
   investor_thresholds.py    DEFENSIVE / ENTERPRISING frozen dataclasses (test thresholds and windows: earnings stability, dividend record, earnings growth)
-  data_quality_config.py    data-check settings: cross-validation % limits, staleness (7 days API, 9 months report), FYE lookback 7 days, min history 10 years, missing-years limit 3, anomaly Z-score 2.0
+  data_quality_config.py    data-check settings: cross-validation % limits, staleness (7 days API, 9 months report), FYE lookback 7 days, min history 10 years, missing-years limit 3, anomaly modified Z-score 3.5 (MAD floor 1 pp), history table 20 years
   risk_thresholds.py        Risk Factors display bands (beta, liquidity, debt/assets, margin volatility, ROE, payout, dividend coverage, MoS, history window); labels only — no calculation, test or verdict uses them
   ttm_config.py             TTM settings: frequency bands (75–105 / 150–210 days), gap tolerances, span checks, period-date limits
   valuation_config.py       project valuation settings: NORMALIZED_EPS_YEARS (3), EPV_MIN/MAX_YEARS (7/10), DEEP_VALUE_MIN_DISCOUNT_PCT (2.0), STRONG_BUY_MIN_MOS_PCT (20)
@@ -185,7 +185,7 @@ Where EODHD pre-computed values are used today:
 6. `DossierGenerator` shows the TTM section only if `ttm_graham_number != "N/A"`. The section compares TTM Graham Number, TBVPS (`metrics['tbvps']`), net-net, P/E and P/B (`financial_data['pe_ratio']`, `['price_to_book']`) with the latest annual figures; the TTM margin of safety is shown with its basis, not diffed (the annual one is defined differently).
 
 ### 5.3 Anomalies (`core/anomaly_detector.py`)
-YoY EPS growth % (skip prev EPS ≤ 0), population SD, flag |z| > 2.0. Needs ≥ 3 growth rates (in practice can't flag with < 6).
+YoY EPS growth % between consecutive years with income data within the table's latest `FINANCIAL_HISTORY_YEARS` (20) years (dividend-only placeholder rows skipped; prev EPS ≤ 0 skipped). Modified Z-score 0.6745 × (x − median) / MAD with MAD floored at `ANOMALY_MIN_SPREAD_PP` (1 pp), flagged when |z| > 3.5 (Iglewicz & Hoaglin; NIST e-Handbook §1.3.5.17). Needs ≥ 3 growth rates. Data-quality alert only, not a Graham criterion.
 
 ---
 
@@ -250,7 +250,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising criterion in `core/investor_tests/` and `core.verdict.determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1255 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1258 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

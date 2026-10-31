@@ -419,9 +419,4 @@ TTM calculations provide more current financial metrics by using the most recent
 - **Staleness Detection**: Annual reports older than 9 months trigger a data staleness warning
 - **Data Quality**: All 3 years must have non-null, numeric EPS values for normalized calculation to proceed
 
-### Statistical Anomalies (Z-Score Analysis):
-*Metrics that deviate significantly from historical patterns*
-
-- Year 2020-09-25: EPS growth Z-Score = 2.16 (Outlier)
-
 ---

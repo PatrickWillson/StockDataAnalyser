@@ -28,6 +28,12 @@ FISCAL_YEAR_END_LOOKBACK_DAYS: Final[int] = 7
 MIN_HISTORY_YEARS_RECOMMENDED: Final[int] = 10
 MAX_MISSING_HISTORY_YEARS: Final[int] = 3          # warn when this many fiscal years are missing in the reported range
 
-# Anomaly detection (EPS growth Z-scores)
-ANOMALY_Z_SCORE_THRESHOLD: Final[float] = 2.0
+# Anomaly detection: modified Z-score of EPS growth, 0.6745 x (x - median) / MAD, flagged above 3.5
+# (Iglewicz & Hoaglin 1993; NIST/SEMATECH e-Handbook of Statistical Methods 1.3.5.17)
+ANOMALY_Z_SCORE_THRESHOLD: Final[float] = 3.5
+# MAD floor (EPS growth, percentage points): an engineering choice so near-constant growth does not
+# turn immaterial differences into extreme scores
+ANOMALY_MIN_SPREAD_PP: Final[float] = 1.0
+# Years shown in the dossier's financial history table (anomalies are only flagged within it)
+FINANCIAL_HISTORY_YEARS: Final[int] = 20
 ANOMALY_MIN_DATA_POINTS: Final[int] = 3            # minimum years and growth rates
