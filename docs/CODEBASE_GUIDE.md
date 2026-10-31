@@ -222,7 +222,7 @@ GBX logic lives in several places: `CurrencyConverter.convert` (÷100), `FXClien
 | 6 | 20-YEAR FINANCIALS | `financial_history.py` `FinancialHistorySection(financial_data)` |
 | 3 | CRITICAL ALERTS | `_generate_critical_alerts` (warnings + anomalies) — rendered **last** |
 
-Each section's `generate()` returns `List[str]`; the generator joins with `\n`. Only some sections subclass `DossierSection`. Money amounts are formatted with `output.formatting.format_price_display` (one shared definition), though some sections still format inline (e.g. `USD29.11` in calculation_details). Several sections do their own arithmetic (BVPS, NCA, ratios, yields, risk bands) rather than reading core results.
+Each section's `generate()` returns `List[str]`; the generator joins with `\n`. Only some sections subclass `DossierSection`. Money amounts are formatted with `output.formatting.format_price_display` (one shared definition), though some sections still format inline (e.g. `USD29.11` in calculation_details). Several sections do their own arithmetic (BVPS, NCA, ratios, yields, risk bands) rather than reading core results. Criterion and formula text in Graham Tests, Methodology and Calculation Details is built from config (`GRAHAM_MULTIPLIER`, `COST_OF_CAPITAL`, `DEFENSIVE`/`ENTERPRISING`, `EPV_MIN/MAX_YEARS`); two enterprising lines ("5 of past 7 years", "Current Ratio > 1.5") are still literal because they misdescribe the code (code: 5 of 5, ≥) — fixed with F20.
 
 ---
 

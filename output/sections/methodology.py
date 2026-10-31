@@ -8,6 +8,8 @@ EPV (Earnings Power Value), Net-Net Value, and Margin of Safety.
 from typing import List, Dict, Any
 from output.formatting import format_price_display
 from core.history import has_statement_data
+from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
+from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 
 
 class MethodologySection:
@@ -163,7 +165,7 @@ class MethodologySection:
         # Single-Year Graham Number (Legacy)
         if isinstance(graham_number, (int, float)) and graham_number > 0:
             graham_display = format_price_display(graham_number, unified_currency, unified_currency)
-            lines.append(f"- **Graham Number - Single-Year EPS ({graham_display})**: √(22.5 × EPS × TBVPS)")
+            lines.append(f"- **Graham Number - Single-Year EPS ({graham_display})**: √({GRAHAM_MULTIPLIER:g} × EPS × TBVPS)")
             lines.append("  - Conservative intrinsic value estimate")
             lines.append("  - Based on Benjamin Graham's formula from 'The Intelligent Investor'")
             lines.append("  - Uses most recent annual EPS")
@@ -175,7 +177,7 @@ class MethodologySection:
         if isinstance(normalized_graham_number, (int, float)) and normalized_graham_number > 0:
             normalized_display = format_price_display(normalized_graham_number, unified_currency, unified_currency)
             lines.append(f"  - **Value**: {normalized_display}")
-            lines.append("  - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)")
+            lines.append(f"  - **Formula**: √({GRAHAM_MULTIPLIER:g} × EPS_3yr_avg × TBVPS)")
             lines.append("")
             lines.append("  **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year")
             lines.append("  makes a cyclical company appear undervalued despite being a value destroyer over the")
@@ -188,7 +190,7 @@ class MethodologySection:
         else:
             # Normalized Graham Number is "N/A" - still show breakdown if available
             lines.append("  - **Value**: N/A")
-            lines.append("  - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)")
+            lines.append(f"  - **Formula**: √({GRAHAM_MULTIPLIER:g} × EPS_3yr_avg × TBVPS)")
             lines.append("")
             lines.append("  **Rationale**: Smooths cyclical volatility and prevents 'bull traps'")
             lines.append("")
@@ -212,17 +214,17 @@ class MethodologySection:
             epv_per_share = epv_details.get('epv_per_share', 0)
             normalized_earnings = epv_details.get('normalized_earnings', 0)
             years_used = epv_details.get('years_used', 0)
-            cost_of_capital = epv_details.get('cost_of_capital', 0.10)
+            cost_of_capital = epv_details.get('cost_of_capital', COST_OF_CAPITAL)
             years_included = epv_details.get('years_included', [])
             net_incomes = epv_details.get('net_incomes', [])
             
             lines.append("- **EPV - Simplified Earnings Power Estimate**")
             lines.append("")
             lines.append("  **Methodology:**")
-            lines.append("  - Uses 7-10 year average of net income")
+            lines.append(f"  - Uses {EPV_MIN_YEARS}-{EPV_MAX_YEARS} year average of net income")
             lines.append("  - **Includes ALL years** (profitable and unprofitable)")
             lines.append("  - Loss years reduce the average (real value destruction)")
-            lines.append("  - Capitalizes earnings at 10% discount rate")
+            lines.append(f"  - Capitalizes earnings at {COST_OF_CAPITAL:.0%} discount rate")
             lines.append("  - Inspired by Graham's emphasis on full-cycle earnings")
             lines.append("")
             lines.append("  **Important**: This is a simplified approach, not Graham's original methodology.")
@@ -328,7 +330,7 @@ class MethodologySection:
         lines.append("")
         lines.append("  This system uses the **lower** of two valuation methods as the intrinsic value:")
         lines.append("  1. **Normalized Graham Number** (3-year average EPS)")
-        lines.append("  2. **EPV per share** (7-10 year normalized earnings)")
+        lines.append(f"  2. **EPV per share** ({EPV_MIN_YEARS}-{EPV_MAX_YEARS} year normalized earnings)")
         lines.append("")
         lines.append("  **Why This Is Conservative** (Graham's Philosophy):")
         lines.append("  - Graham emphasized buying with a margin of safety")
@@ -479,13 +481,13 @@ class MethodologySection:
             lines.append("")
             lines.append("### Combined P/E × P/B Test")
             lines.append("")
-            lines.append("Graham specified that for defensive investors, the product of P/E and P/B ratios should not exceed 22.5. This rule provides flexibility in valuation:")
+            lines.append(f"Graham specified that for defensive investors, the product of P/E and P/B ratios should not exceed {GRAHAM_MULTIPLIER:g}. This rule provides flexibility in valuation:")
             lines.append("")
             lines.append("- A company with P/E of 15 can have P/B up to 1.5 (15 × 1.5 = 22.5)")
             lines.append("- A company with P/E of 10 can have P/B up to 2.25 (10 × 2.25 = 22.5)")
             lines.append("- A company with P/B of 0.5 can have P/E up to 45 (45 × 0.5 = 22.5)")
             lines.append("")
-            lines.append("**Formula**: Combined Test = P/E Ratio × P/B Ratio ≤ 22.5")
+            lines.append(f"**Formula**: Combined Test = P/E Ratio × P/B Ratio ≤ {GRAHAM_MULTIPLIER:g}")
             lines.append("")
             lines.append("This test recognizes that a low price relative to book value can compensate for higher earnings multiples, and vice versa.")
         

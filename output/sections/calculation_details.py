@@ -8,6 +8,8 @@ Net-Net Value calculation, currency conversion details, and EPV methodology clar
 
 from typing import List, Dict, Any
 from core.history import has_statement_data
+from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
+from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 
 
 class CalculationDetailsSection:
@@ -200,10 +202,10 @@ class CalculationDetailsSection:
             eps_for_graham = latest_data.get('eps', 0)
             
             if eps_for_graham > 0 and tbvps > 0:
-                lines.append("- **Formula**: √(22.5 × EPS × TBVPS)")
+                lines.append(f"- **Formula**: √({GRAHAM_MULTIPLIER:g} × EPS × TBVPS)")
                 lines.append(f"- **EPS**: {unified_currency}{eps_for_graham:.2f}")
                 lines.append(f"- **TBVPS**: {unified_currency}{tbvps:.2f}")
-                lines.append(f"- **Calculation**: √(22.5 × {eps_for_graham:.2f} × {tbvps:.2f}) = √({22.5 * eps_for_graham * tbvps:.2f})")
+                lines.append(f"- **Calculation**: √({GRAHAM_MULTIPLIER:g} × {eps_for_graham:.2f} × {tbvps:.2f}) = √({GRAHAM_MULTIPLIER * eps_for_graham * tbvps:.2f})")
                 lines.append(f"- **Graham Number**: {unified_currency}{graham_number:.2f}")
                 lines.append("- **Note**: Uses unrounded intermediate values for precision")
             
@@ -295,18 +297,18 @@ class CalculationDetailsSection:
         
         if epv_value > 0:
             epv_details = self.metrics.get('epv_details', {})
-            cost_of_capital = epv_details.get('cost_of_capital', 0.10)
+            cost_of_capital = epv_details.get('cost_of_capital', COST_OF_CAPITAL)
             
             lines.append("### EPV Methodology Clarification:")
             lines.append("- **Approach Used**: Simplified Earnings Capitalization")
-            lines.append("- **Formula**: Average Net Income (7-10 years) / 10%")
+            lines.append(f"- **Formula**: Average Net Income ({EPV_MIN_YEARS}-{EPV_MAX_YEARS} years) / {COST_OF_CAPITAL:.0%}")
             lines.append("- **Inspiration**: Graham's emphasis on full-cycle earnings (not a direct Graham formula)")
             lines.append(f"- **Cost of Capital**: {cost_of_capital:.0%} (conservative fixed rate for simplicity)")
             lines.append("- **Includes Loss Years**: Yes (full business cycle)")
             lines.append("")
             lines.append("**This Differs From Graham's Original Work**:")
             lines.append("- Graham discussed 'earning power' conceptually but didn't provide this specific formula")
-            lines.append("- Graham Number (√(22.5 × EPS × BVPS)) is Graham's actual intrinsic value formula")
+            lines.append(f"- Graham Number (√({GRAHAM_MULTIPLIER:g} × EPS × BVPS)) is Graham's actual intrinsic value formula")
             lines.append("- Our EPV is a simplified interpretation of Graham's principles")
             lines.append("")
             lines.append("**This Differs From Modern EPV (Greenwald, 2001)**:")
