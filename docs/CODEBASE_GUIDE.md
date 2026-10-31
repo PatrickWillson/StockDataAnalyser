@@ -31,7 +31,7 @@ Requires `EODHD_API_KEY` in `.env`. `--debug` sets DEBUG logging and dumps raw E
 | 1 | `main()` | argparse (`ticker` upper-cased, `--debug`); `configure_logging(debug, secrets=[API_KEY])` (urllib3 logger pinned to WARNING; `SecretRedactingFilter` on root handlers); exit 1 if no key |
 | 2 | `ClientFactory` | builds `EODHDClient(api_key, FXClient())` and `YFinanceClient` |
 | 3 | `EODHDClient.fetch_all_data(ticker, yf_client)` | client fetches fundamentals + dividend endpoint, then `core.financial_data_assembler.FinancialDataAssembler.assemble(data, dividend_api_data, ticker, yf_client)` parses, currency-normalises, calculates and validates → `financial_data` dict (§4.1); data-quality warnings include `validate_data_quality` and `check_data_staleness` (latest annual report > 9 months old; dividend-only years ignored) |
-| 4 | CLI lines ~125–260 | historical year-end prices from yfinance, matched to fiscal year-ends, GBX÷100, historical FX applied → writes `history[date]['year_end_price']` + warnings |
+| 4 | `main()` + `core.historical_prices.apply_year_end_prices` | CLI fetches daily yfinance prices and matches them to fiscal year-ends; `apply_year_end_prices` divides GBX by 100 (LSE), applies historical FX (current-rate fallback), writes `history[date]['year_end_price']` and adds warnings |
 | 5 | `GrahamCalculator(financial_data).compute_all()` | → `metrics` dict (§4.3) |
 | 6 | `TTMCalculator(...).compute_all(annual_metrics=metrics)` | only if `quarterly_data` present; wrapped in try/except → `ttm_metrics` (§4.4) |
 | 7 | `AnomalyDetector(financial_data).scan()` | → `anomalies: List[str]` |
@@ -54,6 +54,7 @@ clients/
   fx_client.py              FXClient: yfinance "{A}{B}=X" rates, current + historical, per-instance cache
   factory.py                ClientFactory: builds clients (validates API key)
 core/
+  historical_prices.py      apply_year_end_prices(): year-end price currency handling + merge into history
   financial_data_assembler.py  FinancialDataAssembler: raw fundamentals + dividends → financial_data (price, London Fix, FX, ratios, cross-validation, data-quality warnings)
   errors.py                 DataSourceError hierarchy (EODHDAuthError, EODHDRateLimitError, EODHDRequestError, PriceUnavailableError) — raised instead of exiting
   financial_data_processor.py  FinancialDataProcessor: raw JSON → per-year history, dividends, price, validation
@@ -191,7 +192,7 @@ YoY EPS growth % (skip prev EPS ≤ 0), population SD, flag |z| > 2.0. Needs ≥
    - else GBX (not from market cap) → ÷100
    - then convert to financials ccy; `fx_rate_used` recorded; historical FX fetched for fiscal year-ends.
 4. Highlights dividend/BVPS, forward dividend, TTM dividend: GBX relabelled GBP, then converted.
-5. CLI converts historical year-end prices (GBX÷100 for LSE, then historical FX, fallback to current).
+5. `core.historical_prices.apply_year_end_prices` converts historical year-end prices (GBX÷100 for LSE, then historical FX, fallback to current).
 6. Executive Summary converts the 52-week range with `fx_rate_used` (the rate already used for the price); no FX calls happen in the output layer.
 7. All conversions are logged into `warnings` via `CurrencyConverter.get_consolidated_warning()` (except the plain GBX÷100 path).
 
@@ -242,7 +243,7 @@ Each section's `generate()` returns `List[str]`; the generator joins with `\n`. 
 - **Characterisation unit tests** — `tests/test_parsing_characterisation.py` (`extract_ceo_name`, `parse_income_statement`, `calculate_ttm_dividend`, `validate_data_quality`) and `tests/test_investor_tests_characterisation.py` (every defensive/enterprising `_test_*` method and `_determine_verdict`, with Hypothesis at each threshold boundary). They pin current behaviour; assertions that encode a known defect are marked `# Known defect:` — when fixing that defect, change the marked assertion in the same commit.
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1210 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1218 pass / 20 skip as of 2026-10-31); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 
