@@ -21,7 +21,7 @@ def test_key_metrics_with_nca_and_quick_ratio():
         'quick_ratio': 1.87,
         'nca_details': {
             'current_assets': 1234567000.0,
-            'total_liabilities': 987654000.0,
+            'current_liabilities': 987654000.0,
             'nca': 246913000.0,
             'long_term_debt': 699563000.0,
             'debt_coverage_ratio': 2.83,
@@ -40,13 +40,13 @@ def test_key_metrics_with_nca_and_quick_ratio():
     assert 'Liquidity Analysis' in content
     assert 'Current Ratio**: 2.15 (Current Assets / Current Liabilities, fiscal year ending 2023-12-31)' in content
     assert 'Quick Ratio**: 1.87' in content
-    assert 'Net Current Assets (NCA) Analysis' in content
+    assert 'Net Current Assets (Working Capital) and Debt' in content
     assert 'Current Assets**: 1,234,567,000.00 USD' in content
-    assert 'Total Liabilities**: 987,654,000.00 USD' in content
+    assert 'Current Liabilities**: 987,654,000.00 USD' in content
     assert 'Net Current Assets**: 246,913,000.00 USD' in content
     assert 'Long-term Debt**: 699,563,000.00 USD' in content
     assert 'Debt Coverage Ratio**: 2.83 (283.00%)' in content
-    assert "Graham's defensive test requires long-term debt < NCA" in content
+    assert "long-term debt should not exceed net current assets (working capital)" in content
 
 
 def test_key_metrics_with_na_quick_ratio():
@@ -62,7 +62,7 @@ def test_key_metrics_with_na_quick_ratio():
         'quick_ratio': 'N/A',
         'nca_details': {
             'current_assets': 1000000.0,
-            'total_liabilities': 800000.0,
+            'current_liabilities': 800000.0,
             'nca': 200000.0,
             'long_term_debt': 150000.0,
             'debt_coverage_ratio': 0.75,
@@ -79,7 +79,7 @@ def test_key_metrics_with_na_quick_ratio():
     
     # Assert
     assert 'Quick Ratio**: N/A' in content
-    assert 'Net Current Assets (NCA) Analysis' in content
+    assert 'Net Current Assets (Working Capital) and Debt' in content
 
 
 def test_key_metrics_with_na_nca():
@@ -95,7 +95,7 @@ def test_key_metrics_with_na_nca():
         'quick_ratio': 1.2,
         'nca_details': {
             'current_assets': 'N/A',
-            'total_liabilities': 'N/A',
+            'current_liabilities': 'N/A',
             'nca': 'N/A',
             'long_term_debt': 'N/A',
             'debt_coverage_ratio': 'N/A',
@@ -151,7 +151,7 @@ def test_key_metrics_formatting():
         'quick_ratio': 1.5,
         'nca_details': {
             'current_assets': 5432100.50,
-            'total_liabilities': 3210987.25,
+            'current_liabilities': 3210987.25,
             'nca': 2221113.25,
             'long_term_debt': 1500000.00,
             'debt_coverage_ratio': 0.675,

@@ -340,14 +340,12 @@
     },
     "nca_details": {
       "current_assets": 110000000.0,
-      "debt_coverage_pct": "950.0%",
-      "debt_coverage_ratio": 9.5,
+      "current_liabilities": 85000000.0,
+      "debt_coverage_pct": "38.0%",
+      "debt_coverage_ratio": 0.38,
       "long_term_debt": 9500000.0,
-      "nca": 1000000.0,
-      "total_liabilities": 109000000.0,
-      "warnings": [
-        "NCA analysis may not be applicable for Utility companies due to balance sheet structure"
-      ]
+      "nca": 25000000.0,
+      "warnings": []
     },
     "net_net_value": 0.06,
     "normalized_graham_number": 8.42,

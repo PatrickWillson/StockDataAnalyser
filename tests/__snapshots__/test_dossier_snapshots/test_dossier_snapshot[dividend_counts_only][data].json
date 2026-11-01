@@ -430,11 +430,11 @@
     },
     "nca_details": {
       "current_assets": 143566000000.0,
+      "current_liabilities": 145308000000.0,
       "debt_coverage_pct": "N/A",
       "debt_coverage_ratio": "N/A",
       "long_term_debt": 106000000000.0,
-      "nca": -146871000000.0,
-      "total_liabilities": 290437000000.0,
+      "nca": -1742000000.0,
       "warnings": [
         "NCA is zero or negative - cannot calculate debt coverage ratio"
       ]

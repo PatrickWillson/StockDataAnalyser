@@ -164,7 +164,7 @@ Where EODHD pre-computed values are used today:
 | Graham Number | √(22.5 × EPS_latest × TBVPS); EPS ≤ 0 → "N/A" |
 | Normalized Graham Number | √(22.5 × mean(EPS of the 3 most recent years with statement data) × TBVPS) — uses `FinancialDataProcessor.extract_3year_eps_data`, which skips dividend-only years (revenue, net income, equity all 0.0 and EPS 0); same years as the 3-yr avg P/E |
 | Net-Net (NCAV/share) | (Current Assets − Total Liabilities − claims outside common equity) / Shares (`core.formulas.net_current_asset_value`). Claims = EODHD minority-interest field, else total assets − total liabilities − equity, floored at 0 (`BalanceSheetRow.claims_outside_common_equity`). Annual and TTM. Preferred stock inside equity is not yet deducted (§11 E10) |
-| NCA details | NCA = CA − Total Liabilities; debt coverage = LTD / NCA |
+| NCA details | NCA = working capital = CA − CL (as in the defensive debt test 4.2); debt coverage = LTD / NCA; keys `current_assets, current_liabilities, nca, long_term_debt, debt_coverage_ratio, debt_coverage_pct, warnings`. Shown in Key Metrics. Not the net-net value (CA − all liabilities − claims) |
 | Current ratio | CA / CL for the latest year with balance-sheet data; `{'ratio', 'fiscal_year_end'}`; shares `investor_tests.criteria.latest_current_ratio` with the current-ratio investor tests, so display and PASS/FAIL agree |
 | Quick ratio | (CA − Inventory) / CL from the latest annual balance sheet (`inventory` parsed; a reported 0 counts). Inventory not reported → N/A with a warning, never imputed from the sector (F14) |
 | 3-yr avg P/E | price / mean(EPS of 3 latest complete years) |
@@ -224,7 +224,7 @@ Price-unit logic lives in `core/price_quote.py` (`is_minor_unit`, `to_major_unit
 | – | Header (`# STOCK ANALYSIS DOSSIER`, DATE, CEO/sector/currency) | `_generate_header` |
 | 1 | EXECUTIVE SUMMARY | `executive_summary.py` `ExecutiveSummarySection(financial_data, metrics)` |
 | 1.5 | TTM ANALYSIS (conditional) | `ttm_analysis.py` `TTMAnalysisSection(ttm_metrics, metrics, financial_data)` |
-| 2 | KEY METRICS | `key_metrics.py` `KeyMetricsSection(financial_data, {'current_ratio': …, 'quick_ratio': …})` — NCA is still withheld until it uses CA − CL |
+| 2 | KEY METRICS | `key_metrics.py` `KeyMetricsSection(financial_data, {'current_ratio': …, 'quick_ratio': …, 'nca_details': …})` |
 | 3 | CRITICAL ALERTS | `_generate_critical_alerts` (warnings + anomalies) |
 | – | RISK FACTORS | `risk_factors.py` `RiskFactorsSection` (`generate()` → `_generate_second_risk_section`) |
 | 4 / 5 | GRAHAM DEFENSIVE / ENTERPRISING TESTS | `graham_tests.py` `GrahamTestsSection(metrics)` |

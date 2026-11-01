@@ -62,10 +62,10 @@ def test_methodology_with_all_new_metrics():
     assert 'never estimated' in content
     
     # Assert - NCA and Debt Coverage
-    assert 'Net Current Assets (NCA) and Debt Coverage' in content
-    assert 'NCA = Current Assets - Total Liabilities' in content
+    assert 'Net Current Assets (Working Capital) and Debt Coverage' in content
+    assert 'NCA = Current Assets - Current Liabilities' in content
     assert 'Debt Coverage Ratio** = Long-term Debt / NCA' in content
-    assert 'ratio < 1.0' in content
+    assert 'ratio at most 1.0' in content
     
     # Assert - Combined P/E × P/B Test
     assert 'Combined P/E × P/B Test' in content
@@ -162,7 +162,7 @@ def test_methodology_nca_sector_note():
     content = '\n'.join(lines)
     
     # Assert
-    assert 'Financial and Utility companies' in content
+    assert 'for financial companies NCA analysis may not be applicable' in content
     assert 'NCA analysis may not be applicable' in content
 
 

@@ -468,17 +468,17 @@ class MethodologySection:
         nca_details = self.metrics.get('nca_details', {})
         if nca_details and isinstance(nca_details, dict):
             lines.append("")
-            lines.append("### Net Current Assets (NCA) and Debt Coverage")
+            lines.append("### Net Current Assets (Working Capital) and Debt Coverage")
             lines.append("")
-            lines.append("Net Current Assets represents the company's liquid net worth after paying all liabilities.")
+            lines.append("Net current assets here are working capital, as in Graham's defensive debt test (not the net-net value, which deducts all liabilities).")
             lines.append("")
-            lines.append("**Formula**: NCA = Current Assets - Total Liabilities")
+            lines.append("**Formula**: NCA = Current Assets - Current Liabilities")
             lines.append("")
             lines.append("**Debt Coverage Ratio** = Long-term Debt / NCA")
             lines.append("")
-            lines.append("Graham's defensive investor test requires long-term debt to be less than NCA (ratio < 1.0). This ensures the company could theoretically pay off all long-term debt using only its liquid assets.")
+            lines.append("Graham's defensive investor test: long-term debt \"should not exceed the net current assets (or working capital)\" (ratio at most 1.0).")
             lines.append("")
-            lines.append("**Note**: For Financial and Utility companies, NCA analysis may not be applicable due to their unique balance sheet structures (high leverage is normal for these sectors).")
+            lines.append("**Note**: For regulated utilities Graham uses debt ≤ 2 × stock equity instead; for financial companies NCA analysis may not be applicable.")
         
         # Combined P/E × P/B Test
         combined_test = self.metrics.get('combined_pe_pb_test', {})

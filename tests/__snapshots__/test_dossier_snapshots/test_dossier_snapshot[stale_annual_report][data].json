@@ -299,14 +299,12 @@
     },
     "nca_details": {
       "current_assets": 134836000000.0,
-      "debt_coverage_pct": "N/A",
-      "debt_coverage_ratio": "N/A",
+      "current_liabilities": 125481000000.0,
+      "debt_coverage_pct": "1166.29%",
+      "debt_coverage_ratio": 11.66,
       "long_term_debt": 109106000000.0,
-      "nca": -153076000000.0,
-      "total_liabilities": 287912000000.0,
-      "warnings": [
-        "NCA is zero or negative - cannot calculate debt coverage ratio"
-      ]
+      "nca": 9355000000.0,
+      "warnings": []
     },
     "net_net_value": -9.32,
     "normalized_graham_number": 21.38,

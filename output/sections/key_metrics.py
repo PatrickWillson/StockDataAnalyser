@@ -145,11 +145,11 @@ class KeyMetricsSection(DossierSection):
         nca_details = self.metrics.get('nca_details', {})
         if nca_details and isinstance(nca_details, dict):
             lines.append("")
-            lines.append("### Net Current Assets (NCA) Analysis")
+            lines.append("### Net Current Assets (Working Capital) and Debt")
             lines.append("")
             
             current_assets = nca_details.get('current_assets')
-            total_liabilities = nca_details.get('total_liabilities')
+            current_liabilities = nca_details.get('current_liabilities')
             nca = nca_details.get('nca')
             long_term_debt = nca_details.get('long_term_debt')
             debt_coverage_ratio = nca_details.get('debt_coverage_ratio')
@@ -160,9 +160,9 @@ class KeyMetricsSection(DossierSection):
                 ca_display = format_price_display(current_assets, unified_currency, unified_currency)
                 lines.append(f"- **Current Assets**: {ca_display}")
             
-            if total_liabilities is not None and total_liabilities != 'N/A':
-                tl_display = format_price_display(total_liabilities, unified_currency, unified_currency)
-                lines.append(f"- **Total Liabilities**: {tl_display}")
+            if current_liabilities is not None and current_liabilities != 'N/A':
+                cl_display = format_price_display(current_liabilities, unified_currency, unified_currency)
+                lines.append(f"- **Current Liabilities**: {cl_display}")
             
             if nca is not None and nca != 'N/A':
                 nca_display = format_price_display(nca, unified_currency, unified_currency)
@@ -175,7 +175,7 @@ class KeyMetricsSection(DossierSection):
             if debt_coverage_ratio is not None and debt_coverage_ratio != 'N/A':
                 lines.append(f"- **Debt Coverage Ratio**: {debt_coverage_ratio:.2f} ({debt_coverage_pct}) - Long-term Debt / NCA")
                 lines.append("")
-                lines.append("*Graham's defensive test requires long-term debt < NCA (ratio < 1.0). This ensures the company could theoretically pay off all long-term debt using only its liquid assets.*")
+                lines.append("*Graham's defensive test: long-term debt should not exceed net current assets (working capital), i.e. a ratio of at most 1.0.*")
             elif debt_coverage_ratio == 'N/A':
                 lines.append("- **Debt Coverage Ratio**: N/A")
 

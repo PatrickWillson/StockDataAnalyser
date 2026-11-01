@@ -100,7 +100,7 @@ def test_end_to_end_all_new_metrics_calculated():
     # Assert - NCA details structure
     nca_details = metrics['nca_details']
     assert 'current_assets' in nca_details
-    assert 'total_liabilities' in nca_details
+    assert 'current_liabilities' in nca_details
     assert 'nca' in nca_details
     assert 'debt_coverage_ratio' in nca_details
     
@@ -155,9 +155,9 @@ def test_end_to_end_key_metrics_section():
     assert 'SECTION 2: KEY METRICS' in content
     assert 'Liquidity Analysis' in content
     assert 'Quick Ratio' in content
-    assert 'Net Current Assets (NCA) Analysis' in content
+    assert 'Net Current Assets (Working Capital) and Debt' in content
     assert 'Current Assets' in content
-    assert 'Total Liabilities' in content
+    assert 'Current Liabilities' in content
     assert 'Debt Coverage Ratio' in content
 
 
@@ -221,7 +221,7 @@ def test_end_to_end_methodology_section():
     assert 'P/E Ratio (3-Year Average)' in content
     assert "Graham's Defensive Criterion #6" in content
     assert 'Quick Ratio (Acid Test)' in content
-    assert 'Net Current Assets (NCA) and Debt Coverage' in content
+    assert 'Net Current Assets (Working Capital) and Debt Coverage' in content
     assert 'Combined P/E × P/B Test' in content
     assert 'Historical Trend Metrics' in content
 

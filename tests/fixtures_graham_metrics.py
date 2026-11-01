@@ -50,16 +50,16 @@ class GrahamMetricsFixtures:
     @staticmethod
     def get_nca_test_data(
         current_assets: Decimal = Decimal('1000000'),
-        total_liabilities: Decimal = Decimal('600000'),
+        current_liabilities: Decimal = Decimal('600000'),
         long_term_debt: Decimal = Decimal('300000'),
         sector: str = 'Technology'
     ) -> Dict[str, Any]:
         """
-        Get financial data for testing NCA calculations.
+        Get financial data for testing NCA (working capital) calculations.
         
         Args:
             current_assets: Current assets value
-            total_liabilities: Total liabilities value
+            current_liabilities: Current liabilities value
             long_term_debt: Long-term debt value
             sector: Company sector
         
@@ -68,7 +68,7 @@ class GrahamMetricsFixtures:
         """
         balance_sheet = generate_balance_sheet_data(
             current_assets=current_assets,
-            total_liabilities=total_liabilities,
+            current_liabilities=current_liabilities,
             long_term_debt=long_term_debt
         )
         
@@ -366,11 +366,11 @@ class EdgeCaseFixtures:
         Get financial data with negative NCA.
         
         Returns:
-            Financial data where total liabilities exceed current assets
+            Financial data where current liabilities exceed current assets (negative working capital)
         """
         return GrahamMetricsFixtures.get_nca_test_data(
             current_assets=Decimal('500000'),
-            total_liabilities=Decimal('800000'),
+            current_liabilities=Decimal('800000'),
             long_term_debt=Decimal('400000')
         )
     

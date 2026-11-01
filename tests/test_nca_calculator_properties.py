@@ -28,31 +28,31 @@ class TestNCACalculationCorrectness:
     """
     Property 1: NCA Calculation Correctness
     
-    For any balance sheet data with current_assets and total_liabilities,
-    the calculated NCA should equal current_assets minus total_liabilities.
+    For any balance sheet data with current_assets and current_liabilities,
+    the calculated NCA should equal current_assets minus current_liabilities.
     
     Validates: Requirements 1.1
     """
     
     @given(
         current_assets=currency_strategy(min_value="0", max_value="1000000000000"),
-        total_liabilities=currency_strategy(min_value="0", max_value="1000000000000"),
+        current_liabilities=currency_strategy(min_value="0", max_value="1000000000000"),
         long_term_debt=currency_strategy(min_value="0", max_value="1000000000000")
     )
     @settings(max_examples=100)
-    def test_nca_equals_current_assets_minus_total_liabilities(
-        self, current_assets, total_liabilities, long_term_debt
+    def test_nca_equals_current_assets_minus_current_liabilities(
+        self, current_assets, current_liabilities, long_term_debt
     ):
         """
         Property: NCA = Current Assets - Total Liabilities
         
         For any valid balance sheet data, the NCA calculation must equal
-        the difference between current assets and total liabilities.
+        the difference between current assets and current liabilities.
         """
         # Arrange
         financial_data = GrahamMetricsFixtures.get_nca_test_data(
             current_assets=current_assets,
-            total_liabilities=total_liabilities,
+            current_liabilities=current_liabilities,
             long_term_debt=long_term_debt
         )
         calculator = GrahamCalculator(financial_data)
@@ -63,18 +63,18 @@ class TestNCACalculationCorrectness:
         # Assert
         assert result['current_assets'] == float(current_assets), \
             "Current assets should match input"
-        assert result['total_liabilities'] == float(total_liabilities), \
-            "Total liabilities should match input"
+        assert result['current_liabilities'] == float(current_liabilities), \
+            "Current liabilities should match input"
         
         # Verify NCA formula
         if result['nca'] != "N/A":
-            expected_nca = current_assets - total_liabilities
+            expected_nca = current_assets - current_liabilities
             actual_nca = to_decimal(result['nca'])
             assert_decimal_equal(
                 actual_nca,
                 expected_nca,
                 tolerance=Decimal('0.01'),
-                message=f"NCA {actual_nca} should equal current_assets {current_assets} - total_liabilities {total_liabilities} = {expected_nca}"
+                message=f"NCA {actual_nca} should equal current_assets {current_assets} - current_liabilities {current_liabilities} = {expected_nca}"
             )
     
     def test_nca_calculation_with_known_values(self):
@@ -86,7 +86,7 @@ class TestNCACalculationCorrectness:
         # Arrange
         financial_data = GrahamMetricsFixtures.get_nca_test_data(
             current_assets=Decimal('1234567000'),
-            total_liabilities=Decimal('987654000'),
+            current_liabilities=Decimal('987654000'),
             long_term_debt=Decimal('699563000')
         )
         calculator = GrahamCalculator(financial_data)
@@ -111,7 +111,7 @@ class TestNCADisplayCompleteness:
     Property 2: NCA Display Completeness
     
     For any valid NCA calculation result, the output should contain
-    current_assets, total_liabilities, nca, and debt_coverage_ratio
+    current_assets, current_liabilities, nca, and debt_coverage_ratio
     (or "N/A") as separate displayable values.
     
     Validates: Requirements 1.2, 1.4
@@ -119,19 +119,19 @@ class TestNCADisplayCompleteness:
     
     @given(
         current_assets=currency_strategy(min_value="1", max_value="1000000000000"),
-        total_liabilities=currency_strategy(min_value="1", max_value="1000000000000"),
+        current_liabilities=currency_strategy(min_value="1", max_value="1000000000000"),
         long_term_debt=currency_strategy(min_value="0", max_value="1000000000000")
     )
     @settings(max_examples=100)
     def test_nca_result_contains_all_required_fields(
-        self, current_assets, total_liabilities, long_term_debt
+        self, current_assets, current_liabilities, long_term_debt
     ):
         """
         Property: NCA result must contain all required display fields.
         
         Every NCA calculation result must include:
         - current_assets
-        - total_liabilities
+        - current_liabilities
         - nca
         - long_term_debt
         - debt_coverage_ratio
@@ -141,7 +141,7 @@ class TestNCADisplayCompleteness:
         # Arrange
         financial_data = GrahamMetricsFixtures.get_nca_test_data(
             current_assets=current_assets,
-            total_liabilities=total_liabilities,
+            current_liabilities=current_liabilities,
             long_term_debt=long_term_debt
         )
         calculator = GrahamCalculator(financial_data)
@@ -152,7 +152,7 @@ class TestNCADisplayCompleteness:
         # Assert - all required fields must be present
         required_fields = [
             'current_assets',
-            'total_liabilities',
+            'current_liabilities',
             'nca',
             'long_term_debt',
             'debt_coverage_ratio',
@@ -173,7 +173,7 @@ class TestNCADisplayCompleteness:
         # Arrange
         financial_data = GrahamMetricsFixtures.get_nca_test_data(
             current_assets=Decimal('1000000'),
-            total_liabilities=Decimal('600000'),
+            current_liabilities=Decimal('600000'),
             long_term_debt=Decimal('300000')
         )
         calculator = GrahamCalculator(financial_data)
@@ -183,7 +183,7 @@ class TestNCADisplayCompleteness:
         
         # Assert
         assert result['current_assets'] == 1000000.0
-        assert result['total_liabilities'] == 600000.0
+        assert result['current_liabilities'] == 600000.0
         assert result['nca'] == 400000.0
         assert result['long_term_debt'] == 300000.0
         assert result['debt_coverage_ratio'] != "N/A"
@@ -203,12 +203,12 @@ class TestDebtCoverageCalculation:
     
     @given(
         current_assets=currency_strategy(min_value="1000000", max_value="1000000000000"),
-        total_liabilities=currency_strategy(min_value="1", max_value="500000000000"),
+        current_liabilities=currency_strategy(min_value="1", max_value="500000000000"),
         long_term_debt=currency_strategy(min_value="1", max_value="1000000000000")
     )
     @settings(max_examples=100)
     def test_debt_coverage_ratio_formula(
-        self, current_assets, total_liabilities, long_term_debt
+        self, current_assets, current_liabilities, long_term_debt
     ):
         """
         Property: Debt Coverage Ratio = Long-term Debt / NCA (when NCA > 0)
@@ -217,13 +217,13 @@ class TestDebtCoverageCalculation:
         must equal long_term_debt divided by NCA.
         """
         # Ensure NCA will be positive
-        if current_assets <= total_liabilities:
-            current_assets = total_liabilities + Decimal('1000000')
+        if current_assets <= current_liabilities:
+            current_assets = current_liabilities + Decimal('1000000')
         
         # Arrange
         financial_data = GrahamMetricsFixtures.get_nca_test_data(
             current_assets=current_assets,
-            total_liabilities=total_liabilities,
+            current_liabilities=current_liabilities,
             long_term_debt=long_term_debt
         )
         calculator = GrahamCalculator(financial_data)
@@ -293,7 +293,7 @@ class TestDebtCoverageCalculation:
         # Arrange
         financial_data = GrahamMetricsFixtures.get_nca_test_data(
             current_assets=Decimal('600000'),
-            total_liabilities=Decimal('600000'),
+            current_liabilities=Decimal('600000'),
             long_term_debt=Decimal('300000')
         )
         calculator = GrahamCalculator(financial_data)
@@ -323,8 +323,8 @@ class TestSectorSpecificNCAWarnings:
         ("Financials", True),
         ("Financial Services", True),
         ("Banking", True),
-        ("Utilities", True),
-        ("Utility", True),
+        ("Utilities", False),
+        ("Utility", False),
         ("Technology", False),
         ("Services", False),
         ("Manufacturing", False),
@@ -377,22 +377,11 @@ class TestSectorSpecificNCAWarnings:
         assert any('balance sheet structure' in w for w in result['warnings']), \
             "Should mention balance sheet structure in warning"
     
-    def test_utility_sector_warning_content(self):
-        """
-        Unit test: Verify Utility sector warning message.
-        """
-        # Arrange
+    def test_utility_sector_has_no_nca_warning(self):
+        """Regulated utilities have their own debt rule (debt <= 2 x equity), so no NCA caveat."""
         financial_data = SectorSpecificFixtures.get_utility_sector_data()
-        calculator = GrahamCalculator(financial_data)
-        
-        # Act
-        result = calculator.compute_nca_details()
-        
-        # Assert
-        assert any('Utility' in w or 'Utilities' in w for w in result['warnings']), \
-            "Should mention Utility sector in warning"
-        assert any('balance sheet structure' in w for w in result['warnings']), \
-            "Should mention balance sheet structure in warning"
+        result = GrahamCalculator(financial_data).compute_nca_details()
+        assert not any('Utility' in w or 'Utilities' in w for w in result['warnings'])
 
 
 class TestNCAEdgeCases:
@@ -459,7 +448,7 @@ class TestNCAEdgeCases:
         # Arrange
         financial_data = GrahamMetricsFixtures.get_nca_test_data(
             current_assets=Decimal('1000000'),
-            total_liabilities=Decimal('600000'),
+            current_liabilities=Decimal('600000'),
             long_term_debt=Decimal('0')
         )
         calculator = GrahamCalculator(financial_data)
@@ -480,7 +469,7 @@ class TestNCAEdgeCases:
         # Arrange
         financial_data = GrahamMetricsFixtures.get_nca_test_data(
             current_assets=Decimal('999999999999'),  # ~1 trillion
-            total_liabilities=Decimal('500000000000'),  # 500 billion
+            current_liabilities=Decimal('500000000000'),  # 500 billion
             long_term_debt=Decimal('300000000000')  # 300 billion
         )
         calculator = GrahamCalculator(financial_data)

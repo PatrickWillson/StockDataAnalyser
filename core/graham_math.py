@@ -269,120 +269,56 @@ class GrahamCalculator:
     
     def compute_nca_details(self) -> Dict[str, Union[float, str]]:
         """
-        Calculate Net Current Assets with detailed breakdown.
+        Net current assets (working capital) and the debt coverage of defensive criterion 4.2:
+        long-term debt "should not exceed the net current assets (or working capital)"
+        (GRAHAM_METHODOLOGY §4.2). The same figures as the investor test, for display.
+        Not the net-net value (current assets minus all liabilities), which is compute_net_net.
         
-        NCA represents the company's liquid net worth after paying all liabilities.
-        Graham's defensive investor test requires long-term debt < NCA.
-        
-        Formula: NCA = Current Assets - Total Liabilities
-        Debt Coverage Ratio = Long-term Debt / NCA
+        Formula: NCA = Current Assets - Current Liabilities
+        Debt Coverage Ratio = Long-term Debt / NCA (Graham: at most 1.0)
         
         Returns:
-            Dictionary with:
-                - current_assets: float
-                - total_liabilities: float
-                - nca: float
-                - long_term_debt: float
-                - debt_coverage_ratio: Union[float, str] (or "N/A")
-                - debt_coverage_pct: str ("X.XX%" or "N/A")
-                - warnings: List[str]
+            Dictionary with current_assets, current_liabilities, nca, long_term_debt,
+            debt_coverage_ratio (float rounded to 2dp or "N/A"), debt_coverage_pct ("X.XX%" or
+            "N/A") and warnings
         """
+        def unavailable(reason):
+            return {'current_assets': "N/A", 'current_liabilities': "N/A", 'nca': "N/A",
+                    'long_term_debt': "N/A", 'debt_coverage_ratio': "N/A", 'debt_coverage_pct': "N/A",
+                    'warnings': [reason]}
+        
         history = self.data.get('history', {})
         if not history:
-            return {
-                'current_assets': "N/A",
-                'total_liabilities': "N/A",
-                'nca': "N/A",
-                'long_term_debt': "N/A",
-                'debt_coverage_ratio': "N/A",
-                'debt_coverage_pct': "N/A",
-                'warnings': ["No financial history available"]
-            }
-        
-        # Get most recent fiscal year with financial data
-        years = sorted(history.keys(), reverse=True)
-        if not years:
-            return {
-                'current_assets': "N/A",
-                'total_liabilities': "N/A",
-                'nca': "N/A",
-                'long_term_debt': "N/A",
-                'debt_coverage_ratio': "N/A",
-                'debt_coverage_pct': "N/A",
-                'warnings': ["No financial years available"]
-            }
-        
-        latest_year = self._get_latest_financial_year(history, years)
+            return unavailable("No financial history available")
+        latest_year = self._get_latest_financial_year(history, sorted(history.keys(), reverse=True))
         if not latest_year:
-            return {
-                'current_assets': "N/A",
-                'total_liabilities': "N/A",
-                'nca': "N/A",
-                'long_term_debt': "N/A",
-                'debt_coverage_ratio': "N/A",
-                'debt_coverage_pct': "N/A",
-                'warnings': ["No financial data available"]
-            }
+            return unavailable("No financial data available")
         
         year_data = history[latest_year]
-        warnings = []
-        
-        # Extract required fields
         current_assets = year_data.get('current_assets')
-        total_liabilities = year_data.get('total_liabilities')
+        current_liabilities = year_data.get('current_liabilities')
         long_term_debt = year_data.get('long_term_debt', 0.0)
+        if current_assets is None or current_liabilities is None:
+            return unavailable("Balance sheet data unavailable")
         
-        # Handle missing balance sheet data
-        if current_assets is None or total_liabilities is None:
-            return {
-                'current_assets': "N/A",
-                'total_liabilities': "N/A",
-                'nca': "N/A",
-                'long_term_debt': "N/A",
-                'debt_coverage_ratio': "N/A",
-                'debt_coverage_pct': "N/A",
-                'warnings': ["Balance sheet data unavailable"]
-            }
-        
-        # Convert to Decimal for precise calculation
-        current_assets_dec = Decimal(str(current_assets))
-        total_liabilities_dec = Decimal(str(total_liabilities))
-        long_term_debt_dec = Decimal(str(long_term_debt))
-        
-        # Calculate NCA
-        nca_dec = net_current_asset_value(current_assets_dec, total_liabilities_dec)
-        
-        # Check for sector-specific warnings
+        warnings = []
         sector = (self.data.get('sector') or '').lower()
         if 'financial' in sector or 'bank' in sector:
             warnings.append("NCA analysis may not be applicable for Financial companies due to balance sheet structure")
-        elif 'utility' in sector or 'utilities' in sector:
-            warnings.append("NCA analysis may not be applicable for Utility companies due to balance sheet structure")
         
-        # Calculate debt coverage ratio
-        debt_coverage_ratio = "N/A"
-        debt_coverage_pct = "N/A"
-        
-        if nca_dec <= 0:
+        nca = current_assets - current_liabilities
+        if nca <= 0:
             warnings.append("NCA is zero or negative - cannot calculate debt coverage ratio")
-            debt_coverage_ratio = "N/A"
-            debt_coverage_pct = "N/A"
+            debt_coverage_ratio, debt_coverage_pct = "N/A", "N/A"
         else:
-            # Calculate ratio: Long-term Debt / NCA
-            ratio_dec = long_term_debt_dec / nca_dec
-            debt_coverage_ratio = float(ratio_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
-            
-            # Format as percentage
-            pct_dec = ratio_dec * 100
-            debt_coverage_pct = f"{float(pct_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))}%"
-        
-        # Round NCA for display
-        nca_rounded = float(nca_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP))
+            ratio = long_term_debt / nca
+            debt_coverage_ratio = round(ratio, 2)
+            debt_coverage_pct = f"{round(ratio * 100, 2)}%"
         
         return {
             'current_assets': current_assets,
-            'total_liabilities': total_liabilities,
-            'nca': nca_rounded,
+            'current_liabilities': current_liabilities,
+            'nca': round(nca, 2),
             'long_term_debt': long_term_debt,
             'debt_coverage_ratio': debt_coverage_ratio,
             'debt_coverage_pct': debt_coverage_pct,

@@ -40,6 +40,16 @@
 
 - **Current Ratio**: 1.07 (Current Assets / Current Liabilities, fiscal year ending 2021-09-25)
 - **Quick Ratio**: 1.02 (Acid Test - excludes inventory)
+
+### Net Current Assets (Working Capital) and Debt
+
+- **Current Assets**: 134,836,000,000.00 USD
+- **Current Liabilities**: 125,481,000,000.00 USD
+- **Net Current Assets**: 9,355,000,000.00 USD
+- **Long-term Debt**: 109,106,000,000.00 USD
+- **Debt Coverage Ratio**: 11.66 (1166.29%) - Long-term Debt / NCA
+
+*Graham's defensive test: long-term debt should not exceed net current assets (working capital), i.e. a ratio of at most 1.0.*
 - Insider Ownership: 0.07%
 - Institutional Ownership: 61.44%
 - Beta (Volatility): 1.290
@@ -286,17 +296,17 @@ A Quick Ratio > 1.0 indicates the company can meet short-term obligations withou
 
 **Note**: When inventory is not reported in the annual balance sheet, the Quick Ratio is N/A (never estimated).
 
-### Net Current Assets (NCA) and Debt Coverage
+### Net Current Assets (Working Capital) and Debt Coverage
 
-Net Current Assets represents the company's liquid net worth after paying all liabilities.
+Net current assets here are working capital, as in Graham's defensive debt test (not the net-net value, which deducts all liabilities).
 
-**Formula**: NCA = Current Assets - Total Liabilities
+**Formula**: NCA = Current Assets - Current Liabilities
 
 **Debt Coverage Ratio** = Long-term Debt / NCA
 
-Graham's defensive investor test requires long-term debt to be less than NCA (ratio < 1.0). This ensures the company could theoretically pay off all long-term debt using only its liquid assets.
+Graham's defensive investor test: long-term debt "should not exceed the net current assets (or working capital)" (ratio at most 1.0).
 
-**Note**: For Financial and Utility companies, NCA analysis may not be applicable due to their unique balance sheet structures (high leverage is normal for these sectors).
+**Note**: For regulated utilities Graham uses debt ≤ 2 × stock equity instead; for financial companies NCA analysis may not be applicable.
 
 ### Combined P/E × P/B Test
 
