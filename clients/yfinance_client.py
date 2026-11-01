@@ -6,11 +6,21 @@ price source for the Stock Data Analyser application. It translates EODHD
 ticker formats to yfinance formats and fetches current prices from Yahoo Finance.
 """
 
-from typing import Optional, Tuple, Dict, List
+from dataclasses import dataclass, field
+from typing import Any, Mapping, Optional, Tuple, Dict, List
 from datetime import datetime, timedelta
 import logging
 from config.data_quality_config import FISCAL_YEAR_END_LOOKBACK_DAYS
 from core.price_quote import PriceQuote
+
+
+@dataclass(frozen=True)
+class YahooCompanyData:
+    """Yahoo's company data for one ticker, as returned (clients/yahoo_mapper.py maps it)."""
+    yahoo_symbol: str
+    info: Mapping[str, Any] = field(default_factory=dict)        # Ticker.info
+    dividends: Tuple[Tuple[str, float], ...] = ()                 # (ex-date 'YYYY-MM-DD', per share), oldest first
+    splits: Tuple[Tuple[str, float], ...] = ()                    # (date, shares after / before), oldest first
 
 
 class YFinanceClient:
@@ -399,3 +409,27 @@ class YFinanceClient:
                     self.logger.debug(f"{fiscal_end}: Invalid date format - {e}")
         
         return result
+
+    def fetch_company_data(self, ticker: str) -> Optional[YahooCompanyData]:
+        """
+        Yahoo's profile and market data (`info`), dividend payments and stock splits for a ticker.
+        
+        Dividends are per share in the quote currency, split-adjusted, dated by ex-date (yfinance
+        has no payment dates). Returns None when the ticker cannot be translated or fetched.
+        """
+        symbol, exchange = self._parse_ticker(ticker)
+        yf_ticker = self._translate_ticker(symbol, exchange) if symbol and exchange else None
+        if not yf_ticker:
+            return None
+        try:
+            import yfinance as yf
+            ticker_obj = yf.Ticker(yf_ticker)
+            info = dict(ticker_obj.info or {})
+            dividends = tuple((stamp.strftime('%Y-%m-%d'), float(value))
+                              for stamp, value in ticker_obj.dividends.items())
+            splits = tuple((stamp.strftime('%Y-%m-%d'), float(value))
+                           for stamp, value in ticker_obj.splits.items())
+        except Exception as e:
+            self.logger.warning(f"Yahoo company data unavailable for {yf_ticker}: {type(e).__name__}: {e}")
+            return None
+        return YahooCompanyData(yahoo_symbol=yf_ticker, info=info, dividends=dividends, splits=splits)
