@@ -40,6 +40,8 @@ MONEY, PER_SHARE, SHARES = "USD", "USD/shares", "shares"
 REVENUE = ("RevenueFromContractWithCustomerExcludingAssessedTax", "RevenueFromContractWithCustomerIncludingAssessedTax",
            "SalesRevenueNet", "SalesRevenueGoodsNet", "Revenues", "RevenuesNetOfInterestExpense")
 NET_INCOME = ("NetIncomeLossAvailableToCommonStockholdersBasic", "NetIncomeLoss")
+# Consolidated profit incl. minority interests: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest
+PROFIT_LOSS, NCI_INCOME = ("ProfitLoss",), ("NetIncomeLossAttributableToNoncontrollingInterest",)
 EPS = ("EarningsPerShareBasic", "EarningsPerShareBasicAndDiluted")
 EQUITY = ("StockholdersEquity",)
 EQUITY_INCL_NCI = ("StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",)
@@ -413,6 +415,36 @@ def _cover_shares(facts: _Facts, end: str) -> Optional[float]:
     return float(sum(c[2] for c in same_filing if c[1] == date))
 
 
+def _net_income(facts: _Facts, end: str, kind: str, notes: Optional["_Notes"] = None) -> Optional[Fact]:
+    """
+    Net income for the common: the NET_INCOME chain, else ProfitLoss minus the minority interests'
+    share (US-GAAP: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest),
+    else ProfitLoss when no minority interest is reported at the period end (Johnson & Johnson tagged
+    FY2007-09 only as ProfitLoss). None when the minority share cannot be taken out.
+    """
+    fact = facts.get(NET_INCOME, end, MONEY, kind)
+    if fact is not None:
+        if notes is not None:
+            notes.fact("net income", end, fact)
+        return fact
+    profit = facts.get(PROFIT_LOSS, end, MONEY, kind)
+    if profit is None:
+        return None
+    minority_share = facts.get(NCI_INCOME, end, MONEY, kind)
+    if minority_share is not None:
+        how, value = "derived as ProfitLoss - the minority interests' share", profit.value - minority_share.value
+    elif not _value(facts.get(MINORITY, end, MONEY, "instant")):
+        how, value = "ProfitLoss used (no minority interest reported)", profit.value
+    else:
+        if notes is not None:
+            notes.derive("net income", "not available: only ProfitLoss is tagged and the minority interests' "
+                         "share of it is not", end)
+        return None
+    if notes is not None:
+        notes.derive("net income", how, end)
+    return Fact(value=value, first_value=value, tag=profit.tag, restated=False)
+
+
 def _revenue(facts: _Facts, end: str, kind: str, utility: bool) -> Tuple[Optional[Fact], Optional[Fact]]:
     """(revenue fact, total `Revenues` fact) for the period."""
     total = facts.get(("Revenues",), end, MONEY, kind)
@@ -434,7 +466,7 @@ def _income_row(facts: _Facts, end: str, notes: _Notes, utility: bool = False) -
     return IncomeStatementRow(
         period_end=end,
         revenue=_value(revenue_fact),
-        net_income=field("net income", NET_INCOME),
+        net_income=_value(_net_income(facts, end, "year", notes)),
         eps=field("EPS", EPS, PER_SHARE),
     )
 
@@ -552,7 +584,7 @@ def periodic_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, f
     income, balance = [], []
     for end in ends:
         revenue, _ = _revenue(facts, end, "quarter", utility)
-        net_income = facts.get(NET_INCOME, end, MONEY, "quarter")
+        net_income = _net_income(facts, end, "quarter")
         eps = facts.get(EPS, end, PER_SHARE, "quarter")
         row_revenue, row_income = _value(revenue), _value(net_income)
         if end in year_ends and (revenue is None or net_income is None):

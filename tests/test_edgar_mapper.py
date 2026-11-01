@@ -296,3 +296,36 @@ def test_unmapped_intangible_tags_are_noted():
     notes = " ".join(annual_data(facts).notes)
     assert "IndefiniteLivedBroadcastIntangibles is tagged but not included" in notes
     assert "DeferredTax" not in notes
+
+
+def _profit_facts(minority=None, minority_share=None):
+    concepts = {"ProfitLoss": [("2009-01-01", "2009-12-31", 100.0, "2010-02-01", "10-K", "USD")],
+                "Assets": [(None, "2009-12-31", 1000.0, "2010-02-01", "10-K", "USD")]}
+    if minority is not None:
+        concepts["MinorityInterest"] = [(None, "2009-12-31", minority, "2010-02-01", "10-K", "USD")]
+    if minority_share is not None:
+        concepts["NetIncomeLossAttributableToNoncontrollingInterest"] = [
+            ("2009-01-01", "2009-12-31", minority_share, "2010-02-01", "10-K", "USD")]
+    facts = _facts(concepts)
+    facts["facts"]["us-gaap"]["NetIncomeLoss"] = {"units": {}}
+    facts["facts"]["us-gaap"]["Revenues"] = {"units": {"USD": [{"start": "2009-01-01", "end": "2009-12-31",
+                                                                 "val": 500.0, "filed": "2010-02-01", "form": "10-K"}]}}
+    return annual_data(facts)
+
+
+def test_net_income_from_profit_loss_without_minority_interest():
+    data = _profit_facts()
+    assert data.income_statements[0].net_income == 100.0
+    assert any("ProfitLoss used (no minority interest reported)" in n for n in data.notes)
+
+
+def test_net_income_from_profit_loss_less_the_minority_share():
+    data = _profit_facts(minority=50.0, minority_share=8.0)
+    assert data.income_statements[0].net_income == 92.0
+    assert any("derived as ProfitLoss - the minority interests' share" in n for n in data.notes)
+
+
+def test_net_income_not_guessed_when_the_minority_share_is_untagged():
+    data = _profit_facts(minority=50.0)
+    assert data.income_statements[0].net_income is None
+    assert any("not available: only ProfitLoss is tagged" in n for n in data.notes)
