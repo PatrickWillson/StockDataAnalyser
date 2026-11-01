@@ -1,0 +1,187 @@
+"""
+SEC EDGAR companyfacts -> annual statement rows (clients/edgar_mapper.py).
+
+Fixtures in tests/fixtures_sec/ are real SEC companyfacts (US-government public data), trimmed to the
+concepts the mapper reads. Golden values are from the companies' 10-K filings:
+- Apple FY2024 10-K (filed 2024-11-01): https://www.sec.gov/Archives/edgar/data/320193/000032019324000123/
+- Southern Co FY2024 10-K (filed 2025-02-20): https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0000092122&type=10-K
+Splits (date, ratio) are the companies' published stock splits.
+"""
+
+import gzip
+import json
+import os
+
+import pytest
+
+from clients.edgar_mapper import annual_data
+
+FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures_sec")
+SPLITS = {"AAPL": [("2014-06-09", 7.0), ("2020-08-31", 4.0)], "WMT": [("2024-02-26", 3.0)],
+          "HRL": [("2011-02-15", 2.0), ("2016-02-10", 2.0)], "KO": [("2012-08-13", 2.0)]}
+
+
+def fixture(ticker):
+    with gzip.open(os.path.join(FIXTURES, f"{ticker}.json.gz")) as fh:
+        return json.loads(fh.read())
+
+
+def mapped(ticker):
+    data = fixture(ticker)
+    return annual_data(data["companyfacts"], SPLITS.get(ticker, ()), data["submissions"]["sic"])
+
+
+def row(rows, end):
+    return next(r for r in rows if r.period_end == end)
+
+
+def test_apple_fy2024_matches_the_10k():
+    data = mapped("AAPL")
+    income = row(data.income_statements, "2024-09-28")
+    balance = row(data.balance_sheets, "2024-09-28")
+    assert (income.revenue, income.net_income, income.eps) == (391_035e6, 93_736e6, 6.11)
+    assert balance.total_assets == 364_980e6 and balance.total_liabilities == 308_030e6
+    assert balance.total_equity == 56_950e6
+    assert balance.current_assets == 152_987e6 and balance.current_liabilities == 176_392e6
+    assert balance.inventory == 7_286e6
+    assert balance.long_term_debt == 85_750e6                    # term debt, non-current
+    assert balance.short_term_debt == 9_967e6 + 10_912e6         # commercial paper + term debt, current
+    assert balance.shares_outstanding == 15_116_786_000
+    assert data.dividends_paid["2024-09-28"] == 15_234e6
+    assert data.shares_by_year["2024"] == 15_116_786_000
+
+
+def test_southern_fy2024_matches_the_10k():
+    data = mapped("SO")
+    balance = row(data.balance_sheets, "2024-12-31")
+    assert (balance.total_assets, balance.total_liabilities, balance.total_equity) == (145_180e6, 108_506e6, 33_208e6)
+    assert balance.noncontrolling_interest == 3_466e6
+    income = row(data.income_statements, "2024-12-31")
+    assert (income.revenue, income.net_income) == (26_724e6, 4_401e6)
+
+
+def test_fiscal_years_keyed_by_actual_period_end_newest_first():
+    data = mapped("AAPL")
+    ends = [r.period_end for r in data.income_statements]
+    assert ends == sorted(ends, reverse=True)
+    assert ends[0] == "2025-09-27" and ends[-1] == "2007-09-29"       # 52/53-week years
+    assert len(data.balance_sheets) == len(ends) - 1                  # FY2007: income comparatives only
+
+
+def test_per_share_history_is_on_todays_share_basis():
+    """Apple split 7:1 (2014) and 4:1 (2020): FY2013 basic EPS of $40.03 is 1.43 today."""
+    data = mapped("AAPL")
+    eps = {r.period_end[:4]: r.eps for r in data.income_statements}
+    assert eps["2013"] == pytest.approx(40.03 / 28, abs=0.005)
+    assert eps["2007"] == pytest.approx(4.04 / 28, abs=0.005)
+    assert data.shares_by_year["2012"] == pytest.approx(939_208_000 * 28, rel=0.001)
+    # Without the split history each year keeps the basis of its last filing: a mixed series
+    raw = {r.period_end[:4]: r.eps for r in annual_data(fixture("AAPL")["companyfacts"]).income_statements}
+    assert raw["2013"] == pytest.approx(40.03 / 7, abs=0.005)      # last filed after the 2014 split only
+    assert raw["2007"] == pytest.approx(4.04, abs=0.005)           # last filed before any later split
+
+
+def test_splits_are_not_reported_as_restatements():
+    notes = " ".join(mapped("WMT").notes) + " ".join(mapped("HRL").notes)
+    assert "EPS 4.29 -> 1.43" not in notes and "FY2022 EPS" not in notes
+    assert "FY2015 EPS" not in notes
+
+
+def test_genuine_restatement_uses_the_latest_figure_and_is_flagged():
+    """Apple restated FY2009 for its 2009 revenue-recognition change."""
+    data = mapped("AAPL")
+    assert row(data.income_statements, "2009-09-26").revenue == 42_905e6
+    restated = next(n for n in data.notes if "restated" in n)
+    assert "FY2009 revenue 3.6537e+10 -> 4.2905e+10" in restated
+
+
+def test_derived_total_liabilities_and_shares_are_noted():
+    data = mapped("KO")
+    balance = row(data.balance_sheets, "2024-12-31")
+    # KO tags no `Liabilities`: liabilities and equity - equity incl. minority interest
+    assert balance.total_liabilities == pytest.approx(balance.total_assets - balance.total_equity
+                                                      - balance.noncontrolling_interest)
+    assert any("total liabilities: derived as liabilities and equity - total equity" in n for n in data.notes)
+    assert any("year-end shares: derived as shares issued - treasury shares" in n for n in data.notes)
+
+
+def test_parent_equity_derived_when_only_total_equity_is_tagged():
+    data = mapped("JNJ")
+    assert row(data.balance_sheets, "2024-12-29").total_equity == 71_490e6
+    assert any("stockholders' equity: derived as equity incl. minority interest - minority interest" in n
+               for n in data.notes)
+
+
+def test_cover_page_shares_and_temporary_equity():
+    data = mapped("WMT")
+    balance = row(data.balance_sheets, "2026-01-31")
+    assert balance.shares_outstanding == 7_972_402_501
+    assert any("cover-page count" in n for n in data.notes)
+    assert any("- temporary equity" in n for n in data.notes)
+
+
+def test_weighted_average_shares_as_last_resort():
+    data = mapped("HRL")
+    assert row(data.balance_sheets, "2025-10-26").shares_outstanding == 550_164_000
+    assert any("weighted-average basic shares" in n for n in data.notes)
+
+
+def test_utility_revenue_is_total_operating_revenues():
+    """Southern Co: contract revenue 28,942 excludes other operating revenues; total is 29,553."""
+    assert row(mapped("SO").income_statements, "2025-12-31").revenue == 29_553e6
+
+
+def test_utility_inventory_is_the_sum_of_its_parts():
+    data = mapped("SO")
+    assert row(data.balance_sheets, "2024-12-31").inventory == 3_369e6
+    assert any("inventory: derived as the sum of" in n for n in data.notes)
+
+
+def test_bank_has_no_classified_balance_sheet():
+    balance = row(mapped("JPM").balance_sheets, "2024-12-31")
+    assert balance.current_assets is None and balance.current_liabilities is None and balance.inventory is None
+    assert balance.total_assets == 4_002_814e6
+
+
+def _facts(concepts):
+    """Synthetic companyfacts: {tag: [(start, end, value, filed, form, unit)]}."""
+    out = {}
+    for tag, rows in concepts.items():
+        units = {}
+        for start, end, value, filed, form, unit in rows:
+            entry = {"end": end, "val": value, "filed": filed, "form": form, "fy": int(end[:4]), "fp": "FY"}
+            if start:
+                entry["start"] = start
+            units.setdefault(unit, []).append(entry)
+        out[tag] = {"units": units}
+    return {"facts": {"us-gaap": out}}
+
+
+def test_latest_filed_tag_wins_and_ties_go_to_chain_order():
+    facts = _facts({
+        "SalesRevenueNet": [("2020-01-01", "2020-12-31", 100.0, "2021-02-01", "10-K", "USD")],
+        "Revenues": [("2020-01-01", "2020-12-31", 104.0, "2022-02-01", "10-K", "USD")],
+        "RevenueFromContractWithCustomerExcludingAssessedTax": [("2021-01-01", "2021-12-31", 110.0, "2022-02-01", "10-K", "USD")],
+        "NetIncomeLoss": [("2020-01-01", "2020-12-31", 10.0, "2021-02-01", "10-K", "USD"),
+                          ("2021-01-01", "2021-12-31", 11.0, "2022-02-01", "10-K", "USD")],
+    })
+    facts["facts"]["us-gaap"]["Revenues"]["units"]["USD"].append(
+        {"start": "2021-01-01", "end": "2021-12-31", "val": 115.0, "filed": "2022-02-01", "form": "10-K"})
+    data = annual_data(facts)
+    revenue = {r.period_end: r.revenue for r in data.income_statements}
+    assert revenue["2020-12-31"] == 104.0        # the 2022 filing restated FY2020 under `Revenues`
+    assert revenue["2021-12-31"] == 110.0        # same filing: sales tag first (D-F3)
+
+
+def test_non_usd_filer_is_rejected():
+    facts = _facts({"NetIncomeLoss": [("2020-01-01", "2020-12-31", 10.0, "2021-02-01", "10-K", "EUR")]})
+    with pytest.raises(ValueError, match="only USD"):
+        annual_data(facts)
+
+
+def test_quarterly_and_partial_year_facts_are_not_annual():
+    facts = _facts({"NetIncomeLoss": [("2020-10-01", "2020-12-31", 3.0, "2021-02-01", "10-K", "USD"),
+                                      ("2020-01-01", "2020-12-31", 10.0, "2021-02-01", "10-K", "USD"),
+                                      ("2021-01-01", "2021-12-31", 99.0, "2022-02-01", "10-Q", "USD")]})
+    data = annual_data(facts)
+    assert [(r.period_end, r.net_income) for r in data.income_statements] == [("2020-12-31", 10.0)]
