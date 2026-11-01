@@ -217,7 +217,7 @@ Price-unit logic lives in `core/price_quote.py` (`is_minor_unit`, `to_major_unit
 
 ## 8. Dossier
 
-`DossierGenerator.generate()` renders in this **actual** order:
+`DossierGenerator.generate()` renders in the CLAUDE.md order (D3, F15):
 
 | # | Heading | Source |
 |---|---|---|
@@ -225,12 +225,12 @@ Price-unit logic lives in `core/price_quote.py` (`is_minor_unit`, `to_major_unit
 | 1 | EXECUTIVE SUMMARY | `executive_summary.py` `ExecutiveSummarySection(financial_data, metrics)` |
 | 1.5 | TTM ANALYSIS (conditional) | `ttm_analysis.py` `TTMAnalysisSection(ttm_metrics, metrics, financial_data)` |
 | 2 | KEY METRICS | `key_metrics.py` `KeyMetricsSection(financial_data, {'current_ratio': …, 'quick_ratio': …})` — NCA is still withheld until it uses CA − CL |
+| 3 | CRITICAL ALERTS | `_generate_critical_alerts` (warnings + anomalies) |
 | – | RISK FACTORS | `risk_factors.py` `RiskFactorsSection` (`generate()` → `_generate_second_risk_section`) |
-| – | METHODOLOGY NOTES | `methodology.py` `MethodologySection` |
-| – | CALCULATION DETAILS | `calculation_details.py` `CalculationDetailsSection` |
 | 4 / 5 | GRAHAM DEFENSIVE / ENTERPRISING TESTS | `graham_tests.py` `GrahamTestsSection(metrics)` |
 | 6 | 20-YEAR FINANCIALS | `financial_history.py` `FinancialHistorySection(financial_data)` |
-| 3 | CRITICAL ALERTS | `_generate_critical_alerts` (warnings + anomalies) — rendered **last** |
+| – | METHODOLOGY NOTES | `methodology.py` `MethodologySection` |
+| – | CALCULATION DETAILS | `calculation_details.py` `CalculationDetailsSection` |
 
 Each section's `generate()` returns `List[str]`; the generator joins with `\n`. Only some sections subclass `DossierSection`. Money amounts are formatted with `output.formatting.format_price_display` (one shared definition), though some sections still format inline (e.g. `USD29.11` in calculation_details). Several sections do their own arithmetic (BVPS, NCA, ratios, yields, risk bands) rather than reading core results. Criterion and formula text in Graham Tests, Methodology and Calculation Details is built from config (`GRAHAM_MULTIPLIER`, `COST_OF_CAPITAL`, `DEFENSIVE`/`ENTERPRISING`, `EPV_MIN/MAX_YEARS`); two enterprising lines ("5 of past 7 years", "Current Ratio > 1.5") are still literal because they misdescribe the code (code: 5 of 5, ≥) — fixed with F20.
 

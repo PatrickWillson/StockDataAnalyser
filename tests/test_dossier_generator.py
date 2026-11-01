@@ -208,16 +208,11 @@ def test_section_ordering(sample_financial_data, sample_metrics, sample_anomalie
     assert financials_pos >= 0
     assert alerts_pos >= 0
     
-    # Verify sections are in correct order
-    assert header_pos < exec_summary_pos
-    assert exec_summary_pos < key_metrics_pos
-    assert key_metrics_pos < risk_factors_pos
-    assert risk_factors_pos < methodology_pos
-    assert methodology_pos < calc_details_pos
-    assert calc_details_pos < defensive_tests_pos
-    assert defensive_tests_pos < enterprising_tests_pos
-    assert enterprising_tests_pos < financials_pos
-    assert financials_pos < alerts_pos
+    # Verify sections are in the CLAUDE.md order (decision D3): numbered sections 1-6 in sequence,
+    # Risk Factors with the metrics, methodology and calculation details last
+    assert header_pos < exec_summary_pos < key_metrics_pos < alerts_pos < risk_factors_pos
+    assert risk_factors_pos < defensive_tests_pos < enterprising_tests_pos < financials_pos
+    assert financials_pos < methodology_pos < calc_details_pos
 
 
 def test_header_generation(sample_financial_data, sample_metrics, sample_anomalies):

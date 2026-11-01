@@ -46,6 +46,24 @@
 
 ---
 
+## SECTION 3: CRITICAL ALERTS
+
+### Data Quality & Limitations:
+- Price Source: yfinance (primary source)
+- [VALIDATION] API data is 46 days old (last update: 2024-01-15). Price and market data may be stale.
+- [VALIDATION] ROA Difference: API shows 22.40% (TTM basis), calculated 26.97% (annual basis) (20.4% difference). Using annual data from audited financials per Graham methodology.
+- Insufficient History Warning: Only 8 years of data available (minimum 10 recommended)
+- Potentially Stale Data: Most recent annual report is from 2021-09-25 (29 months old)
+- TTM Analysis: Periodic data not available from API
+
+### Normalized Graham Number Requirements:
+- **3-Year Data Requirement**: Normalized Graham Number calculation requires 3 consecutive years of annual EPS data
+- **Fallback Strategy**: When insufficient data is available, the system falls back to EPV (Earnings Power Value) for Margin of Safety calculation
+- **Staleness Detection**: Annual reports older than 9 months trigger a data staleness warning
+- **Data Quality**: All 3 years must have non-null, numeric EPS values for normalized calculation to proceed
+
+---
+
 ## RISK FACTORS
 *Quantifiable risks based on Graham's investment criteria*
 
@@ -82,6 +100,82 @@
 **Graham's Principle on Risk**: *"The essence of investment management is the management of risks, not the management of returns. Returns are the reward for taking risk, but the risk must be measured and managed."*
 
 ---
+
+## SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS
+
+1. **Earnings Stability**: FAIL
+   - Criterion: Positive earnings in each of the past 10 years
+2. **Current Ratio**: FAIL
+   - Criterion: Current Ratio ≥ 2.0
+3. **Debt to Assets**: FAIL
+   - Criterion: Long-term debt ≤ net current assets (current assets − current liabilities)
+4. **Dividend Record**: FAIL
+   - Criterion: Uninterrupted dividend payments for at least 20 years
+5. **Earnings Growth**: N/A (Too Young)
+   - Criterion: Average EPS of the latest 3 reported years at least one-third (33.3%) above the average of the reported years 9-11 back
+6. **P/E Ratio**: FAIL
+   - Criterion: Price ≤ 15 × average EPS of the last 3 reported years
+7. **P/B Ratio**: FAIL
+   - Criterion: Price ≤ 1.5 × tangible book value per share, or P/E (3-year average EPS) × P/B ≤ 22.5
+8. **Combined P/E × P/B Test** (criterion 7 alternative): FAIL
+   - P/E Ratio (3-year average EPS): 35.44
+   - P/B Ratio (tangible book): 48.81
+   - Product: 1729.48 (must be ≤ 22.5)
+   - *Graham: "a multiplier of earnings below 15 could justify a correspondingly higher multiplier of assets"; the product should not exceed 22.5. It relaxes the P/B limit only; the P/E limit (criterion 6) still applies.*
+
+---
+
+## SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS
+
+1. **Earnings Stability**: PASS
+   - Criterion: Profitability in most recent year and 5 of past 7 years
+2. **Current Ratio**: FAIL
+   - Criterion: Current Ratio > 1.5
+3. **Debt to Assets**: FAIL
+   - Criterion: Long-term debt ≤ 110% of net current assets (current assets − current liabilities)
+4. **Dividend Record**: PASS
+   - Criterion: Currently pays a dividend (last year > 0)
+5. **Earnings Growth**: PASS
+   - Criterion: Latest EPS above the EPS 5 reported years earlier
+6. **Price Test**: FAIL
+   - Criterion: P/E < 10 AND Price < 120% of Net Tangible Assets
+
+---
+
+## SECTION 6: 20-YEAR FINANCIALS (STANDARDIZED)
+*All values in USD*
+
+| Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares (B) | Price | P/E | P/B |
+|------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
+| 2021 | 365817000000.0 | 94680000000.0 | 5.763756829850952 | 0.8806957124783874 | 3.84 | 0.57 | 15.3% | 109.11B | 16.427B | 187.45 | 32.5 | 48.8 |
+| 2020 | 347526150000.0 | 89946000000.0 | 5.298183169547693 | 0.8095565685873096 | 3.53 | 0.52 | 15.3% | 103.65B | 16.977B | 172.45 | 32.5 | 48.9 |
+| 2019 | 330149842500.0 | 85448700000.0 | 4.807796614899591 | 0.7346260416957371 | 3.2 | 0.48 | 15.3% | 98.47B | 17.773B | 158.66 | 33.0 | 49.6 |
+| 2018 | 313642350375.0 | 81176265000.0 | 4.477849788386874 | 0.6842105290303433 | 2.98 | 0.44 | 15.3% | 93.54B | 18.128B | 145.97 | 32.6 | 49.0 |
+| 2017 | 297960232856.0 | 77117451750.0 | 4.170546371672121 | 0.6372549045232432 | 2.78 | 0.41 | 15.3% | 88.87B | 18.491B | 134.29 | 32.2 | 48.3 |
+| 2016 | 283062221213.0 | 73261579162.0 | 3.8843324049086845 | 0.593521724790227 | 2.59 | 0.38 | 15.3% | 84.42B | 18.861B | 123.54 | 31.8 | 47.7 |
+| 2015 | 268909110153.0 | 69598500204.0 | 3.617760573227029 | 0.5527898417276331 | 2.41 | 0.36 | 15.3% | 80.20B | 19.238B | 113.66 | 31.4 | 47.2 |
+| 2014 | 255463654645.0 | 66118575194.0 | 3.3694828868839335 | 0.514853283973929 | 2.25 | 0.33 | 15.3% | 76.19B | 19.623B | 104.57 | 31.0 | 46.5 |
+
+**Note on Data Completeness:**
+
+**Graham Trend Analysis Columns:**
+- **WCPS (Working Capital Per Share)**: (Current Assets - Current Liabilities) / Shares Outstanding
+  - Measures the company's liquid net worth per share
+  - Positive values indicate financial strength
+  - ⚠️ Negative values indicate current liabilities exceed current assets (liquidity concern)
+  - Trend analysis: Increasing WCPS shows improving financial strength
+- **Payout Ratio**: (Dividend / EPS) × 100
+  - Percentage of earnings paid as dividends
+  - Values > 100% indicate unsustainable dividends (paying more than earned)
+  - Values < 50% indicate conservative dividend policy with room for growth
+  - 'N/A' shown for years with zero or negative earnings
+- **Total Debt**: Sum of long-term and short-term debt. Graham emphasized tracking debt trends to distinguish companies that grow through retained earnings vs leverage.
+- **Shares (B)**: Common shares outstanding in billions. Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).
+- **Price**: Year-end stock price on fiscal year end date (or last trading day within 7 days prior). Source: Yahoo Finance via yfinance.
+- **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates loss year (Graham's method: show losses explicitly).
+- **P/B**: Historical Price-to-Book ratio (Price ÷ BVPS). Shows how the market valued net assets over time.
+
+*Note: Historical prices converted to unified currency using current FX rates. Historical FX rates not used - actual historical valuations may differ due to FX fluctuations.*
 
 ## METHODOLOGY NOTES
 *How key metrics are calculated*
@@ -322,99 +416,5 @@ TTM calculations provide more current financial metrics by using the most recent
 - Consistent with other Graham-inspired metrics
 - Transparent and auditable
 - Provides reasonable valuation estimate for comparison
-
----
-
-## SECTION 4: GRAHAM DEFENSIVE INVESTOR TESTS
-
-1. **Earnings Stability**: FAIL
-   - Criterion: Positive earnings in each of the past 10 years
-2. **Current Ratio**: FAIL
-   - Criterion: Current Ratio ≥ 2.0
-3. **Debt to Assets**: FAIL
-   - Criterion: Long-term debt ≤ net current assets (current assets − current liabilities)
-4. **Dividend Record**: FAIL
-   - Criterion: Uninterrupted dividend payments for at least 20 years
-5. **Earnings Growth**: N/A (Too Young)
-   - Criterion: Average EPS of the latest 3 reported years at least one-third (33.3%) above the average of the reported years 9-11 back
-6. **P/E Ratio**: FAIL
-   - Criterion: Price ≤ 15 × average EPS of the last 3 reported years
-7. **P/B Ratio**: FAIL
-   - Criterion: Price ≤ 1.5 × tangible book value per share, or P/E (3-year average EPS) × P/B ≤ 22.5
-8. **Combined P/E × P/B Test** (criterion 7 alternative): FAIL
-   - P/E Ratio (3-year average EPS): 35.44
-   - P/B Ratio (tangible book): 48.81
-   - Product: 1729.48 (must be ≤ 22.5)
-   - *Graham: "a multiplier of earnings below 15 could justify a correspondingly higher multiplier of assets"; the product should not exceed 22.5. It relaxes the P/B limit only; the P/E limit (criterion 6) still applies.*
-
----
-
-## SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS
-
-1. **Earnings Stability**: PASS
-   - Criterion: Profitability in most recent year and 5 of past 7 years
-2. **Current Ratio**: FAIL
-   - Criterion: Current Ratio > 1.5
-3. **Debt to Assets**: FAIL
-   - Criterion: Long-term debt ≤ 110% of net current assets (current assets − current liabilities)
-4. **Dividend Record**: PASS
-   - Criterion: Currently pays a dividend (last year > 0)
-5. **Earnings Growth**: PASS
-   - Criterion: Latest EPS above the EPS 5 reported years earlier
-6. **Price Test**: FAIL
-   - Criterion: P/E < 10 AND Price < 120% of Net Tangible Assets
-
----
-
-## SECTION 6: 20-YEAR FINANCIALS (STANDARDIZED)
-*All values in USD*
-
-| Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares (B) | Price | P/E | P/B |
-|------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
-| 2021 | 365817000000.0 | 94680000000.0 | 5.763756829850952 | 0.8806957124783874 | 3.84 | 0.57 | 15.3% | 109.11B | 16.427B | 187.45 | 32.5 | 48.8 |
-| 2020 | 347526150000.0 | 89946000000.0 | 5.298183169547693 | 0.8095565685873096 | 3.53 | 0.52 | 15.3% | 103.65B | 16.977B | 172.45 | 32.5 | 48.9 |
-| 2019 | 330149842500.0 | 85448700000.0 | 4.807796614899591 | 0.7346260416957371 | 3.2 | 0.48 | 15.3% | 98.47B | 17.773B | 158.66 | 33.0 | 49.6 |
-| 2018 | 313642350375.0 | 81176265000.0 | 4.477849788386874 | 0.6842105290303433 | 2.98 | 0.44 | 15.3% | 93.54B | 18.128B | 145.97 | 32.6 | 49.0 |
-| 2017 | 297960232856.0 | 77117451750.0 | 4.170546371672121 | 0.6372549045232432 | 2.78 | 0.41 | 15.3% | 88.87B | 18.491B | 134.29 | 32.2 | 48.3 |
-| 2016 | 283062221213.0 | 73261579162.0 | 3.8843324049086845 | 0.593521724790227 | 2.59 | 0.38 | 15.3% | 84.42B | 18.861B | 123.54 | 31.8 | 47.7 |
-| 2015 | 268909110153.0 | 69598500204.0 | 3.617760573227029 | 0.5527898417276331 | 2.41 | 0.36 | 15.3% | 80.20B | 19.238B | 113.66 | 31.4 | 47.2 |
-| 2014 | 255463654645.0 | 66118575194.0 | 3.3694828868839335 | 0.514853283973929 | 2.25 | 0.33 | 15.3% | 76.19B | 19.623B | 104.57 | 31.0 | 46.5 |
-
-**Note on Data Completeness:**
-
-**Graham Trend Analysis Columns:**
-- **WCPS (Working Capital Per Share)**: (Current Assets - Current Liabilities) / Shares Outstanding
-  - Measures the company's liquid net worth per share
-  - Positive values indicate financial strength
-  - ⚠️ Negative values indicate current liabilities exceed current assets (liquidity concern)
-  - Trend analysis: Increasing WCPS shows improving financial strength
-- **Payout Ratio**: (Dividend / EPS) × 100
-  - Percentage of earnings paid as dividends
-  - Values > 100% indicate unsustainable dividends (paying more than earned)
-  - Values < 50% indicate conservative dividend policy with room for growth
-  - 'N/A' shown for years with zero or negative earnings
-- **Total Debt**: Sum of long-term and short-term debt. Graham emphasized tracking debt trends to distinguish companies that grow through retained earnings vs leverage.
-- **Shares (B)**: Common shares outstanding in billions. Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).
-- **Price**: Year-end stock price on fiscal year end date (or last trading day within 7 days prior). Source: Yahoo Finance via yfinance.
-- **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates loss year (Graham's method: show losses explicitly).
-- **P/B**: Historical Price-to-Book ratio (Price ÷ BVPS). Shows how the market valued net assets over time.
-
-*Note: Historical prices converted to unified currency using current FX rates. Historical FX rates not used - actual historical valuations may differ due to FX fluctuations.*
-
-## SECTION 3: CRITICAL ALERTS
-
-### Data Quality & Limitations:
-- Price Source: yfinance (primary source)
-- [VALIDATION] API data is 46 days old (last update: 2024-01-15). Price and market data may be stale.
-- [VALIDATION] ROA Difference: API shows 22.40% (TTM basis), calculated 26.97% (annual basis) (20.4% difference). Using annual data from audited financials per Graham methodology.
-- Insufficient History Warning: Only 8 years of data available (minimum 10 recommended)
-- Potentially Stale Data: Most recent annual report is from 2021-09-25 (29 months old)
-- TTM Analysis: Periodic data not available from API
-
-### Normalized Graham Number Requirements:
-- **3-Year Data Requirement**: Normalized Graham Number calculation requires 3 consecutive years of annual EPS data
-- **Fallback Strategy**: When insufficient data is available, the system falls back to EPV (Earnings Power Value) for Margin of Safety calculation
-- **Staleness Detection**: Annual reports older than 9 months trigger a data staleness warning
-- **Data Quality**: All 3 years must have non-null, numeric EPS values for normalized calculation to proceed
 
 ---

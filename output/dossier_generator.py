@@ -101,16 +101,15 @@ class DossierGenerator:
         This method orchestrates the generation of all dossier sections in the
         correct order and assembles them into a complete markdown document.
         
-        The generation order is:
+        The generation order follows CLAUDE.md "Output Format" (decision D3):
         1. Header (metadata)
-        2. Executive Summary
-        3. Key Metrics
-        4. Risk Factors
-        5. Methodology Notes
-        6. Calculation Details
-        7. Graham Tests (defensive and enterprising)
-        8. Financial History
-        9. Critical Alerts (warnings and anomalies)
+        2. Section 1: Executive Summary (then 1.5 TTM Analysis, if available)
+        3. Section 2: Key Metrics
+        4. Section 3: Critical Alerts (warnings and anomalies)
+        5. Risk Factors
+        6. Sections 4-5: Graham Tests (defensive and enterprising)
+        7. Section 6: Financial History
+        8. Methodology Notes and Calculation Details
         
         Returns:
             str: Complete markdown-formatted dossier as a single string
@@ -127,26 +126,24 @@ class DossierGenerator:
         if self.ttm_analysis:
             lines.extend(self.ttm_analysis.generate())
         
-        # 3. Key Metrics
+        # 3. Key Metrics (Section 2)
         lines.extend(self.key_metrics.generate())
         
-        # 4. Risk Factors
+        # 4. Critical Alerts (Section 3)
+        lines.extend(self._generate_critical_alerts())
+        
+        # 5. Risk Factors
         lines.extend(self.risk_factors.generate())
         
-        # 5. Methodology Notes
-        lines.extend(self.methodology.generate())
-        
-        # 6. Calculation Details
-        lines.extend(self.calculation_details.generate())
-        
-        # 7. Graham Tests (defensive and enterprising)
+        # 6. Graham Tests (Sections 4 and 5)
         lines.extend(self.graham_tests.generate())
         
-        # 8. Financial History
+        # 7. Financial History (Section 6)
         lines.extend(self.financial_history.generate())
         
-        # 9. Critical Alerts
-        lines.extend(self._generate_critical_alerts())
+        # 8. Methodology Notes and Calculation Details
+        lines.extend(self.methodology.generate())
+        lines.extend(self.calculation_details.generate())
         
         # Join all lines with newlines
         return '\n'.join(lines)
