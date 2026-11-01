@@ -5,9 +5,10 @@ including market risk, financial strength risk, operational stability risk,
 dividend risk, valuation risk, and data quality risk assessments.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
+from core.models import GrahamResult, MarginOfSafetyDetails, or_default
 from output.formatting import format_price_display
 from config.data_quality_config import MIN_HISTORY_YEARS_RECOMMENDED
 from config.investor_thresholds import DEFENSIVE, ENTERPRISING
@@ -51,15 +52,16 @@ class RiskFactorsSection(DossierSection):
     Requirements: 2.3
     """
     
-    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any], context: Optional[ReportContext] = None):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Union[GrahamResult, Dict[str, Any]],
+                 context: Optional[ReportContext] = None):
         """Initialize risk factors section.
         
         Args:
             financial_data: Dictionary containing financial data (FinancialData DTO)
-            metrics: Dictionary containing Graham metrics (GrahamMetrics DTO)
+            metrics: Graham metrics (GrahamResult, or its dict form)
         """
         self.financial_data = financial_data
-        self.metrics = metrics
+        self.metrics = GrahamResult.from_dict(metrics)
         self.context = context or build_report_context(financial_data, metrics)
     
     def generate(self) -> List[str]:
@@ -333,8 +335,8 @@ class RiskFactorsSection(DossierSection):
         """
         lines.append("### Valuation Risk (Margin of Safety):")
         
-        margin_of_safety = self.metrics.get('margin_of_safety', 'N/A')
-        intrinsic_value = (self.metrics.get('margin_of_safety_details') or {}).get('intrinsic_value_used', 'N/A')
+        margin_of_safety = or_default(self.metrics.margin_of_safety, 'N/A')
+        intrinsic_value = or_default((self.metrics.margin_of_safety_details or MarginOfSafetyDetails()).intrinsic_value_used, 'N/A')
         price = self.financial_data.get('price', 0)
         
         # Graham: a bargain needs indicated value at least 50% above price, i.e. a margin of at
