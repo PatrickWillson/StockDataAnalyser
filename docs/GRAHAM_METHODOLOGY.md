@@ -52,7 +52,7 @@
 | 4.2 | Strong financial condition | Industrials: current assets ≥ 2 × current liabilities **and** long-term debt ≤ net current assets (working capital = CA − CL). Public utilities: debt ≤ 2 × stock equity at book value; the current-ratio test is dropped | [S] (several summaries agree) |
 | 4.3 | Earnings stability | Some earnings (no deficit) in each of the past 10 years | [S] |
 | 4.4 | Dividend record | Uninterrupted payments for at least the past 20 years | [S] |
-| 4.5 | Earnings growth | Per-share earnings up at least one-third over 10 years, **using three-year averages at the beginning and end** | [S] |
+| 4.5 | Earnings growth | Per-share earnings up at least one-third over 10 years, **using three-year averages at the beginning and end** | [S] — window **decided 2026-11-01** (user, from the one published reading found, GrahamValue): latest 3 reported years vs the reported years 9–11 back |
 | 4.6 | Moderate P/E | *Current price not more than 15 × average earnings of the past three years* | [S] (consistent across sources) |
 | 4.7 | Moderate price-to-assets | *"Current price should not be more than 1½ times the book value last reported."* But *"a multiplier of earnings below 15 could justify a correspondingly higher multiplier of assets"*: *"the product of the multiplier times the ratio of price to book value should not exceed 22.5."* | [Q] |
 
@@ -107,7 +107,7 @@ The ordered rules, implemented in `core/verdict.py` (F20): no intrinsic value �
 | EPV per share | Average per-share earnings (§2.4) | Average total NI ÷ today's shares | F22 |
 | Missing EPV | N/A, not zero (§2) | "N/A" with the reason; MoS uses the normalized Graham Number alone and says why. Negative average earnings over the cycle stay a real 0 (no earning power), so MoS is N/A rather than resting on the last three years (§2.1–2.3) | **Fixed (F3)** |
 | Defensive P/E (4.6) | 15 × 3-year average EPS | Price ≤ 15 × mean EPS of the 3 latest reported years | **Fixed (F20)** |
-| Defensive earnings growth (4.5) | Per-share, 3-year averages at both ends | Single-year total net income vs 10th year | F20 |
+| Defensive earnings growth (4.5) | Per-share, 3-year averages at both ends | Mean EPS of reported years 0–2 ≥ 4/3 × mean of years 9–11 | **Fixed (F20)** (split basis of per-share history: CODEBASE_GUIDE §11 E5) |
 | Defensive dividend record (4.4) | 20 uninterrupted years | Dividend in each of the 20 calendar years ending with the newest year | **Fixed (F20)** |
 | Defensive P/B (4.7) | ≤ 1.5 × tangible book (§3.5), or P/E × P/B ≤ 22.5 with the P/E on three-year average earnings (the 4.6 multiplier) | Same; the product relaxes P/B only (P/E ≤ 15 still required by 4.6) | **Fixed (F20)** (preferred stock not yet deducted from tangible book — §11 E10) |
 | Book value for Graham Number | Tangible book (§3.5 decision) | Tangible book (TBVPS) | **Decided** — matches |

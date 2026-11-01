@@ -8,6 +8,7 @@ from config.graham_constants import GRAHAM_MULTIPLIER
 from config.investor_thresholds import DEFENSIVE
 from core.formulas import tangible_equity
 from core.financial_data_processor import FinancialDataProcessor
+from core.history import has_statement_data
 from core.investor_tests.criteria import current_ratio_test, earnings_stability, latest_financial_year
 
 
@@ -44,22 +45,27 @@ def dividend_record(history: dict, years: list, num_years: int) -> str:
 
 
 def earnings_growth(history: dict, years: list, num_years: int) -> str:
-    """Latest net income at least MIN_EARNINGS_GROWTH × that of the 10th financial year back."""
-    if num_years < DEFENSIVE.EARNINGS_GROWTH_YEARS:
+    """
+    Criterion 4.5: "a minimum increase of at least one-third in per-share earnings in the past ten
+    years using three-year averages at the beginning and end" — mean EPS of the latest three
+    reported years ≥ 4/3 × mean EPS of the reported years 9-11 back (window: user decision
+    2026-11-01, GRAHAM_METHODOLOGY §4.5). Fewer than 12 reported years: "N/A (Too Young)", which
+    the verdict does not count as a pass. A non-positive base average fails.
+    """
+    reported = [year for year in years if has_statement_data(history[year])]
+    span = DEFENSIVE.EARNINGS_GROWTH_AVERAGE_YEARS
+    base_start = DEFENSIVE.EARNINGS_GROWTH_BASE_OFFSET
+    if len(reported) < base_start + span:
         return 'N/A (Too Young)'
-    latest_year = latest_financial_year(history, years)
-    if not latest_year:
+
+    def average_eps(selected):
+        return sum(history[year].get('eps', 0.0) for year in selected) / len(selected)
+
+    recent = average_eps(reported[:span])
+    base = average_eps(reported[base_start:base_start + span])
+    if base <= 0:
         return 'FAIL'
-    # The 10th financial year before the latest (dividend-only years skipped)
-    financial_years = [y for y in years if latest_financial_year(history, [y])]
-    if len(financial_years) < DEFENSIVE.EARNINGS_GROWTH_YEARS:
-        return 'N/A (Too Young)'
-    oldest_year = financial_years[DEFENSIVE.EARNINGS_GROWTH_YEARS - 1]
-    old_earnings = history[oldest_year].get('net_income', 0.0)
-    recent_earnings = history[latest_year].get('net_income', 0.0)
-    if old_earnings <= 0:
-        return 'FAIL'
-    return 'PASS' if recent_earnings / old_earnings >= DEFENSIVE.MIN_EARNINGS_GROWTH else 'FAIL'
+    return 'PASS' if recent >= DEFENSIVE.MIN_EARNINGS_GROWTH * base else 'FAIL'
 
 
 def pe_ratio(history: dict, years: list, price: float, max_pe: float = 15) -> str:

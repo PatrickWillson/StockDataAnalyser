@@ -13,7 +13,7 @@
 *Current metrics (P/E, Price) reflect most recent available data*
 
 - Verdict: **UNDERVALUED – FAILS GRAHAM CRITERIA**
-  - Margin of safety 59.1%, but criteria not passed — defensive: current ratio, dividend record; enterprising: current ratio
+  - Margin of safety 59.1%, but criteria not passed — defensive: current ratio, dividend record, earnings growth; enterprising: current ratio
 - Graham Number (Single-Year EPS): 12.78 GBP
 - Graham Number (3-Year Avg EPS): 8.42 GBP
   - ⚠️ Note: 3-year average (34% lower) reveals earnings peaked in recent year
@@ -362,8 +362,8 @@ TTM calculations provide more current financial metrics by using the most recent
    - Criterion: Long-term debt ≤ net current assets (current assets − current liabilities)
 4. **Dividend Record**: FAIL
    - Criterion: Uninterrupted dividend payments for at least 20 years
-5. **Earnings Growth**: PASS
-   - Criterion: Earnings growth ≥ 33% over 10 years
+5. **Earnings Growth**: N/A (Too Young)
+   - Criterion: Average EPS of the latest 3 reported years at least one-third (33.3%) above the average of the reported years 9-11 back
 6. **P/E Ratio**: PASS
    - Criterion: Price ≤ 15 × average EPS of the last 3 reported years
 7. **P/B Ratio**: PASS

@@ -360,7 +360,7 @@
       "current_ratio": "FAIL",
       "debt_to_assets": "PASS",
       "dividend_record": "FAIL",
-      "earnings_growth": "PASS",
+      "earnings_growth": "N/A (Too Young)",
       "earnings_stability": "PASS",
       "pb_ratio": "FAIL",
       "pe_ratio": "FAIL"

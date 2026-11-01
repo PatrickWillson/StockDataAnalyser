@@ -50,7 +50,7 @@ class TestDefensiveThresholds:
         assert thresholds.MIN_EARNINGS_YEARS == 10  # Strict Graham: ALL 10 years
         assert thresholds.MAX_PE_RATIO == 15.0
         assert thresholds.MAX_PB_RATIO == 1.5
-        assert thresholds.MIN_EARNINGS_GROWTH == 1.33
+        assert thresholds.MIN_EARNINGS_GROWTH == 4 / 3
     
     def test_immutability(self):
         """Test DefensiveThresholds is frozen and cannot be modified."""
@@ -64,7 +64,7 @@ class TestDefensiveThresholds:
         assert DEFENSIVE.MIN_EARNINGS_YEARS == 10  # Strict Graham: ALL 10 years
         assert DEFENSIVE.MAX_PE_RATIO == 15.0
         assert DEFENSIVE.MAX_PB_RATIO == 1.5
-        assert DEFENSIVE.MIN_EARNINGS_GROWTH == 1.33
+        assert DEFENSIVE.MIN_EARNINGS_GROWTH == 4 / 3
     
     def test_singleton_immutability(self):
         """Test DEFENSIVE singleton cannot be modified."""

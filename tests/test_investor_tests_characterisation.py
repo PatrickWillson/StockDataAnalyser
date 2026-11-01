@@ -149,45 +149,44 @@ class TestDividendRecord:
 
 
 class TestEarningsGrowth:
-    """Defensive: latest net income / net income of the 10th financial year >= 1.33."""
+    """Defensive 4.5 (F20): mean EPS of reported years 0-2 >= 4/3 x mean EPS of years 9-11."""
 
     @staticmethod
-    def _history(latest_ni, oldest_ni):
-        history = {f"{2023 - i}-12-31": _year() for i in range(10)}
-        history["2023-12-31"] = _year(net_income=latest_ni)
-        history["2014-12-31"] = _year(net_income=oldest_ni)
+    def _history(recent_eps, base_eps, years=12):
+        history = {}
+        for i in range(years):
+            eps = recent_eps if i < 3 else base_eps if 9 <= i <= 11 else 2.0
+            history[f"{2023 - i}-12-31"] = _year(eps=eps)
         return history
 
     @settings(max_examples=200)
     @given(growth=st.floats(min_value=0.5, max_value=3.0, allow_nan=False))
-    def test_passes_at_or_above_minimum_growth(self, growth):
-        history = self._history(latest_ni=100.0 * growth, oldest_ni=100.0)
-        expected = "PASS" if (100.0 * growth) / 100.0 >= DEFENSIVE.MIN_EARNINGS_GROWTH else "FAIL"
+    def test_passes_at_or_above_one_third(self, growth):
+        history = self._history(recent_eps=1.5 * growth, base_eps=1.5)
+        expected = "PASS" if 1.5 * growth >= (4 / 3) * 1.5 else "FAIL"
         assert _run("_test_earnings_growth", history, len(history)) == expected
 
-    def test_fewer_than_ten_years_is_too_young(self):
-        history = {f"{2023 - i}-12-31": _year() for i in range(9)}
+    def test_exactly_one_third_passes_and_33_percent_does_not(self):
+        assert _run("_test_earnings_growth", self._history(4.0, 3.0), 12) == "PASS"   # +33.3...%
+        assert _run("_test_earnings_growth", self._history(3.99, 3.0), 12) == "FAIL"  # +33.0%
+
+    def test_uses_three_year_averages_not_single_years(self):
+        history = self._history(recent_eps=3.0, base_eps=2.0)
+        history["2023-12-31"] = _year(eps=1.0)  # one weak latest year: average (1+3+3)/3 = 2.33 < 2.67
+        assert _run("_test_earnings_growth", history, len(history)) == "FAIL"
+
+    def test_fewer_than_twelve_reported_years_is_too_young(self):
+        history = self._history(4.0, 2.0, years=11)
         assert _run("_test_earnings_growth", history, len(history)) == "N/A (Too Young)"
 
-    def test_dividend_only_years_do_not_count_towards_ten(self):
-        history = {f"{2023 - i}-12-31": _year() for i in range(9)}
+    def test_dividend_only_years_do_not_count(self):
+        history = self._history(4.0, 2.0, years=11)
         history["2024-12-31"] = DIVIDEND_ONLY_YEAR
         assert _run("_test_earnings_growth", history, len(history)) == "N/A (Too Young)"
 
-    def test_non_positive_old_earnings_fails(self):
-        assert _run("_test_earnings_growth", self._history(200.0, 0.0), 10) == "FAIL"
-        assert _run("_test_earnings_growth", self._history(200.0, -5.0), 10) == "FAIL"
-
-    def test_no_financial_year_fails(self):
-        history = {f"{2023 - i}-12-31": {"dividend": 1.0} for i in range(10)}
-        assert _run("_test_earnings_growth", history, len(history)) == "FAIL"
-
-    def test_known_defect_uses_single_year_total_net_income(self):
-        # Known defect: Graham uses per-share 3-year averages; this compares single-year totals,
-        # so a share-count change does not affect the result
-        history = self._history(latest_ni=140.0, oldest_ni=100.0)
-        history["2014-12-31"]["shares_outstanding"] = 10.0
-        assert _run("_test_earnings_growth", history, len(history)) == "PASS"
+    def test_non_positive_base_fails(self):
+        assert _run("_test_earnings_growth", self._history(4.0, 0.0), 12) == "FAIL"
+        assert _run("_test_earnings_growth", self._history(4.0, -1.0), 12) == "FAIL"
 
 
 def _three_years(eps_newest_first):

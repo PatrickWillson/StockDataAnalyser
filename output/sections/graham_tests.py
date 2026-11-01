@@ -81,7 +81,9 @@ class GrahamTestsSection:
         # Test 5: Earnings Growth
         earnings_growth = defensive_tests.get('earnings_growth', 'N/A')
         lines.append(f"5. **Earnings Growth**: {earnings_growth}")
-        lines.append(f"   - Criterion: Earnings growth ≥ {DEFENSIVE.MIN_EARNINGS_GROWTH - 1:.0%} over {DEFENSIVE.EARNINGS_GROWTH_YEARS} years")
+        lines.append(f"   - Criterion: Average EPS of the latest {DEFENSIVE.EARNINGS_GROWTH_AVERAGE_YEARS} reported years "
+                     f"at least one-third ({DEFENSIVE.MIN_EARNINGS_GROWTH - 1:.1%}) above the average of the reported "
+                     f"years {DEFENSIVE.EARNINGS_GROWTH_BASE_OFFSET}-{DEFENSIVE.EARNINGS_GROWTH_BASE_OFFSET + DEFENSIVE.EARNINGS_GROWTH_AVERAGE_YEARS - 1} back")
         
         # Test 6: P/E Ratio
         pe_ratio = defensive_tests.get('pe_ratio', 'N/A')

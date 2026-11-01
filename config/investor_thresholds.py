@@ -27,19 +27,23 @@ class DefensiveThresholds:
         MIN_EARNINGS_YEARS: Minimum years of positive earnings required (10 years - strict Graham)
         MAX_PE_RATIO: Maximum acceptable Price-to-Earnings ratio (15.0)
         MAX_PB_RATIO: Maximum acceptable Price-to-Book ratio (1.5)
-        MIN_EARNINGS_GROWTH: Minimum earnings growth over 10 years (1.33 = 33%)
+        MIN_EARNINGS_GROWTH: Minimum ratio of the recent to the base three-year average EPS (4/3:
+                             "a minimum increase of at least one-third")
         EARNINGS_STABILITY_YEARS: Years examined for earnings stability (10)
         MIN_DIVIDEND_YEARS: Years of uninterrupted dividends examined (20)
-        EARNINGS_GROWTH_YEARS: Span of the earnings growth test (10 financial years)
+        EARNINGS_GROWTH_AVERAGE_YEARS: Reported years averaged at each end (3)
+        EARNINGS_GROWTH_BASE_OFFSET: The base average starts this many reported years back (9: years
+                                     9-11 against 0-2; user decision 2026-11-01, GRAHAM_METHODOLOGY §4.5)
     """
     MIN_CURRENT_RATIO: float = 2.0
     MIN_EARNINGS_YEARS: int = 10  # Graham: "Some earnings in EACH of the past 10 years"
     MAX_PE_RATIO: float = 15.0
     MAX_PB_RATIO: float = 1.5
-    MIN_EARNINGS_GROWTH: float = 1.33  # 33% over 10 years
+    MIN_EARNINGS_GROWTH: float = 4 / 3  # at least one-third over ten years
     EARNINGS_STABILITY_YEARS: int = 10
     MIN_DIVIDEND_YEARS: int = 20  # Graham: uninterrupted dividends for at least 20 years
-    EARNINGS_GROWTH_YEARS: int = 10
+    EARNINGS_GROWTH_AVERAGE_YEARS: int = 3
+    EARNINGS_GROWTH_BASE_OFFSET: int = 9
 
 
 @dataclass(frozen=True)
