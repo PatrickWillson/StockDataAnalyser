@@ -106,7 +106,7 @@ def main():
         # 3. Compute Metrics
         logger.info("[4/6] Calculating Graham Metrics (Strict Rules)...")
         calculator = GrahamCalculator(financial_data)
-        metrics = calculator.compute_all()
+        metrics = calculator.compute()
         
         # 4. Calculate TTM Metrics
         logger.info("[5/6] Calculating TTM Metrics...")
@@ -120,7 +120,7 @@ def main():
                     currency=financial_data.get('currency', 'USD'),
                 )
                 
-                ttm_metrics = ttm_calculator.compute_all()
+                ttm_metrics = ttm_calculator.compute()
                 
                 # Add TTM warnings to financial data warnings
                 if ttm_metrics.get('warnings'):

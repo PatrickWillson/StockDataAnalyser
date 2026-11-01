@@ -10,6 +10,7 @@ This module implements strict Graham formulas for value investing analysis:
 - Defensive Investor Tests
 """
 
+from core.models import GrahamResult
 from core.formulas import graham_number, margin_of_safety_pct, net_current_asset_value, tangible_equity
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Union
@@ -772,6 +773,10 @@ class GrahamCalculator:
             'fiscal_year_end': year,
         }
 
+    def compute(self) -> GrahamResult:
+        """compute_all() as a typed GrahamResult (core.models, M7)."""
+        return GrahamResult.from_dict(self.compute_all())
+    
     def compute_all(self) -> dict:
         """
         Compute all Graham metrics.

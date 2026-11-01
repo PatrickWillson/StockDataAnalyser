@@ -69,10 +69,12 @@ def run_cli(monkeypatch, tmp_path):
 
         class RecordingDossierGenerator(DossierGenerator):
             def __init__(self, ticker, financial_data, metrics, anomalies, ttm_metrics=None):
+                def plain(value):  # typed models (core.models) are recorded in their dict form
+                    return value.to_dict() if hasattr(value, "to_dict") else value
                 captured.update(copy.deepcopy({
-                    "financial_data": financial_data,
-                    "metrics": metrics,
-                    "ttm_metrics": ttm_metrics,
+                    "financial_data": plain(financial_data),
+                    "metrics": plain(metrics),
+                    "ttm_metrics": plain(ttm_metrics),
                     "anomalies": anomalies,
                 }))
                 super().__init__(ticker, financial_data, metrics, anomalies, ttm_metrics=ttm_metrics)

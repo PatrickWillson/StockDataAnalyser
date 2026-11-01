@@ -99,6 +99,16 @@ class Model:
         extra = {key: value for key, value in data.items() if key not in names}
         return cls(extra=extra, **kwargs)
 
+    def __getitem__(self, key: str) -> Any:
+        """Dict-style subscript during the migration (shim)."""
+        value = self.get(key, MISSING)
+        if value is MISSING:
+            raise KeyError(key)
+        return value
+
+    def __contains__(self, key: str) -> bool:
+        return self.get(key, MISSING) is not MISSING
+
     def get(self, key: str, default: Any = None) -> Any:
         """Dict-style read during the migration (shim): the to_dict() value or `default`."""
         value = getattr(self, key, MISSING) if key != 'extra' else MISSING

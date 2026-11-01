@@ -15,6 +15,7 @@ import logging
 import statistics
 from datetime import datetime
 from typing import Dict, Union, List, Any, Optional
+from core.models import TTMResult
 from core.formulas import graham_number, margin_of_safety_pct, net_current_asset_value, price_multiple, tangible_equity
 from config.ttm_config import (
     EARLIEST_PERIOD_YEAR,
@@ -755,6 +756,10 @@ class TTMCalculator:
             return False
         
         return True
+    
+    def compute(self) -> TTMResult:
+        """compute_all() as a typed TTMResult (core.models, M7)."""
+        return TTMResult.from_dict(self.compute_all())
     
     def compute_all(self) -> Dict[str, Any]:
         """

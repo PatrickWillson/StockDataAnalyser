@@ -4,6 +4,7 @@ Unit tests for main CLI orchestrator in stock_data_analyser.py
 These tests verify the CLI handles various scenarios correctly.
 """
 
+from core.models import GrahamResult
 import pytest
 import os
 from unittest.mock import Mock, patch
@@ -109,7 +110,7 @@ def test_ticker_suffix_example():
                                 mock_create_yf.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()
-                                mock_calculator_instance.compute_all.return_value = mock_metrics
+                                mock_calculator_instance.compute.return_value = GrahamResult.from_dict(mock_metrics)
                                 MockCalculator.return_value = mock_calculator_instance
                                 
                                 mock_detector_instance = Mock()
@@ -391,7 +392,7 @@ def test_system_continues_when_eodhd_has_price():
                                 mock_create_yf.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()
-                                mock_calculator_instance.compute_all.return_value = mock_metrics
+                                mock_calculator_instance.compute.return_value = GrahamResult.from_dict(mock_metrics)
                                 MockCalculator.return_value = mock_calculator_instance
                                 
                                 mock_detector_instance = Mock()
@@ -478,7 +479,7 @@ def test_system_continues_when_yfinance_fallback_succeeds():
                                 mock_create_yf.return_value = mock_yf_instance
                                 
                                 mock_calculator_instance = Mock()
-                                mock_calculator_instance.compute_all.return_value = mock_metrics
+                                mock_calculator_instance.compute.return_value = GrahamResult.from_dict(mock_metrics)
                                 MockCalculator.return_value = mock_calculator_instance
                                 
                                 mock_detector_instance = Mock()

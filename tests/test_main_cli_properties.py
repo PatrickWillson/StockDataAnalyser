@@ -6,6 +6,7 @@ These tests verify universal properties that should hold across all inputs.
 NOTE: These tests need to be updated to work with ClientFactory pattern.
 """
 
+from core.models import GrahamResult
 import pytest
 from unittest.mock import Mock, patch
 from hypothesis import given, strategies as st
@@ -152,7 +153,7 @@ def test_system_continues_with_valid_price_property(ticker, exchange, price):
                                     MockYFClient.return_value = mock_yf_instance
                                     
                                     mock_calculator_instance = Mock()
-                                    mock_calculator_instance.compute_all.return_value = mock_metrics
+                                    mock_calculator_instance.compute.return_value = GrahamResult.from_dict(mock_metrics)
                                     MockCalculator.return_value = mock_calculator_instance
                                     
                                     mock_detector_instance = Mock()
