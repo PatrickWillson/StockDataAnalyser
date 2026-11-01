@@ -64,7 +64,7 @@ core/
   currency_converter.py     CurrencyConverter: convert / convert_batch / try_convert_batch (None = no rate) / normalise_quote_unit (minor-unit quote → major ccy, the London Fix), conversion log
   graham_math.py            GrahamCalculator: valuation metrics (TBVPS, Graham Numbers, net-net, NCA details, ratios, EPV, MoS) and compute_all, which calls the investor tests and verdict below
   investor_tests/           criteria.py (latest_financial_year, earnings_stability, latest_current_ratio, current_ratio_test), defensive.py (run_defensive_tests + 5 criteria, EMPTY_RESULTS), enterprising.py (run_enterprising_tests + 3 criteria, EMPTY_RESULTS); pure functions of (history, years, …)
-  verdict.py                determine_verdict (current rules; Graham redesign is F20/D8)
+  verdict.py                determine_verdict (design D8: Graham's quality AND margin of safety) → {'verdict', 'reason'}
   history.py                predicates for "this year has real data" (skip dividend-only years) + latest_year()
   ttm_calculator.py         TTMCalculator: frequency detection, period selection, TTM metrics
   anomaly_detector.py       AnomalyDetector: EPS growth Z-scores
@@ -126,7 +126,7 @@ claude-output/              agent-written markdown (gitignored)
 - Total debt: reported `shortLongTermDebtTotal` (short + long-term debt incl. leases) when > 0, else `longTermDebt + shortTermDebt` (GRAHAM_METHODOLOGY §9). Display only (history table, Risk Factors "short-term debt and leases" = total − long-term); Graham's debt tests use `long_term_debt`.
 
 ### 4.3 `metrics` (returned by `GrahamCalculator.compute_all`)
-`tbvps (latest annual, rounded; "N/A"), graham_number, normalized_graham_number, epv, epv_details, net_net_value, nca_details, current_ratio, quick_ratio, three_year_avg_pe, combined_pe_pb_test, margin_of_safety, margin_of_safety_details, defensive_tests, enterprising_tests, verdict, warnings`
+`tbvps (latest annual, rounded; "N/A"), verdict, verdict_reason, graham_number, normalized_graham_number, epv, epv_details, net_net_value, nca_details, current_ratio, quick_ratio, three_year_avg_pe, combined_pe_pb_test, margin_of_safety, margin_of_safety_details, defensive_tests, enterprising_tests, verdict, warnings`
 
 Values are floats or `"N/A"`-style strings (also `"N/A - reason"`, `"N/A (Too Young)"`). `epv` is the **total** EPV (not per share); per share is in `epv_details['epv_per_share']`.
 
@@ -171,7 +171,7 @@ Where EODHD pre-computed values are used today:
 | Combined P/E×P/B | round(P/E) × round(P/B, BVPS-based) ≤ 22.5 |
 | EPV | mean(net income, up to 10 complete years, min 7) / COST_OF_CAPITAL; per share = EPV / latest shares. Unavailable (fewer than 7 complete years, no data, no share count) → `epv`/`epv_per_share` "N/A" with `unavailable_reason`; negative average earnings over the cycle → 0.0 (no earning power), also with the reason (F3) |
 | Margin of Safety | IV = min(Normalized GN, EPV/share) over the anchors that are available; MoS = (IV − Price)/IV × 100; IV 0 (no earning power) or both unavailable → "N/A". `margin_of_safety_details['note']` gives the reason when an anchor is missing or IV is 0, and the Executive Summary shows it |
-| Verdict | GN "N/A" → "Rely on EPV - Negative Equity"; defensive fail & enterprising pass → "ENTERPRISING BUY"; MoS ≥ 20 → "STRONG BUY (Undervalued)"; > 0 → "UNDERVALUED"; else "OVERVALUED" |
+| Verdict | `core.verdict.determine_verdict` (D8), first match: no intrinsic value → INSUFFICIENT DATA; price ≤ ⅔ × NCAV/share → NET-NET BARGAIN; MoS ≤ 0 or N/A → OVERVALUED; all defensive PASS → DEFENSIVE BUY; all enterprising PASS → ENTERPRISING BUY; else UNDERVALUED – FAILS GRAHAM CRITERIA. "N/A" never counts as a pass. `metrics['verdict_reason']` names the rule and failed criteria; the Executive Summary shows it |
 
 **Defensive tests** (`DEFENSIVE` thresholds): current ratio ≥ 2.0; LTD ≤ CA − CL; earnings stability (positive NI in last 10 years); dividend record (a dividend in each of the 20 calendar years ending with the newest year; fewer years or a missing year → FAIL); earnings growth (latest NI / NI 10 financial years ago ≥ 1.33, else "N/A (Too Young)"); P/E: price ≤ 15 × mean EPS of the 3 latest reported years (`extract_3year_eps_data`; fewer years or average ≤ 0 → FAIL); P/B: price ≤ 1.5 × tangible BVPS, or P/E (3-year average) × P/B (tangible) ≤ 22.5 (`defensive.pe_pb_multiples`, also behind `metrics['combined_pe_pb_test']`).
 **Enterprising tests** (`ENTERPRISING`): current ratio ≥ 1.5; LTD ≤ (CA − CL) × 1.10; earnings stability (5 of last 5); current dividend > 0; earnings growth (latest EPS > EPS 5 reported years earlier; fewer years → FAIL); price: P/E < 10 AND price < TBVPS × 1.20.

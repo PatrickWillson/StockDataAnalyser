@@ -19,7 +19,3 @@ EPV_MAX_YEARS: Final[int] = 10
 
 # Flag a deep-value opportunity when price is more than this % below net-net value
 DEEP_VALUE_MIN_DISCOUNT_PCT: Final[float] = 2.0
-
-# Current verdict tier: margin of safety at or above this % is "STRONG BUY".
-# Not a Graham threshold (GRAHAM_METHODOLOGY §7); to be removed by the verdict redesign.
-STRONG_BUY_MIN_MOS_PCT: Final[float] = 20.0

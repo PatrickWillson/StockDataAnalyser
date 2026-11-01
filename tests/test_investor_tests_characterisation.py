@@ -327,49 +327,48 @@ ALL_PASS_ENTERPRISING = {k: "PASS" for k in ("earnings_stability", "current_rati
 
 
 class TestDetermineVerdict:
-    def _verdict(self, graham_number=25.0, mos=10.0, defensive=None, enterprising=None):
-        return determine_verdict(graham_number, mos, 0.0, defensive, enterprising)
+    """Design D8 (GRAHAM_METHODOLOGY §7): first matching rule wins."""
 
-    def test_graham_number_na_short_circuits(self):
-        assert self._verdict(graham_number="N/A", mos=50.0) == "Rely on EPV - Negative Equity"
+    @staticmethod
+    def _verdict(mos=10.0, intrinsic=25.0, net_net="N/A", price=20.0, defensive=None, enterprising=None,
+                 note=None):
+        details = {'mos_percentage': mos, 'intrinsic_value_used': intrinsic, 'note': note}
+        return determine_verdict(details, net_net, price, defensive, enterprising)['verdict']
 
-    @pytest.mark.parametrize("mos,expected", [
-        (20.0, "STRONG BUY (Undervalued)"), (50.0, "STRONG BUY (Undervalued)"),
-        (19.9, "UNDERVALUED"), (0.1, "UNDERVALUED"),
-        (0.0, "OVERVALUED"), (-30.0, "OVERVALUED"),
-    ])
-    def test_margin_of_safety_tiers(self, mos, expected):
-        assert self._verdict(mos=mos) == expected
+    def test_no_intrinsic_value_is_insufficient_data(self):
+        assert self._verdict(mos="N/A", intrinsic="N/A") == "INSUFFICIENT DATA"
 
-    def test_non_numeric_margin_of_safety_is_pending(self):
-        assert self._verdict(mos="N/A") == "PENDING"
+    def test_net_net_bargain_at_two_thirds_of_ncav(self):
+        assert self._verdict(net_net=30.0, price=20.0, mos=-50.0) == "NET-NET BARGAIN"
+        assert self._verdict(net_net=29.9, price=20.0, mos=-50.0) == "OVERVALUED"
 
-    def test_known_defect_integer_margin_of_safety_is_pending(self):
-        # Known defect: only float is accepted, so an int MoS falls through to PENDING
-        assert self._verdict(mos=25) == "PENDING"
-
-    def test_defensive_failure_with_enterprising_pass_is_enterprising_buy(self):
-        defensive = {**ALL_PASS_DEFENSIVE, "pb_ratio": "FAIL"}
-        assert self._verdict(mos=10.0, defensive=defensive, enterprising=ALL_PASS_ENTERPRISING) == "ENTERPRISING BUY"
-
-    def test_known_defect_enterprising_buy_overrides_negative_margin_of_safety(self):
-        defensive = {**ALL_PASS_DEFENSIVE, "pb_ratio": "FAIL"}
-        assert self._verdict(mos=-80.0, defensive=defensive, enterprising=ALL_PASS_ENTERPRISING) == "ENTERPRISING BUY"
-
-    def test_known_defect_na_results_count_as_passes(self):
-        defensive = {**ALL_PASS_DEFENSIVE, "pb_ratio": "FAIL"}
-        enterprising = {**ALL_PASS_ENTERPRISING, "earnings_growth": "N/A - Not Required",
-                        "current_ratio": "N/A (Too Young)"}
-        assert self._verdict(mos=-5.0, defensive=defensive, enterprising=enterprising) == "ENTERPRISING BUY"
-
-    def test_all_defensive_pass_falls_through_to_margin_of_safety(self):
-        assert self._verdict(mos=-5.0, defensive=ALL_PASS_DEFENSIVE,
+    @pytest.mark.parametrize("mos", [0.0, -30.0, "N/A"])
+    def test_no_margin_of_safety_is_overvalued_even_if_criteria_pass(self, mos):
+        assert self._verdict(mos=mos, defensive=ALL_PASS_DEFENSIVE,
                              enterprising=ALL_PASS_ENTERPRISING) == "OVERVALUED"
 
-    def test_both_failing_falls_through_to_margin_of_safety(self):
+    def test_defensive_buy_needs_all_defensive_criteria(self):
+        assert self._verdict(mos=0.1, defensive=ALL_PASS_DEFENSIVE) == "DEFENSIVE BUY"
+
+    def test_enterprising_buy_when_defensive_fails(self):
+        defensive = {**ALL_PASS_DEFENSIVE, "pb_ratio": "FAIL"}
+        assert self._verdict(defensive=defensive, enterprising=ALL_PASS_ENTERPRISING) == "ENTERPRISING BUY"
+
+    def test_na_is_never_a_pass(self):
+        defensive = {**ALL_PASS_DEFENSIVE, "earnings_growth": "N/A (Too Young)"}
+        enterprising = {**ALL_PASS_ENTERPRISING, "current_ratio": "N/A"}
+        assert self._verdict(defensive=defensive, enterprising=enterprising) == "UNDERVALUED – FAILS GRAHAM CRITERIA"
+
+    def test_cheap_but_failing_both_lists_the_failures(self):
         defensive = {**ALL_PASS_DEFENSIVE, "pb_ratio": "FAIL"}
         enterprising = {**ALL_PASS_ENTERPRISING, "price_test": "FAIL"}
-        assert self._verdict(mos=25.0, defensive=defensive, enterprising=enterprising) == "STRONG BUY (Undervalued)"
+        result = determine_verdict({'mos_percentage': 25.0, 'intrinsic_value_used': 25.0}, "N/A", 20.0,
+                                   defensive, enterprising)
+        assert result['verdict'] == "UNDERVALUED – FAILS GRAHAM CRITERIA"
+        assert "defensive: P/B; enterprising: price" in result['reason']
+
+    def test_no_strong_buy_tier(self):
+        assert self._verdict(mos=90.0, defensive=ALL_PASS_DEFENSIVE) == "DEFENSIVE BUY"
 
 
 class TestComputeCurrentRatio:

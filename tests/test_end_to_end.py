@@ -238,7 +238,8 @@ def test_end_to_end_with_negative_equity():
     
     # Assert: System should handle negative equity gracefully
     assert metrics['graham_number'] == "N/A"
-    assert metrics['verdict'] == "Rely on EPV - Negative Equity"
+    # D8: negative tangible equity no longer short-circuits; the Graham Number is just unavailable
+    assert metrics['verdict'] in ("OVERVALUED", "INSUFFICIENT DATA", "NET-NET BARGAIN", "UNDERVALUED – FAILS GRAHAM CRITERIA")
     assert any("Negative Tangible Book Value" in w for w in metrics['warnings'])
     assert dossier_content is not None
 

@@ -567,7 +567,8 @@
         "2021-09-25"
       ]
     },
-    "verdict": "Rely on EPV - Negative Equity",
+    "verdict": "OVERVALUED",
+    "verdict_reason": "Price is not below conservative intrinsic value (margin of safety -249.5%)",
     "warnings": [
       "Negative Tangible Book Value - Company has negative equity"
     ]

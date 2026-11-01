@@ -363,6 +363,7 @@
       ]
     },
     "verdict": "OVERVALUED",
+    "verdict_reason": "Price is not below conservative intrinsic value (margin of safety -349.6%)",
     "warnings": []
   },
   "ttm_metrics": null

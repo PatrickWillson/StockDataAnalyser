@@ -363,7 +363,8 @@
         "2021-12-31"
       ]
     },
-    "verdict": "STRONG BUY (Undervalued)",
+    "verdict": "UNDERVALUED – FAILS GRAHAM CRITERIA",
+    "verdict_reason": "Margin of safety 59.1%, but criteria not passed — defensive: current ratio, dividend record; enterprising: current ratio",
     "warnings": []
   },
   "ttm_metrics": null

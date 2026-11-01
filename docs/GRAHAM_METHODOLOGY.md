@@ -85,7 +85,7 @@ Graham's principles applied to a verdict **[I]**:
 - A price above conservative value is never a buy, whatever other tests say.
 - Thresholds such as "≥ 20% margin = strong buy" are not Graham's and should not drive verdicts.
 
-The ordered verdict rules are in `claude-output/REFACTOR_SCOPE.md` (D8) and will move into code in F20.
+The ordered rules, implemented in `core/verdict.py` (F20): no intrinsic value → INSUFFICIENT DATA; price ≤ ⅔ × NCAV per share → NET-NET BARGAIN; margin of safety ≤ 0 or N/A → OVERVALUED; all defensive criteria pass → DEFENSIVE BUY; all enterprising criteria pass → ENTERPRISING BUY; otherwise UNDERVALUED – FAILS GRAHAM CRITERIA. **[I]** (rule order is this project's design; each rule applies a principle above)
 
 **This codebase's EPV** = average net income (7–10 years) ÷ 10% is a simplified *capitalised past earning power* (§2.1, §2.6): a multiplier of 10, within Graham's range. "EPV" as a name comes from Greenwald (2001), whose method differs (normalised EBIT, maintenance capex, WACC). **[I]**
 
@@ -114,7 +114,7 @@ The ordered verdict rules are in `claude-output/REFACTOR_SCOPE.md` (D8) and will
 | Adequate size (4.1) | Required | Not implemented | Ignored by decision D7 |
 | Enterprising price (5.1, 5.6) | Low P/E **and** < 120% net tangible assets | P/E < 10 **and** price < 1.2 × TBVPS | **Fixed (F20)** |
 | Enterprising earnings growth (5.5) | Required (≈5-year) | Latest EPS > EPS of the reported year 5 years earlier | **Fixed (F20)** |
-| Verdict (§7) | Quality **and** margin of safety | ENTERPRISING BUY can override a negative MoS; N/A counts as pass | F20 (D8) |
+| Verdict (§7) | Quality **and** margin of safety | D8 rules in `core/verdict.py`; N/A never a pass; no 20% "strong buy" tier | **Fixed (F20)** |
 | Historical prices | Actual market price, adjusted only for splits / capital changes (§2.4, §8.3) | Split-adjusted, not dividend-adjusted | **Fixed (F8)**. Open check: Yahoo closes are split-adjusted to today's share basis while each year's EPS uses that year's share count, so a split year may mismatch — unverified against real data |
 | Total debt (display, Risk Factors) | Count every obligation ranking ahead of the stock; prefer the conservative figure (§8.4) | Reported total incl. leases, else component sum | **Decided 2026-10-31** (user: "go with what Graham would do"); debt tests (4.2, 5.2) still use long-term debt as Graham specified |
 | Earnings measure | Earnings for the common, special items included (§2.3) | `netIncomeApplicableToCommonShares`, else `netIncome` | **Fixed** (was continuing-ops income, which EODHD reports before minority interest: WLKP.US EPS 10.48 instead of 1.77) |

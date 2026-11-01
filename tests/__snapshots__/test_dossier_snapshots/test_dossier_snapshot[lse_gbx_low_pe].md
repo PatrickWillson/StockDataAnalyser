@@ -12,7 +12,8 @@
 ## SECTION 1: EXECUTIVE SUMMARY
 *Current metrics (P/E, Price) reflect most recent available data*
 
-- Verdict: **STRONG BUY (Undervalued)**
+- Verdict: **UNDERVALUED – FAILS GRAHAM CRITERIA**
+  - Margin of safety 59.1%, but criteria not passed — defensive: current ratio, dividend record; enterprising: current ratio
 - Graham Number (Single-Year EPS): 12.78 GBP
 - Graham Number (3-Year Avg EPS): 8.42 GBP
   - ⚠️ Note: 3-year average (34% lower) reveals earnings peaked in recent year

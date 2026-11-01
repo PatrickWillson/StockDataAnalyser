@@ -874,7 +874,7 @@ class GrahamCalculator:
         enterprising_tests = self.run_investor_tests("enterprising", tbvps=tbvps)
         
         # Determine verdict (use new MoS structure)
-        verdict = determine_verdict(graham_number, margin_of_safety_data['mos_percentage'], epv_data['epv'],
+        verdict = determine_verdict(margin_of_safety_data, net_net_value_raw, price,
                                     defensive_tests, enterprising_tests)
         
         metrics = {
@@ -891,7 +891,8 @@ class GrahamCalculator:
             'quick_ratio': quick_ratio,
             'three_year_avg_pe': three_year_avg_pe,
             'combined_pe_pb_test': combined_pe_pb_test,
-            'verdict': verdict,
+            'verdict': verdict['verdict'],
+            'verdict_reason': verdict['reason'],
             'defensive_tests': defensive_tests,
             'enterprising_tests': enterprising_tests,
             'warnings': self.warnings.copy()

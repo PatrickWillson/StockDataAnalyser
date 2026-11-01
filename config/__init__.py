@@ -52,7 +52,6 @@ from config.valuation_config import (
     EPV_MIN_YEARS,
     EPV_MAX_YEARS,
     DEEP_VALUE_MIN_DISCOUNT_PCT,
-    STRONG_BUY_MIN_MOS_PCT,
 )
 
 __all__ = [
@@ -98,5 +97,4 @@ __all__ = [
     'EPV_MIN_YEARS',
     'EPV_MAX_YEARS',
     'DEEP_VALUE_MIN_DISCOUNT_PCT',
-    'STRONG_BUY_MIN_MOS_PCT',
 ]

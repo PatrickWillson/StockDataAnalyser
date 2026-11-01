@@ -542,8 +542,10 @@ def test_no_crashes_on_negative_equity(negative_equity):
         assert result['graham_number'] == "N/A", \
             f"Expected Graham Number to be 'N/A' for negative equity, got {result['graham_number']}"
         
-        assert result['verdict'] == "Rely on EPV - Negative Equity", \
-            f"Expected verdict 'Rely on EPV - Negative Equity', got {result['verdict']}"
+        # D8: negative tangible equity makes the Graham Number unavailable; it is not a verdict
+        assert result['verdict'] != "Rely on EPV - Negative Equity"
+        assert result['verdict'] in ("INSUFFICIENT DATA", "NET-NET BARGAIN", "OVERVALUED", "DEFENSIVE BUY",
+                                     "ENTERPRISING BUY", "UNDERVALUED – FAILS GRAHAM CRITERIA")
         
         # Verify warning was added
         assert any("Negative Tangible Book Value" in w for w in result['warnings']), \

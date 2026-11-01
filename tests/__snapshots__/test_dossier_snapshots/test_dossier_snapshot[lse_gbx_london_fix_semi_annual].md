@@ -13,6 +13,7 @@
 *Current metrics (P/E, Price) reflect most recent available data*
 
 - Verdict: **OVERVALUED**
+  - Price is not below conservative intrinsic value (margin of safety -349.6%)
 - Graham Number (Single-Year EPS): 12.78 GBP
 - Graham Number (3-Year Avg EPS): 8.42 GBP
   - ⚠️ Note: 3-year average (34% lower) reveals earnings peaked in recent year

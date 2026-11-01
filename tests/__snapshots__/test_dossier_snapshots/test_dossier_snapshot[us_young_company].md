@@ -13,6 +13,7 @@
 *Current metrics (P/E, Price) reflect most recent available data*
 
 - Verdict: **OVERVALUED**
+  - Price is not below conservative intrinsic value (margin of safety -701.1%)
 - Graham Number (Single-Year EPS): 23.68 USD
 - Graham Number (3-Year Avg EPS): 23.40 USD
 - Intrinsic Value (EPV per share): N/A (requires 7+ years of annual earnings with a positive average)

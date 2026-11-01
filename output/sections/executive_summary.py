@@ -14,7 +14,7 @@ class ExecutiveSummarySection(DossierSection):
     """Generates the executive summary section of the dossier.
     
     This section includes:
-    - Verdict (UNDERVALUED/FAIRLY VALUED/OVERVALUED)
+    - Verdict (core.verdict, design D8) and the rule that produced it
     - Intrinsic values (Graham Number, EPV, Net-Net)
     - Margin of Safety
     - Current price and 52-week range
@@ -54,6 +54,8 @@ class ExecutiveSummarySection(DossierSection):
         
         # Verdict
         lines.append(f"- Verdict: **{self.metrics['verdict']}**")
+        if self.metrics.get('verdict_reason'):
+            lines.append(f"  - {self.metrics['verdict_reason']}")
         
         # Intrinsic values
         self._add_intrinsic_values(lines, unified_currency)
