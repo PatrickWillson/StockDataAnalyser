@@ -9,6 +9,7 @@ import logging
 from typing import Dict, Any, List, Optional
 from core.currency_converter import CurrencyConverter
 from core.history import has_statement_data, is_dividend_only_year
+from core.models import HistoryRow, or_default
 from core.price_quote import PriceQuote, same_currency
 from core.statement_parsing import parse_balance_sheet_rows, parse_income_statement_rows
 from config.valuation_config import NORMALIZED_EPS_YEARS
@@ -863,8 +864,7 @@ class FinancialDataProcessor:
         
         # Validate each year has valid EPS
         for year in three_years:
-            year_data = history[year]
-            eps = year_data.get('eps')
+            eps = or_default(HistoryRow.from_dict(history[year]).eps, None)
             
             # Check for null, "NA" strings, or non-numeric values
             if eps is None or eps == "" or eps == "NA" or eps == "N/A":

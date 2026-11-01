@@ -8,37 +8,43 @@ differ on purpose and are kept distinct so existing behaviour is unchanged. Unif
 them is a behaviour change and must be done (and snapshot-reviewed) separately.
 """
 
-from typing import Any, Callable, Dict, Iterable, Optional
+from typing import Any, Callable, Iterable, Mapping, Optional, Union
 
-YearData = Dict[str, Any]
+from core.models import MISSING, HistoryRow, or_default
+
+# A row as a HistoryRow, or its dict form (assembly works on dicts; each predicate normalises)
+YearData = Union[HistoryRow, Mapping[str, Any]]
 
 
 def has_statement_data(year_data: YearData) -> bool:
     """Revenue, net income (may be a loss) or equity reported."""
+    row = HistoryRow.from_dict(year_data)
     return (
-        year_data.get('revenue', 0.0) > 0
-        or year_data.get('net_income', 0.0) != 0
-        or year_data.get('total_equity', 0.0) > 0
+        or_default(row.revenue, 0.0) > 0
+        or or_default(row.net_income, 0.0) != 0
+        or or_default(row.total_equity, 0.0) > 0
     )
 
 
 def has_statement_or_current_assets(year_data: YearData) -> bool:
     """has_statement_data, or current assets reported."""
-    return has_statement_data(year_data) or year_data.get('current_assets', 0.0) > 0
+    return has_statement_data(year_data) or or_default(HistoryRow.from_dict(year_data).current_assets, 0.0) > 0
 
 
 def has_income_data(year_data: YearData) -> bool:
     """Revenue, net income (may be a loss) or EPS reported."""
+    row = HistoryRow.from_dict(year_data)
     return (
-        year_data.get('revenue', 0.0) > 0
-        or year_data.get('net_income', 0.0) != 0
-        or year_data.get('eps', 0.0) != 0
+        or_default(row.revenue, 0.0) > 0
+        or or_default(row.net_income, 0.0) != 0
+        or or_default(row.eps, 0.0) != 0
     )
 
 
 def has_balance_sheet_data(year_data: YearData) -> bool:
     """Current assets or equity reported."""
-    return year_data.get('current_assets', 0.0) > 0 or year_data.get('total_equity', 0.0) > 0
+    row = HistoryRow.from_dict(year_data)
+    return or_default(row.current_assets, 0.0) > 0 or or_default(row.total_equity, 0.0) > 0
 
 
 def is_dividend_only_year(year_data: YearData) -> bool:
@@ -48,12 +54,13 @@ def is_dividend_only_year(year_data: YearData) -> bool:
     revenue or equity, so it is not dividend-only. Rows lacking those keys are not judged
     dividend-only (they are partial data, not placeholders).
     """
-    statement_fields = ('revenue', 'net_income', 'total_equity')
-    return (all(field in year_data and year_data[field] in (0, 0.0) for field in statement_fields)
-            and year_data.get('eps') in (None, 0, 0.0))
+    row = HistoryRow.from_dict(year_data)
+    statement_values = (row.revenue, row.net_income, row.total_equity)
+    return (all(value is not MISSING and value in (0, 0.0) for value in statement_values)
+            and or_default(row.eps, None) in (None, 0, 0.0))
 
 
-def latest_year(history: Dict[str, YearData], years: Iterable[str],
+def latest_year(history: Mapping[str, YearData], years: Iterable[str],
                 predicate: Callable[[YearData], bool] = has_statement_data) -> Optional[str]:
     """
     First year in `years` (callers pass newest first) whose row satisfies `predicate`.
