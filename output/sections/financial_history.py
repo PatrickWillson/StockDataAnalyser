@@ -6,9 +6,9 @@ per share, total debt, shares outstanding, historical prices, and valuation rati
 """
 
 from typing import List, Dict, Any, Optional
-from config.data_quality_config import FINANCIAL_HISTORY_YEARS
-from core.history import has_income_data
+
 from output.sections.base import DossierSection
+from core.report_context import ReportContext, build_report_context
 
 
 class FinancialHistorySection(DossierSection):
@@ -25,13 +25,15 @@ class FinancialHistorySection(DossierSection):
     Requirements: 2.7
     """
     
-    def __init__(self, financial_data: Dict[str, Any]):
+    def __init__(self, financial_data: Dict[str, Any], context: Optional[ReportContext] = None):
         """Initialize financial history section.
         
         Args:
             financial_data: Dictionary containing financial data (FinancialData DTO)
+            context: Shared view model (built here when the section is used alone)
         """
         self.financial_data = financial_data
+        self.context = context or build_report_context(financial_data)
     
     @staticmethod
     def format_debt(value: float, currency: str = None) -> str:
@@ -174,16 +176,13 @@ class FinancialHistorySection(DossierSection):
         lines.append(f"| Year | Revenue | Net Income | EPS | {div_header} | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |")
         lines.append("|------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|")
         
-        # Get history and sort years descending (most recent first)
-        history = self.financial_data.get('history', {})
-        sorted_years = sorted(history.keys(), reverse=True)[:FINANCIAL_HISTORY_YEARS]
-        
         # Track incomplete years for notes
         incomplete_years = []
         
-        # Generate table rows
-        for year in sorted_years:
-            data = history[year]
+        # Generate table rows (latest FINANCIAL_HISTORY_YEARS, newest first)
+        for table_row in self.context.history_table:
+            year = table_row.year
+            data = table_row.row
             revenue = data.get('revenue', 0.0)
             net_income = data.get('net_income', 0.0)
             eps = data.get('eps', 0.0)
@@ -192,8 +191,8 @@ class FinancialHistorySection(DossierSection):
             shares_outstanding = data.get('shares_outstanding', 0.0)
             year_end_price = data.get('year_end_price')  # Can be None
             
-            # Check if this year has actual financial data or just dividend data
-            has_financial_data = has_income_data(data)
+            # Does this year have actual financial data or just dividend data?
+            has_financial_data = table_row.has_income
             
             # Format values - show "[Data Unavailable]" for years without financial statements
             if not has_financial_data and dividend > 0:
@@ -224,10 +223,7 @@ class FinancialHistorySection(DossierSection):
                 else:
                     dividend_str = self.format_per_share(dividend) if is_dividend_amounts else f"{dividend:.0f}"
                 
-                # Calculate BVPS from balance sheet data
-                total_equity = data.get('total_equity', 0)
-                shares = data.get('shares_outstanding', 0)
-                bvps = round(total_equity / shares, 2) if shares > 0 and total_equity > 0 else 0
+                bvps = table_row.bvps
                 bvps_str = f"{bvps:.2f}" if bvps > 0 else 'N/A'
                 
                 # Get WCPS (already calculated in financial_data_processor)

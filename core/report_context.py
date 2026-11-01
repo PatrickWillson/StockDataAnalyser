@@ -9,8 +9,20 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Mapping, Optional, Tuple
 
 from config.risk_thresholds import PROFIT_MARGIN_SANITY_LIMIT_PCT, RISK_HISTORY_WINDOW_YEARS
-from core.formulas import tangible_equity
-from core.history import has_statement_data, latest_year
+from core.financial_data_processor import FinancialDataProcessor
+from core.formulas import net_current_asset_value, tangible_equity
+from core.price_quote import is_minor_unit, major_currency
+from config.data_quality_config import FINANCIAL_HISTORY_YEARS
+from core.history import has_income_data, has_statement_data, latest_year
+
+
+@dataclass(frozen=True)
+class HistoryTableRow:
+    """One row of the 20-year financial history table."""
+    year: str                      # history key ('YYYY-MM-DD')
+    row: Mapping[str, Any]
+    has_income: bool               # False: a dividend-only row ("[Data Unavailable]")
+    bvps: float                    # total equity / shares rounded to 2 dp; 0 when not computable
 
 
 @dataclass(frozen=True)
@@ -116,6 +128,20 @@ class ReportContext:
     trailing_yield_pct: Optional[float] = None
     forward_dividend: float = 0.0
     forward_yield_pct: Optional[float] = None
+    # EODHD Highlights.BookValue (converted) against our latest BVPS, % difference (labelled comparison)
+    api_bvps_diff_pct: Optional[float] = None
+    # The three latest reported years' EPS (FinancialDataProcessor.extract_3year_eps_data); None
+    # without history
+    three_year_eps: Optional[Mapping[str, Any]] = None
+    three_year_eps_avg: Optional[float] = None
+    # Latest reported year: current assets - total liabilities - claims ahead of the common
+    latest_ncav: Optional[float] = None
+    # Quote currency (yfinance, else EODHD's trading code) and whether it is a minor unit (GBp, ZAc ...)
+    quote_currency: Optional[str] = None
+    quote_is_minor_unit: bool = False
+    quote_major_currency: Optional[str] = None
+    # Latest FINANCIAL_HISTORY_YEARS rows, newest first
+    history_table: Tuple[HistoryTableRow, ...] = ()
 
     @property
     def latest_year_label(self) -> Optional[str]:
@@ -139,14 +165,35 @@ def build_report_context(financial_data: Dict[str, Any], metrics: Optional[Dict[
     trailing = row.get('dividend', 0.0) if financial_data.get('is_dividend_amounts', False) else 0.0
     forward = financial_data.get('forward_dividend_rate') or 0.0
 
+    bvps = equity / shares if has_book else None
+    api_bvps = financial_data.get('book_value_per_share') or 0
+    eps_data = FinancialDataProcessor.extract_3year_eps_data(history) if history else None
+    quote_currency = financial_data.get('price_quote_currency') or financial_data.get('original_stock_currency')
+
     def yield_pct(amount):
         return (amount / price) * 100 if amount and amount > 0 and price > 0 else None
 
     return ReportContext(
         latest_year=year, latest_row=row, risk=_risk_figures(financial_data, history, years, row),
-        latest_bvps=equity / shares if has_book else None,
+        latest_bvps=bvps,
         latest_tangible_equity=tangible,
         latest_tbvps=tangible / shares if has_book else None,
         trailing_dividend=trailing, trailing_yield_pct=yield_pct(trailing),
         forward_dividend=forward, forward_yield_pct=yield_pct(forward),
+        api_bvps_diff_pct=abs(bvps - api_bvps) / api_bvps * 100 if bvps is not None and api_bvps > 0 else None,
+        three_year_eps=eps_data,
+        three_year_eps_avg=sum(eps_data['eps_values']) / 3 if eps_data and eps_data['valid'] else None,
+        latest_ncav=net_current_asset_value(row.get('current_assets', 0), row.get('total_liabilities', 0),
+                                            row.get('claims_outside_equity', 0.0)) if row else None,
+        quote_currency=quote_currency,
+        quote_is_minor_unit=is_minor_unit(quote_currency),
+        quote_major_currency=major_currency(quote_currency),
+        history_table=tuple(_history_table_row(key, history[key]) for key in years[:FINANCIAL_HISTORY_YEARS]),
     )
+
+
+def _history_table_row(year: str, row: Mapping[str, Any]) -> HistoryTableRow:
+    equity = row.get('total_equity', 0)
+    shares = row.get('shares_outstanding', 0)
+    return HistoryTableRow(year=year, row=row, has_income=has_income_data(row),
+                           bvps=round(equity / shares, 2) if shares > 0 and equity > 0 else 0)

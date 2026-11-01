@@ -376,15 +376,10 @@ class MethodologySection(DossierSection):
             lines: List to append lines to
             unified_currency: Currency for display
         """
-        from core.financial_data_processor import FinancialDataProcessor
-        
-        history = self.financial_data.get('history', {})
-        if not history:
+        eps_data = self.context.three_year_eps
+        if eps_data is None:
             lines.append("  **3-Year EPS**: No financial history available")
             return
-        
-        # Extract 3-year EPS data
-        eps_data = FinancialDataProcessor.extract_3year_eps_data(history)
         
         if not eps_data['valid']:
             # Show why calculation failed
@@ -402,8 +397,7 @@ class MethodologySection(DossierSection):
             eps_display = format_price_display(eps, unified_currency, unified_currency)
             eps_parts.append(f"{year_label}: {eps_display}")
         
-        # Calculate average
-        eps_avg = sum(eps_values) / 3
+        eps_avg = self.context.three_year_eps_avg
         avg_display = format_price_display(eps_avg, unified_currency, unified_currency)
         
         # Format: "3-Year EPS: [Year1: $X.XX, Year2: $Y.YY, Year3: $Z.ZZ] → Avg: $A.AA"

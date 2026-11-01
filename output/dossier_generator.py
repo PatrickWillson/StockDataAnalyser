@@ -93,7 +93,7 @@ class DossierGenerator:
         self.methodology = MethodologySection(financial_data, metrics, context)
         self.calculation_details = CalculationDetailsSection(financial_data, metrics, context)
         self.graham_tests = GrahamTestsSection(metrics)
-        self.financial_history = FinancialHistorySection(financial_data)
+        self.financial_history = FinancialHistorySection(financial_data, context)
         
         # Initialize TTM section if data available
         if ttm_metrics and ttm_metrics.get('ttm_graham_number') != "N/A":

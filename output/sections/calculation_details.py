@@ -7,10 +7,9 @@ Net-Net Value calculation, currency conversion details, and EPV methodology clar
 """
 
 from typing import List, Dict, Any, Optional
-from core.formulas import net_current_asset_value
-from core.price_quote import is_minor_unit, major_currency
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
 from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
+from config.data_quality_config import BVPS_MAX_DIFF_PCT
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
 
@@ -152,12 +151,10 @@ class CalculationDetailsSection(DossierSection):
             lines.append(f"- **Book Value Per Share (BVPS)**: {bvps:.2f} {unified_currency} (without subtracting intangibles)")
             
             # Compare to API if available
-            api_bvps = self.financial_data.get('book_value_per_share', 0)
-            if api_bvps is None:
-                api_bvps = 0
-            if api_bvps > 0:
-                diff_pct = abs(bvps - api_bvps) / api_bvps * 100
-                if diff_pct > 15:
+            api_bvps = self.financial_data.get('book_value_per_share') or 0
+            diff_pct = self.context.api_bvps_diff_pct
+            if diff_pct is not None:
+                if diff_pct > BVPS_MAX_DIFF_PCT:
                     lines.append(f"- **API Book Value**: {api_bvps:.2f} {unified_currency} ({diff_pct:.1f}% difference)")
                     lines.append("  - **Explanation**: Differences may be due to:")
                     lines.append("    - Different share count (API may use basic vs. diluted)")
@@ -220,7 +217,7 @@ class CalculationDetailsSection(DossierSection):
                     lines.append(f"- **Less: Minority Interest and Other Claims Outside Common Equity**: "
                                  f"{claims_outside_equity:,.0f} {unified_currency}")
                 
-                net_current_assets = net_current_asset_value(current_assets, total_liabilities, claims_outside_equity)
+                net_current_assets = self.context.latest_ncav
                 lines.append(f"- **Net Current Assets**: {net_current_assets:,.0f} {unified_currency}")
                 lines.append(f"- **Divided by Shares**: {shares_used:,.0f}")
                 lines.append(f"- **Net-Net Value Per Share**: {net_net:.2f} {unified_currency}")
@@ -242,14 +239,14 @@ class CalculationDetailsSection(DossierSection):
             unified_currency: Unified currency for analysis
         """
         # The price unit follows the quote currency code (F6), e.g. GBp = pence
-        quote_currency = self.financial_data.get('price_quote_currency') or original_stock_currency
-        minor_unit_quote = is_minor_unit(quote_currency)
+        quote_currency = self.context.quote_currency
+        minor_unit_quote = self.context.quote_is_minor_unit
         if original_stock_currency != unified_currency or minor_unit_quote:
             lines.append("### Currency Conversion Details:")
             fx_rate = self.financial_data.get('fx_rate_used', 0)
             
             if minor_unit_quote:
-                major = major_currency(quote_currency)
+                major = self.context.quote_major_currency
                 name = "London Fix" if major == "GBP" else "Minor-Unit Conversion"
                 lines.append(f"- **Stock Trading Currency**: {original_stock_currency} (price quoted in {quote_currency})")
                 lines.append(f"- **Financial Statements Currency**: {unified_currency}")
