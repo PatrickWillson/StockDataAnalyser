@@ -10,13 +10,13 @@ This module implements strict Graham formulas for value investing analysis:
 - Defensive Investor Tests
 """
 
-from core.models import GrahamResult
+from core.models import FinancialData, GrahamResult, or_default
 from core.formulas import graham_number, margin_of_safety_pct, net_current_asset_value, tangible_equity
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Union
 
 from config.graham_constants import GRAHAM_MULTIPLIER, COST_OF_CAPITAL
-from core.history import has_statement_data, has_statement_or_current_assets
+from core.history import has_statement_data, has_statement_or_current_assets, row_at
 from core.investor_tests import defensive, enterprising
 from core.investor_tests.criteria import latest_current_ratio
 from core.verdict import determine_verdict
@@ -43,14 +43,14 @@ class GrahamCalculator:
     - Missing data
     """
     
-    def __init__(self, financial_data: dict):
+    def __init__(self, financial_data: Union[FinancialData, dict]):
         """
         Initialize calculator with financial data.
         
         Args:
-            financial_data: Dictionary containing ticker, price, currency, history, etc.
+            financial_data: FinancialData (or its dict form): ticker, price, currency, history, etc.
         """
-        self.data = financial_data
+        self.data = FinancialData.from_dict(financial_data)
         self.warnings = []
     
     def _get_latest_financial_year(self, history: dict, years: list) -> str:
@@ -87,7 +87,7 @@ class GrahamCalculator:
         Returns:
             float: TBVPS value, or "N/A" if data unavailable or negative
         """
-        history = self.data.get('history', {})
+        history = or_default(self.data.history, {})
         if not history:
             return "N/A"
         
@@ -103,10 +103,10 @@ class GrahamCalculator:
         year_data = history[latest_year]
         
         # Extract required fields
-        total_equity = year_data.get('total_equity', 0.0)
-        intangible_assets = year_data.get('intangible_assets', 0.0)
-        goodwill = year_data.get('goodwill', 0.0)
-        shares_outstanding = year_data.get('shares_outstanding', 0.0)
+        total_equity = or_default(year_data.total_equity, 0.0)
+        intangible_assets = or_default(year_data.intangible_assets, 0.0)
+        goodwill = or_default(year_data.goodwill, 0.0)
+        shares_outstanding = or_default(year_data.shares_outstanding, 0.0)
         
         # Validate shares outstanding
         if shares_outstanding == 0:
@@ -141,7 +141,7 @@ class GrahamCalculator:
             return "N/A"
         
         # Get most recent EPS from year with financial data
-        history = self.data.get('history', {})
+        history = or_default(self.data.history, {})
         if not history:
             return "N/A"
         
@@ -153,7 +153,7 @@ class GrahamCalculator:
         if not latest_year:
             return "N/A"
         
-        eps = history[latest_year].get('eps', 0.0)
+        eps = or_default(history[latest_year].eps, 0.0)
         
         # Handle negative EPS
         if eps <= 0:
@@ -188,7 +188,7 @@ class GrahamCalculator:
             return "N/A"
         
         # Get financial history
-        history = self.data.get('history', {})
+        history = or_default(self.data.history, {})
         if not history:
             self.warnings.append("Normalized Graham Number: No financial history available")
             return "N/A"
@@ -234,7 +234,7 @@ class GrahamCalculator:
         Returns:
             float: Net-Net Value rounded to 2 decimals, or "N/A" if data unavailable
         """
-        history = self.data.get('history', {})
+        history = or_default(self.data.history, {})
         if not history:
             return "N/A"
         
@@ -250,9 +250,9 @@ class GrahamCalculator:
         year_data = history[latest_year]
         
         # Extract required fields
-        current_assets = year_data.get('current_assets')
-        total_liabilities = year_data.get('total_liabilities')
-        shares_outstanding = year_data.get('shares_outstanding', 0.0)
+        current_assets = or_default(year_data.current_assets, None)
+        total_liabilities = or_default(year_data.total_liabilities, None)
+        shares_outstanding = or_default(year_data.shares_outstanding, 0.0)
         
         # Handle missing data
         if current_assets is None or total_liabilities is None:
@@ -263,7 +263,7 @@ class GrahamCalculator:
             return "N/A"
         
         # Calculate Net-Net Value
-        claims_outside_equity = year_data.get('claims_outside_equity', 0.0)
+        claims_outside_equity = or_default(year_data.claims_outside_equity, 0.0)
         net_net = net_current_asset_value(current_assets, total_liabilities, claims_outside_equity) / shares_outstanding
         
         return round(net_net, 2) if round_result else net_net
@@ -288,7 +288,7 @@ class GrahamCalculator:
                     'long_term_debt': "N/A", 'debt_coverage_ratio': "N/A", 'debt_coverage_pct': "N/A",
                     'warnings': [reason]}
         
-        history = self.data.get('history', {})
+        history = or_default(self.data.history, {})
         if not history:
             return unavailable("No financial history available")
         latest_year = self._get_latest_financial_year(history, sorted(history.keys(), reverse=True))
@@ -296,14 +296,14 @@ class GrahamCalculator:
             return unavailable("No financial data available")
         
         year_data = history[latest_year]
-        current_assets = year_data.get('current_assets')
-        current_liabilities = year_data.get('current_liabilities')
-        long_term_debt = year_data.get('long_term_debt', 0.0)
+        current_assets = or_default(year_data.current_assets, None)
+        current_liabilities = or_default(year_data.current_liabilities, None)
+        long_term_debt = or_default(year_data.long_term_debt, 0.0)
         if current_assets is None or current_liabilities is None:
             return unavailable("Balance sheet data unavailable")
         
         warnings = []
-        sector = (self.data.get('sector') or '').lower()
+        sector = (or_default(self.data.sector, None) or '').lower()
         if 'financial' in sector or 'bank' in sector:
             warnings.append("NCA analysis may not be applicable for Financial companies due to balance sheet structure")
         
@@ -339,7 +339,7 @@ class GrahamCalculator:
         Returns:
             float: Quick Ratio rounded to 2 decimals, or "N/A" if cannot calculate
         """
-        history = self.data.get('history', {})
+        history = or_default(self.data.history, {})
         if not history:
             return "N/A"
         
@@ -355,9 +355,9 @@ class GrahamCalculator:
         year_data = history[latest_year]
         
         # Extract required fields
-        current_assets = year_data.get('current_assets')
-        inventory = year_data.get('inventory')
-        current_liabilities = year_data.get('current_liabilities')
+        current_assets = or_default(year_data.current_assets, None)
+        inventory = or_default(year_data.inventory, None)
+        current_liabilities = or_default(year_data.current_liabilities, None)
         
         # Handle missing current assets or current liabilities
         if current_assets is None or current_liabilities is None:
@@ -405,7 +405,7 @@ class GrahamCalculator:
                 - pe_on_avg: Union[float, str] - P/E ratio or "N/A"
                 - years_used: List[str] - Years included in average
         """
-        history = self.data.get('history', {})
+        history = or_default(self.data.history, {})
         if not history:
             return {
                 'three_year_avg_eps': "N/A",
@@ -439,7 +439,7 @@ class GrahamCalculator:
         # Extract EPS for each year (including negative values for losses)
         eps_values = []
         for year in years_to_use:
-            eps = history[year].get('eps', 0.0)
+            eps = or_default(history[year].eps, 0.0)
             eps_values.append(eps)
         
         # Convert to Decimal for precise calculation
@@ -454,7 +454,7 @@ class GrahamCalculator:
         avg_eps = float(avg_eps_rounded)
         
         # Calculate P/E ratio
-        price = self.data.get('price', 0.0)
+        price = or_default(self.data.price, 0.0)
         
         if avg_eps <= 0:
             # Cannot calculate meaningful P/E with zero or negative average earnings
@@ -491,8 +491,8 @@ class GrahamCalculator:
                 - product: Union[float, str] - P/E × P/B or "N/A"
                 - result: str - "PASS" (product ≤ 22.5), "FAIL", or "N/A"
         """
-        history = self.data.get('history', {})
-        price = self.data.get('price', 0.0)
+        history = or_default(self.data.history, {})
+        price = or_default(self.data.price, 0.0)
         multiples = defensive.pe_pb_multiples(history, sorted(history.keys(), reverse=True), price)
         
         def shown(value):
@@ -647,7 +647,7 @@ class GrahamCalculator:
         # Calculate average net income INCLUDING loss years
         net_incomes = []
         for year in years_to_use:
-            net_income = history[year].get('net_income', 0.0)
+            net_income = or_default(row_at(history, year).net_income, 0.0)
             net_incomes.append(net_income)
         
         # Arithmetic mean of all years (including losses)
@@ -665,7 +665,7 @@ class GrahamCalculator:
         if not latest_year:
             return "N/A - No financial data available"
         
-        shares = history[latest_year].get('shares_outstanding', 0)
+        shares = or_default(row_at(history, latest_year).shares_outstanding, 0)
         epv_per_share = epv / shares if shares > 0 else "N/A"  # no share count: unknown, not zero
         
         result = {
@@ -699,7 +699,7 @@ class GrahamCalculator:
                 'epv_per_share': float
             }
         """
-        history = self.data.get('history', {})
+        history = or_default(self.data.history, {})
         
         # Call the new normalized method
         result = self.compute_epv_normalized(history, round_result=True)
@@ -734,8 +734,8 @@ class GrahamCalculator:
         Returns:
             Dictionary with test names as keys and PASS/FAIL/"N/A" as values
         """
-        history = self.data.get('history', {})
-        price = self.data.get('price', 0.0)
+        history = or_default(self.data.history, {})
+        price = or_default(self.data.price, 0.0)
         
         if not history:
             return dict(enterprising.EMPTY_RESULTS if investor_type == "enterprising" else defensive.EMPTY_RESULTS)
@@ -747,7 +747,7 @@ class GrahamCalculator:
             if tbvps is _UNSET:
                 tbvps = self.compute_tbvps(round_result=False)
             return enterprising.run_enterprising_tests(history, years, num_years, price, tbvps)
-        return defensive.run_defensive_tests(history, years, num_years, price, self.data.get('industry'))
+        return defensive.run_defensive_tests(history, years, num_years, price, or_default(self.data.industry, None))
     
     # Keep old method name for backward compatibility
     def run_defensive_tests(self) -> dict:
@@ -766,7 +766,7 @@ class GrahamCalculator:
         Returns:
             {'ratio': float rounded to 2dp or "N/A", 'fiscal_year_end': str or None}
         """
-        history = self.data.get('history', {})
+        history = or_default(self.data.history, {})
         year, ratio = latest_current_ratio(history, sorted(history.keys(), reverse=True))
         return {
             'ratio': round(ratio, 2) if ratio is not None else "N/A",
@@ -797,7 +797,7 @@ class GrahamCalculator:
         three_year_avg_pe = self.compute_three_year_avg_pe()
         combined_pe_pb_test = self.compute_combined_pe_pb_test()
         
-        price = self.data.get('price', 0.0)
+        price = or_default(self.data.price, 0.0)
         margin_of_safety_data = self.compute_margin_of_safety(price, normalized_gn=normalized_graham_number,
                                                               epv_data=epv_data)
         
@@ -834,7 +834,7 @@ class GrahamCalculator:
             'combined_pe_pb_test': combined_pe_pb_test,
             'verdict': verdict['verdict'],
             'verdict_reason': verdict['reason'],
-            'public_utility': defensive.is_public_utility(self.data.get('industry')),
+            'public_utility': defensive.is_public_utility(or_default(self.data.industry, None)),
             'defensive_tests': defensive_tests,
             'enterprising_tests': enterprising_tests,
             'warnings': self.warnings.copy()
