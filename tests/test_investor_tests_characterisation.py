@@ -291,24 +291,25 @@ class TestCurrentDividend:
 
 
 class TestEnterprisingPrice:
-    """Currently: P/E < 10 OR price < 1.2 x TBVPS (TBVPS = 500 / 50 = 10 in _year())."""
+    """F20: P/E < 10 AND price < 1.2 x TBVPS (TBVPS = 500 / 50 = 10 in _year())."""
 
-    def test_low_pe_alone_passes(self):
-        assert _run("_test_enterprising_price", {"2023-12-31": _year(eps=2.0)}, price=19.0) == "PASS"
+    def test_both_conditions_pass(self):
+        assert _run("_test_enterprising_price", {"2023-12-31": _year(eps=2.0)}, price=11.9) == "PASS"
 
-    def test_price_below_120_percent_of_tbvps_alone_passes(self):
-        assert _run("_test_enterprising_price", {"2023-12-31": _year(eps=0.5)}, price=11.9) == "PASS"
+    def test_low_pe_alone_fails(self):
+        # P/E 9.5 but price 19 is 190% of tangible book
+        assert _run("_test_enterprising_price", {"2023-12-31": _year(eps=2.0)}, price=19.0) == "FAIL"
 
-    def test_non_positive_eps_falls_back_to_tbvps_rule(self):
+    def test_price_below_120_percent_of_tbvps_alone_fails(self):
+        # Price 11.9 < 12 but P/E 23.8
+        assert _run("_test_enterprising_price", {"2023-12-31": _year(eps=0.5)}, price=11.9) == "FAIL"
+
+    def test_non_positive_eps_fails(self):
         assert _run("_test_enterprising_price", {"2023-12-31": _year(eps=0.0, net_income=-5.0)},
-                    price=11.0) == "PASS"
+                    price=11.0) == "FAIL"
 
     def test_neither_condition_fails(self):
         assert _run("_test_enterprising_price", {"2023-12-31": _year(eps=1.0)}, price=12.0) == "FAIL"
-
-    def test_known_defect_either_condition_is_enough(self):
-        # Known defect: rules are OR'd, so a stock far above tangible book still passes on P/E alone
-        assert _run("_test_enterprising_price", {"2023-12-31": _year(eps=10.0)}, price=99.0) == "PASS"
 
     def test_negative_tbvps_and_high_pe_fails(self):
         history = {"2023-12-31": _year(eps=1.0, goodwill=1000.0)}

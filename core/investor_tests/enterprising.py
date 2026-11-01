@@ -35,18 +35,20 @@ def current_dividend(history: dict, years: list) -> str:
 
 
 def price_test(history: dict, years: list, price: float, tbvps: Optional[object]) -> str:
-    """P/E below MAX_PE_RATIO or price below MAX_PB_RATIO × TBVPS (tbvps: unrounded float or "N/A")."""
+    """
+    Criteria 5.1 and 5.6 together (GRAHAM_METHODOLOGY §5: all criteria apply together): a low
+    multiplier, P/E on the latest EPS below MAX_PE_RATIO, AND price below MAX_PB_RATIO (120%) of
+    net tangible assets per share (tbvps: unrounded float or "N/A").
+    """
     if not years or price == 0:
         return 'FAIL'
     latest_year = latest_financial_year(history, years)
     if not latest_year:
         return 'FAIL'
     eps = history[latest_year].get('eps', 0.0)
-    if eps > 0 and price / eps < ENTERPRISING.MAX_PE_RATIO:
-        return 'PASS'
-    if isinstance(tbvps, float) and tbvps > 0 and price < tbvps * ENTERPRISING.MAX_PB_RATIO:
-        return 'PASS'
-    return 'FAIL'
+    low_multiple = eps > 0 and price / eps < ENTERPRISING.MAX_PE_RATIO
+    below_assets = isinstance(tbvps, float) and tbvps > 0 and price < tbvps * ENTERPRISING.MAX_PB_RATIO
+    return 'PASS' if low_multiple and below_assets else 'FAIL'
 
 
 def run_enterprising_tests(history: dict, years: list, num_years: int, price: float, tbvps) -> dict:

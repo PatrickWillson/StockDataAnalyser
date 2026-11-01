@@ -295,7 +295,7 @@
       "dividend_record": "PASS",
       "earnings_growth": "N/A - Not Required",
       "earnings_stability": "PASS",
-      "price_test": "PASS"
+      "price_test": "FAIL"
     },
     "epv": 66126810.0,
     "epv_details": {

@@ -112,7 +112,7 @@ The ordered verdict rules are in `claude-output/REFACTOR_SCOPE.md` (D8) and will
 | Defensive P/B (4.7) | ≤ 1.5 × tangible book (§3.5), or P/E × P/B ≤ 22.5 with the P/E on three-year average earnings (the 4.6 multiplier) | Same; the product relaxes P/B only (P/E ≤ 15 still required by 4.6) | **Fixed (F20)** (preferred stock not yet deducted from tangible book — §11 E10) |
 | Book value for Graham Number | Tangible book (§3.5 decision) | Tangible book (TBVPS) | **Decided** — matches |
 | Adequate size (4.1) | Required | Not implemented | Ignored by decision D7 |
-| Enterprising price (5.1, 5.6) | Low P/E **and** < 120% net tangible assets | P/E < 10 **or** price < 1.2 × TBVPS | F20 (AND) |
+| Enterprising price (5.1, 5.6) | Low P/E **and** < 120% net tangible assets | P/E < 10 **and** price < 1.2 × TBVPS | **Fixed (F20)** |
 | Enterprising earnings growth (5.5) | Required (≈5-year) | "N/A - Not Required" | F20 |
 | Verdict (§7) | Quality **and** margin of safety | ENTERPRISING BUY can override a negative MoS; N/A counts as pass | F20 (D8) |
 | Historical prices | Actual market price, adjusted only for splits / capital changes (§2.4, §8.3) | Split-adjusted, not dividend-adjusted | **Fixed (F8)**. Open check: Yahoo closes are split-adjusted to today's share basis while each year's EPS uses that year's share count, so a split year may mismatch — unverified against real data |
