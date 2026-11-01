@@ -97,6 +97,7 @@ The ordered rules, implemented in `core/verdict.py` (F20): no intrinsic value �
 4. Prefer conservative choices when data is ambiguous (e.g. exclude, don't impute).
 5. TTM data is informational; Graham tests use annual data only.
 6. Document every assumption and conversion in the dossier.
+7. **Restated years: use the latest restated figure, and flag it** (user decision 2026-11-01, for sources that carry every filing's version of a year, e.g. SEC EDGAR). Graham judges each year by what it really earned on a consistent basis, using later knowledge, not by the figure first reported: he compares balance sheets "to obtain a check on the reported earnings" and to determine "what we might call true earnings, as compared with reported earnings", raising one company's earlier earnings because its reserves "did not constitute in any sense real liabilities, because in July 1946…" and lowering another's because its reserves "proved insufficient" **[P]** (Lecture 2); he restates railway figures for tax carry-backs and rental payments to make them comparable **[P]** (Lecture 3). A later filing's restatement (error correction, retrospective accounting change) is the company's own correction on that basis; Graham does not discuss restated filings as such, so applying his practice to them is **[I]**. Data Quality lists every year and field whose value differs from the first-reported one.
 
 ## 9. Current code vs Graham (kept in sync with the refactor plan)
 
@@ -128,7 +129,7 @@ The ordered rules, implemented in `core/verdict.py` (F20): no intrinsic value �
 
 ## 10. Sources
 
-- Graham, *Current Problems in Security Analysis*, Lectures 1–10 (1946–47), Columbia Business School: e.g. [Lecture 4](https://business.columbia.edu/sites/default/files-efs/imce-uploads/Graham_Sept1946Feb1947_CurrentProblemsinSecurityAnalysis_Lecture4.pdf) (replace the number for other lectures).
+- Graham, *Current Problems in Security Analysis*, Lectures 1–10 (1946–47), Columbia Business School: e.g. [Lecture 2](https://business.columbia.edu/sites/default/files-efs/imce-uploads/Graham_Sept1946Feb1947_CurrentProblemsinSecurityAnalysis_Lecture2.pdf) (comparative balance sheets, true vs reported earnings), [Lecture 3](https://business.columbia.edu/sites/default/files-efs/imce-uploads/Graham_Sept1946Feb1947_CurrentProblemsinSecurityAnalysis_Lecture3.pdf) (restated railway coverage), [Lecture 4](https://business.columbia.edu/sites/default/files-efs/imce-uploads/Graham_Sept1946Feb1947_CurrentProblemsinSecurityAnalysis_Lecture4.pdf) (replace the number for other lectures).
 - Kahn & Milne, [*Benjamin Graham: The Father of Financial Analysis*](https://www.ivey.uwo.ca/media/3065497/ben-graham-father-financial-analysis.pdf) (CFA Institute Research Foundation, 1977), incl. "An Hour with Mr. Graham, March 1976".
 - [Graham number — Wikipedia](https://en.wikipedia.org/wiki/Graham_number) (quotes ch. 14 criterion 7).
 - [Benjamin Graham formula — Wikipedia](https://en.wikipedia.org/wiki/Benjamin_Graham_formula).
