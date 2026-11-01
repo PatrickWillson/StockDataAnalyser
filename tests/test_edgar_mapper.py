@@ -331,3 +331,32 @@ def test_net_income_not_guessed_when_the_minority_share_is_untagged():
     data = _profit_facts(minority=50.0)
     assert data.income_statements[0].net_income is None
     assert any("not available: only ProfitLoss is tagged" in n for n in data.notes)
+
+
+# --- Holding-company reorganisations (predecessor filers) ---------------------------------------
+
+GOOGL_SPLITS = [("2014-03-27", 2.002), ("2022-07-18", 20.0)]
+
+
+def test_predecessor_filings_extend_the_history():
+    """Alphabet (CIK 1652044, from 2015) succeeded Google Inc. (CIK 1288776): 13 years alone, 19 merged."""
+    from clients.edgar_mapper import merge_companyfacts
+    alphabet, google = fixture("GOOGL")["companyfacts"], fixture("GOOGL_PREDECESSOR")["companyfacts"]
+    alone = annual_data(alphabet, GOOGL_SPLITS)
+    merged = annual_data(merge_companyfacts(alphabet, [google]), GOOGL_SPLITS)
+    assert alone.income_statements[-1].period_end == "2013-12-31"
+    assert merged.income_statements[-1].period_end == "2007-12-31" and len(merged.income_statements) == 19
+    assert row(merged.income_statements, "2014-12-31").revenue == 66_001e6            # Google Inc. FY2014 10-K
+    # Per-share history continues on today's basis: Google's FY2008 basic EPS $13.46 / 2.002 / 20
+    assert row(merged.income_statements, "2008-12-31").eps == pytest.approx(13.46 / 2.002 / 20, abs=0.001)
+
+
+def test_successor_figures_win_where_years_overlap():
+    from clients.edgar_mapper import merge_companyfacts
+    successor = _facts({"NetIncomeLoss": [("2014-01-01", "2014-12-31", 141.0, "2016-02-01", "10-K", "USD"),
+                                          ("2015-01-01", "2015-12-31", 158.0, "2016-02-01", "10-K", "USD")]})
+    predecessor = _facts({"NetIncomeLoss": [("2013-01-01", "2013-12-31", 127.0, "2015-02-01", "10-K", "USD"),
+                                            ("2014-01-01", "2014-12-31", 144.0, "2015-02-01", "10-K", "USD")]})
+    data = annual_data(merge_companyfacts(successor, [predecessor]))
+    assert {r.period_end: r.net_income for r in data.income_statements} == {
+        "2015-12-31": 158.0, "2014-12-31": 141.0, "2013-12-31": 127.0}     # 2014: the successor's later filing

@@ -39,6 +39,9 @@ class FakeEdgar:
     def fetch_submissions(self, cik):
         return self.data["submissions"]
 
+    def predecessor_ciks(self, ticker):
+        return ()
+
 
 class FakeYahoo:
     def __init__(self, data=SO_YAHOO):
@@ -139,3 +142,36 @@ def test_free_path_assembles_financial_data():
     assert data["history"]["2024-12-31"]["dividend"] == pytest.approx(0.98)   # Yahoo payments, 2024
     assert data["industry"] == "Utilities - Regulated Electric"
     assert data["warnings"][0].startswith("Dividends per year bucketed by ex-dividend date")
+
+
+class PredecessorEdgar(FakeEdgar):
+    def __init__(self):
+        super().__init__("GOOGL")
+        self.predecessor = fixture("GOOGL_PREDECESSOR")
+
+    def resolve_cik(self, ticker):
+        return "0001652044"
+
+    def predecessor_ciks(self, ticker):
+        return ("0001288776",)
+
+    def fetch_company_facts(self, cik):
+        return self.predecessor["companyfacts"] if cik == "0001288776" else self.data["companyfacts"]
+
+
+def test_predecessor_history_is_merged_and_noted():
+    yahoo = YahooCompanyData(yahoo_symbol="GOOGL", info={"currency": "USD"},
+                             splits=(("2014-03-27", 2.002), ("2022-07-18", 20.0)))
+    f = FreeUSFundamentalsSource(PredecessorEdgar(), FakeYahoo(yahoo)).fetch_fundamentals("GOOGL.US")
+    assert f.annual_income_statements[-1].period_end == "2007-12-31"
+    assert any("EARLIER YEARS FROM THE PREDECESSOR FILER GOOGLE INC." in n.upper() and "CIK 0001288776" in n
+               for n in f.notes)
+
+
+def test_successor_issuer_without_mapped_predecessor_is_noted():
+    edgar = FakeEdgar()
+    edgar.data = dict(edgar.data, submissions=dict(edgar.data["submissions"], filings={"recent": {
+        "form": ["10-K", "8-K12B"], "filingDate": ["2026-02-20", "2016-07-01"],
+        "accessionNumber": ["a", "b"], "reportDate": ["2025-12-31", ""]}}))
+    f = FreeUSFundamentalsSource(edgar, FakeYahoo()).fetch_fundamentals("SO.US")
+    assert any("filed a Form 8-K12B (successor issuer) on 2016-07-01" in n for n in f.notes)

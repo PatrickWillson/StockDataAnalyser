@@ -32,6 +32,14 @@ def _latest_filing_date(submissions: Mapping[str, Any]) -> Optional[str]:
     return max(dates) if dates else None
 
 
+def _successor_filing(submissions: Mapping[str, Any]) -> Optional[str]:
+    """Date of a Form 8-K12B (the successor-issuer notice) among the company's filings, if any."""
+    recent = submissions.get("filings", {}).get("recent", {})
+    dates = [date for form, date in zip(recent.get("form", []), recent.get("filingDate", []))
+             if str(form).startswith("8-K12B")]
+    return min(dates) if dates else None
+
+
 def _exchange(submissions: Mapping[str, Any]) -> str:
     exchanges = [e for e in submissions.get("exchanges", []) or [] if e]
     return exchanges[0] if exchanges else "US"
@@ -73,6 +81,24 @@ class FreeUSFundamentalsSource:
         self._save_debug(ticker, "submissions", submissions)
 
         notes: List[str] = []
+        predecessors = self.edgar.predecessor_ciks(ticker)
+        if predecessors:
+            earlier = []
+            for predecessor in predecessors:
+                try:
+                    earlier.append(self.edgar.fetch_company_facts(predecessor))
+                except TickerNotCoveredError:
+                    notes.append(f"SEC EDGAR: predecessor CIK {predecessor} has no XBRL data")
+            facts = edgar_mapper.merge_companyfacts(facts, earlier)
+            names = ", ".join(f"{f.get('entityName')} (CIK {str(f.get('cik')).zfill(10)})" for f in earlier)
+            if names:
+                notes.append(f"SEC EDGAR: earlier years from the predecessor filer {names}, which this company "
+                             f"succeeded in a holding-company reorganisation (shares exchanged one for one)")
+        else:
+            succession = _successor_filing(submissions)
+            if succession:
+                notes.append(f"SEC EDGAR: this company filed a Form 8-K12B (successor issuer) on {succession}; "
+                             "years before that may be under a predecessor's CIK (config SEC_PREDECESSOR_CIKS)")
         yahoo = self.yahoo.fetch_company_data(ticker)
         if yahoo is None:
             notes.append("Yahoo Finance company data unavailable: no dividend payments, splits or profile; "

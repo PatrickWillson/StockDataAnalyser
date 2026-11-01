@@ -602,3 +602,20 @@ def periodic_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, f
             balance.append(row)
     return EdgarPeriodicData(balance_sheets=tuple(balance), income_statements=tuple(income),
                              notes=notes.render())
+
+
+def merge_companyfacts(successor: Mapping[str, Any], predecessors: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
+    """
+    One companyfacts for a company and the filers it succeeded (holding-company reorganisations,
+    config SEC_PREDECESSOR_CIKS). Fact rows are pooled per concept and unit; where both report a
+    period, the successor's later filing wins through the usual latest-filed rule.
+    """
+    merged: Dict[str, Any] = {"cik": successor.get("cik"), "entityName": successor.get("entityName"), "facts": {}}
+    for source in [successor, *predecessors]:
+        for taxonomy, concepts in source.get("facts", {}).items():
+            target = merged["facts"].setdefault(taxonomy, {})
+            for tag, concept in concepts.items():
+                units = target.setdefault(tag, {"units": {}})["units"]
+                for unit, rows in concept.get("units", {}).items():
+                    units.setdefault(unit, []).extend(rows)
+    return merged

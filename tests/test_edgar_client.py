@@ -66,25 +66,27 @@ def test_sec_symbol(ticker, symbol):
 
 
 def test_resolves_cik_with_declared_user_agent_and_fetches_the_index_once():
-    client = _client({INDEX_URL: FakeResponse(200, INDEX)}, cik_overrides={})
+    client = _client({INDEX_URL: FakeResponse(200, INDEX)})
     assert client.resolve_cik("AAPL.US") == "0000320193"
     assert client.resolve_cik("BRK.B.US") == "0001067983"
     assert len(client.session.calls) == 1
     assert client.session.calls[0][1]["User-Agent"] == UA
 
 
-def test_cik_override_for_reorganised_company_skips_the_index():
-    client = _client({}, cik_overrides={"XOM": "0000034088"})
-    assert client.resolve_cik("XOM.US") == "0000034088"
-    assert client.session.calls == []
+def test_reorganised_company_resolves_to_its_current_cik_and_lists_predecessors():
+    client = _client({INDEX_URL: FakeResponse(200, INDEX)}, predecessors={"XOM": ("0000034088",)})
+    assert client.resolve_cik("XOM.US") == "0002115436"
+    assert client.predecessor_ciks("XOM.US") == ("0000034088",)
+    assert client.predecessor_ciks("AAPL.US") == ()
 
 
-def test_default_overrides_come_from_config():
-    assert EdgarClient(UA).cik_overrides["XOM"] == "0000034088"
+def test_default_predecessors_come_from_config():
+    assert EdgarClient(UA).predecessor_ciks("GOOGL.US") == ("0001288776",)
+    assert EdgarClient(UA).predecessor_ciks("XOM.US") == ("0000034088",)
 
 
 def test_unknown_ticker_is_not_covered():
-    client = _client({INDEX_URL: FakeResponse(200, INDEX)}, cik_overrides={})
+    client = _client({INDEX_URL: FakeResponse(200, INDEX)})
     with pytest.raises(TickerNotCoveredError, match="not in the SEC ticker index"):
         client.resolve_cik("ZZZZ.US")
 
@@ -111,7 +113,7 @@ def test_typed_errors(response, error):
 
 
 def test_requests_are_throttled(no_sleep):
-    client = _client({INDEX_URL: FakeResponse(200, INDEX)}, cik_overrides={})
+    client = _client({INDEX_URL: FakeResponse(200, INDEX)})
     client.resolve_cik("AAPL.US")
     client._ticker_index = None
     client.resolve_cik("AAPL.US")

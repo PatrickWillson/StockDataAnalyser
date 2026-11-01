@@ -9,12 +9,12 @@ the SEC fair-access policy (config/edgar_config.py).
 
 import logging
 import time
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Mapping, Optional, Tuple
 
 import requests
 
 from clients.base_client import BaseAPIClient
-from config.edgar_config import (SEC_CIK_OVERRIDES, SEC_COMPANY_FACTS_URL, SEC_MIN_REQUEST_INTERVAL,
+from config.edgar_config import (SEC_COMPANY_FACTS_URL, SEC_MIN_REQUEST_INTERVAL, SEC_PREDECESSOR_CIKS,
                                  SEC_SUBMISSIONS_URL, SEC_TICKER_INDEX_URL)
 from core.errors import SourceAuthError, SourceRateLimitError, SourceRequestError, TickerNotCoveredError
 
@@ -43,11 +43,12 @@ class EdgarClient(BaseAPIClient):
     """Fetches SEC EDGAR data for one or more US tickers."""
 
     def __init__(self, user_agent: str, debug: bool = False,
-                 cik_overrides: Optional[Mapping[str, str]] = None):
+                 predecessors: Optional[Mapping[str, Tuple[str, ...]]] = None):
         """
         Args:
             user_agent: requester name and contact email, as the SEC requires (SEC_USER_AGENT)
-            cik_overrides: ticker -> CIK for reorganised companies (default: config SEC_CIK_OVERRIDES)
+            predecessors: ticker -> predecessor CIKs of reorganised companies (default: config
+                SEC_PREDECESSOR_CIKS)
 
         Raises:
             ValueError: the User-Agent has no contact email
@@ -58,7 +59,7 @@ class EdgarClient(BaseAPIClient):
         super().__init__(timeout=30, max_retries=3, backoff_factor=1.0)
         self.user_agent = user_agent
         self.debug = debug
-        self.cik_overrides = dict(SEC_CIK_OVERRIDES if cik_overrides is None else cik_overrides)
+        self.predecessors = dict(SEC_PREDECESSOR_CIKS if predecessors is None else predecessors)
         self._ticker_index: Optional[Dict[str, str]] = None
         self._last_request = 0.0
 
@@ -95,10 +96,6 @@ class EdgarClient(BaseAPIClient):
             TickerNotCoveredError: the ticker is not in the SEC index (not an SEC filer)
         """
         symbol = sec_symbol(ticker)
-        if symbol in self.cik_overrides:
-            logger.warning(f"SEC: {symbol} uses CIK {self.cik_overrides[symbol]} (reorganised company; "
-                           f"see config/edgar_config.py)")
-            return self.cik_overrides[symbol]
         if self._ticker_index is None:
             index = self._get_json(SEC_TICKER_INDEX_URL)
             self._ticker_index = {str(entry["ticker"]).upper(): str(entry["cik_str"]).zfill(10)
@@ -106,6 +103,10 @@ class EdgarClient(BaseAPIClient):
         if symbol not in self._ticker_index:
             raise TickerNotCoveredError(f"{ticker}: not in the SEC ticker index (not an SEC filer?)")
         return self._ticker_index[symbol]
+
+    def predecessor_ciks(self, ticker: str) -> Tuple[str, ...]:
+        """CIKs of the filers this company succeeded (config SEC_PREDECESSOR_CIKS), oldest last."""
+        return tuple(self.predecessors.get(sec_symbol(ticker), ()))
 
     def fetch_company_facts(self, cik: str) -> Dict[str, Any]:
         """Every XBRL fact the company has filed (data.sec.gov companyfacts)."""
