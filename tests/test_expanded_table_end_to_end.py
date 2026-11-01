@@ -17,6 +17,7 @@ from clients.factory import ClientFactory
 from core.graham_math import GrahamCalculator
 from core.anomaly_detector import AnomalyDetector
 from output.dossier_generator import DossierGenerator
+from core.financial_data_assembler import load_financial_data
 
 # Load environment variables
 load_dotenv()
@@ -39,7 +40,7 @@ def test_expanded_table_has_11_columns():
     # Fetch data and generate dossier
     client = ClientFactory.create_eodhd_client(API_KEY, debug=False)
     yf_client = ClientFactory.create_yfinance_client(debug=False)
-    financial_data = client.fetch_all_data(ticker, yf_client=yf_client)
+    financial_data = load_financial_data(ticker, client, yf_client, ClientFactory.create_rate_source())
     
     # Fetch historical prices
     history_keys = list(financial_data.get('history', {}).keys())
@@ -102,7 +103,7 @@ def test_expanded_table_columns_populated():
     # Fetch data and generate dossier
     client = ClientFactory.create_eodhd_client(API_KEY, debug=False)
     yf_client = ClientFactory.create_yfinance_client(debug=False)
-    financial_data = client.fetch_all_data(ticker, yf_client=yf_client)
+    financial_data = load_financial_data(ticker, client, yf_client, ClientFactory.create_rate_source())
     
     # Fetch historical prices
     history_keys = list(financial_data.get('history', {}).keys())
@@ -219,7 +220,7 @@ def test_pe_column_shows_negative_for_losses():
     # Fetch data and generate dossier
     client = ClientFactory.create_eodhd_client(API_KEY, debug=False)
     yf_client = ClientFactory.create_yfinance_client(debug=False)
-    financial_data = client.fetch_all_data(ticker, yf_client=yf_client)
+    financial_data = load_financial_data(ticker, client, yf_client, ClientFactory.create_rate_source())
     
     # Manually inject a loss year for testing
     history = financial_data.get('history', {})
@@ -273,7 +274,7 @@ def test_graham_trend_analysis_documentation_present():
     # Fetch data and generate dossier
     client = ClientFactory.create_eodhd_client(API_KEY, debug=False)
     yf_client = ClientFactory.create_yfinance_client(debug=False)
-    financial_data = client.fetch_all_data(ticker, yf_client=yf_client)
+    financial_data = load_financial_data(ticker, client, yf_client, ClientFactory.create_rate_source())
     
     # Fetch historical prices
     history_keys = list(financial_data.get('history', {}).keys())
@@ -332,7 +333,7 @@ def test_table_markdown_syntax_valid():
     # Fetch data and generate dossier
     client = ClientFactory.create_eodhd_client(API_KEY, debug=False)
     yf_client = ClientFactory.create_yfinance_client(debug=False)
-    financial_data = client.fetch_all_data(ticker, yf_client=yf_client)
+    financial_data = load_financial_data(ticker, client, yf_client, ClientFactory.create_rate_source())
     
     # Fetch historical prices
     history_keys = list(financial_data.get('history', {}).keys())

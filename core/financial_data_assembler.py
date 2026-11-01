@@ -10,6 +10,7 @@ from core.currency_converter import CurrencyConverter
 from core.errors import PriceUnavailableError
 from core.financial_data_processor import FinancialDataProcessor
 from core.fundamentals import CompanyFundamentals
+from core.ports import FundamentalsSource, QuoteSource, RateSource
 from core.history import has_statement_data
 from core.price_quote import PriceQuote, to_major_unit
 from config.data_quality_config import (API_DATA_MAX_AGE_DAYS, BVPS_MAX_DIFF_PCT, DIVIDEND_SOURCE_MAX_DIFF_PCT,
@@ -17,6 +18,27 @@ from config.data_quality_config import (API_DATA_MAX_AGE_DAYS, BVPS_MAX_DIFF_PCT
                                          SHARE_COUNT_MAX_DIFF_PCT)
 
 logger = logging.getLogger(__name__)
+
+
+def load_financial_data(ticker: str, fundamentals_source: FundamentalsSource, quote_source: QuoteSource,
+                        rate_source: RateSource, debug: bool = False) -> Dict[str, Any]:
+    """
+    Fetch the fundamentals and current quote through the ports and assemble financial_data.
+
+    Args:
+        ticker: SYMBOL.EXCHANGE as given to the CLI (e.g. AAPL.US)
+        fundamentals_source, quote_source, rate_source: adapters chosen by clients.factory
+
+    Raises:
+        DataSourceError: a source failed; PriceUnavailableError: no usable current price
+    """
+    fundamentals = fundamentals_source.fetch_fundamentals(ticker)
+    # Current price from the quote source (the only price source); assembly itself does no I/O
+    quote = quote_source.get_quote(ticker)
+    currency_converter = CurrencyConverter(fx_client=rate_source)
+    processor = FinancialDataProcessor(currency_converter=currency_converter, debug=debug)
+    assembler = FinancialDataAssembler(processor, currency_converter, rate_source, debug=debug)
+    return assembler.assemble(fundamentals, ticker, quote=quote)
 
 
 class FinancialDataAssembler:
@@ -28,7 +50,7 @@ class FinancialDataAssembler:
         Args:
             processor: Normaliser for the fundamentals
             currency_converter: Converter sharing the same FX source
-            fx_client: FX source providing get_rate, fetch_historical_rates, match_fiscal_year_end_rates
+            fx_client: RateSource (core/ports.py)
             debug: Enable debug logging
         """
         self.processor = processor

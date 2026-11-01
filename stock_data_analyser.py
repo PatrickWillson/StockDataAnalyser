@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 # Import Core Modules
 from core.errors import DataSourceError, PriceUnavailableError
+from core.financial_data_assembler import load_financial_data
 from clients.factory import ClientFactory
 from core.graham_math import GrahamCalculator
 from core.anomaly_detector import AnomalyDetector
@@ -16,9 +17,9 @@ from core.models import FinancialData, or_default
 from output.dossier_generator import DossierGenerator
 from logging_utils import install_secret_redaction
 
-# Load Environment Variables
+# Load Environment Variables (FUNDAMENTALS_PROVIDER picks the fundamentals vendor, default "eodhd";
+# its API key is read from the variable the provider names, e.g. EODHD_API_KEY)
 load_dotenv()
-API_KEY = os.getenv("EODHD_API_KEY")
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -65,21 +66,30 @@ def main():
     
     ticker = args.ticker.upper()
     
-    # Configure logging based on debug flag
-    configure_logging(debug=args.debug, secrets=[API_KEY])
+    try:
+        provider = ClientFactory.fundamentals_provider(os.getenv("FUNDAMENTALS_PROVIDER"))
+    except ValueError as e:
+        configure_logging(debug=args.debug)
+        logger.error(str(e))
+        sys.exit(1)
+    api_key = os.getenv(provider.api_key_env)
 
-    if not API_KEY:
-        logger.error("EODHD_API_KEY not found in .env file.")
+    # Configure logging based on debug flag
+    configure_logging(debug=args.debug, secrets=[api_key])
+
+    if not api_key:
+        logger.error(f"{provider.api_key_env} not found in .env file.")
         sys.exit(1)
 
     logger.info(f"Stock Data Analyser Starting for {ticker}")
 
     try:
         # 1. Fetch Data
-        logger.info("[1/6] Fetching Fundamentals from EODHD...")
-        client = ClientFactory.create_eodhd_client(API_KEY, debug=args.debug)
-        yf_client = ClientFactory.create_yfinance_client(debug=args.debug)
-        financial_data = client.fetch_all_data(ticker, yf_client=yf_client)
+        fundamentals_source = ClientFactory.create_fundamentals_source(api_key, provider.name, debug=args.debug)
+        logger.info(f"[1/6] Fetching Fundamentals from {fundamentals_source.name}...")
+        quote_source = ClientFactory.create_quote_source(debug=args.debug)
+        financial_data = load_financial_data(ticker, fundamentals_source, quote_source,
+                                             ClientFactory.create_rate_source(), debug=args.debug)
         price = financial_data.get('price', 0.0)
         
         # 1.5. Fetch Historical Prices (for Historical P/E and P/B columns)
@@ -88,14 +98,14 @@ def main():
         year_end_prices = None
         if history_keys:
             logger.debug(f"Fetching historical prices from {min(history_keys)} to {max(history_keys)}")
-            daily_prices = yf_client.fetch_historical_prices(
+            daily_prices = quote_source.fetch_historical_prices(
                 ticker,
                 start_date=min(history_keys),
                 end_date=max(history_keys)
             )
             if daily_prices:
                 logger.debug(f"Fetched {len(daily_prices)} days of historical price data")
-                year_end_prices = yf_client.match_fiscal_year_end_prices(
+                year_end_prices = quote_source.match_fiscal_year_end_prices(
                     daily_prices,
                     fiscal_year_ends=history_keys
                 )
@@ -172,7 +182,7 @@ def _log_price_unavailable(ticker, error):
     logger.error(str(error))
     logger.error("Graham's Principle: 'No data is better than wrong data.'")
     logger.error("The system cannot generate a reliable valuation without current price data.")
-    logger.error("Price source: yfinance (Yahoo Finance). EODHD price fields are not used: their date and unit are opaque.")
+    logger.error("Price source: yfinance (Yahoo Finance). Fundamentals-vendor price fields are not used: their date and unit are opaque.")
     logger.error("Troubleshooting:")
     logger.error("  - Check the ticker format (e.g. AAPL.US, VOD.LSE) and that the stock is actively trading")
     logger.error("  - yfinance may not have data for this ticker; check the exchange mapping in clients/yfinance_client.py")

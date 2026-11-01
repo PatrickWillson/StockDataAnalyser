@@ -9,6 +9,8 @@ from core.price_quote import PriceQuote
 from hypothesis import given, strategies as st, settings
 from unittest.mock import Mock, patch
 from clients.eodhd_client import EODHDClient
+from core.financial_data_assembler import load_financial_data
+from clients.fx_client import FXClient
 
 
 # Feature: stock-data-analyser, Property 1: Ticker suffix preservation
@@ -53,7 +55,7 @@ def test_ticker_suffix_preservation(base_ticker, suffix):
         
         # Call the method
         try:
-            client.fetch_all_data(ticker, yf_client=Mock(get_quote=Mock(return_value=PriceQuote(100.0, 'USD'))))
+            load_financial_data(ticker, client, Mock(get_quote=Mock(return_value=PriceQuote(100.0, 'USD'))), FXClient())
         except SystemExit:
             # Ignore system exits for this test
             pass

@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 
 import pytest
 
-from clients.eodhd_client import EODHDClient
+from core.financial_data_assembler import FinancialDataAssembler
 from core.financial_data_processor import FinancialDataProcessor
 from core.ttm_calculator import TTMCalculator
 from output.dossier_generator import DossierGenerator
@@ -31,10 +31,11 @@ def test_dossier_header_date():
 
 @pytest.mark.time_machine(PINNED, tick=False)
 def test_api_staleness_warning():
-    client = EODHDClient('test_key', fx_client=object())
+    processor = FinancialDataProcessor()
+    assembler = FinancialDataAssembler(processor, None, object())
     data = {'General': {'UpdatedAt': '2026-01-01'}}
 
-    warnings = client.assembler._cross_validate_metrics(to_fundamentals(data), 0.0, 0.0, 0.0, 0.0, 0.0)
+    warnings = assembler._cross_validate_metrics(to_fundamentals(data), 0.0, 0.0, 0.0, 0.0, 0.0)
 
     assert any('API data is 30 days old' in w for w in warnings)
 

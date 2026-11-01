@@ -46,7 +46,8 @@ clients/ (Data Acquisition Layer)
     ├── eodhd_mapper.py - EODHD JSON → CompanyFundamentals (the only code that knows EODHD keys)
     ├── yfinance_client.py - Yahoo Finance for real-time prices
     ├── fx_client.py - Live FX rates
-    └── base_client.py - HTTP retry logic & session management
+    ├── base_client.py - HTTP retry logic & session management
+    └── factory.py - Composition root: picks the adapter for each port (FUNDAMENTALS_PROVIDER)
     ↓
 core/ (Business Logic Layer)
     ├── graham_math.py - Graham formulas (IMMUTABLE)
@@ -55,6 +56,7 @@ core/ (Business Logic Layer)
     ├── currency_converter.py - FX rate application
     ├── financial_data_processor.py - Data normalization (provider-neutral)
     ├── fundamentals.py - Provider-neutral input contract (CompanyFundamentals)
+    ├── ports.py - Data-source interfaces (typing.Protocol): FundamentalsSource, QuoteSource, RateSource
     └── models.py - Typed models (frozen dataclasses with to_dict()/from_dict())
     ↓
 output/ (Output Layer)
@@ -75,6 +77,7 @@ claude-output/ (Agent-generated markdown notes - gitignored)
 
 ### Key Design Principles
 - **Never mix API logic with calculation logic** - Each layer has single responsibility
+- **Vendors only behind ports** - core depends on `core/ports.py` protocols and the provider-neutral `CompanyFundamentals`; vendor JSON is mapped only in its adapter (`clients/eodhd_mapper.py`). Replacing a vendor: `docs/CODEBASE_GUIDE.md` §12
 - **Currency unification** - All calculations use a single currency (financials_currency)
 - **Graceful degradation** - Missing data triggers warnings, never crashes
 - **Transparency over perfection** - Explain all assumptions and conversions
@@ -319,6 +322,7 @@ See `README.md` for complete list.
 - ❌ **Never assume currencies match** - Explicitly handle each currency pair
 - ❌ **Never crash on bad data** - Return "N/A", add warning, continue
 - ❌ **Never mix API logic with calculation logic** - Strict layer separation
+- ❌ **Never read a vendor's payload in core** - Map it into `CompanyFundamentals` in the vendor's adapter (enforced by `tests/test_architecture.py`)
 - ❌ **Never hardcode API keys** - Use `.env` file
 - ❌ **Never modify dossier section order** - Structure is optimized for LLM parsing
 - ❌ **Never use TTM for Graham tests** - Graham used annual audited data
@@ -341,6 +345,9 @@ cp .env.example .env
 
 # Add your EODHD API key
 EODHD_API_KEY=your_api_key_here
+
+# Optional: fundamentals vendor (registered in clients/factory.py; default eodhd)
+FUNDAMENTALS_PROVIDER=eodhd
 ```
 
 **Required EODHD Packages:**

@@ -9,6 +9,7 @@ from core.price_quote import PriceQuote
 from unittest.mock import Mock, patch
 from clients.eodhd_client import EODHDClient
 from clients.fx_client import FXClient
+from core.financial_data_assembler import load_financial_data
 
 
 def test_fetch_all_data_basic():
@@ -94,7 +95,7 @@ def test_fetch_all_data_basic():
         mock_response.json.return_value = mock_response_data
         mock_get.return_value = mock_response
         
-        result = client.fetch_all_data('AAPL.US', yf_client=Mock(get_quote=Mock(return_value=PriceQuote(150.0, 'USD'))))
+        result = load_financial_data('AAPL.US', client, Mock(get_quote=Mock(return_value=PriceQuote(150.0, 'USD'))), FXClient())
         
         # Verify basic structure
         assert result['ticker'] == 'AAPL'
@@ -123,7 +124,7 @@ def test_london_fix_integration():
     fx_client = Mock(spec=FXClient)
     fx_client.get_rate.return_value = 1.25
     fx_client.fetch_historical_rates.return_value = None
-    client = EODHDClient("test_api_key", fx_client=fx_client)
+    client = EODHDClient("test_api_key")
     
     mock_response_data = {
         'General': {
@@ -160,7 +161,7 @@ def test_london_fix_integration():
         mock_response.json.return_value = mock_response_data
         mock_get.return_value = mock_response
         
-        result = client.fetch_all_data('VOD.L', yf_client=Mock(get_quote=Mock(return_value=PriceQuote(80.0, 'GBp'))))
+        result = load_financial_data('VOD.L', client, Mock(get_quote=Mock(return_value=PriceQuote(80.0, 'GBp'))), fx_client)
         
         # London Fix: 80.0 GBp -> 0.80 GBP, then converted to USD at the fixed rate
         assert result['price'] == pytest.approx(0.8 * 1.25), f"Expected 1.00 USD, got {result['price']}"
@@ -217,7 +218,7 @@ def test_data_sanitization():
         mock_response.json.return_value = mock_response_data
         mock_get.return_value = mock_response
         
-        result = client.fetch_all_data('TEST.US', yf_client=Mock(get_quote=Mock(return_value=PriceQuote(10.0, 'USD'))))
+        result = load_financial_data('TEST.US', client, Mock(get_quote=Mock(return_value=PriceQuote(10.0, 'USD'))), FXClient())
         
         # Verify NA values are converted to 0.0
         data = result['history']['2023-12-31']

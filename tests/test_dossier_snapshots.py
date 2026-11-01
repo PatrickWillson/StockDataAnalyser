@@ -80,7 +80,8 @@ def run_cli(monkeypatch, tmp_path):
                 super().__init__(ticker, financial_data, metrics, anomalies, ttm_metrics=ttm_metrics)
 
         monkeypatch.setattr(stock_data_analyser, "DossierGenerator", RecordingDossierGenerator)
-        monkeypatch.setattr(stock_data_analyser, "API_KEY", "fake-api-key")
+        monkeypatch.setenv("EODHD_API_KEY", "fake-api-key")
+        monkeypatch.delenv("FUNDAMENTALS_PROVIDER", raising=False)
         monkeypatch.setattr(sys, "argv", ["stock_data_analyser.py", scenario.ticker])
         monkeypatch.chdir(tmp_path)
 

@@ -11,6 +11,8 @@ from unittest.mock import Mock, patch
 from clients.eodhd_client import EODHDClient
 from output.dossier_generator import DossierGenerator
 from core.graham_math import GrahamCalculator
+from core.financial_data_assembler import load_financial_data
+from clients.fx_client import FXClient
 
 
 class TestDividendDisplayIntegration:
@@ -102,7 +104,7 @@ class TestDividendDisplayIntegration:
         with patch('clients.eodhd_client.EODHDClient._make_eodhd_request', return_value=mock_data), \
              patch('clients.eodhd_client.EODHDClient._fetch_dividend_history', return_value=None):
             client = EODHDClient('test_key', debug=False)
-            financial_data = client.fetch_all_data('TEST.US', yf_client=Mock(get_quote=Mock(return_value=PriceQuote(100.0, 'USD'))))
+            financial_data = load_financial_data('TEST.US', client, Mock(get_quote=Mock(return_value=PriceQuote(100.0, 'USD'))), FXClient())
         
         # Generate metrics
         calculator = GrahamCalculator(financial_data)
@@ -184,7 +186,7 @@ class TestDividendDisplayIntegration:
         with patch('clients.eodhd_client.EODHDClient._make_eodhd_request', return_value=mock_data), \
              patch('clients.eodhd_client.EODHDClient._fetch_dividend_history', return_value=None):
             client = EODHDClient('test_key', debug=False)
-            financial_data = client.fetch_all_data('TEST.US', yf_client=Mock(get_quote=Mock(return_value=PriceQuote(100.0, 'USD'))))
+            financial_data = load_financial_data('TEST.US', client, Mock(get_quote=Mock(return_value=PriceQuote(100.0, 'USD'))), FXClient())
         
         # Generate metrics
         calculator = GrahamCalculator(financial_data)

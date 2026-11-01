@@ -15,6 +15,7 @@ from clients.eodhd_client import EODHDClient
 from core.errors import PriceUnavailableError
 from core.financial_data_processor import FinancialDataProcessor
 from core.price_quote import PriceQuote, major_currency, same_currency
+from core.financial_data_assembler import load_financial_data
 
 # Every EODHD location the old fallback chain read a price from
 EODHD_PRICES = {
@@ -37,10 +38,10 @@ class MockYFinanceClient:
 
 
 def _fetch(ticker, payload, yf_client):
-    client = EODHDClient("test_key", fx_client=Mock())
+    client = EODHDClient("test_key")
     with patch.object(client, "_make_eodhd_request", return_value=payload), \
          patch.object(client, "_fetch_dividend_history", return_value=None):
-        return client.fetch_all_data(ticker, yf_client=yf_client)
+        return load_financial_data(ticker, client, yf_client, Mock())
 
 
 @given(price=prices)
@@ -101,7 +102,6 @@ def test_ticker_passed_to_yfinance_client_and_its_price_used(ticker, price):
 
 
 @pytest.mark.parametrize("yf_client, reason", [
-    (None, "no price from yfinance"),
     (MockYFinanceClient(None), "no price from yfinance"),
     (MockYFinanceClient(PriceQuote(100.0, "EUR")), "probably a different listing"),
 ])

@@ -24,8 +24,7 @@ class TestClientFactory:
         assert isinstance(client, EODHDClient)
         assert client.api_key == api_key
         assert client.debug is False
-        assert isinstance(client.fx_client, FXClient)
-        assert isinstance(client.currency_converter, CurrencyConverter)
+        assert client.name == "EODHD"
     
     def test_create_eodhd_client_with_debug(self):
         """Test EODHD client creation with debug flag enabled."""
@@ -92,22 +91,27 @@ class TestClientFactory:
         assert isinstance(converter, CurrencyConverter)
         assert converter.fx_client is custom_fx_client
     
-    def test_eodhd_client_has_dependencies(self):
-        """Test that EODHD client has all required dependencies injected."""
-        api_key = "test_api_key_12345"
+    def test_eodhd_client_only_fetches(self):
+        """The EODHD adapter fetches and maps; FX and assembly are separate ports / core."""
+        client = ClientFactory.create_eodhd_client("test_api_key_12345")
         
-        client = ClientFactory.create_eodhd_client(api_key)
+        assert not hasattr(client, 'fx_client')
+        assert not hasattr(client, 'assembler')
+    
+    def test_default_fundamentals_provider_is_eodhd(self):
+        provider = ClientFactory.fundamentals_provider()
         
-        # Verify FX client is injected
-        assert hasattr(client, 'fx_client')
-        assert isinstance(client.fx_client, FXClient)
-        
-        # Verify currency converter is injected
-        assert hasattr(client, 'currency_converter')
-        assert isinstance(client.currency_converter, CurrencyConverter)
-        
-        # Verify processor is injected
-        assert hasattr(client, 'processor')
+        assert provider.name == "eodhd" and provider.api_key_env == "EODHD_API_KEY"
+        assert ClientFactory.fundamentals_provider(" EODHD ") is provider
+        assert isinstance(ClientFactory.create_fundamentals_source("key", "eodhd"), EODHDClient)
+    
+    def test_unknown_fundamentals_provider_is_rejected(self):
+        with pytest.raises(ValueError, match="registered: eodhd"):
+            ClientFactory.fundamentals_provider("acme")
+    
+    def test_quote_and_rate_sources(self):
+        assert isinstance(ClientFactory.create_quote_source(), YFinanceClient)
+        assert isinstance(ClientFactory.create_rate_source(), FXClient)
     
     def test_debug_flag_propagates_to_eodhd_client(self):
         """Test that debug flag is properly propagated to EODHD client."""
@@ -142,9 +146,6 @@ class TestClientFactory:
         # Verify they are different instances
         assert client1 is not client2
         assert client1.debug != client2.debug
-        
-        # Verify they have different FX clients
-        assert client1.fx_client is not client2.fx_client
     
     def test_factory_methods_are_static(self):
         """Test that factory methods can be called without instantiation."""

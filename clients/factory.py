@@ -1,19 +1,63 @@
 """
-Client Factory
+Client Factory: the composition root for data sources.
 
-Factory for creating API clients with proper dependency injection.
-Centralizes client instantiation for maintainability and testability.
+Chooses the adapter behind each port (core/ports.py). The fundamentals provider is selected by
+name (the FUNDAMENTALS_PROVIDER environment variable, default "eodhd"); adding a vendor means
+writing its adapter and registering it in FUNDAMENTALS_PROVIDERS below.
 """
 
-from typing import Optional
+from dataclasses import dataclass
+from typing import Callable, Optional
 from clients.eodhd_client import EODHDClient
 from clients.yfinance_client import YFinanceClient
 from clients.fx_client import FXClient
 from core.currency_converter import CurrencyConverter
+from core.ports import FundamentalsSource, QuoteSource, RateSource
+
+
+@dataclass(frozen=True)
+class FundamentalsProvider:
+    """A registered fundamentals vendor."""
+    name: str                                            # FUNDAMENTALS_PROVIDER value, e.g. "eodhd"
+    api_key_env: str                                     # environment variable holding its API key
+    create: Callable[[str, bool], FundamentalsSource]    # (api_key, debug) -> adapter
+
+
+DEFAULT_FUNDAMENTALS_PROVIDER = "eodhd"
 
 
 class ClientFactory:
     """Factory for creating API clients with proper dependency injection."""
+    
+    @staticmethod
+    def fundamentals_provider(name: Optional[str] = None) -> FundamentalsProvider:
+        """
+        The registered fundamentals provider called `name` (default: DEFAULT_FUNDAMENTALS_PROVIDER).
+        
+        Raises:
+            ValueError: no provider of that name is registered
+        """
+        key = (name or DEFAULT_FUNDAMENTALS_PROVIDER).strip().lower()
+        if key not in FUNDAMENTALS_PROVIDERS:
+            raise ValueError(f"Unknown fundamentals provider {name!r}; "
+                             f"registered: {', '.join(sorted(FUNDAMENTALS_PROVIDERS))}")
+        return FUNDAMENTALS_PROVIDERS[key]
+    
+    @staticmethod
+    def create_fundamentals_source(api_key: str, provider: Optional[str] = None,
+                                   debug: bool = False) -> FundamentalsSource:
+        """The fundamentals adapter for `provider` (default "eodhd")."""
+        return ClientFactory.fundamentals_provider(provider).create(api_key, debug)
+    
+    @staticmethod
+    def create_quote_source(debug: bool = False) -> QuoteSource:
+        """Current and historical prices (yfinance)."""
+        return ClientFactory.create_yfinance_client(debug=debug)
+    
+    @staticmethod
+    def create_rate_source() -> RateSource:
+        """Current and historical FX rates (yfinance)."""
+        return ClientFactory.create_fx_client()
     
     @staticmethod
     def create_eodhd_client(api_key: str, debug: bool = False) -> EODHDClient:
@@ -37,13 +81,7 @@ class ClientFactory:
         if not api_key or not api_key.strip():
             raise ValueError("EODHD API key is required")
         
-        fx_client = FXClient()
-        
-        return EODHDClient(
-            api_key=api_key,
-            fx_client=fx_client,
-            debug=debug
-        )
+        return EODHDClient(api_key=api_key, debug=debug)
     
     @staticmethod
     def create_yfinance_client(debug: bool = False) -> YFinanceClient:
@@ -96,3 +134,14 @@ class ClientFactory:
         """
         # The composition root supplies the real FX source; core never creates one
         return CurrencyConverter(fx_client=fx_client or FXClient())
+
+
+# Registered fundamentals vendors. `create` looks the factory method up at call time, so tests
+# can substitute it.
+FUNDAMENTALS_PROVIDERS = {
+    "eodhd": FundamentalsProvider(
+        name="eodhd",
+        api_key_env="EODHD_API_KEY",
+        create=lambda api_key, debug: ClientFactory.create_eodhd_client(api_key, debug=debug),
+    ),
+}

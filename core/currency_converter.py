@@ -6,17 +6,11 @@ Centralizes currency logic for maintainability and testability.
 """
 
 import logging
-from typing import List, Tuple, Optional, Dict, Protocol
+from typing import List, Tuple, Optional, Dict
+from core.ports import RateSource
 from core.price_quote import is_minor_unit, to_major_unit
 
 logger = logging.getLogger(__name__)
-
-
-class RateSource(Protocol):
-    """Anything that can supply an FX rate (e.g. clients.fx_client.FXClient)."""
-
-    def get_rate(self, from_currency: str, to_currency: str) -> Optional[float]:
-        ...
 
 
 class CurrencyConverter:

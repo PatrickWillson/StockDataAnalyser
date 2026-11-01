@@ -9,6 +9,7 @@ import pytest
 import os
 from dotenv import load_dotenv
 from clients.factory import ClientFactory
+from core.financial_data_assembler import load_financial_data
 
 
 # Load environment variables
@@ -37,7 +38,7 @@ def test_vod_lse_historical_fx_rates_end_to_end():
     yf_client = ClientFactory.create_yfinance_client(debug=True)
     
     # Fetch all data for VOD.LSE
-    financial_data = client.fetch_all_data('VOD.LSE', yf_client=yf_client)
+    financial_data = load_financial_data('VOD.LSE', client, yf_client, ClientFactory.create_rate_source())
     
     # Verify basic data was fetched
     assert financial_data is not None, "Should fetch financial data"
@@ -110,7 +111,7 @@ def test_msft_us_no_fx_fetch_when_currencies_match():
     yf_client = ClientFactory.create_yfinance_client(debug=True)
     
     # Fetch all data for MSFT.US
-    financial_data = client.fetch_all_data('MSFT.US', yf_client=yf_client)
+    financial_data = load_financial_data('MSFT.US', client, yf_client, ClientFactory.create_rate_source())
     
     # Verify basic data was fetched
     assert financial_data is not None, "Should fetch financial data"
@@ -155,7 +156,7 @@ def test_historical_fx_rates_improve_accuracy():
     yf_client = ClientFactory.create_yfinance_client(debug=True)
     
     # Fetch data for a stock with currency conversion (e.g., VOD.LSE)
-    financial_data = client.fetch_all_data('VOD.LSE', yf_client=yf_client)
+    financial_data = load_financial_data('VOD.LSE', client, yf_client, ClientFactory.create_rate_source())
     
     original_currency = financial_data.get('original_stock_currency', '')
     financials_currency = financial_data.get('financials_currency', '')
@@ -207,7 +208,7 @@ def test_performance_overhead_acceptable():
     
     # Measure time for complete data fetch
     start_time = time.time()
-    financial_data = client.fetch_all_data('VOD.LSE', yf_client=yf_client)
+    financial_data = load_financial_data('VOD.LSE', client, yf_client, ClientFactory.create_rate_source())
     end_time = time.time()
     
     elapsed_time = end_time - start_time

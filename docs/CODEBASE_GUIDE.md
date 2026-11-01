@@ -28,17 +28,17 @@ Requires `EODHD_API_KEY` in `.env`. `--debug` sets DEBUG logging and dumps raw E
 | Step | Code | What happens |
 |---|---|---|
 | 0 | `stock_data_analyser.py` import time | `load_dotenv()`; `API_KEY` read into a module global |
-| 1 | `main()` | argparse (`ticker` upper-cased, `--debug`); `configure_logging(debug, secrets=[API_KEY])` (urllib3 logger pinned to WARNING; `SecretRedactingFilter` on root handlers); exit 1 if no key |
-| 2 | `ClientFactory` | builds `EODHDClient(api_key, FXClient())` and `YFinanceClient` |
-| 3 | `EODHDClient.fetch_all_data(ticker, yf_client)` | `fetch_fundamentals(ticker)` fetches the fundamentals + dividend endpoints and maps them with `clients.eodhd_mapper.to_fundamentals` into a provider-neutral `CompanyFundamentals` (`core/fundamentals.py`); the yfinance quote is fetched; then `core.financial_data_assembler.FinancialDataAssembler.assemble(fundamentals, ticker, quote)` normalises, currency-normalises, calculates and validates → `financial_data` dict (§4.1); data-quality warnings include `validate_data_quality` and `check_data_staleness` (latest annual report > 9 months old; dividend-only years ignored) |
-| 4 | `main()` + `core.historical_prices.apply_year_end_prices` | CLI fetches daily yfinance prices and matches them to fiscal year-ends; `apply_year_end_prices` divides minor-unit prices by 100 (per `price_quote_currency`, e.g. GBp), applies historical FX (current-rate fallback), writes `history[date]['year_end_price']` and adds warnings; `main()` then freezes `financial_data` into a `FinancialData` (`core/models.py`) |
+| 1 | `main()` | argparse (`ticker` upper-cased, `--debug`); the fundamentals provider from `FUNDAMENTALS_PROVIDER` (default `eodhd`; unknown → exit 1) and its API key from the variable it names (`EODHD_API_KEY`); `configure_logging(debug, secrets=[api_key])` (urllib3 logger pinned to WARNING; `SecretRedactingFilter` on root handlers); exit 1 if no key |
+| 2 | `ClientFactory` (`clients/factory.py`, the composition root) | `create_fundamentals_source(api_key, provider)` → `EODHDClient`; `create_quote_source()` → `YFinanceClient`; `create_rate_source()` → `FXClient` — one adapter per port (`core/ports.py`) |
+| 3 | `core.financial_data_assembler.load_financial_data(ticker, fundamentals_source, quote_source, rate_source)` | `fundamentals_source.fetch_fundamentals(ticker)` (EODHD: fundamentals + dividend endpoints, mapped by `clients.eodhd_mapper.to_fundamentals` into a provider-neutral `CompanyFundamentals`, `core/fundamentals.py`); `quote_source.get_quote(ticker)`; then `core.financial_data_assembler.FinancialDataAssembler.assemble(fundamentals, ticker, quote)` normalises, currency-normalises, calculates and validates → `financial_data` dict (§4.1); data-quality warnings include `validate_data_quality` and `check_data_staleness` (latest annual report > 9 months old; dividend-only years ignored) |
+| 4 | `main()` + `core.historical_prices.apply_year_end_prices` | CLI fetches daily prices from the quote source and matches them to fiscal year-ends; `apply_year_end_prices` divides minor-unit prices by 100 (per `price_quote_currency`, e.g. GBp), applies historical FX (current-rate fallback), writes `history[date]['year_end_price']` and adds warnings; `main()` then freezes `financial_data` into a `FinancialData` (`core/models.py`) |
 | 5 | `GrahamCalculator(financial_data).compute()` | → `metrics`, a `GrahamResult` (`core/models.py`) built from the `compute_all()` dict (§4.3). TBVPS, normalized Graham Number and EPV are computed once and passed to the Graham Number, margin of safety and investor tests (each public method still computes them itself when called alone) |
 | 6 | `TTMCalculator(quarterly_data, price, currency).compute()` | only if `quarterly_data` present; wrapped in try/except → `ttm_metrics`, a `TTMResult` (§4.4). Its warnings, a failure message or "Periodic data not available" are added to the model's `warnings` (`dataclasses.replace`) before steps 7–8 |
 | 7 | `AnomalyDetector(financial_data).scan()` | → `anomalies: List[str]` |
 | 8 | `DossierGenerator(ticker, financial_data, metrics, anomalies, ttm_metrics).generate()` | → Markdown string |
 | 9 | `save_dossier` | writes `data/{TICKER}_DOSSIER.md` (path relative to CWD) |
 
-Error handling: clients and the assembler raise typed errors from `core/errors.py` (`DataSourceError` → `EODHDAuthError` (401), `EODHDRateLimitError` (429), `EODHDRequestError` (network / other status / bad JSON), `PriceUnavailableError` (no price from yfinance or EODHD)); no client calls `sys.exit`. `main()` catches `PriceUnavailableError` (fatal banner + troubleshooting), other `DataSourceError` (message) and any other `Exception` (critical), each → exit 1. Exit codes are only 0/1.
+Error handling: clients and the assembler raise typed errors from `core/errors.py` (`DataSourceError` → `SourceAuthError` (401), `SourceRateLimitError` (429), `SourceRequestError` (network / other status / bad JSON), `PriceUnavailableError` (no usable price from the quote source)); the EODHD adapter raises subclasses `EODHDAuthError` / `EODHDRateLimitError` / `EODHDRequestError` (`clients/eodhd_client.py`); no client calls `sys.exit`. `main()` catches `PriceUnavailableError` (fatal banner + troubleshooting), other `DataSourceError` (message) and any other `Exception` (critical), each → exit 1. Exit codes are only 0/1.
 
 ---
 
@@ -49,19 +49,20 @@ stock_data_analyser.py      CLI + orchestration (+ historical price/FX block)
 logging_utils.py            redact(), SecretRedactingFilter, install_secret_redaction — keeps API keys out of logs
 clients/
   base_client.py            BaseAPIClient: requests.Session, urllib3 Retry(3, backoff 1.0, 5xx, GET)
-  eodhd_client.py           EODHDClient (name "EODHD"): fetches fundamentals + dividend endpoint (and the --debug raw dump); fetch_fundamentals() → CompanyFundamentals; fetch_all_data() also assembles
+  eodhd_client.py           EODHDClient (name "EODHD"), the FundamentalsSource adapter: fetches fundamentals + dividend endpoint (and the --debug raw dump); fetch_fundamentals() → CompanyFundamentals; EODHD error subclasses
   eodhd_mapper.py           the only code that knows EODHD's JSON: to_fundamentals(data, dividend_records, ticker) → CompanyFundamentals; statement rows (balance_sheet_row / income_statement_row, raw key names), CEO, share counts, dividend payments / cash-flow dividends / Dividends array / payment counts, forward rate, Highlights etc. as MarketData; corrects EODHD labels (LSE GBX → GBP for per-share dividend, book value, forward rate and Dividend API records, E1/E2)
   yfinance_client.py        YFinanceClient: EXCHANGE_MAPPING, get_quote (price + Yahoo quote currency), historical prices, FYE matching
   fx_client.py              FXClient: yfinance "{A}{B}=X" rates, current + historical, per-instance cache
-  factory.py                ClientFactory: builds clients (validates API key)
+  factory.py                ClientFactory: the composition root; FUNDAMENTALS_PROVIDERS registry (FundamentalsProvider: name, api_key_env, create) — today only "eodhd"; fundamentals_provider(name), create_fundamentals_source, create_quote_source, create_rate_source, create_eodhd_client (validates API key)
 core/
   formulas.py               shared Graham formulas (plain arithmetic, no rounding/N/A): tangible_equity, net_current_asset_value, graham_number, margin_of_safety_pct, price_multiple; used by graham_math, ttm_calculator and Calculation Details
   report_context.py         ReportContext (dossier view model, M5): reads FinancialData / HistoryRow attributes (accepts the model or its dict); latest reported year/row (a HistoryRow); RiskFigures (liquidity, current ratio, debt ratios, margin mean/stdev, loss years, payout, dividend coverage (from a history row's `operating_cash_flow`, which the assembler does not produce today, so the line never appears in real dossiers), dividend years; earnings window = latest 10 reported years); latest BVPS / tangible equity / TBVPS / NCAV; trailing and forward dividend yields; API-BVPS % difference; three-year EPS breakdown; quote currency and minor-unit flag; the 20-year table rows (HistoryTableRow). From core the output layer imports only this module and core.models (tests/test_architecture.py); build_report_context(financial_data, metrics); built once by DossierGenerator and passed to every section
   price_quote.py            PriceQuote(price, currency); major_currency / same_currency (minor units GBp/GBX→GBP, ZAc→ZAR, ILA→ILS; case-sensitive)
   fundamentals.py           provider-neutral input contract: CompanyFundamentals (profile, statement currency, annual + periodic BalanceSheetRow / IncomeStatementRow with Optional fields (None = not reported) and as_history_fields(), share counts, DividendPayment / DatedDividend, cash-flow dividends paid, payment counts, forward rate, MarketData = the vendor's labelled figures); optional_float, number_or_zero. Values carry their true currency; core reads no vendor format (tests/test_architecture.py)
   historical_prices.py      apply_year_end_prices(): year-end price currency handling + merge into history
-  financial_data_assembler.py  FinancialDataAssembler: CompanyFundamentals + quote → financial_data (price, London Fix, FX, ratios, cross-validation, data-quality warnings)
-  errors.py                 DataSourceError hierarchy (EODHDAuthError, EODHDRateLimitError, EODHDRequestError, PriceUnavailableError) — raised instead of exiting
+  financial_data_assembler.py  load_financial_data(ticker, fundamentals_source, quote_source, rate_source) (fetch through the ports, then assemble); FinancialDataAssembler: CompanyFundamentals + quote → financial_data (price, London Fix, FX, ratios, cross-validation, data-quality warnings)
+  errors.py                 provider-neutral DataSourceError hierarchy (SourceAuthError, SourceRateLimitError, SourceRequestError, PriceUnavailableError) — raised instead of exiting
+  ports.py                  the data-source interfaces (typing.Protocol, @runtime_checkable): FundamentalsSource (name, fetch_fundamentals), QuoteSource (get_quote, fetch_historical_prices, match_fiscal_year_end_prices), RateSource (get_rate, fetch_historical_rates, match_fiscal_year_end_rates)
   financial_data_processor.py  FinancialDataProcessor: raw JSON → per-year history, dividends, price, validation
   currency_converter.py     CurrencyConverter: convert / convert_batch / try_convert_batch (None = no rate) / normalise_quote_unit (minor-unit quote → major ccy, the London Fix), conversion log
   graham_math.py            GrahamCalculator: valuation metrics (TBVPS, Graham Numbers, net-net, NCA details, ratios, EPV, MoS) and compute_all, which calls the investor tests and verdict below
@@ -98,7 +99,7 @@ claude-output/              agent-written markdown (gitignored)
 
 ## 4. Data shapes
 
-### 4.1 `financial_data` (returned by `FinancialDataAssembler.assemble`, via `EODHDClient.fetch_all_data`)
+### 4.1 `financial_data` (returned by `FinancialDataAssembler.assemble`, via `load_financial_data`)
 | Key | Meaning |
 |---|---|
 | `ticker`, `exchange` | `General.Code` (no suffix), `General.Exchange` |
@@ -253,7 +254,7 @@ Every section subclasses `DossierSection`, receives the shared `core.report_cont
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Hypothesis profile** (`tests/conftest.py`): `deadline=None` project-wide — the per-example timing deadline caused intermittent failures on WSL; example counts are unchanged.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1278 pass / 20 skip as of 2026-11-01); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1280 pass / 20 skip as of 2026-11-01); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 
@@ -262,7 +263,8 @@ Every section subclasses `DossierSection`, receives the shared `core.report_cont
 | To… | Edit |
 |---|---|
 | add a Graham metric | `core/graham_math.py` (+ `compute_all`), property test, section in `output/sections/`, methodology text, **this guide §4.3/§5.1** |
-| add an EODHD field | `financial_data_processor.py` parser + `merge_financial_data`; `FinancialDataAssembler.assemble` return dict; **§4.1/§4.2** |
+| add an EODHD field | a `CompanyFundamentals` field (`core/fundamentals.py`) + its mapping in `clients/eodhd_mapper.py`; use it in `financial_data_processor.py` / `FinancialDataAssembler.assemble`; **§4.1/§4.2** |
+| replace or add a data vendor | see **§12** |
 | add an exchange | `YFinanceClient.EXCHANGE_MAPPING`; **§7** |
 | change a threshold | `config/investor_thresholds.py` (Graham constants are immutable) — also hardcoded strings in `graham_tests.py`/`methodology.py` |
 | add/reorder a section | `output/dossier_generator.py` + `output/sections/`; **§8** (order is fixed for LLM parsing) |
@@ -292,3 +294,24 @@ The code relies on these readings of EODHD (and yfinance) fields. Each is listed
 | E15 | yfinance `fast_info['currency']` is `GBp` for LSE, `ZAc` for JSE, `ILA` for TASE, ISO codes elsewhere | quote currency match and minor-unit ÷100 | live check 2026-10-31 (yfinance 1.0): `YU.L`/`VOD.L` GBp, `NPN.JO` ZAc, `TEVA.TA` ILA, `AAPL` USD, `SAP.DE` EUR, `RY.TO` CAD | **Confirmed** | — |
 | E16 | yfinance `history(auto_adjust=False)['Close']` is split-adjusted but not dividend-adjusted | historical P/E, P/B | live check 2026-10-31 (yfinance 1.0): AAPL 2020-08-28 (day before the 4:1 split) `Close` 124.81 = traded ≈ $499 ÷ 4; `Adj Close` 120.96 (dividend-adjusted) | **Confirmed** | — |
 
+---
+
+## 12. Data sources: ports and adapters (replacing a vendor)
+
+The core never talks to a vendor. It depends on three **ports** in `core/ports.py`, written as `typing.Protocol` classes (PEP 544 structural typing, Python's equivalent of Java interfaces: an adapter conforms by having the methods, without inheriting from core):
+
+| Port | Today's adapter | Supplies |
+|---|---|---|
+| `FundamentalsSource` | `clients/eodhd_client.EODHDClient` + `clients/eodhd_mapper.py` | `CompanyFundamentals` (`core/fundamentals.py`): statements, share counts, dividends, company data, the vendor's labelled market figures |
+| `QuoteSource` | `clients/yfinance_client.YFinanceClient` | current quote (price + quote currency), daily closes, year-end matching |
+| `RateSource` | `clients/fx_client.FXClient` | current and historical FX rates |
+
+`clients/factory.py` is the composition root: the CLI asks it for one adapter per port and passes them to `load_financial_data`. `CompanyFundamentals` is the whole contract for fundamentals: values as reported, in their **true** currency (the adapter fixes vendor labelling quirks, e.g. EODHD's GBX label on pound-scale LSE values), statement fields `None` when not reported, rows newest first, vendor pre-computed figures only in `MarketData` (display / labelled comparison). `tests/test_architecture.py` fails if an EODHD JSON key appears anywhere in `core/`.
+
+**To replace EODHD with another fundamentals vendor:**
+1. Write `clients/<vendor>_client.py` with a class that has `name` and `fetch_fundamentals(ticker) -> CompanyFundamentals`, raising `core.errors` source errors (subclass them for vendor names). Put the JSON-to-model mapping in `clients/<vendor>_mapper.py`, the only place that knows the vendor's field names.
+2. Register it in `FUNDAMENTALS_PROVIDERS` (`clients/factory.py`) with the environment variable that holds its API key, and set `FUNDAMENTALS_PROVIDER=<vendor>` in `.env`.
+3. Map each field with the meanings in `core/fundamentals.py` (and `docs/GRAHAM_METHODOLOGY.md` for which line items Graham needs: net income for the common incl. special items, equity excluding minority interest, reported share counts per year, dividends per share); record every unconfirmed field reading in §11.
+4. Run `tests/test_data_source_ports.py` (`assert_fundamentals_contract` on the new mapper's output) and add mapper tests from the vendor's sample payloads; the snapshot scenarios cover the EODHD path end to end.
+
+Ticker symbols stay `SYMBOL.EXCHANGE` with EODHD exchange codes; `YFinanceClient` translates them to Yahoo suffixes (§7). A vendor with other codes translates in its adapter.

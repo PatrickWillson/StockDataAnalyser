@@ -1,48 +1,51 @@
 """
-EODHD API Client
+EODHD API Client: the EODHD adapter for the FundamentalsSource port (core/ports.py).
 
-Fetches financial data from EODHD API.
-Delegates data processing to FinancialDataProcessor for separation of concerns.
+Fetches the fundamentals and Dividend API endpoints; clients/eodhd_mapper.py maps the JSON into
+provider-neutral CompanyFundamentals. Nothing else in the code base depends on EODHD.
 """
 
 import requests
 import logging
 from typing import Dict, Any, Optional, List
 from clients.base_client import BaseAPIClient
-from core.errors import EODHDAuthError, EODHDRateLimitError, EODHDRequestError
-from clients.fx_client import FXClient
 from clients.eodhd_mapper import SOURCE_NAME, to_fundamentals
-from core.currency_converter import CurrencyConverter
-from core.financial_data_assembler import FinancialDataAssembler
-from core.financial_data_processor import FinancialDataProcessor
+from core.errors import SourceAuthError, SourceRateLimitError, SourceRequestError
 from core.fundamentals import CompanyFundamentals
 
 logger = logging.getLogger(__name__)
 
 
+class EODHDAuthError(SourceAuthError):
+    """EODHD rejected the API key (HTTP 401)."""
+
+
+class EODHDRateLimitError(SourceRateLimitError):
+    """EODHD rate limit exceeded (HTTP 429)."""
+
+
+class EODHDRequestError(SourceRequestError):
+    """The EODHD request failed (network error or unexpected HTTP status)."""
+
+
 class EODHDClient(BaseAPIClient):
-    """Client for fetching financial data from EODHD API."""
+    """Fetches company fundamentals from EODHD (implements core.ports.FundamentalsSource)."""
     
     name = SOURCE_NAME
     
     API_BASE_URL = "https://eodhd.com/api/fundamentals/{ticker}"
     
-    def __init__(self, api_key: str, fx_client: Optional[FXClient] = None, debug: bool = False):
+    def __init__(self, api_key: str, debug: bool = False):
         """
         Initialize EODHD client with retry logic.
         
         Args:
             api_key: EODHD API key
-            fx_client: Optional FX client for currency conversion (creates one if not provided)
             debug: Enable debug logging (default: False)
         """
         super().__init__(timeout=30, max_retries=3, backoff_factor=1.0)
         self.api_key = api_key
-        self.fx_client = fx_client or FXClient()
-        self.currency_converter = CurrencyConverter(fx_client=self.fx_client)
         self.debug = debug
-        self.processor = FinancialDataProcessor(currency_converter=self.currency_converter, debug=debug)
-        self.assembler = FinancialDataAssembler(self.processor, self.currency_converter, self.fx_client, debug=debug)
     
     def _make_eodhd_request(self, ticker: str) -> Dict[str, Any]:
         """
@@ -160,21 +163,3 @@ class EODHDClient(BaseAPIClient):
         logger.info("Fetching dividend history...")
         dividend_api_data = self._fetch_dividend_history(ticker)
         return to_fundamentals(data, dividend_api_data, ticker)
-    
-    def fetch_all_data(self, ticker: str, yf_client: Optional[Any] = None) -> Dict[str, Any]:
-        """
-        Fetch the fundamentals and dividend history for a ticker and assemble financial_data.
-        
-        Args:
-            ticker: Stock ticker with exchange suffix (e.g., AAPL.US, YU.LSE)
-            yf_client: Optional yfinance client for the current price quote (the only price source)
-            
-        Returns:
-            financial_data dict (see FinancialDataAssembler.assemble)
-        """
-        fundamentals = self.fetch_fundamentals(ticker)
-        
-        # Current price from yfinance (the only price source); assembly itself does no I/O
-        quote = yf_client.get_quote(ticker) if yf_client else None
-        
-        return self.assembler.assemble(fundamentals, ticker, quote=quote)

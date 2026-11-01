@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from clients.factory import ClientFactory
+from core.financial_data_assembler import load_financial_data
 
 # Load environment variables
 load_dotenv()
@@ -38,7 +39,7 @@ def test_historical_prices_integrated_into_history_msft():
     # Fetch data using same workflow as main script
     client = ClientFactory.create_eodhd_client(API_KEY, debug=True)
     yf_client = ClientFactory.create_yfinance_client(debug=True)
-    financial_data = client.fetch_all_data(ticker, yf_client=yf_client)
+    financial_data = load_financial_data(ticker, client, yf_client, ClientFactory.create_rate_source())
     
     # Get history keys
     history_keys = list(financial_data.get('history', {}).keys())
@@ -113,7 +114,7 @@ def test_historical_prices_currency_conversion_lse():
     # Fetch data
     client = ClientFactory.create_eodhd_client(API_KEY, debug=True)
     yf_client = ClientFactory.create_yfinance_client(debug=True)
-    financial_data = client.fetch_all_data(ticker, yf_client=yf_client)
+    financial_data = load_financial_data(ticker, client, yf_client, ClientFactory.create_rate_source())
     
     # Get currencies
     stock_currency = financial_data.get('original_stock_currency', '')

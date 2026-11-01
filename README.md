@@ -108,6 +108,8 @@ EODHD_API_KEY=your_api_key_here
 
 **Note**: yfinance (Yahoo Finance) is used for real-time price data and does not require an API key. Only the EODHD API key is required for fundamental financial data.
 
+**Data vendors are swappable**: the analysis core reads fundamentals, prices and FX rates only through interfaces (`core/ports.py`). EODHD is today's fundamentals provider (`FUNDAMENTALS_PROVIDER=eodhd`, the default); to use another vendor, write an adapter and register it in `clients/factory.py` — see `docs/CODEBASE_GUIDE.md` §12.
+
 ### EODHD API Package Requirements
 
 To use this tool, you need to purchase the following EODHD API packages:
