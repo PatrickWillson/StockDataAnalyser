@@ -4,9 +4,10 @@ This module generates the executive summary section of the stock analysis dossie
 including verdict, intrinsic values, margin of safety, current price, and dividend information.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
+from core.models import EPVDetails, GrahamResult, MarginOfSafetyDetails, ThreeYearAvgPE, or_default
 from output.formatting import format_price_display
 
 
@@ -24,15 +25,16 @@ class ExecutiveSummarySection(DossierSection):
     Requirements: 1.4, 2.1
     """
     
-    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any], context: Optional[ReportContext] = None):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Union[GrahamResult, Dict[str, Any]],
+                 context: Optional[ReportContext] = None):
         """Initialize executive summary section.
         
         Args:
             financial_data: Dictionary containing financial data (FinancialData DTO)
-            metrics: Dictionary containing Graham metrics (GrahamMetrics DTO)
+            metrics: Graham metrics (GrahamResult, or its dict form)
         """
         self.financial_data = financial_data
-        self.metrics = metrics
+        self.metrics = GrahamResult.from_dict(metrics)
         self.context = context or build_report_context(financial_data, metrics)
     
     def generate(self) -> List[str]:
@@ -54,20 +56,20 @@ class ExecutiveSummarySection(DossierSection):
         original_stock_currency = self.financial_data.get('original_stock_currency', unified_currency)
         
         # Verdict
-        lines.append(f"- Verdict: **{self.metrics['verdict']}**")
-        if self.metrics.get('verdict_reason'):
-            lines.append(f"  - {self.metrics['verdict_reason']}")
+        lines.append(f"- Verdict: **{self.metrics.verdict}**")
+        if self.metrics.verdict_reason:
+            lines.append(f"  - {self.metrics.verdict_reason}")
         
         # Intrinsic values
         self._add_intrinsic_values(lines, unified_currency)
         
         # Margin of Safety - Requirement 10.1
         # Display normalized MoS as primary value with limiting factor
-        mos_details = self.metrics.get('margin_of_safety_details', {})
-        mos_percentage = mos_details.get('mos_percentage', self.metrics.get('margin_of_safety', 'N/A'))
-        limiting_factor = mos_details.get('limiting_factor', 'N/A')
-        intrinsic_value_used = mos_details.get('intrinsic_value_used', 'N/A')
-        mos_note = mos_details.get('note')
+        mos_details = self.metrics.margin_of_safety_details or MarginOfSafetyDetails()
+        mos_percentage = or_default(mos_details.mos_percentage, or_default(self.metrics.margin_of_safety, 'N/A'))
+        limiting_factor = or_default(mos_details.limiting_factor, 'N/A')
+        intrinsic_value_used = or_default(mos_details.intrinsic_value_used, 'N/A')
+        mos_note = or_default(mos_details.note, None)
         
         if mos_percentage != 'N/A':
             # Format the MoS display with limiting factor
@@ -119,10 +121,10 @@ class ExecutiveSummarySection(DossierSection):
             lines: List to append lines to
             unified_currency: Currency for display
         """
-        graham_str = self.metrics['graham_number']
-        normalized_graham_str = self.metrics.get('normalized_graham_number', 'N/A')
-        epv_details = self.metrics.get('epv_details') or {}
-        net_net_str = self.metrics.get('net_net_value', 'N/A')
+        graham_str = self.metrics.graham_number
+        normalized_graham_str = or_default(self.metrics.normalized_graham_number, 'N/A')
+        epv_details = self.metrics.epv_details or EPVDetails()
+        net_net_str = or_default(self.metrics.net_net_value, 'N/A')
         
         # Legacy Graham Number (Single-Year EPS) - Requirement 3.4
         if graham_str != 'N/A':
@@ -155,8 +157,8 @@ class ExecutiveSummarySection(DossierSection):
         
         # EPV per share (metrics['epv'] is the whole-company value)
         # Core reports an unavailable EPV as years_used == 0 (too little history or negative average earnings)
-        epv_per_share = epv_details.get('epv_per_share')
-        epv_years = epv_details.get('years_used', 0)
+        epv_per_share = or_default(epv_details.epv_per_share, None)
+        epv_years = or_default(epv_details.years_used, 0)
         if isinstance(epv_per_share, (int, float)) and epv_per_share > 0 and epv_years:
             epv_display = format_price_display(float(epv_per_share), unified_currency, unified_currency)
             lines.append(f"- Intrinsic Value (EPV per share): {epv_display} ({epv_years}-year average earnings)")
@@ -320,11 +322,11 @@ class ExecutiveSummarySection(DossierSection):
             lines.append(f"- P/E Ratio (Current Year): {pe_ratio:.2f}")
         
         # Add three-year average P/E if available
-        three_year_pe = self.metrics.get('three_year_avg_pe', {})
-        if isinstance(three_year_pe, dict):
-            pe_on_avg = three_year_pe.get('pe_on_avg')
-            avg_eps = three_year_pe.get('three_year_avg_eps')
-            years_used = three_year_pe.get('years_used', [])
+        three_year_pe = or_default(self.metrics.three_year_avg_pe, ThreeYearAvgPE())
+        if isinstance(three_year_pe, ThreeYearAvgPE):
+            pe_on_avg = or_default(three_year_pe.pe_on_avg, None)
+            avg_eps = or_default(three_year_pe.three_year_avg_eps, None)
+            years_used = or_default(three_year_pe.years_used, ())
             
             if pe_on_avg != 'N/A' and avg_eps != 'N/A' and years_used:
                 # Format years range
