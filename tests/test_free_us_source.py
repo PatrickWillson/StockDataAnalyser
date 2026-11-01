@@ -42,6 +42,9 @@ class FakeEdgar:
     def predecessor_ciks(self, ticker):
         return ()
 
+    def fetch_certifying_officer(self, cik, submissions):
+        return self.officer if hasattr(self, "officer") else None
+
 
 class FakeYahoo:
     def __init__(self, data=SO_YAHOO):
@@ -175,3 +178,14 @@ def test_successor_issuer_without_mapped_predecessor_is_noted():
         "accessionNumber": ["a", "b"], "reportDate": ["2025-12-31", ""]}}))
     f = FreeUSFundamentalsSource(edgar, FakeYahoo()).fetch_fundamentals("SO.US")
     assert any("filed a Form 8-K12B (successor issuer) on 2016-07-01" in n for n in f.notes)
+
+
+def test_ceo_from_the_10k_certification_when_yahoo_has_none():
+    edgar = FakeEdgar()
+    edgar.officer = "Jane Q. Doe"
+    no_ceo = YahooCompanyData(yahoo_symbol="SO", info={"currency": "USD", "companyOfficers": []})
+    f = FreeUSFundamentalsSource(edgar, FakeYahoo(no_ceo)).fetch_fundamentals("SO.US")
+    assert f.ceo_name == "Jane Q. Doe"
+    assert any("Exhibit 31.1 certification" in n for n in f.notes)
+    # Yahoo's CEO is preferred; the certification is not fetched then
+    assert source().fetch_fundamentals("SO.US").ceo_name == "Mr. Christopher C. Womack"

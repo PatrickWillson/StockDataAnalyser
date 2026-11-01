@@ -13,8 +13,9 @@ from typing import Any, Dict, Mapping, Optional, Tuple
 
 import requests
 
+from clients import edgar_mapper
 from clients.base_client import BaseAPIClient
-from config.edgar_config import (SEC_COMPANY_FACTS_URL, SEC_MIN_REQUEST_INTERVAL, SEC_PREDECESSOR_CIKS,
+from config.edgar_config import (SEC_ARCHIVES_URL, SEC_COMPANY_FACTS_URL, SEC_MIN_REQUEST_INTERVAL, SEC_PREDECESSOR_CIKS,
                                  SEC_SUBMISSIONS_URL, SEC_TICKER_INDEX_URL)
 from core.errors import SourceAuthError, SourceRateLimitError, SourceRequestError, TickerNotCoveredError
 
@@ -64,6 +65,16 @@ class EdgarClient(BaseAPIClient):
         self._last_request = 0.0
 
     def _get_json(self, url: str) -> Any:
+        response = self._get(url)
+        try:
+            return response.json()
+        except ValueError as e:
+            raise EdgarRequestError(f"SEC returned invalid JSON for {url}") from e
+
+    def _get_text(self, url: str) -> str:
+        return self._get(url).text
+
+    def _get(self, url: str):
         wait = SEC_MIN_REQUEST_INTERVAL - (time.monotonic() - self._last_request)
         if wait > 0:
             time.sleep(wait)
@@ -83,10 +94,7 @@ class EdgarClient(BaseAPIClient):
             raise TickerNotCoveredError(f"SEC has no data at {url}")
         if response.status_code != 200:
             raise EdgarRequestError(f"SEC request failed with status {response.status_code}: {url}")
-        try:
-            return response.json()
-        except ValueError as e:
-            raise EdgarRequestError(f"SEC returned invalid JSON for {url}") from e
+        return response
 
     def resolve_cik(self, ticker: str) -> str:
         """
@@ -111,6 +119,26 @@ class EdgarClient(BaseAPIClient):
     def fetch_company_facts(self, cik: str) -> Dict[str, Any]:
         """Every XBRL fact the company has filed (data.sec.gov companyfacts)."""
         return self._get_json(SEC_COMPANY_FACTS_URL.format(cik=cik))
+
+    def fetch_certifying_officer(self, cik: str, submissions: Mapping[str, Any]) -> Optional[str]:
+        """
+        The principal executive officer who signed the latest 10-K's Exhibit 31.1 certification
+        (Sarbanes-Oxley s.302), or None. Two requests: the filing's SGML header (which names each
+        document's type) and the exhibit. Failures return None: the name is display only.
+        """
+        recent = submissions.get("filings", {}).get("recent", {})
+        accession = next((acc for form, acc in zip(recent.get("form", []), recent.get("accessionNumber", []))
+                          if form == "10-K"), None)
+        if not accession:
+            return None
+        folder = SEC_ARCHIVES_URL.format(cik=int(cik), accession=accession.replace("-", ""))
+        try:
+            header = self._get_text(f"{folder}/{accession}-index-headers.html")
+            exhibit = edgar_mapper.exhibit_filename(header, "EX-31.1")
+            return edgar_mapper.certifying_officer(self._get_text(f"{folder}/{exhibit}")) if exhibit else None
+        except (SourceRequestError, SourceRateLimitError, SourceAuthError, TickerNotCoveredError) as e:
+            logger.debug(f"SEC: no Exhibit 31.1 officer for CIK {cik}: {e}")
+            return None
 
     def fetch_submissions(self, cik: str) -> Dict[str, Any]:
         """Company metadata and recent filings (data.sec.gov submissions)."""

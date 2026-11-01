@@ -15,8 +15,8 @@ INDEX = {"0": {"cik_str": 320193, "ticker": "AAPL", "title": "Apple Inc."},
 
 
 class FakeResponse:
-    def __init__(self, status_code, payload=None, bad_json=False):
-        self.status_code, self._payload, self._bad_json = status_code, payload, bad_json
+    def __init__(self, status_code, payload=None, bad_json=False, text=""):
+        self.status_code, self._payload, self._bad_json, self.text = status_code, payload, bad_json, text
 
     def json(self):
         if self._bad_json:
@@ -118,3 +118,28 @@ def test_requests_are_throttled(no_sleep):
     client._ticker_index = None
     client.resolve_cik("AAPL.US")
     assert no_sleep and all(0 < s <= 0.11 for s in no_sleep)
+
+
+HEADER = ("&lt;DOCUMENT&gt;\n&lt;TYPE&gt;EX-31.10\n&lt;FILENAME&gt;wrong.htm\n"
+          "&lt;DOCUMENT&gt;\n&lt;TYPE&gt;EX-31.1\n&lt;SEQUENCE&gt;7\n&lt;FILENAME&gt;ex311.htm\n")
+SUBMISSIONS = {"filings": {"recent": {"form": ["10-Q", "10-K"], "accessionNumber": ["0000048465-26-000001",
+                                                                                  "0000048465-25-000059"]}}}
+FOLDER = "https://www.sec.gov/Archives/edgar/data/48465/000004846525000059"
+
+
+def test_certifying_officer_from_the_latest_10k_exhibit_31_1():
+    client = _client({f"{FOLDER}/0000048465-25-000059-index-headers.html": FakeResponse(200, text=HEADER),
+                      f"{FOLDER}/ex311.htm": FakeResponse(200, text="<p>EXHIBIT 31.1</p><p>I, <b>Jeffrey M. "
+                                                                    "Ettinger</b>, certify that: 1. I have reviewed")})
+    assert client.fetch_certifying_officer("0000048465", SUBMISSIONS) == "Jeffrey M. Ettinger"
+
+
+def test_certifying_officer_is_none_when_unavailable():
+    assert _client({}).fetch_certifying_officer("0000048465", SUBMISSIONS) is None        # 404s
+    assert _client({}).fetch_certifying_officer("0000048465", {"filings": {"recent": {}}}) is None
+
+
+def test_exhibit_31_10_is_not_exhibit_31_1():
+    from clients.edgar_mapper import exhibit_filename
+    assert exhibit_filename(HEADER, "EX-31.1") == "ex311.htm"
+    assert exhibit_filename("&lt;TYPE&gt;EX-31.10\n&lt;FILENAME&gt;x.htm", "EX-31.1") is None

@@ -22,6 +22,7 @@ Only USD statements are mapped (foreign SEC filers are a later step).
 """
 
 import datetime as dt
+import html
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
@@ -619,3 +620,17 @@ def merge_companyfacts(successor: Mapping[str, Any], predecessors: Sequence[Mapp
                 for unit, rows in concept.get("units", {}).items():
                     units.setdefault(unit, []).extend(rows)
     return merged
+
+
+def exhibit_filename(sgml_header: str, exhibit_type: str) -> Optional[str]:
+    """The file name of a filing's `exhibit_type` document (e.g. EX-31.1) from its SGML header."""
+    text = html.unescape(sgml_header)
+    match = re.search(r"<TYPE>" + re.escape(exhibit_type) + r"\b.*?<FILENAME>([^\s<]+)", text, re.S)
+    return match.group(1) if match else None
+
+
+def certifying_officer(exhibit_html: str) -> Optional[str]:
+    """The signer of a Sarbanes-Oxley s.302 certification: "I, <name>, certify that ..."."""
+    text = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", exhibit_html)))
+    match = re.search(r"\bI,\s+([A-Z][^,]{2,80}?),\s+certify", text)
+    return match.group(1).strip() if match else None

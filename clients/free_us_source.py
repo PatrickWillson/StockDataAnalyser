@@ -114,6 +114,13 @@ class FreeUSFundamentalsSource:
             raise TickerNotCoveredError(f"{ticker}: no annual reports with XBRL financial data at the SEC")
         periodic = edgar_mapper.periodic_data(facts, splits, sic)
         profile = yahoo_mapper.profile(yahoo)
+        ceo_name = profile.ceo_name
+        if ceo_name == "N/A":
+            officer = self.edgar.fetch_certifying_officer(cik, submissions)
+            if officer:
+                ceo_name = officer
+                notes.append("CEO: the principal executive officer who signed the latest 10-K's Exhibit 31.1 "
+                             "certification (Yahoo Finance lists no CEO)")
         quote_currency = profile.quote_currency or STATEMENT_CURRENCY
         if splits:
             notes.append("Per-share figures and share counts adjusted to today's share basis for stock splits "
@@ -135,7 +142,7 @@ class FreeUSFundamentalsSource:
             sector=profile.sector,
             industry=profile.industry,
             employees=profile.employees,
-            ceo_name=profile.ceo_name,
+            ceo_name=ceo_name,
             is_delisted=False,
             # No vendor refresh date: SEC figures are as filed (the latest filing date is in the notes)
             updated_at=None,

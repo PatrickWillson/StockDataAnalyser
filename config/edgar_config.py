@@ -11,6 +11,7 @@ from typing import Final, Mapping, Tuple
 SEC_TICKER_INDEX_URL: Final[str] = "https://www.sec.gov/files/company_tickers.json"
 SEC_COMPANY_FACTS_URL: Final[str] = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik}.json"
 SEC_SUBMISSIONS_URL: Final[str] = "https://data.sec.gov/submissions/CIK{cik}.json"
+SEC_ARCHIVES_URL: Final[str] = "https://www.sec.gov/Archives/edgar/data/{cik}/{accession}"   # a filing's folder
 
 # Seconds between requests: 0.11 s keeps a client under the SEC's 10 requests/second
 SEC_MIN_REQUEST_INTERVAL: Final[float] = 0.11
