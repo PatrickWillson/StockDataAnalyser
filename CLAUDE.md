@@ -53,7 +53,7 @@ core/ (Business Logic Layer)
     ├── ttm_calculator.py - Trailing Twelve Months calculations
     ├── currency_converter.py - FX rate application
     ├── financial_data_processor.py - Data parsing & normalization
-    └── data_models.py - Data Transfer Objects (DTOs)
+    └── models.py - Typed models (frozen dataclasses with to_dict()/from_dict())
     ↓
 output/ (Output Layer)
     ├── dossier_generator.py - Assembles final Markdown
