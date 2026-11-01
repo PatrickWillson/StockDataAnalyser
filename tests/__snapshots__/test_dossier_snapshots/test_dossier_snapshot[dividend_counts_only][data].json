@@ -8,6 +8,7 @@
     "book_value_per_share": 3.951,
     "ceo_name": "Mr. Timothy D. Cook",
     "currency": "USD",
+    "data_source": "EODHD",
     "dividend_currency": "USD",
     "dividend_per_share": 0.96,
     "dividend_source": "Unknown",

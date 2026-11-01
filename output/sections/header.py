@@ -41,11 +41,12 @@ class HeaderSection(DossierSection):
         sector = or_default(self.financial_data.sector, 'N/A')
         industry = or_default(self.financial_data.industry, 'N/A')
         employees = or_default(self.financial_data.employees, 0)
+        data_source = or_default(self.financial_data.data_source, 'N/A')
         
         # Title and basic metadata
         lines.append(f"# STOCK ANALYSIS DOSSIER: {self.ticker}")
         lines.append(f"# DATE: {datetime.now().strftime('%Y-%m-%d')}")
-        lines.append("# SOURCE: EODHD (Tier 1 Data)")
+        lines.append(f"# SOURCE: {data_source} (Tier 1 Data)")
         lines.append(f"# CEO: {ceo_name}")
         lines.append(f"# SECTOR: {sector} | INDUSTRY: {industry}")
         lines.append(f"# EMPLOYEES: {employees:,}" if employees > 0 else "# EMPLOYEES: N/A")

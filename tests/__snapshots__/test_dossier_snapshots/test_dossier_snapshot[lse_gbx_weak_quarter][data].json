@@ -8,6 +8,7 @@
     "book_value_per_share": 4.82,
     "ceo_name": "Mr. Baljit Bobby Kalar",
     "currency": "GBP",
+    "data_source": "EODHD",
     "dividend_currency": "GBP",
     "dividend_per_share": 0.63,
     "dividend_source": "Cash Flow",

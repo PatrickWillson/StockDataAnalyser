@@ -254,6 +254,7 @@ class FinancialData(Model):
     financials_currency: str = MISSING
     dividend_currency: str = MISSING
     price: float = MISSING
+    data_source: str = MISSING                       # fundamentals vendor, e.g. "EODHD"
     price_source: str = MISSING
     price_quote_currency: Optional[str] = MISSING
     price_currency_before_fx: Optional[str] = MISSING

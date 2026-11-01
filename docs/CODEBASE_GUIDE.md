@@ -105,6 +105,7 @@ claude-output/              agent-written markdown (gitignored)
 | `ticker`, `exchange` | `General.Code` (no suffix), `General.Exchange` |
 | `currency` | unified calculation currency = financials currency |
 | `original_stock_currency`, `financials_currency` | trading ccy (`General.CurrencyCode`), balance-sheet `currency_symbol` |
+| `data_source` | the fundamentals vendor (`CompanyFundamentals.source`, e.g. `'EODHD'`); shown in the dossier header `# SOURCE:` |
 | `price`, `price_source` | current price **in financials ccy**; always `'yfinance'` (no price → `PriceUnavailableError`, no dossier) |
 | `price_quote_currency`, `price_currency_before_fx` | quote currency as yfinance reported it (e.g. `GBp`); its major currency (`GBP`), the price's currency before FX |
 | `fx_rate_used`, `historical_fx_rates` | price ccy → financials ccy rate; `{fye_date: rate or None}` |
@@ -254,7 +255,7 @@ Every section subclasses `DossierSection`, receives the shared `core.report_cont
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Hypothesis profile** (`tests/conftest.py`): `deadline=None` project-wide — the per-example timing deadline caused intermittent failures on WSL; example counts are unchanged.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1280 pass / 20 skip as of 2026-11-01); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1283 pass / 20 skip as of 2026-11-01); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

@@ -12,6 +12,7 @@ from core.fundamentals import BalanceSheetRow, CompanyFundamentals, DividendPaym
 from core.graham_math import GrahamCalculator
 from core.ports import FundamentalsSource, QuoteSource, RateSource
 from core.price_quote import PriceQuote
+from output.dossier_generator import DossierGenerator
 from tests.fixtures import EODHDFixtures
 
 
@@ -114,3 +115,6 @@ def test_the_core_runs_on_any_fundamentals_source():
     assert financial_data["history"]["2023-12-31"]["dividend"] == 0.2
     metrics = GrahamCalculator(financial_data).compute()
     assert metrics.defensive_tests["earnings_stability"] == "PASS"
+    assert financial_data["data_source"] == "In-memory vendor"
+    header = DossierGenerator("TEST.US", financial_data, metrics, []).header.generate()
+    assert "# SOURCE: In-memory vendor (Tier 1 Data)" in header

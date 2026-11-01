@@ -419,6 +419,7 @@ class FinancialDataAssembler:
             'financials_currency': financials_currency,
             'dividend_currency': financials_currency,  # Dividends now converted to financials_currency
             'price': price,
+            'data_source': fundamentals.source,  # the fundamentals vendor (dossier header)
             'price_source': price_source,  # NEW: Track price source for data quality assessment
             'dividend_source': dividend_source,  # NEW: Track dividend source for data quality assessment
             'fx_rate_used': fx_rate_used,  # NEW: FX rate used for price conversion (for historical prices)
@@ -495,7 +496,7 @@ class FinancialDataAssembler:
             if diff_pct > SHARE_COUNT_MAX_DIFF_PCT:
                 warnings.append(
                     f"[VALIDATION] Share Count: Using {outstanding_shares_annual:,.0f} shares from financial statements. "
-                    f"Market data (SharesStats) shows {shares_stats:,.0f} shares ({diff_pct:.1f}% difference). "
+                    f"Market data ({fundamentals.source}) shows {shares_stats:,.0f} shares ({diff_pct:.1f}% difference). "
                     f"Financial statement shares are used for accurate per-share calculations per Graham methodology."
                 )
                 logger.info(f"Share count difference: Financial statements {outstanding_shares_annual:,.0f} vs Market data {shares_stats:,.0f}")

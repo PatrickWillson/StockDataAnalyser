@@ -8,6 +8,7 @@
     "book_value_per_share": 3.951,
     "ceo_name": "Mr. Timothy D. Cook",
     "currency": "CAD",
+    "data_source": "EODHD",
     "dividend_currency": "CAD",
     "dividend_per_share": 0.96,
     "dividend_source": "Cash Flow",

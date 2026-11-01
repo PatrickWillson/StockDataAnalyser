@@ -16,6 +16,7 @@ def sample_financial_data():
     """Create sample financial data for testing."""
     return {
         'ticker': 'TEST.US',
+        'data_source': 'EODHD',
         'exchange': 'US',
         'currency': 'USD',
         'original_stock_currency': 'USD',
