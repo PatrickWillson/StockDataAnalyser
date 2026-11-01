@@ -18,6 +18,7 @@ from core.financial_data_processor import FinancialDataProcessor
 from core.ttm_calculator import TTMCalculator
 from core.graham_math import GrahamCalculator
 from output.dossier_generator import DossierGenerator
+from clients.eodhd_mapper import to_fundamentals
 
 
 def create_mock_api_response_with_quarterly_data():
@@ -166,8 +167,8 @@ def test_ttm_quarterly_data_extraction():
     processor = FinancialDataProcessor()
     
     # Extract quarterly data
-    balance_sheet = processor.parse_quarterly_balance_sheet(api_response)
-    income_statement = processor.parse_quarterly_income_statement(api_response)
+    balance_sheet = processor.parse_quarterly_balance_sheet(to_fundamentals(api_response))
+    income_statement = processor.parse_quarterly_income_statement(to_fundamentals(api_response))
     
     # Verify balance sheet extraction
     assert len(balance_sheet) == 4
@@ -204,8 +205,8 @@ def test_ttm_calculation_workflow():
     
     # Create processor and extract quarterly data
     processor = FinancialDataProcessor()
-    balance_sheet = processor.parse_quarterly_balance_sheet(api_response)
-    income_statement = processor.parse_quarterly_income_statement(api_response)
+    balance_sheet = processor.parse_quarterly_balance_sheet(to_fundamentals(api_response))
+    income_statement = processor.parse_quarterly_income_statement(to_fundamentals(api_response))
     quarterly_data = processor.merge_quarterly_data(balance_sheet, income_statement)
     
     # Create TTM calculator
@@ -259,8 +260,8 @@ def test_ttm_dossier_generation():
     
     # Extract quarterly data
     processor = FinancialDataProcessor()
-    balance_sheet = processor.parse_quarterly_balance_sheet(api_response)
-    income_statement = processor.parse_quarterly_income_statement(api_response)
+    balance_sheet = processor.parse_quarterly_balance_sheet(to_fundamentals(api_response))
+    income_statement = processor.parse_quarterly_income_statement(to_fundamentals(api_response))
     quarterly_data = processor.merge_quarterly_data(balance_sheet, income_statement)
     
     # Calculate annual metrics
@@ -389,8 +390,8 @@ def test_ttm_warnings_in_critical_alerts():
     
     # Extract quarterly data
     processor = FinancialDataProcessor()
-    balance_sheet = processor.parse_quarterly_balance_sheet(api_response)
-    income_statement = processor.parse_quarterly_income_statement(api_response)
+    balance_sheet = processor.parse_quarterly_balance_sheet(to_fundamentals(api_response))
+    income_statement = processor.parse_quarterly_income_statement(to_fundamentals(api_response))
     quarterly_data = processor.merge_quarterly_data(balance_sheet, income_statement)
     
     # Calculate metrics

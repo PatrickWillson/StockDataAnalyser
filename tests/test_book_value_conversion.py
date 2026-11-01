@@ -8,6 +8,7 @@ from unittest.mock import Mock
 from core.currency_converter import CurrencyConverter
 from core.financial_data_assembler import FinancialDataAssembler
 from core.financial_data_processor import FinancialDataProcessor
+from clients.eodhd_mapper import to_fundamentals
 from core.price_quote import PriceQuote
 from tests.fixtures import EODHDFixtures
 from tests.snapshot_scenarios import set_currencies
@@ -24,7 +25,7 @@ def _assemble(dividend_share, book_value):
     fx.fetch_historical_rates.return_value = None
     converter = CurrencyConverter(fx_client=fx)
     assembler = FinancialDataAssembler(FinancialDataProcessor(currency_converter=converter), converter, fx)
-    return assembler.assemble(raw, None, "AAPL.XETRA", quote=PriceQuote(170.0, "EUR"))
+    return assembler.assemble(to_fundamentals(raw, None, "AAPL.XETRA"), "AAPL.XETRA", quote=PriceQuote(170.0, "EUR"))
 
 
 def test_book_value_converted_without_a_dividend():

@@ -10,6 +10,7 @@ Tests Requirements 2.1, 2.2, 2.3, 2.4:
 
 import pytest
 from core.financial_data_processor import FinancialDataProcessor
+from clients.eodhd_mapper import to_fundamentals
 
 
 class TestDividendCalculation:
@@ -47,7 +48,7 @@ class TestDividendCalculation:
             }
         }
         
-        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(data)
+        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(to_fundamentals(data))
         
         # Should use cash flow for all years, not forward rate
         assert '2024' in result
@@ -96,7 +97,7 @@ class TestDividendCalculation:
             }
         }
         
-        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(data)
+        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(to_fundamentals(data))
         
         # Most recent year (2024) has no audited dividend: not filled with the estimate
         assert '2024' not in result
@@ -141,7 +142,7 @@ class TestDividendCalculation:
             }
         }
         
-        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(data)
+        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(to_fundamentals(data))
         
         assert result == {}
         assert 'forward_rate' not in sources.values()
@@ -181,7 +182,7 @@ class TestDividendCalculation:
             }
         }
         
-        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(data)
+        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(to_fundamentals(data))
         
         # Verify source indicators
         assert '2024' not in sources              # Most recent, missing cash flow: not estimated
@@ -221,7 +222,7 @@ class TestDividendCalculation:
             }
         }
         
-        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(data)
+        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(to_fundamentals(data))
         
         # Should not add forward rate if it's zero
         assert '2024' not in result or result['2024'] == 0.0
@@ -250,7 +251,7 @@ class TestDividendCalculation:
             }
         }
         
-        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(data)
+        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(to_fundamentals(data))
         
         # No shares -> no per-share dividend; the estimate does not stand in for it
         assert '2024' not in result

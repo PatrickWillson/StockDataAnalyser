@@ -6,6 +6,7 @@ Tests the new balance sheet extraction logic for total debt and shares outstandi
 
 from hypothesis import given, strategies as st
 from core.financial_data_processor import FinancialDataProcessor
+from clients.eodhd_mapper import to_fundamentals
 
 
 class TestTotalDebtCalculation:
@@ -37,7 +38,7 @@ class TestTotalDebtCalculation:
             }
         }
         
-        result = processor.parse_balance_sheet(mock_data)
+        result = processor.parse_balance_sheet(to_fundamentals(mock_data))
         
         assert '2024-12-31' in result
         calculated_total = result['2024-12-31']['total_debt']
@@ -71,7 +72,7 @@ class TestTotalDebtCalculation:
             }
         }
         
-        result = processor.parse_balance_sheet(mock_data)
+        result = processor.parse_balance_sheet(to_fundamentals(mock_data))
         
         assert '2024-12-31' in result
         calculated_total = result['2024-12-31']['total_debt']
@@ -98,7 +99,7 @@ class TestTotalDebtCalculation:
             }
         }
         
-        result = processor.parse_balance_sheet(mock_data)
+        result = processor.parse_balance_sheet(to_fundamentals(mock_data))
         
         assert '2024-12-31' in result
         assert result['2024-12-31']['total_debt'] == 0.0
@@ -126,7 +127,7 @@ class TestTotalDebtCalculation:
             }
         }
         
-        result = processor.parse_balance_sheet(mock_data)
+        result = processor.parse_balance_sheet(to_fundamentals(mock_data))
         
         assert '2024-12-31' in result
         # Should use the reported total (200M), not the component sum (150M)
@@ -159,7 +160,7 @@ class TestSharesOutstandingExtraction:
             }
         }
         
-        result = processor.parse_balance_sheet(mock_data)
+        result = processor.parse_balance_sheet(to_fundamentals(mock_data))
         
         assert '2024-12-31' in result
         assert abs(result['2024-12-31']['shares_outstanding'] - shares) < 0.01
@@ -184,7 +185,7 @@ class TestSharesOutstandingExtraction:
             }
         }
         
-        result = processor.parse_balance_sheet(mock_data)
+        result = processor.parse_balance_sheet(to_fundamentals(mock_data))
         
         assert '2024-12-31' in result
         assert result['2024-12-31']['shares_outstanding'] == 5000000000.0
@@ -209,7 +210,7 @@ class TestSharesOutstandingExtraction:
             }
         }
         
-        result = processor.parse_balance_sheet(mock_data)
+        result = processor.parse_balance_sheet(to_fundamentals(mock_data))
         
         assert '2024-12-31' in result
         assert result['2024-12-31']['shares_outstanding'] == 5500000000.0
@@ -232,7 +233,7 @@ class TestSharesOutstandingExtraction:
             }
         }
         
-        result = processor.parse_balance_sheet(mock_data)
+        result = processor.parse_balance_sheet(to_fundamentals(mock_data))
         
         assert '2024-12-31' in result
         assert result['2024-12-31']['shares_outstanding'] == 0.0
@@ -259,7 +260,7 @@ class TestSharesOutstandingExtraction:
             }
         }
         
-        result = processor.parse_balance_sheet(mock_data)
+        result = processor.parse_balance_sheet(to_fundamentals(mock_data))
         
         assert '2024-12-31' in result
         # Should use commonStockSharesOutstanding (7B), not others

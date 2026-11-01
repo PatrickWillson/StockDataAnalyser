@@ -6,6 +6,7 @@ Tests the quarterly income statement extraction logic.
 
 import pytest
 from core.financial_data_processor import FinancialDataProcessor
+from clients.eodhd_mapper import to_fundamentals
 
 
 class TestParseQuarterlyIncomeStatement:
@@ -45,7 +46,7 @@ class TestParseQuarterlyIncomeStatement:
             }
         }
         
-        result = processor.parse_quarterly_income_statement(mock_data)
+        result = processor.parse_quarterly_income_statement(to_fundamentals(mock_data))
         
         # Verify we got 4 quarters
         assert len(result) == 4
@@ -89,7 +90,7 @@ class TestParseQuarterlyIncomeStatement:
             }
         }
         
-        result = processor.parse_quarterly_income_statement(mock_data)
+        result = processor.parse_quarterly_income_statement(to_fundamentals(mock_data))
         
         assert len(result) == 2
         
@@ -123,7 +124,7 @@ class TestParseQuarterlyIncomeStatement:
             }
         }
         
-        result = processor.parse_quarterly_income_statement(mock_data)
+        result = processor.parse_quarterly_income_statement(to_fundamentals(mock_data))
         
         # Should return empty dict
         assert result == {}
@@ -140,7 +141,7 @@ class TestParseQuarterlyIncomeStatement:
             }
         }
         
-        result = processor.parse_quarterly_income_statement(mock_data)
+        result = processor.parse_quarterly_income_statement(to_fundamentals(mock_data))
         
         # Should return empty dict
         assert result == {}
@@ -169,7 +170,7 @@ class TestParseQuarterlyIncomeStatement:
             }
         }
         
-        result = processor.parse_quarterly_income_statement(mock_data)
+        result = processor.parse_quarterly_income_statement(to_fundamentals(mock_data))
         
         assert result['2025-09-30']['eps'] == 2.5
         assert result['2025-06-30']['eps'] == 2.4
@@ -198,7 +199,7 @@ class TestParseQuarterlyIncomeStatement:
             }
         }
         
-        result = processor.parse_quarterly_income_statement(mock_data)
+        result = processor.parse_quarterly_income_statement(to_fundamentals(mock_data))
         
         # Never netIncomeFromContinuingOps
         assert result['2025-09-30']['net_income'] == 10000.0
@@ -227,7 +228,7 @@ class TestParseQuarterlyIncomeStatement:
             }
         }
         
-        result = processor.parse_quarterly_income_statement(mock_data)
+        result = processor.parse_quarterly_income_statement(to_fundamentals(mock_data))
         
         # Should handle missing fields gracefully
         q3_2025 = result['2025-09-30']

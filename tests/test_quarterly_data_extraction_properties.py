@@ -14,6 +14,7 @@ import pytest
 from hypothesis import given, strategies as st
 from datetime import datetime
 from core.financial_data_processor import FinancialDataProcessor
+from clients.eodhd_mapper import to_fundamentals
 
 
 # Strategy for generating valid date strings in YYYY-MM-DD format
@@ -151,7 +152,7 @@ class TestQuarterlyDataExtractionProperties:
             }
         }
         
-        result = processor.parse_quarterly_balance_sheet(mock_data)
+        result = processor.parse_quarterly_balance_sheet(to_fundamentals(mock_data))
         
         # Verify result is a dictionary
         assert isinstance(result, dict)
@@ -184,7 +185,7 @@ class TestQuarterlyDataExtractionProperties:
             }
         }
         
-        result = processor.parse_quarterly_balance_sheet(mock_data)
+        result = processor.parse_quarterly_balance_sheet(to_fundamentals(mock_data))
         
         # Skip if no data
         if len(result) == 0:
@@ -216,7 +217,7 @@ class TestQuarterlyDataExtractionProperties:
             }
         }
         
-        result = processor.parse_quarterly_balance_sheet(mock_data)
+        result = processor.parse_quarterly_balance_sheet(to_fundamentals(mock_data))
         
         # Verify all values are numeric (float); inventory None = not reported (F14)
         for period, data in result.items():
@@ -247,7 +248,7 @@ class TestQuarterlyDataExtractionProperties:
             }
         }
         
-        result = processor.parse_quarterly_income_statement(mock_data)
+        result = processor.parse_quarterly_income_statement(to_fundamentals(mock_data))
         
         # Verify result is a dictionary
         assert isinstance(result, dict)
@@ -280,7 +281,7 @@ class TestQuarterlyDataExtractionProperties:
             }
         }
         
-        result = processor.parse_quarterly_income_statement(mock_data)
+        result = processor.parse_quarterly_income_statement(to_fundamentals(mock_data))
         
         # Skip if no data
         if len(result) == 0:
@@ -312,7 +313,7 @@ class TestQuarterlyDataExtractionProperties:
             }
         }
         
-        result = processor.parse_quarterly_income_statement(mock_data)
+        result = processor.parse_quarterly_income_statement(to_fundamentals(mock_data))
         
         # Verify all values are numeric (float)
         for period, data in result.items():
@@ -352,8 +353,8 @@ class TestQuarterlyDataExtractionProperties:
             }
         }
         
-        parsed_bs = processor.parse_quarterly_balance_sheet(mock_bs_data)
-        parsed_is = processor.parse_quarterly_income_statement(mock_is_data)
+        parsed_bs = processor.parse_quarterly_balance_sheet(to_fundamentals(mock_bs_data))
+        parsed_is = processor.parse_quarterly_income_statement(to_fundamentals(mock_is_data))
         
         # Merge the data
         result = processor.merge_quarterly_data(parsed_bs, parsed_is)
@@ -426,7 +427,7 @@ class TestQuarterlyDataExtractionProperties:
             }
         }
         
-        result = processor.parse_quarterly_balance_sheet(mock_data)
+        result = processor.parse_quarterly_balance_sheet(to_fundamentals(mock_data))
         
         # Verify period count is preserved
         assert len(result) == num_periods, \

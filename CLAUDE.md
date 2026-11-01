@@ -43,6 +43,7 @@ stock_data_analyser.py (CLI entry point)
     ↓
 clients/ (Data Acquisition Layer)
     ├── eodhd_client.py - EODHD API integration for fundamentals
+    ├── eodhd_mapper.py - EODHD JSON → CompanyFundamentals (the only code that knows EODHD keys)
     ├── yfinance_client.py - Yahoo Finance for real-time prices
     ├── fx_client.py - Live FX rates
     └── base_client.py - HTTP retry logic & session management
@@ -52,7 +53,8 @@ core/ (Business Logic Layer)
     ├── anomaly_detector.py - Z-Score statistical analysis
     ├── ttm_calculator.py - Trailing Twelve Months calculations
     ├── currency_converter.py - FX rate application
-    ├── financial_data_processor.py - Data parsing & normalization
+    ├── financial_data_processor.py - Data normalization (provider-neutral)
+    ├── fundamentals.py - Provider-neutral input contract (CompanyFundamentals)
     └── models.py - Typed models (frozen dataclasses with to_dict()/from_dict())
     ↓
 output/ (Output Layer)

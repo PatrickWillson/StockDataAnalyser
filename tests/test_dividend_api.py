@@ -10,6 +10,7 @@ Tests the priority-based dividend data sourcing:
 import pytest
 from unittest.mock import Mock, patch
 from core.financial_data_processor import FinancialDataProcessor
+from clients.eodhd_mapper import to_fundamentals
 
 
 class TestDividendAPIIntegration:
@@ -48,10 +49,7 @@ class TestDividendAPIIntegration:
             {'date': '2023-12-15', 'value': 1.10, 'paymentDate': '2023-12-31', 'currency': 'USD'}  # Paid in 2023
         ]
         
-        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(
-            fundamentals_data, 
-            dividend_api_data=dividend_api_data
-        )
+        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(to_fundamentals(fundamentals_data, dividend_api_data))
         
         # Should use Dividend API data (2.35 for 2024, 2.20 for 2023) not Cash Flow (1.00 per year)
         assert result['2024'] == 2.35  # 1.25 + 1.10
@@ -86,10 +84,7 @@ class TestDividendAPIIntegration:
         }
         
         # Dividend API unavailable (None)
-        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(
-            fundamentals_data, 
-            dividend_api_data=None
-        )
+        result, forward_rate, is_amount, currency, sources = processor.parse_dividend_history(to_fundamentals(fundamentals_data))
         
         # Should use Cash Flow data
         assert result['2024'] == 1.00  # 1000000 / 1000000
@@ -114,10 +109,7 @@ class TestDividendAPIIntegration:
             {'date': '2024-12-15', 'value': 0.15, 'currency': 'GBP'}
         ]
         
-        result, _, _, currency, sources = processor.parse_dividend_history(
-            fundamentals_data, 
-            dividend_api_data=dividend_api_data
-        )
+        result, _, _, currency, sources = processor.parse_dividend_history(to_fundamentals(fundamentals_data, dividend_api_data))
         
         # Should aggregate all 4 payments
         assert result['2024'] == 0.60  # 0.15 * 4
@@ -143,10 +135,7 @@ class TestDividendAPIIntegration:
             }
         ]
         
-        result, _, _, _, sources = processor.parse_dividend_history(
-            fundamentals_data, 
-            dividend_api_data=dividend_api_data
-        )
+        result, _, _, _, sources = processor.parse_dividend_history(to_fundamentals(fundamentals_data, dividend_api_data))
         
         # Should use payment date (2024) not ex-date (2023)
         assert '2024' in result
@@ -176,10 +165,7 @@ class TestDividendAPIIntegration:
         }
         
         # Empty Dividend API list
-        result, _, _, _, sources = processor.parse_dividend_history(
-            fundamentals_data, 
-            dividend_api_data=[]
-        )
+        result, _, _, _, sources = processor.parse_dividend_history(to_fundamentals(fundamentals_data, []))
         
         # Should fall back to Cash Flow
         assert result['2024'] == 1.00
@@ -200,10 +186,7 @@ class TestDividendAPIIntegration:
             {'date': '2024-12-15', 'value': 1.25, 'currency': 'USD'}
         ]
         
-        result, _, _, _, _ = processor.parse_dividend_history(
-            fundamentals_data, 
-            dividend_api_data=dividend_api_data
-        )
+        result, _, _, _, _ = processor.parse_dividend_history(to_fundamentals(fundamentals_data, dividend_api_data))
         
         # Should only include non-zero dividends
         assert result['2024'] == 2.50  # 1.25 + 1.25 (skipped 0.0)
@@ -222,10 +205,7 @@ class TestDividendAPIIntegration:
             {'date': '2024-12-15', 'value': 0.50, 'currency': 'GBP'}
         ]
         
-        _, _, _, currency, _ = processor.parse_dividend_history(
-            fundamentals_data, 
-            dividend_api_data=dividend_api_data
-        )
+        _, _, _, currency, _ = processor.parse_dividend_history(to_fundamentals(fundamentals_data, dividend_api_data))
         
         # Should use dividend currency (GBP) not stock currency (USD)
         assert currency == 'GBP'

@@ -69,3 +69,27 @@ def test_output_layer_reads_core_only_through_the_view_model():
             elif isinstance(node, ast.Import):
                 offenders += [f"{os.path.relpath(path, root)}: {a.name}" for a in node.names if a.name.startswith('core')]
     assert offenders == []
+
+
+# Raw EODHD JSON keys: only the EODHD adapter (clients/eodhd_mapper.py) may name them
+EODHD_PAYLOAD_KEYS = {
+    'General', 'Highlights', 'Financials', 'Balance_Sheet', 'Income_Statement', 'Cash_Flow',
+    'SplitsDividends', 'SharesStats', 'Technicals', 'Valuation', 'outstandingShares', 'Officers',
+    'CurrencyCode', 'currency_symbol', 'totalStockholderEquity', 'commonStockSharesOutstanding',
+    'totalRevenue', 'netIncome', 'dividendsPaid', 'paymentDate', 'NumberDividendsByYear',
+    'ForwardAnnualDividendRate',
+}
+
+
+def test_core_reads_no_vendor_payload():
+    """Core consumes provider-neutral CompanyFundamentals (core/fundamentals.py), never vendor JSON."""
+    import ast
+    import glob
+    root = os.path.join(os.path.dirname(__file__), "..")
+    offenders = []
+    for path in glob.glob(os.path.join(root, "core", "**", "*.py"), recursive=True):
+        with open(path, encoding="utf-8") as handle:
+            tree = ast.parse(handle.read())
+        offenders += [f"{os.path.relpath(path, root)}:{node.lineno}: {node.value!r}" for node in ast.walk(tree)
+                      if isinstance(node, ast.Constant) and node.value in EODHD_PAYLOAD_KEYS]
+    assert offenders == []

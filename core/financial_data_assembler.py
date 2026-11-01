@@ -1,9 +1,7 @@
 """
-Assembles the normalised financial_data dict from raw EODHD payloads.
-
-Moved out of EODHDClient.fetch_all_data (M3.4) so the client only fetches. Price and FX
-rates still come through injected objects (the yfinance price client and an FX source);
-making assembly pure is a later step (M3.6).
+Assembles the normalised financial_data dict from provider-neutral CompanyFundamentals
+(core/fundamentals.py), the current quote and FX rates. Reads no vendor format: a fundamentals
+source adapter (e.g. clients/eodhd_mapper.py) produces the CompanyFundamentals.
 """
 
 import logging
@@ -11,6 +9,7 @@ from typing import Dict, Any, Optional, List
 from core.currency_converter import CurrencyConverter
 from core.errors import PriceUnavailableError
 from core.financial_data_processor import FinancialDataProcessor
+from core.fundamentals import CompanyFundamentals
 from core.history import has_statement_data
 from core.price_quote import PriceQuote, to_major_unit
 from config.data_quality_config import (API_DATA_MAX_AGE_DAYS, BVPS_MAX_DIFF_PCT, DIVIDEND_SOURCE_MAX_DIFF_PCT,
@@ -21,13 +20,13 @@ logger = logging.getLogger(__name__)
 
 
 class FinancialDataAssembler:
-    """Builds financial_data from the raw fundamentals JSON and Dividend API records."""
+    """Builds financial_data from CompanyFundamentals, the current quote and FX rates."""
     
     def __init__(self, processor: FinancialDataProcessor, currency_converter: CurrencyConverter,
                  fx_client: Any, debug: bool = False):
         """
         Args:
-            processor: Parser for EODHD statements
+            processor: Normaliser for the fundamentals
             currency_converter: Converter sharing the same FX source
             fx_client: FX source providing get_rate, fetch_historical_rates, match_fiscal_year_end_rates
             debug: Enable debug logging
@@ -37,14 +36,13 @@ class FinancialDataAssembler:
         self.fx_client = fx_client
         self.debug = debug
     
-    def assemble(self, data: Dict[str, Any], dividend_api_data: Optional[List[Dict[str, Any]]],
-                 ticker: str, quote: Optional[PriceQuote] = None) -> Dict[str, Any]:
+    def assemble(self, fundamentals: CompanyFundamentals, ticker: str,
+                 quote: Optional[PriceQuote] = None) -> Dict[str, Any]:
         """
         Build the financial_data dict (see docs/CODEBASE_GUIDE.md §4.1).
 
         Args:
-            data: Raw EODHD fundamentals JSON
-            dividend_api_data: Records from the EODHD Dividend API, or None
+            fundamentals: Company fundamentals from the fundamentals source
             ticker: Ticker as given to the CLI (e.g. AAPL.US)
             quote: Current price and quote currency from yfinance (the only price source),
                    fetched by the caller, or None
@@ -55,16 +53,13 @@ class FinancialDataAssembler:
         warnings = []
         
         # Extract general information
-        general = data.get('General', {})
-        ticker_code = general.get('Code', ticker.split('.')[0])
-        exchange = general.get('Exchange', 'UNKNOWN')
-        currency = general.get('CurrencyCode', 'USD')
-        ceo_name = self.processor.extract_ceo_name(data)
+        ticker_code = fundamentals.symbol
+        exchange = fundamentals.exchange
+        currency = fundamentals.trading_currency
+        ceo_name = fundamentals.ceo_name
         
-        # Extract financial statement currency
-        financials_currency = data.get('Financials', {}).get('Balance_Sheet', {}).get('currency_symbol', 'USD')
-        if not financials_currency or financials_currency == '':
-            financials_currency = 'USD'
+        # Financial statement currency
+        financials_currency = fundamentals.statement_currency
         
         logger.info(f"Stock Currency: {currency}, Financials Currency: {financials_currency}")
         
@@ -73,53 +68,34 @@ class FinancialDataAssembler:
             logger.warning(f"Currency Mismatch: Stock trades in {currency}, but financial statements are in {financials_currency}")
         
         # Extract additional company info
-        # `or` defaults: EODHD returns JSON null for missing fields, which .get() passes through
-        sector = general.get('Sector') or 'N/A'
-        industry = general.get('Industry') or 'N/A'
-        employees = general.get('FullTimeEmployees') or 0
+        sector = fundamentals.sector or 'N/A'
+        industry = fundamentals.industry or 'N/A'
+        employees = fundamentals.employees or 0
         
-        logger.info(f"Company: {general.get('Name', 'Unknown')}")
+        logger.info(f"Company: {fundamentals.name or 'Unknown'}")
         logger.info(f"Exchange: {exchange}, Currency: {currency}")
         logger.info(f"Sector: {sector}, Industry: {industry}")
         
-        # Numeric fields below are sanitised: JSON null / "NA" / junk -> 0.0 (missing)
-        sanitize = FinancialDataProcessor.sanitize_value
-
-        # Extract highlights data
-        highlights = data.get('Highlights') or {}
-        dividend_per_share = sanitize(highlights.get('DividendShare'))
-        dividend_yield = sanitize(highlights.get('DividendYield'))
-        pe_ratio = sanitize(highlights.get('PERatio'))
-        book_value_per_share = sanitize(highlights.get('BookValue'))
-        roe = sanitize(highlights.get('ReturnOnEquityTTM'))
-        roa = sanitize(highlights.get('ReturnOnAssetsTTM'))
-        profit_margin = sanitize(highlights.get('ProfitMargin'))
-        
-        # Extract valuation data
-        valuation = data.get('Valuation') or {}
-        # Note: We calculate P/B ratio ourselves instead of using PriceBookMRQ
-        # API value is often stale and uses quarterly data vs our annual audited data
-        enterprise_value = sanitize(valuation.get('EnterpriseValue'))
-        
-        # Extract ownership data
-        shares_stats = data.get('SharesStats') or {}
-        insider_ownership = sanitize(shares_stats.get('PercentInsiders'))
-        institutional_ownership = sanitize(shares_stats.get('PercentInstitutions'))
-        
-        # Extract technical data
-        technicals = data.get('Technicals') or {}
-        beta = sanitize(technicals.get('Beta'))
-        week_52_high = sanitize(technicals.get('52WeekHigh'))
-        week_52_low = sanitize(technicals.get('52WeekLow'))
+        # The vendor's market figures (display / labelled comparison only; 0.0 = missing)
+        market = fundamentals.market
+        dividend_per_share = market.dividend_per_share
+        dividend_yield = market.dividend_yield
+        book_value_per_share = market.book_value_per_share
+        # P/E, P/B, ROE, ROA and margin are calculated below from annual audited data
+        enterprise_value = market.enterprise_value
+        insider_ownership = market.insider_ownership
+        institutional_ownership = market.institutional_ownership
+        beta = market.beta
+        week_52_high = market.week_52_high
+        week_52_low = market.week_52_low
         
         # Check if delisted
-        is_delisted = general.get('IsDelisted', False)
-        if is_delisted:
+        if fundamentals.is_delisted:
             warnings.append("WARNING: Company is delisted")
             logger.warning("Company is delisted")
         
         # Extract shares outstanding
-        shares_outstanding = self.processor.extract_shares_outstanding(data)
+        shares_outstanding = fundamentals.shares_outstanding
         if shares_outstanding == 0.0:
             warnings.append("WARNING: Shares outstanding data unavailable")
             logger.warning("Shares outstanding data unavailable")
@@ -127,32 +103,32 @@ class FinancialDataAssembler:
             logger.info(f"Shares Outstanding: {shares_outstanding:,.0f}")
         
         # Extract year-specific shares outstanding for accurate EPS calculation
-        shares_by_year = self.processor.extract_shares_by_year(data)
+        shares_by_year = dict(fundamentals.shares_by_year)
         if shares_by_year:
             logger.info(f"Found year-specific shares data for {len(shares_by_year)} years")
             if self.debug:
                 for year in sorted(shares_by_year.keys(), reverse=True)[:3]:
                     logger.debug(f"{year} shares: {shares_by_year[year]:,.0f}")
         
-        # Fetch dividend history from Dividend API (primary source)
-        if dividend_api_data:
-            logger.info(f"Retrieved {len(dividend_api_data)} dividend records from Dividend API")
+        # Dividend payments (primary dividend source)
+        if fundamentals.dividend_payments:
+            logger.info(f"Retrieved {len(fundamentals.dividend_payments)} dividend payment records")
         else:
-            logger.info("Dividend API unavailable - will use Cash Flow data as fallback")
+            logger.info("Dividend payments unavailable - will use Cash Flow data as fallback")
         
         # Parse financial statements using processor
         logger.info("Parsing financial statements...")
-        balance_sheet = self.processor.parse_balance_sheet(data)
-        income_statement = self.processor.parse_income_statement(data)
-        dividend_history, forward_dividend_rate, is_dividend_amounts, dividend_currency, dividend_sources = self.processor.parse_dividend_history(data, dividend_api_data=dividend_api_data)
+        balance_sheet = self.processor.parse_balance_sheet(fundamentals)
+        income_statement = self.processor.parse_income_statement(fundamentals)
+        dividend_history, forward_dividend_rate, is_dividend_amounts, dividend_currency, dividend_sources = self.processor.parse_dividend_history(fundamentals)
         
-        # Calculate TTM dividend from Dividend API data
-        ttm_dividend, ttm_dividend_payments, ttm_dividend_currency = self.processor.calculate_ttm_dividend(dividend_api_data)
+        # Calculate TTM dividend from the dividend payments
+        ttm_dividend, ttm_dividend_payments, ttm_dividend_currency = self.processor.calculate_ttm_dividend(fundamentals.dividend_payments)
         if ttm_dividend > 0:
             logger.info(f"TTM Dividend: {ttm_dividend:.4f} {ttm_dividend_currency} from {len(ttm_dividend_payments)} payments")
         
         # Convert dividend history to financials currency if needed
-        # This is critical for Dividend API data which comes in the stock's trading currency.
+        # This is critical for dividend payments, which come in the stock's trading currency.
         # Payment counts have no currency and are never converted (F21)
         if is_dividend_amounts and dividend_currency != financials_currency:
             logger.info(f"Converting dividends from {dividend_currency} to {financials_currency}...")
@@ -178,7 +154,8 @@ class FinancialDataAssembler:
                                                       dividends_are_amounts=is_dividend_amounts)
         
         # Get current price
-        price, price_problem = self.processor.get_current_price(quote, currency, warnings=warnings)
+        price, price_problem = self.processor.get_current_price(quote, currency, warnings=warnings,
+                                                                source=fundamentals.source)
         if price_problem:
             raise PriceUnavailableError(f"Current price unavailable for {ticker}: {price_problem}")
         price_source = 'yfinance'
@@ -199,7 +176,7 @@ class FinancialDataAssembler:
                     break
         
         # The price unit follows the yfinance quote currency code (F6): GBp = pence -> ÷100, the
-        # London Fix. EODHD's 52-week range comes from the same exchange prices, so it shares the unit
+        # London Fix. The vendor's 52-week range comes from the same exchange prices, so it shares the unit
         price_quote_currency = quote.currency
         price, price_currency = self.currency_converter.normalise_quote_unit(price, price_quote_currency)
         week_52_high, _ = to_major_unit(week_52_high, price_quote_currency)
@@ -255,13 +232,9 @@ class FinancialDataAssembler:
                         logger.warning(f"Could not fetch historical FX rates for {price_currency}/{financials_currency}")
                         warnings.append("Historical FX rates unavailable - using current rate for all years")
         
-        # Convert Highlights dividends and book value to financials currency
-        # Note: For LSE stocks, DividendShare and BookValue in API are already in GBP, not GBX
-        highlights_dividend_currency = currency
-        if exchange == "LSE" and highlights_dividend_currency == "GBX":
-            # DividendShare and BookValue are already in GBP for LSE stocks, not GBX
-            # So we don't divide by 100 - just change the currency label
-            highlights_dividend_currency = "GBP"
+        # Convert the vendor's per-share dividend and book value to financials currency
+        # (their true currency: the adapter corrects vendor labels, e.g. GBX on pound-scale LSE values)
+        highlights_dividend_currency = market.per_share_currency
         
         # Each converted on its own: book value no longer depends on a dividend being present (F10)
         if highlights_dividend_currency != financials_currency:
@@ -281,11 +254,7 @@ class FinancialDataAssembler:
         
         # Convert forward dividend rate to financials currency
         if forward_dividend_rate:
-            fwd_div_currency = currency
-            if exchange == "LSE" and fwd_div_currency == "GBX":
-                # Forward dividend rate is already in GBP for LSE stocks
-                fwd_div_currency = "GBP"
-            
+            fwd_div_currency = fundamentals.forward_dividend_currency
             if fwd_div_currency != financials_currency:
                 converted_fwd_rate, success = self.currency_converter.convert(
                     forward_dividend_rate, fwd_div_currency, financials_currency
@@ -295,11 +264,7 @@ class FinancialDataAssembler:
         
         # Convert TTM dividend to financials currency
         if ttm_dividend and ttm_dividend > 0:
-            # TTM dividend currency handling (same as forward rate)
             ttm_div_currency = ttm_dividend_currency
-            if exchange == "LSE" and ttm_div_currency == "GBX":
-                # TTM dividend is already in GBP for LSE stocks
-                ttm_div_currency = "GBP"
             
             if ttm_div_currency != financials_currency:
                 converted_ttm_div, success = self.currency_converter.convert(
@@ -370,7 +335,7 @@ class FinancialDataAssembler:
         
         # Cross-validate calculated metrics against API values
         logger.info("Cross-validating metrics...")
-        validation_warnings = self._cross_validate_metrics(data, pe_ratio, calculated_bvps, calculated_roe, calculated_roa, calculated_profit_margin,
+        validation_warnings = self._cross_validate_metrics(fundamentals, pe_ratio, calculated_bvps, calculated_roe, calculated_roa, calculated_profit_margin,
                                                            api_bvps=book_value_per_share, currency=financials_currency)
         warnings.extend(validation_warnings)
         
@@ -418,8 +383,8 @@ class FinancialDataAssembler:
                 logger.warning(f"  - {warning}")
         
         # Parse quarterly data for TTM calculations
-        quarterly_balance_sheet = self.processor.parse_quarterly_balance_sheet(data)
-        quarterly_income_statement = self.processor.parse_quarterly_income_statement(data)
+        quarterly_balance_sheet = self.processor.parse_quarterly_balance_sheet(fundamentals)
+        quarterly_income_statement = self.processor.parse_quarterly_income_statement(fundamentals)
         quarterly_data = self.processor.merge_quarterly_data(quarterly_balance_sheet, quarterly_income_statement)
         
         logger.info(f"Data fetch complete for {ticker}")
@@ -469,12 +434,12 @@ class FinancialDataAssembler:
             'week_52_high': week_52_high,
             'week_52_low': week_52_low,
             # Data quality metadata
-            'api_last_update': general.get('UpdatedAt', 'Unknown'),
+            'api_last_update': fundamentals.updated_at if fundamentals.updated_at is not None else 'Unknown',
             # TTM data
             'quarterly_data': quarterly_data
         }
     
-    def _cross_validate_metrics(self, data: Dict[str, Any], calculated_pe: float, calculated_bvps: float, 
+    def _cross_validate_metrics(self, fundamentals: CompanyFundamentals, calculated_pe: float, calculated_bvps: float, 
                                 calculated_roe: float, calculated_roa: float, calculated_profit_margin: float,
                                 api_bvps: Optional[float] = None, currency: str = "") -> List[str]:
         """
@@ -482,35 +447,25 @@ class FinancialDataAssembler:
         Flag significant discrepancies for user review.
         
         Args:
-            data: Raw API response data
+            fundamentals: Company fundamentals (the vendor's market figures are compared)
             calculated_pe: P/E ratio calculated from financials
             calculated_bvps: Book value per share calculated from balance sheet
             calculated_roe: Return on Equity calculated from annual data
             calculated_roa: Return on Assets calculated from annual data
             calculated_profit_margin: Profit Margin calculated from annual data
-            api_bvps: Highlights.BookValue converted to the financials currency (None: read it raw)
+            api_bvps: The vendor's book value per share converted to the financials currency (None: as reported)
             currency: Financials currency, for the warning text
         
         Returns:
             List of validation warnings
         """
         warnings = []
-        # API values are sanitised (null / "NA" / junk -> 0, i.e. not compared), never trusted raw
-        sanitize = FinancialDataProcessor.sanitize_value
-        highlights = data.get('Highlights') or {}
+        # The vendor's figures are 0.0 when missing (not compared)
+        market = fundamentals.market
         
-        # Check Share Count Consistency
-        shares_stats = sanitize((data.get('SharesStats') or {}).get('SharesOutstanding'))
-        
-        # Get outstandingShares.annual
-        outstanding_shares_annual = 0
-        outstanding_shares_data = (data.get('outstandingShares') or {}).get('annual') or {}
-        if outstanding_shares_data:
-            # Get most recent year
-            for item in outstanding_shares_data.values():
-                if isinstance(item, dict) and 'shares' in item:
-                    outstanding_shares_annual = sanitize(item.get('shares'))
-                    break  # Get first (most recent)
+        # Check Share Count Consistency: current (market data) vs latest annual statement count
+        shares_stats = fundamentals.shares_outstanding
+        outstanding_shares_annual = fundamentals.latest_statement_shares
         
         # Compare share counts if they differ significantly
         if shares_stats > 0 and outstanding_shares_annual > 0:
@@ -524,7 +479,7 @@ class FinancialDataAssembler:
                 logger.info(f"Share count difference: Financial statements {outstanding_shares_annual:,.0f} vs Market data {shares_stats:,.0f}")
         
         # Check P/E ratio
-        api_pe = sanitize(highlights.get('PERatio'))
+        api_pe = market.pe_ratio
         
         # Handle None values - convert to 0 for comparison
         if calculated_pe is None:
@@ -541,9 +496,9 @@ class FinancialDataAssembler:
                 logger.info(f"P/E difference: API {api_pe:.2f} (TTM) vs Calculated {calculated_pe:.2f} (Annual)")
         
         # Check Book Value, both sides in the financials currency (F10): the caller passes
-        # Highlights.BookValue already converted; the raw value is only a fallback for direct callers
+        # book value already converted; the value as reported is only a fallback for direct callers
         if api_bvps is None:
-            api_bvps = sanitize(highlights.get('BookValue'))
+            api_bvps = market.book_value_per_share
         
         # Handle None values - convert to 0 for comparison
         if api_bvps is None:
@@ -563,7 +518,7 @@ class FinancialDataAssembler:
                 logger.warning(f"Book Value discrepancy detected: API {api_bvps:.2f} vs Calculated {calculated_bvps:.2f} {currency}")
         
         # Check for stale price data
-        last_update = (data.get('General') or {}).get('UpdatedAt') or ''
+        last_update = fundamentals.updated_at or ''
         if last_update:
             try:
                 from datetime import datetime, timezone
@@ -588,9 +543,9 @@ class FinancialDataAssembler:
                 logger.debug(f"Could not parse UpdatedAt date: {e}")
         
         # Validate profitability metrics
-        api_roe = sanitize(highlights.get('ReturnOnEquityTTM'))
-        api_roa = sanitize(highlights.get('ReturnOnAssetsTTM'))
-        api_profit_margin = sanitize(highlights.get('ProfitMargin'))
+        api_roe = market.roe
+        api_roa = market.roa
+        api_profit_margin = market.profit_margin
         
         # Handle None values for calculated metrics
         if calculated_roe is None:

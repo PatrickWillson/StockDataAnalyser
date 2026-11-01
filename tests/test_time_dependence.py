@@ -16,6 +16,7 @@ from clients.eodhd_client import EODHDClient
 from core.financial_data_processor import FinancialDataProcessor
 from core.ttm_calculator import TTMCalculator
 from output.dossier_generator import DossierGenerator
+from clients.eodhd_mapper import dividend_payments, to_fundamentals
 
 PINNED = datetime(2026, 1, 31, 12, 0, tzinfo=timezone.utc)
 
@@ -33,7 +34,7 @@ def test_api_staleness_warning():
     client = EODHDClient('test_key', fx_client=object())
     data = {'General': {'UpdatedAt': '2026-01-01'}}
 
-    warnings = client.assembler._cross_validate_metrics(data, 0.0, 0.0, 0.0, 0.0, 0.0)
+    warnings = client.assembler._cross_validate_metrics(to_fundamentals(data), 0.0, 0.0, 0.0, 0.0, 0.0)
 
     assert any('API data is 30 days old' in w for w in warnings)
 
@@ -47,7 +48,7 @@ def test_ttm_dividend_window():
         {'paymentDate': '2025-01-15', 'value': 0.25, 'currency': 'USD'},   # outside (cutoff 2025-01-31)
     ]
 
-    total, payments, _ = processor.calculate_ttm_dividend(dividends)
+    total, payments, _ = processor.calculate_ttm_dividend(dividend_payments(dividends, 'USD', 'US'))
 
     assert total == 0.5
     assert [p['date'] for p in payments] == ['2026-01-15', '2025-02-15']

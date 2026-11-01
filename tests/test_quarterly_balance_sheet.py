@@ -6,6 +6,7 @@ Tests the quarterly balance sheet extraction logic.
 
 import pytest
 from core.financial_data_processor import FinancialDataProcessor
+from clients.eodhd_mapper import to_fundamentals
 
 
 class TestParseQuarterlyBalanceSheet:
@@ -73,7 +74,7 @@ class TestParseQuarterlyBalanceSheet:
             }
         }
         
-        result = processor.parse_quarterly_balance_sheet(mock_data)
+        result = processor.parse_quarterly_balance_sheet(to_fundamentals(mock_data))
         
         # Verify we got 4 quarters
         assert len(result) == 4
@@ -122,7 +123,7 @@ class TestParseQuarterlyBalanceSheet:
             }
         }
         
-        result = processor.parse_quarterly_balance_sheet(mock_data)
+        result = processor.parse_quarterly_balance_sheet(to_fundamentals(mock_data))
         
         assert len(result) == 1
         q3_2025 = result['2025-09-30']
@@ -156,7 +157,7 @@ class TestParseQuarterlyBalanceSheet:
             }
         }
         
-        result = processor.parse_quarterly_balance_sheet(mock_data)
+        result = processor.parse_quarterly_balance_sheet(to_fundamentals(mock_data))
         
         # Should return empty dict
         assert result == {}
@@ -173,7 +174,7 @@ class TestParseQuarterlyBalanceSheet:
             }
         }
         
-        result = processor.parse_quarterly_balance_sheet(mock_data)
+        result = processor.parse_quarterly_balance_sheet(to_fundamentals(mock_data))
         
         # Should return empty dict
         assert result == {}
@@ -204,7 +205,7 @@ class TestParseQuarterlyBalanceSheet:
             }
         }
         
-        result = processor.parse_quarterly_balance_sheet(mock_data)
+        result = processor.parse_quarterly_balance_sheet(to_fundamentals(mock_data))
         
         assert result['2025-09-30']['shares_outstanding'] == 5000.0
         assert result['2025-06-30']['shares_outstanding'] == 4800.0
@@ -246,7 +247,7 @@ class TestParseQuarterlyBalanceSheet:
             }
         }
         
-        result = processor.parse_quarterly_balance_sheet(mock_data)
+        result = processor.parse_quarterly_balance_sheet(to_fundamentals(mock_data))
         
         # Verify total debt from components
         assert result['2025-09-30']['total_debt'] == 350000.0  # 300k + 50k

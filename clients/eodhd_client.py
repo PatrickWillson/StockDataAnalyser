@@ -11,15 +11,19 @@ from typing import Dict, Any, Optional, List
 from clients.base_client import BaseAPIClient
 from core.errors import EODHDAuthError, EODHDRateLimitError, EODHDRequestError
 from clients.fx_client import FXClient
+from clients.eodhd_mapper import SOURCE_NAME, to_fundamentals
 from core.currency_converter import CurrencyConverter
 from core.financial_data_assembler import FinancialDataAssembler
 from core.financial_data_processor import FinancialDataProcessor
+from core.fundamentals import CompanyFundamentals
 
 logger = logging.getLogger(__name__)
 
 
 class EODHDClient(BaseAPIClient):
     """Client for fetching financial data from EODHD API."""
+    
+    name = SOURCE_NAME
     
     API_BASE_URL = "https://eodhd.com/api/fundamentals/{ticker}"
     
@@ -130,16 +134,13 @@ class EODHDClient(BaseAPIClient):
                 logger.debug(f"Dividend API request failed: {str(e)}")
             return None
     
-    def fetch_all_data(self, ticker: str, yf_client: Optional[Any] = None) -> Dict[str, Any]:
+    def fetch_fundamentals(self, ticker: str) -> CompanyFundamentals:
         """
-        Fetch the fundamentals and dividend history for a ticker and assemble financial_data.
+        Fetch the fundamentals and dividend history for a ticker as provider-neutral
+        CompanyFundamentals (clients/eodhd_mapper.py).
         
-        Args:
-            ticker: Stock ticker with exchange suffix (e.g., AAPL.US, YU.LSE)
-            yf_client: Optional yfinance client for the current price quote (the only price source)
-            
-        Returns:
-            financial_data dict (see FinancialDataAssembler.assemble)
+        Raises:
+            EODHDAuthError, EODHDRateLimitError, EODHDRequestError: the fundamentals request failed
         """
         logger.info(f"Fetching data for {ticker}...")
         data = self._make_eodhd_request(ticker)
@@ -158,8 +159,22 @@ class EODHDClient(BaseAPIClient):
         # Fetch dividend history from Dividend API (primary dividend source)
         logger.info("Fetching dividend history...")
         dividend_api_data = self._fetch_dividend_history(ticker)
+        return to_fundamentals(data, dividend_api_data, ticker)
+    
+    def fetch_all_data(self, ticker: str, yf_client: Optional[Any] = None) -> Dict[str, Any]:
+        """
+        Fetch the fundamentals and dividend history for a ticker and assemble financial_data.
+        
+        Args:
+            ticker: Stock ticker with exchange suffix (e.g., AAPL.US, YU.LSE)
+            yf_client: Optional yfinance client for the current price quote (the only price source)
+            
+        Returns:
+            financial_data dict (see FinancialDataAssembler.assemble)
+        """
+        fundamentals = self.fetch_fundamentals(ticker)
         
         # Current price from yfinance (the only price source); assembly itself does no I/O
         quote = yf_client.get_quote(ticker) if yf_client else None
         
-        return self.assembler.assemble(data, dividend_api_data, ticker, quote=quote)
+        return self.assembler.assemble(fundamentals, ticker, quote=quote)

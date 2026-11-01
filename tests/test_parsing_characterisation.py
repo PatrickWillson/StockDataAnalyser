@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import pytest
 
 from core.financial_data_processor import FinancialDataProcessor
+from clients.eodhd_mapper import dividend_payments, extract_ceo_name, extract_shares_by_year, to_fundamentals
 
 
 def _officers(*officers):
@@ -21,49 +22,49 @@ def _officers(*officers):
 class TestExtractCeoName:
     def test_finds_chief_executive_by_title(self):
         data = _officers({"Name": "A", "Title": "CFO"}, {"Name": "B", "Title": "Chief Executive Officer"})
-        assert FinancialDataProcessor.extract_ceo_name(data) == "B"
+        assert extract_ceo_name(data) == "B"
 
     def test_title_match_is_case_insensitive_and_matches_ceo_abbreviation(self):
         data = _officers({"Name": "A", "Title": "CFO"}, {"Name": "B", "Title": "Co-Founder & ceo"})
-        assert FinancialDataProcessor.extract_ceo_name(data) == "B"
+        assert extract_ceo_name(data) == "B"
 
     def test_falls_back_to_first_officer_when_no_ceo_title(self):
         data = _officers({"Name": "A", "Title": "Chairman"}, {"Name": "B", "Title": "CFO"})
-        assert FinancialDataProcessor.extract_ceo_name(data) == "A"
+        assert extract_ceo_name(data) == "A"
 
     def test_missing_name_returns_na(self):
-        assert FinancialDataProcessor.extract_ceo_name(_officers({"Title": "CEO"})) == "N/A"
+        assert extract_ceo_name(_officers({"Title": "CEO"})) == "N/A"
 
     @pytest.mark.parametrize("officers", [None, {}, [], [{"Name": "A", "Title": "CEO"}], "text"])
     def test_missing_or_non_dict_officers_return_na(self, officers):
-        assert FinancialDataProcessor.extract_ceo_name({"General": {"Officers": officers}}) == "N/A"
+        assert extract_ceo_name({"General": {"Officers": officers}}) == "N/A"
 
     def test_non_dict_officer_entries_are_skipped(self):
         data = {"General": {"Officers": {"0": {"Name": "A", "Title": "CFO"}, "1": "junk",
                                          "2": {"Name": "C", "Title": "CEO"}}}}
-        assert FinancialDataProcessor.extract_ceo_name(data) == "C"
+        assert extract_ceo_name(data) == "C"
 
     def test_non_dict_first_officer_returns_na(self):
         data = {"General": {"Officers": {"0": "junk", "1": {"Name": "B", "Title": "CFO"}}}}
-        assert FinancialDataProcessor.extract_ceo_name(data) == "N/A"
+        assert extract_ceo_name(data) == "N/A"
 
     def test_no_general_section_returns_na(self):
-        assert FinancialDataProcessor.extract_ceo_name({}) == "N/A"
+        assert extract_ceo_name({}) == "N/A"
 
     def test_known_defect_ceo_substring_matches_unrelated_titles(self):
         # Known defect: 'ceo' is matched as a substring, so e.g. "herbaCEOus" matches
         data = _officers({"Name": "A", "Title": "Chairman"}, {"Name": "B", "Title": "Head of Herbaceous Products"})
-        assert FinancialDataProcessor.extract_ceo_name(data) == "B"
+        assert extract_ceo_name(data) == "B"
 
     def test_null_title_is_treated_as_no_title(self):
         data = _officers({"Name": "A", "Title": None}, {"Name": "B", "Title": "CEO"})
-        assert FinancialDataProcessor.extract_ceo_name(data) == "B"
+        assert extract_ceo_name(data) == "B"
 
     def test_null_title_on_every_officer_falls_back_to_first(self):
-        assert FinancialDataProcessor.extract_ceo_name(_officers({"Name": "A", "Title": None})) == "A"
+        assert extract_ceo_name(_officers({"Name": "A", "Title": None})) == "A"
 
     def test_null_name_returns_na(self):
-        assert FinancialDataProcessor.extract_ceo_name(_officers({"Name": None, "Title": "CEO"})) == "N/A"
+        assert extract_ceo_name(_officers({"Name": None, "Title": "CEO"})) == "N/A"
 
 
 def _income(yearly):
@@ -76,61 +77,61 @@ class TestParseIncomeStatement:
         return FinancialDataProcessor(currency_converter=object())
 
     def test_maps_fields_and_sorts_newest_first(self, processor):
-        result = processor.parse_income_statement(_income({
+        result = processor.parse_income_statement(to_fundamentals(_income({
             "2022-12-31": {"totalRevenue": 100, "netIncome": 10, "eps": 1.0},
             "2023-12-31": {"totalRevenue": 120, "netIncome": 12, "eps": 1.2},
-        }))
+        })))
         assert list(result) == ["2023-12-31", "2022-12-31"]
         assert result["2023-12-31"] == {"revenue": 120.0, "net_income": 12.0, "eps": 1.2}
 
     @pytest.mark.parametrize("missing_eps", [None, "NA", ""])
     def test_eps_falls_back_to_basic_eps_then_eps_basic(self, processor, missing_eps):
-        result = processor.parse_income_statement(_income({
+        result = processor.parse_income_statement(to_fundamentals(_income({
             "2023-12-31": {"eps": missing_eps, "basicEPS": None, "epsBasic": 2.5, "netIncome": 5},
-        }))
+        })))
         assert result["2023-12-31"]["eps"] == 2.5
 
     def test_basic_eps_preferred_over_eps_basic(self, processor):
-        result = processor.parse_income_statement(_income({
+        result = processor.parse_income_statement(to_fundamentals(_income({
             "2023-12-31": {"eps": None, "basicEPS": 3.0, "epsBasic": 2.5},
-        }))
+        })))
         assert result["2023-12-31"]["eps"] == 3.0
 
     def test_zero_eps_is_kept_not_replaced_by_fallback(self, processor):
-        result = processor.parse_income_statement(_income({
+        result = processor.parse_income_statement(to_fundamentals(_income({
             "2023-12-31": {"eps": 0, "basicEPS": 3.0},
-        }))
+        })))
         assert result["2023-12-31"]["eps"] == 0.0
 
     @pytest.mark.parametrize("missing_ni", [None, "NA", ""])
     def test_net_income_prefers_continuing_ops_then_net_income(self, processor, missing_ni):
-        result = processor.parse_income_statement(_income({
+        result = processor.parse_income_statement(to_fundamentals(_income({
             "2023-12-31": {"netIncomeFromContinuingOps": missing_ni, "netIncome": 7},
-        }))
+        })))
         assert result["2023-12-31"]["net_income"] == 7.0
 
     def test_continuing_ops_never_used(self, processor):
         """Graham includes special items; EODHD's continuing-ops line is also before minority interest."""
-        result = processor.parse_income_statement(_income({
+        result = processor.parse_income_statement(to_fundamentals(_income({
             "2023-12-31": {"netIncomeFromContinuingOps": 369, "netIncome": 62},
-        }))
+        })))
         assert result["2023-12-31"]["net_income"] == 62.0
 
     def test_income_applicable_to_common_preferred_over_net_income(self, processor):
         """Earnings for the common stock: after preferred dividends."""
-        result = processor.parse_income_statement(_income({
+        result = processor.parse_income_statement(to_fundamentals(_income({
             "2023-12-31": {"netIncomeApplicableToCommonShares": 55, "netIncome": 62},
-        }))
+        })))
         assert result["2023-12-31"]["net_income"] == 55.0
 
     def test_missing_values_become_zero(self, processor):
-        result = processor.parse_income_statement(_income({"2023-12-31": {}}))
+        result = processor.parse_income_statement(to_fundamentals(_income({"2023-12-31": {}})))
         assert result["2023-12-31"] == {"revenue": 0.0, "net_income": 0.0, "eps": 0.0}
 
     @pytest.mark.parametrize("data", [{}, _income({}), _income([]), _income(["not-a-dict"]),
                                       {"Financials": {"Income_Statement": {}}}])
     def test_missing_or_malformed_section_returns_empty(self, processor, data):
-        assert processor.parse_income_statement(data) == {}
+        assert processor.parse_income_statement(to_fundamentals(data)) == {}
 
 
 class TestCalculateTtmDividend:
@@ -140,64 +141,64 @@ class TestCalculateTtmDividend:
 
     @pytest.mark.parametrize("data", [None, []])
     def test_no_data_returns_zero_and_usd(self, processor, data):
-        assert processor.calculate_ttm_dividend(data) == (0.0, [], "USD")
+        assert processor.calculate_ttm_dividend(dividend_payments(data, 'USD', 'US')) == (0.0, [], "USD")
 
     def test_sums_payments_within_365_days_of_reference_date(self, processor):
-        total, payments, currency = processor.calculate_ttm_dividend([
+        total, payments, currency = processor.calculate_ttm_dividend(dividend_payments([
             {"paymentDate": "2024-02-15", "value": 0.25, "currency": "GBP"},
             {"paymentDate": "2023-03-01", "value": 0.25, "currency": "GBP"},  # exactly the cutoff: included
             {"paymentDate": "2023-02-28", "value": 0.25, "currency": "GBP"},  # one day too old
-        ], reference_date="2024-02-29")
+        ], 'USD', 'US'), reference_date="2024-02-29")
         assert total == 0.5
         assert [p["date"] for p in payments] == ["2024-02-15", "2023-03-01"]
         assert currency == "GBP"
 
     def test_uses_ex_date_when_payment_date_missing(self, processor):
         total, payments, _ = processor.calculate_ttm_dividend(
-            [{"date": "2024-01-10", "value": 0.4}], reference_date="2024-02-29")
+            dividend_payments([{"date": "2024-01-10", "value": 0.4}], 'USD', 'US'), reference_date="2024-02-29")
         assert total == 0.4
         assert payments == [{"date": "2024-01-10", "value": 0.4, "currency": "USD"}]
 
     def test_skips_zero_negative_and_missing_values(self, processor):
-        total, payments, _ = processor.calculate_ttm_dividend([
+        total, payments, _ = processor.calculate_ttm_dividend(dividend_payments([
             {"paymentDate": "2024-01-10", "value": 0},
             {"paymentDate": "2024-01-11", "value": -1},
             {"paymentDate": "2024-01-12"},
             {"paymentDate": "2024-01-13", "value": "NA"},
-        ], reference_date="2024-02-29")
+        ], 'USD', 'US'), reference_date="2024-02-29")
         assert (total, payments) == (0.0, [])
 
     def test_payments_sorted_newest_first(self, processor):
-        _, payments, _ = processor.calculate_ttm_dividend([
+        _, payments, _ = processor.calculate_ttm_dividend(dividend_payments([
             {"paymentDate": "2023-06-01", "value": 1.0},
             {"paymentDate": "2024-01-01", "value": 1.0},
             {"paymentDate": "2023-09-01", "value": 1.0},
-        ], reference_date="2024-02-29")
+        ], 'USD', 'US'), reference_date="2024-02-29")
         assert [p["date"] for p in payments] == ["2024-01-01", "2023-09-01", "2023-06-01"]
 
     def test_currency_taken_from_first_record_only(self, processor):
-        _, payments, currency = processor.calculate_ttm_dividend([
+        _, payments, currency = processor.calculate_ttm_dividend(dividend_payments([
             {"paymentDate": "2024-01-01", "value": 1.0, "currency": "EUR"},
             {"paymentDate": "2023-12-01", "value": 1.0, "currency": "USD"},
-        ], reference_date="2024-02-29")
+        ], 'USD', 'US'), reference_date="2024-02-29")
         assert currency == "EUR"
         assert [p["currency"] for p in payments] == ["EUR", "USD"]
 
     def test_declared_future_payments_are_excluded(self, processor):
-        total, payments, _ = processor.calculate_ttm_dividend([
+        total, payments, _ = processor.calculate_ttm_dividend(dividend_payments([
             {"paymentDate": "2025-06-01", "value": 1.0},   # declared, not yet paid
             {"paymentDate": "2024-03-01", "value": 1.0},   # day after the reference date
             {"paymentDate": "2024-02-29", "value": 0.5},   # on the reference date: included
-        ], reference_date="2024-02-29")
+        ], 'USD', 'US'), reference_date="2024-02-29")
         assert total == 0.5
         assert [p["date"] for p in payments] == ["2024-02-29"]
 
     @pytest.mark.time_machine(datetime(2024, 2, 29, 12, 0, tzinfo=timezone.utc), tick=False)
     def test_invalid_reference_date_falls_back_to_today(self, processor):
-        total, _, _ = processor.calculate_ttm_dividend([
+        total, _, _ = processor.calculate_ttm_dividend(dividend_payments([
             {"paymentDate": "2024-01-01", "value": 1.0},
             {"paymentDate": "2022-01-01", "value": 1.0},
-        ], reference_date="29/02/2024")
+        ], 'USD', 'US'), reference_date="29/02/2024")
         assert total == 1.0
 
 
@@ -279,7 +280,7 @@ class TestMalformedRawValues:
             "3": {"date": "2020", "shares": "abc"},
             "4": {"date": "2019", "shares": 120},
         }}}
-        assert FinancialDataProcessor.extract_shares_by_year(data) == {"2023": 100.0, "2019": 120.0}
+        assert extract_shares_by_year(data) == {"2023": 100.0, "2019": 120.0}
 
     def test_non_numeric_dividend_array_amount_is_skipped(self):
         data = {"Financials": {"Cash_Flow": {"yearly": {}}},
@@ -288,7 +289,7 @@ class TestMalformedRawValues:
                                                   {"Date": "2022-11-10", "Value": None}]}}
         processor = FinancialDataProcessor(currency_converter=object())
 
-        dividends, _, is_amounts, _, sources = processor.parse_dividend_history(data, None)
+        dividends, _, is_amounts, _, sources = processor.parse_dividend_history(to_fundamentals(data))
 
         assert dividends == {"2023": 0.24}
         assert is_amounts is True
@@ -348,7 +349,7 @@ class TestTotalDebtRule:
     def _total_debt(year_data):
         processor = FinancialDataProcessor(currency_converter=object())
         data = {"Financials": {"Balance_Sheet": {"yearly": {"2022-12-31": year_data}}}}
-        return processor.parse_balance_sheet(data)["2022-12-31"]["total_debt"]
+        return processor.parse_balance_sheet(to_fundamentals(data))["2022-12-31"]["total_debt"]
 
     def test_long_term_only_uses_reported_total(self):
         assert self._total_debt({"longTermDebt": 98_959, "shortLongTermDebtTotal": 120_069}) == 120_069

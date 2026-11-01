@@ -6,6 +6,7 @@ CODEBASE_GUIDE §11 E1 (amounts in pounds) on every dividend path.
 from core.currency_converter import CurrencyConverter
 from core.financial_data_assembler import FinancialDataAssembler
 from core.financial_data_processor import FinancialDataProcessor
+from clients.eodhd_mapper import dividend_payments, to_fundamentals
 
 
 class _NoRates:
@@ -20,7 +21,7 @@ def _processor():
 def test_lse_dividend_records_labelled_gbx_are_pounds_in_the_history_too():
     data = {'General': {'Exchange': 'LSE', 'CurrencyCode': 'GBX'}}
     records = [{'date': '2023-06-01', 'value': 0.25, 'currency': 'GBX'}]
-    history, _, is_amounts, currency, _ = _processor().parse_dividend_history(data, dividend_api_data=records)
+    history, _, is_amounts, currency, _ = _processor().parse_dividend_history(to_fundamentals(data, records))
     assert is_amounts and history == {'2023': 0.25}
     assert currency == 'GBP'
 
@@ -28,16 +29,16 @@ def test_lse_dividend_records_labelled_gbx_are_pounds_in_the_history_too():
 def test_dividend_record_with_null_currency_falls_back_to_the_trading_currency():
     data = {'General': {'Exchange': 'US', 'CurrencyCode': 'USD'}}
     records = [{'date': '2023-06-01', 'value': 0.25, 'currency': None}]
-    *_, currency, _ = _processor().parse_dividend_history(data, dividend_api_data=records)
+    *_, currency, _ = _processor().parse_dividend_history(to_fundamentals(data, records))
     assert currency == 'USD'
-    _, payments, ttm_currency = _processor().calculate_ttm_dividend(records, reference_date='2023-12-31')
+    _, payments, ttm_currency = _processor().calculate_ttm_dividend(dividend_payments(records, 'USD', 'US'), reference_date='2023-12-31')
     assert ttm_currency == 'USD' and payments[0]['currency'] == 'USD'
 
 
 def test_null_financials_still_reads_the_dividends_array():
     data = {'General': {'CurrencyCode': 'USD'}, 'Financials': None,
             'SplitsDividends': {'Dividends': [{'Date': '2022-03-01', 'Value': 0.5}]}}
-    history, _, is_amounts, _, sources = _processor().parse_dividend_history(data)
+    history, _, is_amounts, _, sources = _processor().parse_dividend_history(to_fundamentals(data))
     assert is_amounts and history == {'2022': 0.5} and sources == {'2022': 'dividends_array'}
 
 
@@ -47,4 +48,4 @@ def test_cross_validation_ignores_junk_api_values():
     data = {'Highlights': {'PERatio': 'NA', 'BookValue': 'NA', 'ReturnOnEquityTTM': 'NA',
                            'ReturnOnAssetsTTM': None, 'ProfitMargin': 'junk'},
             'SharesStats': {'SharesOutstanding': 'NA'}, 'General': None}
-    assert assembler._cross_validate_metrics(data, 12.0, 5.0, 0.1, 0.05, 0.2) == []
+    assert assembler._cross_validate_metrics(to_fundamentals(data), 12.0, 5.0, 0.1, 0.05, 0.2) == []

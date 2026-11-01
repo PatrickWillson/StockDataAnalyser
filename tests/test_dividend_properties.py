@@ -9,6 +9,7 @@ Tests correctness properties for Requirements 2.1, 2.2, 2.4:
 import pytest
 from hypothesis import given, strategies as st, assume
 from core.financial_data_processor import FinancialDataProcessor
+from clients.eodhd_mapper import to_fundamentals
 
 
 @given(
@@ -63,7 +64,7 @@ def test_property_dividend_source_priority(num_years, dividends_paid, shares, fo
         }
     }
     
-    result, _, _, _, sources = processor.parse_dividend_history(data)
+    result, _, _, _, sources = processor.parse_dividend_history(to_fundamentals(data))
     
     # Property: All years with cash flow data should use cash_flow source
     for i in range(num_years):
@@ -126,7 +127,7 @@ def test_property_forward_dividend_restriction(num_historical_years, forward_rat
         }
     }
     
-    result, _, _, _, sources = processor.parse_dividend_history(data)
+    result, _, _, _, sources = processor.parse_dividend_history(to_fundamentals(data))
     
     # Property: Only most recent year should have forward_rate
     most_recent_year = str(current_year)
@@ -201,7 +202,7 @@ def test_property_source_consistency(has_cash_flow_most_recent, has_cash_flow_hi
         }
     }
     
-    result, _, _, _, sources = processor.parse_dividend_history(data)
+    result, _, _, _, sources = processor.parse_dividend_history(to_fundamentals(data))
     
     # Property: Source indicators match actual data availability
     

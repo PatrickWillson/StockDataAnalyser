@@ -1,17 +1,18 @@
 """
 Financial Data Processor
 
-Handles parsing, normalization, and validation of financial data from EODHD API.
-Separates data processing logic from API client concerns.
+Normalisation and validation of provider-neutral fundamentals (core/fundamentals.py): history
+rows, dividend history by source priority, TTM dividends, data-quality checks. Reads no vendor
+format; data-source adapters (e.g. clients/eodhd_mapper.py) fill CompanyFundamentals.
 """
 
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Sequence
 from core.currency_converter import CurrencyConverter
+from core.fundamentals import CompanyFundamentals, DividendPayment, number_or_zero
 from core.history import has_statement_data, is_dividend_only_year
 from core.models import HistoryRow, or_default
 from core.price_quote import PriceQuote, same_currency
-from core.statement_parsing import parse_balance_sheet_rows, parse_income_statement_rows
 from config.valuation_config import NORMALIZED_EPS_YEARS
 from config.data_quality_config import (ANNUAL_REPORT_MAX_AGE_MONTHS, DAYS_PER_MONTH, MAX_MISSING_HISTORY_YEARS,
                                          MIN_HISTORY_YEARS_RECOMMENDED)
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class FinancialDataProcessor:
-    """Processes and normalizes financial data from EODHD API responses."""
+    """Processes and normalizes provider-neutral company fundamentals."""
     
     def __init__(self, currency_converter: Optional[CurrencyConverter] = None, debug: bool = False):
         """
@@ -40,93 +41,27 @@ class FinancialDataProcessor:
     
     @staticmethod
     def sanitize_value(value: Any) -> float:
-        """
-        Convert "NA" strings and null values to 0.0.
-        
-        Args:
-            value: Raw value from API
-            
-        Returns:
-            Sanitized float value
-        """
-        if value is None or value == "" or value == "NA" or value == "N/A":
-            return 0.0
-        try:
-            return float(value)
-        except (ValueError, TypeError):
-            return 0.0
-    
-    @staticmethod
-    def extract_ceo_name(data: Dict[str, Any]) -> str:
-        """Extract CEO name from General.Officers field."""
-        try:
-            officers = data.get('General', {}).get('Officers', {})
-            # Officers is a dict with numeric keys ("0", "1", etc.)
-            if isinstance(officers, dict) and officers:
-                # Try to find CEO by title first
-                for key, officer in officers.items():
-                    if isinstance(officer, dict):
-                        title = (officer.get('Title') or '').lower()
-                        if 'chief executive' in title or 'ceo' in title:
-                            return officer.get('Name') or 'N/A'
-                
-                # Fallback: return first officer
-                first_officer = officers.get('0', {})
-                if isinstance(first_officer, dict):
-                    return first_officer.get('Name') or 'N/A'
-        except (KeyError, TypeError):
-            pass
-        return 'N/A'
-    
-    @staticmethod
-    def extract_shares_outstanding(data: Dict[str, Any]) -> float:
-        """Extract shares outstanding from SharesStats."""
-        try:
-            shares = data.get('SharesStats', {}).get('SharesOutstanding', 0)
-            return FinancialDataProcessor.sanitize_value(shares)
-        except (KeyError, TypeError):
-            return 0.0
-    
-    @staticmethod
-    def extract_shares_by_year(data: Dict[str, Any]) -> Dict[str, float]:
-        """
-        Extract year-specific shares outstanding from outstandingShares.annual.
-        
-        Returns:
-            Dictionary with year (string) as key and shares as value
-        """
-        shares_by_year = {}
-        try:
-            outstanding_shares_data = data.get('outstandingShares', {}).get('annual', {})
-            
-            if outstanding_shares_data:
-                for item in outstanding_shares_data.values():
-                    if isinstance(item, dict) and 'date' in item and 'shares' in item:
-                        # Sanitise per row so one malformed row doesn't discard the others
-                        shares = FinancialDataProcessor.sanitize_value(item['shares'])
-                        if shares > 0:
-                            shares_by_year[str(item['date'])] = shares
-            
-            return shares_by_year
-        except (KeyError, TypeError, AttributeError):
-            return {}
+        """Convert "NA" strings and null values to 0.0 (core.fundamentals.number_or_zero)."""
+        return number_or_zero(value)
     
     @staticmethod
     def get_current_price(quote: Optional[PriceQuote], trading_currency: Optional[str],
-                          warnings: Optional[List[str]] = None) -> tuple[float, Optional[str]]:
+                          warnings: Optional[List[str]] = None,
+                          source: str = "the fundamentals source") -> tuple[float, Optional[str]]:
         """
         Current price from the yfinance quote, the only price source.
         
-        EODHD price fields and MarketCapitalization / SharesOutstanding are not used: their
-        date, basis and unit (pence or pounds) are opaque (GRAHAM_METHODOLOGY §8.1). The quote
-        is only accepted when its currency matches EODHD's trading currency (in any unit, e.g.
+        Vendor price fields and market-cap-derived prices are not used: their date, basis and
+        unit (pence or pounds) are opaque (GRAHAM_METHODOLOGY §8.1). The quote is only accepted
+        when its currency matches the fundamentals source's trading currency (in any unit, e.g.
         GBp for GBX), so a lookup that found another listing is rejected (F7). Without a usable
         price there is no valuation, so the caller stops (no price, no dossier).
         
         Args:
             quote: Current price and its quote currency from yfinance, or None
-            trading_currency: EODHD General.CurrencyCode
+            trading_currency: The fundamentals source's trading currency
             warnings: List to append the price-source note to
+            source: Name of the fundamentals source, for the message
             
         Returns:
             (price, None) when usable, else (0.0, reason)
@@ -138,93 +73,38 @@ class FinancialDataProcessor:
         if not quote.currency:
             return 0.0, "yfinance did not report the quote currency, so the listing cannot be confirmed"
         if not same_currency(quote.currency, trading_currency):
-            return 0.0, (f"yfinance quotes {quote.currency} but EODHD trades this ticker in "
+            return 0.0, (f"yfinance quotes {quote.currency} but {source} trades this ticker in "
                          f"{trading_currency}: probably a different listing")
         warnings.append("Price Source: yfinance (primary source)")
         return quote.price, None
     
-    def parse_balance_sheet(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
-        """
-        Parse and sort yearly Balance Sheet data by date descending.
-        
-        Returns:
-            Dictionary with year as key and financial data as value
-        """
-        rows = parse_balance_sheet_rows(data, 'yearly')
+    def parse_balance_sheet(self, fundamentals: CompanyFundamentals) -> Dict[str, Dict[str, float]]:
+        """Annual balance sheet history fields by period end, newest first."""
+        rows = fundamentals.annual_balance_sheets
         self._log(f"[DEBUG] Found {len(rows)} periods of Balance Sheet data")
         return {row.period_end: row.as_history_fields() for row in rows}
     
-    def parse_income_statement(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
-        """
-        Parse and sort yearly Income Statement data by date descending.
-        
-        Returns:
-            Dictionary with year as key and financial data as value
-        """
-        rows = parse_income_statement_rows(data, 'yearly')
+    def parse_income_statement(self, fundamentals: CompanyFundamentals) -> Dict[str, Dict[str, float]]:
+        """Annual income statement history fields by period end, newest first."""
+        rows = fundamentals.annual_income_statements
         self._log(f"[DEBUG] Found {len(rows)} periods of Income Statement data")
         return {row.period_end: row.as_history_fields() for row in rows}
     
-    def parse_quarterly_balance_sheet(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
+    def parse_quarterly_balance_sheet(self, fundamentals: CompanyFundamentals) -> Dict[str, Dict[str, float]]:
         """
-        Parse quarterly balance sheet data from EODHD API.
-        
-        Extracts quarterly balance sheet data from Financials.Balance_Sheet.quarterly,
-        sorts periods by date descending (most recent first), and sanitizes all values.
-        
-        Args:
-            data: Full EODHD API response
-            
-        Returns:
-            Dictionary with date as key (e.g., '2025-09-30') and financial data as value.
-            Returns empty dict if quarterly data is not available.
-            
-        Example:
-            {
-                '2025-09-30': {
-                    'total_equity': 363076000000.0,
-                    'intangible_assets': 21236000000.0,
-                    'goodwill': 119497000000.0,
-                    'current_assets': 189066000000.0,
-                    'total_liabilities': 273275000000.0,
-                    'shares_outstanding': 7466000000.0,
-                    ...
-                },
-                '2025-06-30': { ... },
-                ...
-            }
+        Periodic (quarterly or semi-annual) balance sheet fields by period end, newest first;
+        empty when the source has no periodic data. E.g. {'2025-09-30': {'total_equity': ..., ...}}
         """
-        rows = parse_balance_sheet_rows(data, 'quarterly')
+        rows = fundamentals.quarterly_balance_sheets
         self._log(f"[DEBUG] Found {len(rows)} periods of quarterly Balance Sheet data")
         return {row.period_end: row.as_history_fields() for row in rows}
     
-    def parse_quarterly_income_statement(self, data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
+    def parse_quarterly_income_statement(self, fundamentals: CompanyFundamentals) -> Dict[str, Dict[str, float]]:
         """
-        Parse quarterly income statement data from EODHD API.
-        
-        Extracts quarterly income statement data from Financials.Income_Statement.quarterly,
-        sorts periods by date descending (most recent first), and sanitizes all values.
-        
-        Args:
-            data: Full EODHD API response
-            
-        Returns:
-            Dictionary with date as key (e.g., '2025-09-30') and financial data as value.
-            Returns empty dict if quarterly data is not available.
-            
-        Example:
-            {
-                '2025-09-30': {
-                    'revenue': 77673000000.0,
-                    'net_income': 27747000000.0,
-                    'eps': 3.72,
-                    ...
-                },
-                '2025-06-30': { ... },
-                ...
-            }
+        Periodic income statement fields by period end, newest first; empty when the source
+        has no periodic data. E.g. {'2025-09-30': {'revenue': ..., 'net_income': ..., 'eps': ...}}
         """
-        rows = parse_income_statement_rows(data, 'quarterly')
+        rows = fundamentals.quarterly_income_statements
         self._log(f"[DEBUG] Found {len(rows)} periods of quarterly Income Statement data")
         return {row.period_end: row.as_history_fields() for row in rows}
     
@@ -272,22 +152,17 @@ class FinancialDataProcessor:
             'income_statement': income_statement
         }
     
-    def parse_dividend_history(self, data: Dict[str, Any], dividend_api_data: Optional[List[Dict[str, Any]]] = None) -> tuple[Dict[str, float], Optional[float], bool, str, Dict[str, str]]:
+    def parse_dividend_history(self, fundamentals: CompanyFundamentals) -> tuple[Dict[str, float], Optional[float], bool, str, Dict[str, str]]:
         """
-        Extract dividend history from EODHD Dividend API (primary) or Cash Flow statements (fallback).
-        Returns total dividend amount per share for each year.
+        Dividend per share for each year, from the best source the fundamentals carry.
         
         Priority Order:
-        1. EODHD Dividend API (declared dividends with exact dates)
-        2. Cash Flow dividendsPaid (actual cash distributed)
-        3. Dividends array, then NumberDividendsByYear (payment counts, flagged by is_amount_data=False)
+        1. Dividend payments (declared dividends with exact dates)
+        2. Annual dividends paid from the cash flow statement / that year's shares
+        3. Dividend amounts without currency, then payment counts per year (flagged by is_amount_data=False)
         
-        ForwardAnnualDividendRate is an EODHD estimate: it is returned for labelled display only and
+        The forward dividend rate is a vendor estimate: it is returned for labelled display only and
         never written into the history (GRAHAM_METHODOLOGY §8.1, F21).
-        
-        Args:
-            data: Full EODHD fundamentals API response
-            dividend_api_data: Optional list of dividend records from EODHD Dividend API
         
         Returns:
             Tuple of (dividend_dict, forward_annual_rate, is_amount_data, dividend_currency, source_indicators)
@@ -299,140 +174,82 @@ class FinancialDataProcessor:
         """
         result = {}
         source_indicators = {}
-        forward_rate = None
         is_amount_data = False
-        general = data.get('General') or {}
-        dividend_currency = general.get('CurrencyCode', 'USD')  # Default to stock currency
+        dividend_currency = fundamentals.trading_currency  # Default to stock currency
+        forward_rate = fundamentals.forward_dividend_rate
+        if forward_rate:
+            self._log(f"[DEBUG] Forward Annual Dividend Rate: {forward_rate}")
         
         try:
-            splits_divs = data.get('SplitsDividends') or {}
-            
-            # Extract forward annual dividend rate
-            if splits_divs:
-                forward_rate = splits_divs.get('ForwardAnnualDividendRate')
-                if forward_rate:
-                    forward_rate = self.sanitize_value(forward_rate)
-                    self._log(f"[DEBUG] Forward Annual Dividend Rate: {forward_rate}")
-            
-            # PRIORITY 1: Try EODHD Dividend API data (declared dividends)
-            if dividend_api_data and len(dividend_api_data) > 0:
-                self._log(f"[DEBUG] Processing {len(dividend_api_data)} dividend records from Dividend API")
+            # PRIORITY 1: Dividend payments (declared dividends)
+            payments = fundamentals.dividend_payments
+            if payments:
+                self._log(f"[DEBUG] Processing {len(payments)} dividend payment records")
                 
                 # Aggregate dividends by year (sum all payments in each year)
                 year_totals = {}
-                dividend_currency = dividend_api_data[0].get('currency') or dividend_currency
-                # LSE dividend amounts are in pounds even when labelled GBX (CODEBASE_GUIDE §11 E1),
-                # as in the TTM dividend path
-                if general.get('Exchange') == 'LSE' and dividend_currency == 'GBX':
-                    dividend_currency = 'GBP'
-                
-                for div_record in dividend_api_data:
-                    # Use payment date if available, otherwise ex-dividend date
-                    date_str = div_record.get('paymentDate') or div_record.get('date')
-                    if date_str:
-                        year = date_str[:4]  # Extract year from YYYY-MM-DD
-                        value = self.sanitize_value(div_record.get('value', 0))
-                        
-                        if value > 0:
-                            year_totals[year] = year_totals.get(year, 0.0) + value
-                            self._log(f"[DEBUG] Year {year}: Added dividend {value:.4f} (from Dividend API)")
+                dividend_currency = payments[0].currency
+                for payment in payments:
+                    # Payment date if available, otherwise ex-dividend date
+                    if payment.date:
+                        year = payment.date[:4]  # Extract year from YYYY-MM-DD
+                        if payment.amount > 0:
+                            year_totals[year] = year_totals.get(year, 0.0) + payment.amount
+                            self._log(f"[DEBUG] Year {year}: Added dividend {payment.amount:.4f} (from dividend payments)")
                 
                 if year_totals:
                     result = year_totals
                     is_amount_data = True
                     for year in year_totals.keys():
                         source_indicators[year] = 'dividend_api'
-                    self._log(f"[DEBUG] Aggregated dividends for {len(result)} years from Dividend API (in {dividend_currency})")
+                    self._log(f"[DEBUG] Aggregated dividends for {len(result)} years from dividend payments (in {dividend_currency})")
                     return result, forward_rate, is_amount_data, dividend_currency, source_indicators
             
-            # PRIORITY 2: Try to get dividends from Cash Flow statements (dividendsPaid / shares)
-            cash_flow_section = (data.get('Financials') or {}).get('Cash_Flow') or {}
-            cash_flow = cash_flow_section.get('yearly') or {}
-            
-            # Get Cash Flow currency
-            cash_flow_currency = cash_flow_section.get('currency_symbol', 'USD')
-            
-            if cash_flow:
-                self._log(f"[DEBUG] Found Cash Flow data with {len(cash_flow)} years")
-                self._log(f"[DEBUG] Cash Flow currency: {cash_flow_currency}")
-                
-                # Lookup for shares by year (malformed rows skipped)
-                shares_by_year = self.extract_shares_by_year(data)
-                
-                # Calculate dividend per share from dividendsPaid
-                for year, cf_data in cash_flow.items():
-                    if isinstance(cf_data, dict):
-                        dividends_paid = cf_data.get('dividendsPaid')
-                        year_only = year.split('-')[0]
-                        
-                        if dividends_paid and dividends_paid != 'null':
-                            try:
-                                div_amount = abs(float(dividends_paid))  # Make positive
-                                shares = shares_by_year.get(year_only, 0)
-                                
-                                if shares > 0 and div_amount > 0:
-                                    div_per_share = div_amount / shares
-                                    result[year_only] = div_per_share
-                                    source_indicators[year_only] = 'cash_flow'
-                                    self._log(f"[DEBUG] Year {year_only}: Dividend per share = {div_per_share:.4f} (from {div_amount:,.0f} / {shares:,.0f} shares) [cash_flow]")
-                            except (ValueError, TypeError) as e:
-                                self._log(f"[DEBUG] Could not parse dividendsPaid for {year}: {e}")
+            # PRIORITY 2: Cash flow dividends paid / that year's shares
+            dividends_paid = fundamentals.annual_dividends_paid
+            if dividends_paid:
+                self._log(f"[DEBUG] Found cash flow dividends paid for {len(dividends_paid)} years")
+                self._log(f"[DEBUG] Cash Flow currency: {fundamentals.cash_flow_currency}")
+                shares_by_year = fundamentals.shares_by_year
+                for period_end, div_amount in dividends_paid.items():
+                    year_only = period_end.split('-')[0]
+                    shares = shares_by_year.get(year_only, 0)
+                    if shares > 0 and div_amount > 0:
+                        div_per_share = div_amount / shares
+                        result[year_only] = div_per_share
+                        source_indicators[year_only] = 'cash_flow'
+                        self._log(f"[DEBUG] Year {year_only}: Dividend per share = {div_per_share:.4f} (from {div_amount:,.0f} / {shares:,.0f} shares) [cash_flow]")
                 
                 if result:
                     is_amount_data = True
-                    dividend_currency = cash_flow_currency  # Dividends are in Cash Flow currency
+                    dividend_currency = fundamentals.cash_flow_currency  # Dividends are in Cash Flow currency
                     self._log(f"[DEBUG] Calculated dividend per share for {len(result)} years from Cash Flow (in {dividend_currency})")
                     return result, forward_rate, is_amount_data, dividend_currency, source_indicators
             
-            # Fallback 1: Try Dividends array
-            dividend_list = splits_divs.get('Dividends', [])
-            
-            if dividend_list and isinstance(dividend_list, list) and len(dividend_list) > 0:
-                self._log(f"[DEBUG] Found Dividends array with {len(dividend_list)} records")
-                
-                # Aggregate dividend amounts by year
+            # Fallback 1: dividend amounts without a stated currency (the trading currency)
+            if fundamentals.dividend_amounts:
+                self._log(f"[DEBUG] Found {len(fundamentals.dividend_amounts)} dividend amount records")
                 year_totals = {}
-                for div in dividend_list:
-                    if isinstance(div, dict) and 'Date' in div:
-                        year = div['Date'][:4]
-                        amount = self.sanitize_value(div.get('Value') or div.get('Dividend') or div.get('Amount'))
-                        if amount > 0:
-                            year_totals[year] = year_totals.get(year, 0.0) + amount
-                            source_indicators[year] = 'dividends_array'
+                for dividend in fundamentals.dividend_amounts:
+                    year = dividend.date[:4]
+                    if dividend.amount > 0:
+                        year_totals[year] = year_totals.get(year, 0.0) + dividend.amount
+                        source_indicators[year] = 'dividends_array'
                 
                 if year_totals:
                     result = year_totals
                     is_amount_data = True
-                    self._log(f"[DEBUG] Aggregated dividend amounts for {len(result)} years from Dividends array")
+                    self._log(f"[DEBUG] Aggregated dividend amounts for {len(result)} years from dividend amount records")
                     return result, forward_rate, is_amount_data, dividend_currency, source_indicators
             
-            # Fallback 2: Use NumberDividendsByYear (counts only)
-            div_data = splits_divs.get('NumberDividendsByYear', {})
-            
-            if isinstance(div_data, dict) and div_data:
-                first_key = list(div_data.keys())[0]
-                first_value = div_data[first_key]
-                
-                if isinstance(first_value, dict) and 'Year' in first_value and 'Count' in first_value:
-                    logger.warning("Using dividend payment counts (actual amounts not available from API)")
-                    self._log("[DEBUG] Found indexed dividend count data")
-                    for key, value in div_data.items():
-                        if isinstance(value, dict) and 'Year' in value and 'Count' in value:
-                            year = str(value['Year'])
-                            count = value['Count']
-                            result[year] = self.sanitize_value(count)
-                            source_indicators[year] = 'count'
-                    
-                    self._log(f"[DEBUG] Parsed {len(result)} years of dividend counts")
-                    return result, forward_rate, is_amount_data, dividend_currency, source_indicators
-                
-                elif all(isinstance(k, str) and k.isdigit() and len(k) == 4 for k in list(div_data.keys())[:3]):
-                    logger.warning("Using dividend payment counts (actual amounts not available from API)")
-                    self._log("[DEBUG] Found year-keyed dividend data")
-                    for year, value in div_data.items():
-                        result[year] = self.sanitize_value(value)
-                        source_indicators[year] = 'count'
-                    return result, forward_rate, is_amount_data, dividend_currency, source_indicators
+            # Fallback 2: payment counts per year (no amounts)
+            if fundamentals.dividend_counts_by_year:
+                logger.warning("Using dividend payment counts (actual amounts not available from API)")
+                for year, count in fundamentals.dividend_counts_by_year.items():
+                    result[year] = count
+                    source_indicators[year] = 'count'
+                self._log(f"[DEBUG] Parsed {len(result)} years of dividend counts")
+                return result, forward_rate, is_amount_data, dividend_currency, source_indicators
             
             if not result:
                 self._log("[DEBUG] No dividend history could be parsed")
@@ -442,16 +259,16 @@ class FinancialDataProcessor:
         
         return result, forward_rate, is_amount_data, dividend_currency, source_indicators
     
-    def calculate_ttm_dividend(self, dividend_api_data: Optional[List[Dict[str, Any]]], 
+    def calculate_ttm_dividend(self, dividend_payments: Optional[Sequence[DividendPayment]],
                               reference_date: Optional[str] = None) -> tuple[float, List[Dict[str, Any]], str]:
         """
-        Calculate trailing twelve months (TTM) dividend from Dividend API payment dates.
+        Calculate trailing twelve months (TTM) dividend from dividend payment dates.
         
         This provides the actual dividend income stream for investors buying today,
         based on the sum of all dividend payments in the last 12 months.
         
         Args:
-            dividend_api_data: List of dividend records from EODHD Dividend API
+            dividend_payments: Declared dividend payments (CompanyFundamentals.dividend_payments)
             reference_date: Reference date for TTM calculation (YYYY-MM-DD format)
                           Defaults to today if not provided
         
@@ -463,7 +280,7 @@ class FinancialDataProcessor:
         """
         from datetime import datetime, timedelta
         
-        if not dividend_api_data or len(dividend_api_data) == 0:
+        if not dividend_payments:
             return 0.0, [], 'USD'
         
         # Determine reference date (default to today)
@@ -480,26 +297,22 @@ class FinancialDataProcessor:
         cutoff_str = cutoff_date.strftime('%Y-%m-%d')
         ref_str = ref_date.strftime('%Y-%m-%d')
         
-        # Extract currency from first record
-        currency = dividend_api_data[0].get('currency') or 'USD'
+        # Currency of the first payment
+        currency = dividend_payments[0].currency
         
         # Filter payments in the last 12 months up to the reference date (declared future
         # payments are not trailing dividends)
         ttm_total = 0.0
         ttm_payments = []
         
-        for div in dividend_api_data:
-            # Use payment date if available, otherwise ex-dividend date
-            payment_date_str = div.get('paymentDate') or div.get('date')
-            
-            if payment_date_str and cutoff_str <= payment_date_str <= ref_str:
-                value = self.sanitize_value(div.get('value', 0))
-                if value > 0:
-                    ttm_total += value
+        for payment in dividend_payments:
+            if payment.date and cutoff_str <= payment.date <= ref_str:
+                if payment.amount > 0:
+                    ttm_total += payment.amount
                     ttm_payments.append({
-                        'date': payment_date_str,
-                        'value': value,
-                        'currency': div.get('currency') or currency
+                        'date': payment.date,
+                        'value': payment.amount,
+                        'currency': payment.currency
                     })
         
         # Sort payments by date (most recent first)

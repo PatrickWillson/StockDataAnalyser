@@ -8,6 +8,7 @@ rather than a single share count for all years.
 
 import pytest
 from core.financial_data_processor import FinancialDataProcessor
+from clients.eodhd_mapper import extract_shares_by_year
 
 
 def test_extract_shares_by_year():
@@ -23,8 +24,7 @@ def test_extract_shares_by_year():
         }
     }
     
-    processor = FinancialDataProcessor(debug=False)
-    shares_by_year = processor.extract_shares_by_year(data)
+    shares_by_year = extract_shares_by_year(data)
     
     assert '2024' in shares_by_year
     assert '2023' in shares_by_year
@@ -39,8 +39,7 @@ def test_extract_shares_by_year_empty():
     """Test handling of missing outstandingShares data."""
     data = {}
     
-    processor = FinancialDataProcessor(debug=False)
-    shares_by_year = processor.extract_shares_by_year(data)
+    shares_by_year = extract_shares_by_year(data)
     
     assert shares_by_year == {}
 

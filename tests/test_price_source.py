@@ -75,7 +75,7 @@ def test_no_positive_price_is_missing(quote):
 
 def test_quote_currency_mismatch_is_rejected():
     """A bare-symbol lookup that found another listing (e.g. a US ADR for a Paris stock)."""
-    price, problem = FinancialDataProcessor.get_current_price(PriceQuote(50.0, "USD"), "EUR")
+    price, problem = FinancialDataProcessor.get_current_price(PriceQuote(50.0, "USD"), "EUR", source="EODHD")
     assert price == 0.0
     assert "yfinance quotes USD but EODHD trades this ticker in EUR" in problem
 
