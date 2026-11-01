@@ -10,10 +10,11 @@ from output.formatting import format_price_display
 from core.history import has_statement_data
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
 from config.investor_thresholds import DEFENSIVE
-from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
+from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
+from output.sections.base import DossierSection
 
 
-class MethodologySection:
+class MethodologySection(DossierSection):
     """Generates the methodology notes section of the dossier.
     
     This section explains how key valuation metrics are calculated:

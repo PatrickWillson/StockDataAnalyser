@@ -11,10 +11,11 @@ from core.history import has_statement_data
 from core.formulas import net_current_asset_value, tangible_equity
 from core.price_quote import is_minor_unit, major_currency
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
-from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
+from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
+from output.sections.base import DossierSection
 
 
-class CalculationDetailsSection:
+class CalculationDetailsSection(DossierSection):
     """Generates the calculation details section of the dossier.
     
     This section provides detailed breakdowns of key calculations including:

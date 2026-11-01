@@ -10,9 +10,11 @@ modification of individual sections without affecting others.
 Requirements: 1.1, 1.2, 1.3
 """
 
-from datetime import datetime
 from typing import List, Dict, Any, Optional
+from output.sections.base import DossierSection
+from output.sections.critical_alerts import CriticalAlertsSection
 from output.sections.executive_summary import ExecutiveSummarySection
+from output.sections.header import HeaderSection
 from output.sections.key_metrics import KeyMetricsSection
 from output.sections.risk_factors import RiskFactorsSection
 from output.sections.methodology import MethodologySection
@@ -20,8 +22,6 @@ from output.sections.calculation_details import CalculationDetailsSection
 from output.sections.graham_tests import GrahamTestsSection
 from output.sections.financial_history import FinancialHistorySection
 from output.sections.ttm_analysis import TTMAnalysisSection
-from core.history import has_statement_data
-from config.data_quality_config import ANNUAL_REPORT_MAX_AGE_MONTHS
 
 
 class DossierGenerator:
@@ -78,9 +78,9 @@ class DossierGenerator:
         self.ttm_metrics = ttm_metrics
         
         # Initialize section generators
+        self.header = HeaderSection(ticker, financial_data)
         self.executive_summary = ExecutiveSummarySection(financial_data, metrics)
-        # Quick ratio and NCA details are withheld until inventory is parsed and NCA uses
-        # current assets - current liabilities (GRAHAM_METHODOLOGY §4.2, §9)
+        self.critical_alerts = CriticalAlertsSection(financial_data, metrics, anomalies)
         self.key_metrics = KeyMetricsSection(financial_data, {'current_ratio': metrics.get('current_ratio'),
                                                               'quick_ratio': metrics.get('quick_ratio'),
                                                               'nca_details': metrics.get('nca_details')})
@@ -115,153 +115,13 @@ class DossierGenerator:
         Returns:
             str: Complete markdown-formatted dossier as a single string
         """
-        lines = []
-        
-        # 1. Header with metadata
-        lines.extend(self._generate_header())
-        
-        # 2. Executive Summary
-        lines.extend(self.executive_summary.generate())
-        
-        # 2.5. TTM Analysis (if data available)
+        return '\n'.join(line for section in self.sections() for line in section.generate())
+    
+    def sections(self) -> List[DossierSection]:
+        """The sections in render order (CLAUDE.md "Output Format", decision D3)."""
+        ordered = [self.header, self.executive_summary]
         if self.ttm_analysis:
-            lines.extend(self.ttm_analysis.generate())
-        
-        # 3. Key Metrics (Section 2)
-        lines.extend(self.key_metrics.generate())
-        
-        # 4. Critical Alerts (Section 3)
-        lines.extend(self._generate_critical_alerts())
-        
-        # 5. Risk Factors
-        lines.extend(self.risk_factors.generate())
-        
-        # 6. Graham Tests (Sections 4 and 5)
-        lines.extend(self.graham_tests.generate())
-        
-        # 7. Financial History (Section 6)
-        lines.extend(self.financial_history.generate())
-        
-        # 8. Methodology Notes and Calculation Details
-        lines.extend(self.methodology.generate())
-        lines.extend(self.calculation_details.generate())
-        
-        # Join all lines with newlines
-        return '\n'.join(lines)
-    
-    def _generate_header(self) -> List[str]:
-        """Generate dossier header with metadata.
-        
-        The header includes:
-        - Ticker symbol
-        - Generation date
-        - Data source
-        - CEO name
-        - Sector and industry
-        - Employee count
-        - Most recent annual data year
-        - Currency information
-        
-        Returns:
-            List[str]: List of markdown lines for the header
-        """
-        lines = []
-        
-        # Extract metadata
-        unified_currency = self.financial_data.get('currency', 'USD')
-        original_stock_currency = self.financial_data.get('original_stock_currency', unified_currency)
-        ceo_name = self.financial_data.get('ceo_name', 'N/A')
-        sector = self.financial_data.get('sector', 'N/A')
-        industry = self.financial_data.get('industry', 'N/A')
-        employees = self.financial_data.get('employees', 0)
-        
-        # Title and basic metadata
-        lines.append(f"# STOCK ANALYSIS DOSSIER: {self.ticker}")
-        lines.append(f"# DATE: {datetime.now().strftime('%Y-%m-%d')}")
-        lines.append("# SOURCE: EODHD (Tier 1 Data)")
-        lines.append(f"# CEO: {ceo_name}")
-        lines.append(f"# SECTOR: {sector} | INDUSTRY: {industry}")
-        lines.append(f"# EMPLOYEES: {employees:,}" if employees > 0 else "# EMPLOYEES: N/A")
-        
-        # Add data freshness note - use most recent year with actual financial data
-        history = self.financial_data.get('history', {})
-        if history:
-            sorted_years = sorted(history.keys(), reverse=True)
-            # Find most recent year with financial data (not just dividend data)
-            most_recent_year = None
-            for year in sorted_years:
-                year_data = history[year]
-                if has_statement_data(year_data):
-                    most_recent_year = year.split('-')[0]
-                    break
-            
-            if most_recent_year:
-                lines.append(f"# MOST RECENT ANNUAL DATA: {most_recent_year}")
-        
-        # Add currency note if conversion was applied
-        if original_stock_currency != unified_currency:
-            lines.append(f"# CURRENCY: All values in {unified_currency} (stock trades in {original_stock_currency})")
-        else:
-            lines.append(f"# CURRENCY: {unified_currency}")
-        
-        lines.append("")
-        lines.append("---")
-        
-        return lines
-    
-    def _generate_critical_alerts(self) -> List[str]:
-        """Generate critical alerts section.
-        
-        This section includes:
-        - Data quality warnings
-        - Currency conversion details
-        - Validation discrepancies
-        - Statistical anomalies (modified Z-Score outliers)
-        - Data requirements for normalized calculations
-        
-        Returns:
-            List[str]: List of markdown lines for critical alerts section
-        """
-        lines = []
-        
-        lines.append("")
-        lines.append("## SECTION 3: CRITICAL ALERTS")
-        lines.append("")
-        
-        # Get warnings from financial data and metrics
-        warnings = self.financial_data.get('warnings', [])
-        metric_warnings = self.metrics.get('warnings', [])
-        all_warnings = warnings + metric_warnings
-        
-        # Display warnings
-        if all_warnings:
-            lines.append("### Data Quality & Limitations:")
-            for warning in all_warnings:
-                lines.append(f"- {warning}")
-            lines.append("")
-        
-        # Add normalized Graham Number data requirements
-        lines.append("### Normalized Graham Number Requirements:")
-        lines.append("- **3-Year Data Requirement**: Normalized Graham Number calculation requires 3 consecutive years of annual EPS data")
-        lines.append("- **Fallback Strategy**: When insufficient data is available, the system falls back to EPV (Earnings Power Value) for Margin of Safety calculation")
-        lines.append(f"- **Staleness Detection**: Annual reports older than {ANNUAL_REPORT_MAX_AGE_MONTHS:g} months trigger a data staleness warning")
-        lines.append("- **Data Quality**: All 3 years must have non-null, numeric EPS values for normalized calculation to proceed")
-        lines.append("")
-        
-        # Display anomalies
-        if self.anomalies:
-            lines.append("### Statistical Anomalies (EPS growth, modified Z-Score > 3.5):")
-            lines.append("*Metrics that deviate significantly from historical patterns*")
-            lines.append("")
-            for anomaly in self.anomalies:
-                lines.append(f"- {anomaly}")
-            lines.append("")
-        
-        # If no warnings or anomalies
-        if not all_warnings and not self.anomalies:
-            lines.append("No critical alerts or anomalies detected.")
-            lines.append("")
-        
-        lines.append("---")
-        
-        return lines
+            ordered.append(self.ttm_analysis)
+        ordered += [self.key_metrics, self.critical_alerts, self.risk_factors, self.graham_tests,
+                    self.financial_history, self.methodology, self.calculation_details]
+        return ordered

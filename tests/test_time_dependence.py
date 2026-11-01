@@ -24,7 +24,7 @@ PINNED = datetime(2026, 1, 31, 12, 0, tzinfo=timezone.utc)
 def test_dossier_header_date():
     financial_data = {'currency': 'USD', 'original_stock_currency': 'USD', 'history': {},
                       'warnings': [], 'price': 10.0}
-    header = DossierGenerator('TEST.US', financial_data, {}, [])._generate_header()
+    header = DossierGenerator('TEST.US', financial_data, {}, []).header.generate()
     assert '# DATE: 2026-01-31' in header
 
 

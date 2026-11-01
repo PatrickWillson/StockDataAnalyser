@@ -7,6 +7,8 @@ part of the investment analysis dossier in markdown format.
 
 __all__ = [
     'base',
+    'header',
+    'critical_alerts',
     'executive_summary',
     'key_metrics',
     'risk_factors',

@@ -7,10 +7,11 @@ per share, total debt, shares outstanding, historical prices, and valuation rati
 
 from typing import List, Dict, Any, Optional
 from config.data_quality_config import FINANCIAL_HISTORY_YEARS
-from core.history import has_income_data
+from core.history import has_income_data
+from output.sections.base import DossierSection
 
 
-class FinancialHistorySection:
+class FinancialHistorySection(DossierSection):
     """Generates the 20-year financial history table section of the dossier.
     
     This section includes:

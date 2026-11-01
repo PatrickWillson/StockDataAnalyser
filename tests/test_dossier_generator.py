@@ -386,3 +386,16 @@ def test_normalized_graham_requirements_in_limitations(sample_financial_data, sa
     assert 'Data Quality' in dossier
     assert 'non-null, numeric EPS values' in dossier
 
+
+
+def test_every_section_is_a_dossier_section_in_registry_order(sample_financial_data, sample_metrics, sample_anomalies):
+    """M5: the generator renders one ordered registry of DossierSection objects."""
+    from output.sections.base import DossierSection
+    generator = DossierGenerator('TEST.US', sample_financial_data, sample_metrics, sample_anomalies)
+    sections = generator.sections()
+    assert all(isinstance(section, DossierSection) for section in sections)
+    names = [type(section).__name__ for section in sections]
+    assert names[:2] == ['HeaderSection', 'ExecutiveSummarySection']
+    assert names[-7:] == ['KeyMetricsSection', 'CriticalAlertsSection', 'RiskFactorsSection', 'GrahamTestsSection',
+                          'FinancialHistorySection', 'MethodologySection', 'CalculationDetailsSection']
+    assert generator.generate() == '\n'.join(line for s in sections for line in s.generate())
