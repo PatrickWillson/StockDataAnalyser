@@ -6,12 +6,13 @@ This includes share count disclosure, BVPS calculation, Graham Number calculatio
 Net-Net Value calculation, currency conversion details, and EPV methodology clarification.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
 from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 from config.data_quality_config import BVPS_MAX_DIFF_PCT
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
+from core.models import EPVDetails, GrahamResult, or_default
 
 
 class CalculationDetailsSection(DossierSection):
@@ -28,15 +29,16 @@ class CalculationDetailsSection(DossierSection):
     Requirements: 2.5
     """
     
-    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any], context: Optional[ReportContext] = None):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Union[GrahamResult, Dict[str, Any]],
+                 context: Optional[ReportContext] = None):
         """Initialize calculation details section.
         
         Args:
             financial_data: Dictionary containing financial data (FinancialData DTO)
-            metrics: Dictionary containing Graham metrics (GrahamMetrics DTO)
+            metrics: Graham metrics (GrahamResult, or its dict form)
         """
         self.financial_data = financial_data
-        self.metrics = metrics
+        self.metrics = GrahamResult.from_dict(metrics)
         self.context = context or build_report_context(financial_data, metrics)
     
     def generate(self) -> List[str]:
@@ -176,7 +178,7 @@ class CalculationDetailsSection(DossierSection):
             tbvps: Tangible Book Value Per Share
             unified_currency: Currency for display
         """
-        graham_number = self.metrics.get('graham_number', 0)
+        graham_number = or_default(self.metrics.graham_number, 0)
         
         if isinstance(graham_number, (int, float)) and graham_number > 0:
             lines.append("### Graham Number Calculation:")
@@ -202,7 +204,7 @@ class CalculationDetailsSection(DossierSection):
             shares_used: Number of shares outstanding
             unified_currency: Currency for display
         """
-        net_net = self.metrics.get('net_net_value', 0)
+        net_net = or_default(self.metrics.net_net_value, 0)
         
         if isinstance(net_net, (int, float)) and net_net > 0:
             lines.append("### Net-Net Value Calculation:")
@@ -276,11 +278,11 @@ class CalculationDetailsSection(DossierSection):
         Args:
             lines: List to append lines to
         """
-        epv_value = self.metrics.get('epv', 0)
+        epv_value = or_default(self.metrics.epv, 0)
         
         if isinstance(epv_value, (int, float)) and epv_value > 0:
-            epv_details = self.metrics.get('epv_details', {})
-            cost_of_capital = epv_details.get('cost_of_capital', COST_OF_CAPITAL)
+            epv_details = or_default(self.metrics.epv_details, EPVDetails())
+            cost_of_capital = or_default(epv_details.cost_of_capital, COST_OF_CAPITAL)
             
             lines.append("### EPV Methodology Clarification:")
             lines.append("- **Approach Used**: Simplified Earnings Capitalization")
