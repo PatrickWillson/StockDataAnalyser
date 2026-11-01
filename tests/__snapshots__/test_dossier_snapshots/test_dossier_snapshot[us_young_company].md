@@ -244,7 +244,7 @@
   **For This Stock**:
   - Normalized Graham Number: 23.40 USD
   - EPV per share: N/A
-  - **Intrinsic Value Used**: 23.40 USD (Capped by Normalized Graham Number)
+  - **Intrinsic Value Used**: 23.40 USD (Normalized Graham Number only)
 
   **Interpretation**: Only the Normalized Graham Number is available (EPV unavailable: Insufficient history (3 complete years, minimum 7 required)).
 

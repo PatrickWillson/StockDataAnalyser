@@ -304,6 +304,8 @@ class ExecutiveSummarySection(DossierSection):
                 lines.append(f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%) - Declared (Dividend API) [{most_recent_complete_year}]")
             elif most_recent_div_source == 'cash_flow':
                 lines.append(f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%) - Paid (Cash Flow) [{most_recent_complete_year}]")
+            elif most_recent_div_source == 'dividends_array':
+                lines.append(f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%) - Paid (Dividend history) [{most_recent_complete_year}]")
             else:
                 lines.append(f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%) [{most_recent_complete_year}]")
         elif forward_div and forward_div > 0:

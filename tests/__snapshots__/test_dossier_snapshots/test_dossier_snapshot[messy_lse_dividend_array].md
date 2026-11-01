@@ -22,7 +22,7 @@
 - Margin of Safety: -349.6% (Capped by EPV)
   - Conservative Intrinsic Value: 3.67 GBP
 - Current Price: 16.50 GBP (1,650 pence)
-- Trailing Dividend: 0.28 GBP (Yield: 1.70%) [2023]
+- Trailing Dividend: 0.28 GBP (Yield: 1.70%) - Paid (Dividend history) [2023]
 - P/E Ratio (Current Year): 9.62
 - P/E Ratio (3-Year Avg): 22.19 (based on avg EPS of 0.74 from 2021-2023)
 - Price/Book: 3.67

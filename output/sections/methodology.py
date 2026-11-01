@@ -313,6 +313,7 @@ class MethodologySection:
         epv_per_share = mos_details.get('epv_per_share', 0)
         intrinsic_value_used = mos_details.get('intrinsic_value_used', 0)
         limiting_factor = mos_details.get('limiting_factor', 'N/A')
+        both_anchors = isinstance(normalized_gn, (int, float)) and isinstance(epv_per_share, (int, float))
         
         unified_currency = self.financial_data.get('currency', 'USD')
         
@@ -359,7 +360,8 @@ class MethodologySection:
             
             if isinstance(intrinsic_value_used, (int, float)):
                 intrinsic_display = format_price_display(intrinsic_value_used, unified_currency, unified_currency)
-                lines.append(f"  - **Intrinsic Value Used**: {intrinsic_display} (Capped by {limiting_factor})")
+                basis = f"Capped by {limiting_factor}" if both_anchors else f"{limiting_factor} only"
+                lines.append(f"  - **Intrinsic Value Used**: {intrinsic_display} ({basis})")
             else:
                 lines.append("  - **Intrinsic Value Used**: N/A")
             
@@ -367,7 +369,6 @@ class MethodologySection:
             
             # Add interpretation based on limiting factor (a comparison only when both exist)
             mos_note = mos_details.get('note')
-            both_anchors = isinstance(normalized_gn, (int, float)) and isinstance(epv_per_share, (int, float))
             if mos_note and not both_anchors:
                 lines.append(f"  **Interpretation**: Only the {limiting_factor} is available ({mos_note}).")
             elif limiting_factor == "EPV":
