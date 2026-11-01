@@ -262,7 +262,7 @@ Every section subclasses `DossierSection`, receives the shared `core.report_cont
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Hypothesis profile** (`tests/conftest.py`): `deadline=None` project-wide — the per-example timing deadline caused intermittent failures on WSL; example counts are unchanged.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1344 pass / 20 skip as of 2026-11-01); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1348 pass / 20 skip as of 2026-11-01); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 
@@ -333,7 +333,7 @@ No paid vendor: `ClientFactory.create_free_source` builds `RoutingFundamentalsSo
 - **Statements** — SEC EDGAR XBRL companyfacts (`clients/edgar_client.py`, `clients/edgar_mapper.py`): annual from FY2007 (income) / FY2008 (balance sheet), i.e. about 18–19 years until XBRL history accumulates; quarterly for TTM with derived fourth quarters. Latest restated value per year, first-reported differences flagged (GRAHAM_METHODOLOGY §8.7); derived values flagged; per-share figures on today's share basis.
 - **Dividends, splits, profile, market figures** — Yahoo Finance (`clients/yahoo_mapper.py`): payments by ex-date (no pay dates), decades of history; Yahoo industry names (regulated-utility detection works unchanged); market figures display / comparison only.
 - **Prices and FX** — unchanged (yfinance).
-- **Limits** — US SEC filers in USD only; other exchanges raise `TickerNotCoveredError` (no dossier) until an adapter is routed; banks have no classified balance sheet (as on the EODHD path); companies reorganised under a new CIK need an entry in `config/edgar_config.py` `SEC_CIK_OVERRIDES` (XOM).
+- **Limits** — US SEC filers in USD only; companies that file shares / EPS only under their own XBRL tags get N/A per-share figures and a note (Berkshire Hathaway after FY2014, whose filed per-share figures are also in Class A equivalents); other exchanges raise `TickerNotCoveredError` (no dossier) until an adapter is routed; banks have no classified balance sheet (as on the EODHD path); companies reorganised under a new CIK need an entry in `config/edgar_config.py` `SEC_CIK_OVERRIDES` (XOM).
 - **Decisions** — claude-output scope D-F1–D-F7: restated → latest, flagged; shares outstanding → issued − treasury (cover page when both are tagged rounded to millions) → cover page → weighted average; revenue sales tags first, utilities total operating revenues; short-term debt summed; no cache; static CIK overrides; dividends by ex-date.
 - **Adding a market** — write a `FundamentalsSource` for it (same `CompanyFundamentals` contract) and add it to the routes in `create_free_source`.
 

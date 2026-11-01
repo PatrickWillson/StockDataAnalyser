@@ -384,6 +384,10 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
             balance.append(row)
             if row.shares_outstanding:
                 shares_by_year[end[:4]] = row.shares_outstanding
+        if row is not None and not row.shares_outstanding:
+            notes.derive("share count", "not in the SEC data (the company uses its own tags); per-share figures N/A", end)
+        if income[-1].eps is None:
+            notes.derive("EPS", "not in the SEC data (the company uses its own tags); derived from net income / shares where possible", end)
         paid = facts.get(DIVIDENDS_PAID, end, MONEY, "year")
         notes.fact("dividends paid", end, paid)
         if paid is not None:

@@ -243,3 +243,13 @@ def test_quarterly_balance_sheets_have_share_counts():
     for ticker in ("SO", "AAPL", "KO", "JPM"):
         latest = periodic(ticker).balance_sheets[0]
         assert latest.shares_outstanding and latest.shares_outstanding > 0, ticker
+
+
+def test_years_without_share_count_or_eps_are_noted():
+    facts = _facts({
+        "NetIncomeLoss": [("2020-01-01", "2020-12-31", 10.0, "2021-02-01", "10-K", "USD")],
+        "Assets": [(None, "2020-12-31", 100.0, "2021-02-01", "10-K", "USD")],
+    })
+    notes = " ".join(annual_data(facts).notes)
+    assert "share count: not in the SEC data" in notes and "(FY2020)" in notes
+    assert "EPS: not in the SEC data" in notes

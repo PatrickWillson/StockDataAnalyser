@@ -162,6 +162,8 @@ class ExecutiveSummarySection(DossierSection):
         if isinstance(epv_per_share, (int, float)) and epv_per_share > 0 and epv_years:
             epv_display = format_price_display(float(epv_per_share), unified_currency, unified_currency)
             lines.append(f"- Intrinsic Value (EPV per share): {epv_display} ({epv_years}-year average earnings)")
+        elif epv_years and isinstance(or_default(self.metrics.epv, None), (int, float)) and self.metrics.epv > 0:
+            lines.append("- Intrinsic Value (EPV per share): N/A (no share count for the latest year)")
         else:
             lines.append("- Intrinsic Value (EPV per share): N/A (requires 7+ years of annual earnings with a positive average)")
         

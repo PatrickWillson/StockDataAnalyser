@@ -186,21 +186,24 @@ class TestExecutiveSummarySection:
 
         assert "- Intrinsic Value (EPV per share): 41.20 USD (7-year average earnings)" in lines
 
-    @pytest.mark.parametrize("epv_details", [
-        {'epv': 0.0, 'epv_per_share': 0.0, 'years_used': 0},       # how core reports unavailable EPV
-        {'epv': 1000.0, 'epv_per_share': 0.0, 'years_used': 10},   # share count unavailable
-        None,                                                      # no details at all
+    TOO_SHORT = "- Intrinsic Value (EPV per share): N/A (requires 7+ years of annual earnings with a positive average)"
+    NO_SHARES = "- Intrinsic Value (EPV per share): N/A (no share count for the latest year)"
+
+    @pytest.mark.parametrize("epv_details, epv, expected", [
+        ({'epv': 0.0, 'epv_per_share': 0.0, 'years_used': 0}, 0.0, TOO_SHORT),        # how core reports unavailable EPV
+        ({'epv': 1000.0, 'epv_per_share': 0.0, 'years_used': 10}, 1000.0, NO_SHARES),  # share count unavailable
+        (None, 0.0, TOO_SHORT),                                                        # no details at all
     ])
-    def test_unavailable_epv_shows_na_with_reason_not_zero(self, epv_details):
+    def test_unavailable_epv_shows_na_with_reason_not_zero(self, epv_details, epv, expected):
         financial_data = self.create_test_financial_data()
         metrics = self.create_test_metrics()
         metrics['epv_details'] = epv_details
+        metrics['epv'] = epv
 
         lines = ExecutiveSummarySection(financial_data, metrics).generate()
 
         epv_lines = [line for line in lines if "Intrinsic Value (EPV per share):" in line]
-        assert epv_lines == [
-            "- Intrinsic Value (EPV per share): N/A (requires 7+ years of annual earnings with a positive average)"]
+        assert epv_lines == [expected]
 
     def test_price_display_single_currency(self):
         """Test current price display with single currency."""

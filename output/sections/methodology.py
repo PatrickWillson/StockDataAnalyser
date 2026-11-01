@@ -241,9 +241,11 @@ class MethodologySection(DossierSection):
             
             lines.append(f"  - EPV: {epv_value:,.0f} {unified_currency} ({normalized_earnings:,.0f} {unified_currency} / {cost_of_capital:.0%})")
             
-            if epv_per_share > 0:
+            if isinstance(epv_per_share, (int, float)) and epv_per_share > 0:
                 epv_per_share_display = format_price_display(epv_per_share, unified_currency, unified_currency)
                 lines.append(f"  - EPV Per Share: {epv_per_share_display}")
+            elif not isinstance(epv_per_share, (int, float)):
+                lines.append("  - EPV Per Share: N/A (no share count for the latest year)")
             
             lines.append("")
             

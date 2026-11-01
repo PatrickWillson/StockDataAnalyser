@@ -176,6 +176,27 @@ class TestMethodologySection:
         graham_lines = [line for line in lines if "Graham Number" in line and "√(22.5" in line]
         assert len(graham_lines) == 0
     
+    def test_epv_without_per_share_value_does_not_crash(self):
+        """EPV exists but no share count for the latest year (e.g. Berkshire on the SEC path): N/A, no crash."""
+        financial_data = self.create_test_financial_data()
+        metrics = self.create_test_metrics()
+        metrics['epv_details'] = dict(metrics['epv_details'], epv_per_share='N/A')
+        
+        lines = MethodologySection(financial_data, metrics).generate()
+        
+        assert any("EPV Per Share: N/A (no share count for the latest year)" in line for line in lines)
+    
+    def test_executive_summary_explains_missing_epv_per_share(self):
+        from output.sections.executive_summary import ExecutiveSummarySection
+        financial_data = self.create_test_financial_data()
+        metrics = self.create_test_metrics()
+        metrics['epv_details'] = dict(metrics['epv_details'], epv_per_share='N/A')
+        metrics.setdefault('verdict', 'INSUFFICIENT DATA')
+        
+        lines = ExecutiveSummarySection(financial_data, metrics).generate()
+        
+        assert "- Intrinsic Value (EPV per share): N/A (no share count for the latest year)" in lines
+    
     def test_epv_methodology_explanation(self):
         """Test EPV methodology explanation with full-cycle method."""
         financial_data = self.create_test_financial_data()
