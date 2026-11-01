@@ -7,7 +7,8 @@ Moved verbatim from GrahamCalculator (M4.4); the Graham alignment of each criter
 
 from typing import Optional, Tuple
 
-from core.history import has_balance_sheet_data, has_statement_data, has_statement_or_current_assets
+from core.history import has_balance_sheet_data, has_statement_data, has_statement_or_current_assets, row_at
+from core.models import or_default
 
 
 def latest_financial_year(history: dict, years: list) -> Optional[str]:
@@ -35,7 +36,7 @@ def earnings_stability(history: dict, years: list, min_years: int = 8, period: i
     test_years = complete_years[:period]
     if len(test_years) < min_years:
         return 'FAIL'
-    positive_years = sum(1 for year in test_years if history[year].get('net_income', 0.0) > 0)
+    positive_years = sum(1 for year in test_years if or_default(row_at(history, year).net_income, 0.0) > 0)
     return 'PASS' if positive_years >= min_years else 'FAIL'
 
 
@@ -50,10 +51,10 @@ def latest_current_ratio(history: dict, years: list) -> Tuple[Optional[str], Opt
     """
     for year in years:
         if has_balance_sheet_data(history[year]):
-            current_liabilities = history[year].get('current_liabilities', 0.0)
+            current_liabilities = or_default(row_at(history, year).current_liabilities, 0.0)
             if current_liabilities == 0:
                 return year, None
-            return year, history[year].get('current_assets', 0.0) / current_liabilities
+            return year, or_default(row_at(history, year).current_assets, 0.0) / current_liabilities
     return None, None
 
 

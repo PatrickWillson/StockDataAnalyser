@@ -8,7 +8,8 @@ from config.graham_constants import GRAHAM_MULTIPLIER
 from config.investor_thresholds import DEFENSIVE, REGULATED_UTILITY_INDUSTRIES
 from core.formulas import tangible_equity
 from core.financial_data_processor import FinancialDataProcessor
-from core.history import has_statement_data
+from core.history import has_statement_data, row_at
+from core.models import or_default
 from core.investor_tests.criteria import current_ratio_test, earnings_stability, latest_financial_year
 
 
@@ -22,9 +23,9 @@ def debt_to_net_current_assets(history: dict, years: list) -> str:
     latest_year = latest_financial_year(history, years)
     if not latest_year:
         return 'FAIL'
-    long_term_debt = history[latest_year].get('long_term_debt', 0.0)
-    current_assets = history[latest_year].get('current_assets', 0.0)
-    current_liabilities = history[latest_year].get('current_liabilities', 0.0)
+    long_term_debt = or_default(row_at(history, latest_year).long_term_debt, 0.0)
+    current_assets = or_default(row_at(history, latest_year).current_assets, 0.0)
+    current_liabilities = or_default(row_at(history, latest_year).current_liabilities, 0.0)
     net_current_assets = current_assets - current_liabilities
     return 'PASS' if long_term_debt <= net_current_assets else 'FAIL'
 
@@ -38,7 +39,7 @@ def dividend_record(history: dict, years: list, num_years: int) -> str:
     """
     if not years:
         return 'FAIL'
-    paid_years = {year[:4] for year in years if history[year].get('dividend', 0.0) > 0}
+    paid_years = {year[:4] for year in years if or_default(row_at(history, year).dividend, 0.0) > 0}
     newest = int(max(year[:4] for year in years))
     required = [str(newest - offset) for offset in range(DEFENSIVE.MIN_DIVIDEND_YEARS)]
     return 'PASS' if all(year in paid_years for year in required) else 'FAIL'
@@ -59,7 +60,7 @@ def earnings_growth(history: dict, years: list, num_years: int) -> str:
         return 'N/A (Too Young)'
 
     def average_eps(selected):
-        return sum(history[year].get('eps', 0.0) for year in selected) / len(selected)
+        return sum(or_default(row_at(history, year).eps, 0.0) for year in selected) / len(selected)
 
     recent = average_eps(reported[:span])
     base = average_eps(reported[base_start:base_start + span])
@@ -100,10 +101,10 @@ def pe_pb_multiples(history: dict, years: list, price: float) -> dict:
                 pe = price / average_eps
         latest_year = latest_financial_year(history, years)
         if latest_year:
-            row = history[latest_year]
-            shares = row.get('shares_outstanding', 0.0)
-            book = tangible_equity(row.get('total_equity', 0.0), row.get('intangible_assets', 0.0),
-                                   row.get('goodwill', 0.0))
+            row = row_at(history, latest_year)
+            shares = or_default(row.shares_outstanding, 0.0)
+            book = tangible_equity(or_default(row.total_equity, 0.0), or_default(row.intangible_assets, 0.0),
+                                   or_default(row.goodwill, 0.0))
             if shares > 0 and book > 0:
                 pb = price / (book / shares)
     return {'pe': pe, 'pb': pb, 'product': pe * pb if pe is not None and pb is not None else None}
@@ -146,10 +147,10 @@ def utility_debt_to_equity(history: dict, years: list) -> str:
     latest_year = latest_financial_year(history, years)
     if not latest_year:
         return 'FAIL'
-    equity = history[latest_year].get('total_equity', 0.0)
+    equity = or_default(row_at(history, latest_year).total_equity, 0.0)
     if equity <= 0:
         return 'FAIL'
-    total_debt = history[latest_year].get('total_debt', 0.0)
+    total_debt = or_default(row_at(history, latest_year).total_debt, 0.0)
     return 'PASS' if total_debt <= DEFENSIVE.UTILITY_MAX_DEBT_TO_EQUITY * equity else 'FAIL'
 
 

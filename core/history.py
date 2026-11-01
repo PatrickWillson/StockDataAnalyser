@@ -60,6 +60,11 @@ def is_dividend_only_year(year_data: YearData) -> bool:
             and or_default(row.eps, None) in (None, 0, 0.0))
 
 
+def row_at(history: Mapping[str, YearData], year: str) -> HistoryRow:
+    """history[year] as a HistoryRow (dict rows are converted, models pass through)."""
+    return HistoryRow.from_dict(history[year])
+
+
 def latest_year(history: Mapping[str, YearData], years: Iterable[str],
                 predicate: Callable[[YearData], bool] = has_statement_data) -> Optional[str]:
     """

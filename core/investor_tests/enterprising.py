@@ -7,7 +7,8 @@ Moved verbatim from GrahamCalculator (M4.4); the Graham alignment of each criter
 from typing import Optional
 
 from config.investor_thresholds import ENTERPRISING
-from core.history import has_statement_data
+from core.history import has_statement_data, row_at
+from core.models import or_default
 from core.investor_tests.criteria import current_ratio_test, earnings_stability, latest_financial_year
 
 
@@ -18,9 +19,9 @@ def debt_to_net_current_assets(history: dict, years: list) -> str:
     latest_year = latest_financial_year(history, years)
     if not latest_year:
         return 'FAIL'
-    long_term_debt = history[latest_year].get('long_term_debt', 0.0)
-    current_assets = history[latest_year].get('current_assets', 0.0)
-    current_liabilities = history[latest_year].get('current_liabilities', 0.0)
+    long_term_debt = or_default(row_at(history, latest_year).long_term_debt, 0.0)
+    current_assets = or_default(row_at(history, latest_year).current_assets, 0.0)
+    current_liabilities = or_default(row_at(history, latest_year).current_liabilities, 0.0)
     max_allowed_debt = (current_assets - current_liabilities) * ENTERPRISING.MAX_DEBT_ASSETS
     return 'PASS' if long_term_debt <= max_allowed_debt else 'FAIL'
 
@@ -32,7 +33,7 @@ def current_dividend(history: dict, years: list) -> str:
     latest_year = latest_financial_year(history, years)
     if not latest_year:
         return 'FAIL'
-    return 'PASS' if history[latest_year].get('dividend', 0.0) > 0 else 'FAIL'
+    return 'PASS' if or_default(row_at(history, latest_year).dividend, 0.0) > 0 else 'FAIL'
 
 
 def price_test(history: dict, years: list, price: float, tbvps: Optional[object]) -> str:
@@ -46,7 +47,7 @@ def price_test(history: dict, years: list, price: float, tbvps: Optional[object]
     latest_year = latest_financial_year(history, years)
     if not latest_year:
         return 'FAIL'
-    eps = history[latest_year].get('eps', 0.0)
+    eps = or_default(row_at(history, latest_year).eps, 0.0)
     low_multiple = eps > 0 and price / eps < ENTERPRISING.MAX_PE_RATIO
     below_assets = isinstance(tbvps, float) and tbvps > 0 and price < tbvps * ENTERPRISING.MAX_PB_RATIO
     return 'PASS' if low_multiple and below_assets else 'FAIL'
@@ -61,8 +62,8 @@ def earnings_growth(history: dict, years: list) -> str:
     reported = [year for year in years if has_statement_data(history[year])]
     if len(reported) <= ENTERPRISING.EARNINGS_GROWTH_YEARS:
         return 'FAIL'
-    latest_eps = history[reported[0]].get('eps', 0.0)
-    earlier_eps = history[reported[ENTERPRISING.EARNINGS_GROWTH_YEARS]].get('eps', 0.0)
+    latest_eps = or_default(row_at(history, reported[0]).eps, 0.0)
+    earlier_eps = or_default(row_at(history, reported[ENTERPRISING.EARNINGS_GROWTH_YEARS]).eps, 0.0)
     return 'PASS' if latest_eps > earlier_eps else 'FAIL'
 
 
