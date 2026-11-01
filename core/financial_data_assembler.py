@@ -495,20 +495,21 @@ class FinancialDataAssembler:
             List of validation warnings
         """
         warnings = []
+        # API values are sanitised (null / "NA" / junk -> 0, i.e. not compared), never trusted raw
+        sanitize = FinancialDataProcessor.sanitize_value
+        highlights = data.get('Highlights') or {}
         
         # Check Share Count Consistency
-        shares_stats = data.get('SharesStats', {}).get('SharesOutstanding', 0)
-        if shares_stats is None:
-            shares_stats = 0
+        shares_stats = sanitize((data.get('SharesStats') or {}).get('SharesOutstanding'))
         
         # Get outstandingShares.annual
         outstanding_shares_annual = 0
-        outstanding_shares_data = data.get('outstandingShares', {}).get('annual', {})
+        outstanding_shares_data = (data.get('outstandingShares') or {}).get('annual') or {}
         if outstanding_shares_data:
             # Get most recent year
             for item in outstanding_shares_data.values():
                 if isinstance(item, dict) and 'shares' in item:
-                    outstanding_shares_annual = item.get('shares', 0)
+                    outstanding_shares_annual = sanitize(item.get('shares'))
                     break  # Get first (most recent)
         
         # Compare share counts if they differ significantly
@@ -523,11 +524,9 @@ class FinancialDataAssembler:
                 logger.info(f"Share count difference: Financial statements {outstanding_shares_annual:,.0f} vs Market data {shares_stats:,.0f}")
         
         # Check P/E ratio
-        api_pe = data.get('Highlights', {}).get('PERatio')
+        api_pe = sanitize(highlights.get('PERatio'))
         
         # Handle None values - convert to 0 for comparison
-        if api_pe is None:
-            api_pe = 0
         if calculated_pe is None:
             calculated_pe = 0
         
@@ -544,7 +543,7 @@ class FinancialDataAssembler:
         # Check Book Value, both sides in the financials currency (F10): the caller passes
         # Highlights.BookValue already converted; the raw value is only a fallback for direct callers
         if api_bvps is None:
-            api_bvps = data.get('Highlights', {}).get('BookValue', 0)
+            api_bvps = sanitize(highlights.get('BookValue'))
         
         # Handle None values - convert to 0 for comparison
         if api_bvps is None:
@@ -564,7 +563,7 @@ class FinancialDataAssembler:
                 logger.warning(f"Book Value discrepancy detected: API {api_bvps:.2f} vs Calculated {calculated_bvps:.2f} {currency}")
         
         # Check for stale price data
-        last_update = data.get('General', {}).get('UpdatedAt', '')
+        last_update = (data.get('General') or {}).get('UpdatedAt') or ''
         if last_update:
             try:
                 from datetime import datetime, timezone
@@ -589,17 +588,9 @@ class FinancialDataAssembler:
                 logger.debug(f"Could not parse UpdatedAt date: {e}")
         
         # Validate profitability metrics
-        api_roe = data.get('Highlights', {}).get('ReturnOnEquityTTM')
-        api_roa = data.get('Highlights', {}).get('ReturnOnAssetsTTM')
-        api_profit_margin = data.get('Highlights', {}).get('ProfitMargin')
-        
-        # Handle None values for API metrics
-        if api_roe is None:
-            api_roe = 0
-        if api_roa is None:
-            api_roa = 0
-        if api_profit_margin is None:
-            api_profit_margin = 0
+        api_roe = sanitize(highlights.get('ReturnOnEquityTTM'))
+        api_roa = sanitize(highlights.get('ReturnOnAssetsTTM'))
+        api_profit_margin = sanitize(highlights.get('ProfitMargin'))
         
         # Handle None values for calculated metrics
         if calculated_roe is None:

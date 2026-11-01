@@ -301,10 +301,11 @@ class FinancialDataProcessor:
         source_indicators = {}
         forward_rate = None
         is_amount_data = False
-        dividend_currency = data.get('General', {}).get('CurrencyCode', 'USD')  # Default to stock currency
+        general = data.get('General') or {}
+        dividend_currency = general.get('CurrencyCode', 'USD')  # Default to stock currency
         
         try:
-            splits_divs = data.get('SplitsDividends', {})
+            splits_divs = data.get('SplitsDividends') or {}
             
             # Extract forward annual dividend rate
             if splits_divs:
@@ -319,7 +320,11 @@ class FinancialDataProcessor:
                 
                 # Aggregate dividends by year (sum all payments in each year)
                 year_totals = {}
-                dividend_currency = dividend_api_data[0].get('currency', dividend_currency)
+                dividend_currency = dividend_api_data[0].get('currency') or dividend_currency
+                # LSE dividend amounts are in pounds even when labelled GBX (CODEBASE_GUIDE §11 E1),
+                # as in the TTM dividend path
+                if general.get('Exchange') == 'LSE' and dividend_currency == 'GBX':
+                    dividend_currency = 'GBP'
                 
                 for div_record in dividend_api_data:
                     # Use payment date if available, otherwise ex-dividend date
@@ -341,10 +346,11 @@ class FinancialDataProcessor:
                     return result, forward_rate, is_amount_data, dividend_currency, source_indicators
             
             # PRIORITY 2: Try to get dividends from Cash Flow statements (dividendsPaid / shares)
-            cash_flow = data.get('Financials', {}).get('Cash_Flow', {}).get('yearly', {})
+            cash_flow_section = (data.get('Financials') or {}).get('Cash_Flow') or {}
+            cash_flow = cash_flow_section.get('yearly') or {}
             
             # Get Cash Flow currency
-            cash_flow_currency = data.get('Financials', {}).get('Cash_Flow', {}).get('currency_symbol', 'USD')
+            cash_flow_currency = cash_flow_section.get('currency_symbol', 'USD')
             
             if cash_flow:
                 self._log(f"[DEBUG] Found Cash Flow data with {len(cash_flow)} years")
@@ -475,7 +481,7 @@ class FinancialDataProcessor:
         ref_str = ref_date.strftime('%Y-%m-%d')
         
         # Extract currency from first record
-        currency = dividend_api_data[0].get('currency', 'USD')
+        currency = dividend_api_data[0].get('currency') or 'USD'
         
         # Filter payments in the last 12 months up to the reference date (declared future
         # payments are not trailing dividends)
@@ -493,7 +499,7 @@ class FinancialDataProcessor:
                     ttm_payments.append({
                         'date': payment_date_str,
                         'value': value,
-                        'currency': div.get('currency', currency)
+                        'currency': div.get('currency') or currency
                     })
         
         # Sort payments by date (most recent first)
