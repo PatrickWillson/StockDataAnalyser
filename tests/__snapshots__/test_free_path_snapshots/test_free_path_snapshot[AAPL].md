@@ -86,23 +86,7 @@
 - SEC EDGAR: fourth quarter: derived as the fiscal year minus the first nine months (FY2024, FY2025)
 - Price Source: yfinance (primary source)
 - Year 2026-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2024-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2023-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2022-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2021-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2020-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2019-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2018-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2017-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2016-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2015-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2013-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2012-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2011-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2010-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2009-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Year 2007-09-29: Incomplete data (missing: total_equity)
-- Year 2007-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Year 2006-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Year 2005-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Year 2004-09-27: Incomplete data (missing: revenue, net_income, eps, total_equity)
@@ -115,11 +99,6 @@
 - **Fallback Strategy**: When insufficient data is available, the system falls back to EPV (Earnings Power Value) for Margin of Safety calculation
 - **Staleness Detection**: Annual reports older than 9 months trigger a data staleness warning
 - **Data Quality**: All 3 years must have non-null, numeric EPS values for normalized calculation to proceed
-
-### Statistical Anomalies (EPS growth, modified Z-Score > 3.5):
-*Metrics that deviate significantly from historical patterns*
-
-- Year 2021-09-25: EPS growth modified Z-Score = 3.70 (Outlier: +71.3% vs median +10.7%)
 
 ---
 
@@ -206,26 +185,26 @@
 | 2026 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.30 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2025 | 416.16B | 112.01B | 7.49 | 0.38 | 4.99 | ⚠️ -1.20 | 5.1% | 98.66B | 14.773B | 218.95 | 29.2 | 43.9 |
 | 2024 | 391.04B | 93.74B | 6.11 | 0.37 | 3.77 | ⚠️ -1.55 | 6.1% | 106.63B | 15.117B | 207.89 | 34.0 | 55.1 |
-| 2024 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.37 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2023 | 383.29B | 97.00B | 6.16 | 0.36 | 4.00 | ⚠️ -0.11 | 5.9% | 111.09B | 15.550B | 196.84 | 32.0 | 49.2 |
-| 2023 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.36 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2022 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.35 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2022 | 394.33B | 99.80B | 6.15 | 0.35 | 3.18 | ⚠️ -1.17 | 5.7% | 120.07B | 15.943B | 185.79 | 30.2 | 58.4 |
-| 2021 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.34 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2021 | 365.82B | 94.68B | 5.67 | 0.34 | 3.84 | 0.57 | 6.0% | 124.72B | 16.427B | 174.74 | 30.8 | 45.5 |
-| 2020 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.33 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2020 | 274.51B | 57.41B | 3.31 | 0.33 | 3.85 | 2.26 | 10.0% | 112.44B | 16.977B | 163.68 | 49.5 | 42.5 |
 | 2019 | 260.17B | 55.26B | 2.99 | 0.32 | 5.09 | 3.21 | 10.7% | 108.05B | 17.773B | 152.63 | 51.0 | 30.0 |
-| 2019 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.32 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2018 | 265.60B | 59.53B | 3.00 | 0.31 | 5.63 | 0.81 | 10.4% | 114.48B | 19.020B | 141.58 | 47.2 | 25.1 |
-| 2018 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.31 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2017 | 229.23B | 48.35B | 2.32 | 0.30 | 6.54 | 1.36 | 13.0% | 115.68B | 20.505B | 130.53 | 56.3 | 20.0 |
-| 2017 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.30 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2016 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.29 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2016 | 215.64B | 45.69B | 2.09 | 0.29 | 6.01 | 1.31 | 14.1% | 87.03B | 21.345B | 119.47 | 57.2 | 19.9 |
+| 2015 | 233.72B | 53.39B | 2.32 | 0.29 | 5.35 | 0.39 | 12.3% | 64.33B | 22.315B | 108.42 | 46.7 | 20.3 |
+| 2014 | 182.79B | 39.51B | 1.62 | 0.28 | 4.75 | 0.22 | 17.1% | 35.30B | 23.465B | 97.37 | 60.0 | 20.5 |
+| 2013 | 170.91B | 37.04B | 1.43 | 0.27 | 4.91 | 1.18 | 18.8% | 16.96B | 25.178B | 86.32 | 60.4 | 17.6 |
+| 2012 | 156.51B | 41.73B | 1.59 | 0.26 | 4.50 | 0.73 | 16.4% | N/A | 26.298B | 75.26 | 47.2 | 16.7 |
+| 2011 | 108.25B | 25.92B | 1.00 | 0.25 | 2.94 | 0.65 | 25.3% | N/A | 26.020B | 64.21 | 64.1 | 21.8 |
+| 2010 | 65.22B | 14.01B | 0.55 | 0.25 | 1.86 | 0.82 | 44.7% | N/A | 25.647B | 53.16 | 96.6 | 28.6 |
+| 2009 | 42.91B | 8.23B | 0.33 | 0.24 | 1.26 | 0.80 | 72.5% | N/A | 25.195B | 42.11 | 127.9 | 33.4 |
+| 2008 | 37.49B | 6.12B | 0.25 | 0.23 | 0.90 | 0.75 | 93.6% | N/A | 24.873B | 31.05 | 125.3 | 34.5 |
+| 2007 | 24.58B | 3.50B | 0.14 | 0.23 | N/A | 0.00 | 156.1% | N/A | 14.776B | 20.00 | 138.6 | N/A |
 
 **Note on Data Completeness:**
-- Years marked '[Data Unavailable]' (2026, 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016) show declared dividends but lack complete audited annual financial statements
+- Years marked '[Data Unavailable]' (2026) show declared dividends but lack complete audited annual financial statements
 - **Graham's Principle**: Analysis and valuations use only complete annual data from audited financial statements
 - Declared dividends are shown for income investors but excluded from historical calculations
 

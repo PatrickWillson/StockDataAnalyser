@@ -49,3 +49,14 @@ def test_cross_validation_ignores_junk_api_values():
                            'ReturnOnAssetsTTM': None, 'ProfitMargin': 'junk'},
             'SharesStats': {'SharesOutstanding': 'NA'}, 'General': None}
     assert assembler._cross_validate_metrics(to_fundamentals(data), 12.0, 5.0, 0.1, 0.05, 0.2) == []
+
+
+def test_52_53_week_years_get_no_phantom_dividend_rows():
+    """Apple's fiscal years end 2025-09-27, 2024-09-28, 2023-09-30: each year's dividend joins its own row."""
+    balance = {'2025-09-27': {'total_equity': 70.0}, '2024-09-28': {'total_equity': 57.0},
+               '2023-09-30': {'total_equity': 62.0}}
+    income = {end: {'revenue': 100.0, 'net_income': 10.0, 'eps': 1.0} for end in balance}
+    dividends = {'2025': 1.0, '2024': 0.98, '2023': 0.94, '1995': 0.12}
+    history = FinancialDataProcessor.merge_financial_data(balance, income, dividends, 15.0)
+    assert sorted(history) == ['1995-09-27', '2023-09-30', '2024-09-28', '2025-09-27']
+    assert history['2024-09-28']['dividend'] == 0.98

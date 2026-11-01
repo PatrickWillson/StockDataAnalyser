@@ -100,3 +100,14 @@ def _block_network(request, monkeypatch):
             + "\n  ".join(unique),
             pytrace=False,
         )
+
+
+@pytest.fixture(autouse=True)
+def default_fundamentals_provider(monkeypatch):
+    """
+    Tests never depend on the developer's .env: the provider is pinned to the default (eodhd)
+    before load_dotenv() can supply another (load_dotenv does not override variables already set).
+    Tests of other paths set FUNDAMENTALS_PROVIDER themselves.
+    """
+    monkeypatch.setenv("FUNDAMENTALS_PROVIDER", "eodhd")
+    monkeypatch.delenv("SEC_USER_AGENT", raising=False)

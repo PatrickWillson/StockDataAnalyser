@@ -61,15 +61,6 @@
 - Currency Conversions: EUR → USD at rate 1.0825; EUR → USD at rate 1.0825; EUR → USD at rate 1.0825; EUR → USD at rate 1.0825
 - [VALIDATION] API data is 46 days old (last update: 2024-01-15). Price and market data may be stale.
 - [VALIDATION] ROA Difference: API shows 22.40% (TTM basis), calculated 27.50% (annual basis) (22.8% difference). Using annual data from audited financials per Graham methodology.
-- Year 2022-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2021-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2020-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2019-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2018-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2017-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2016-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2015-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2014-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Historical prices converted from EUR to USD using date-matched historical FX rates. This ensures accurate historical P/E and P/B ratios.
 - TTM Analysis: Periodic data not available from API
 
@@ -168,29 +159,17 @@
 | Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
 | 2023 | 383.29B | 97.00B | 6.24 | 0.95 | 4.00 | ⚠️ -0.11 | 15.3% | 111.09B | 15.550B | 173.20 | 27.8 | 43.3 |
-| 2022 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.93 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2022 | 394.33B | 99.80B | 6.26 | 0.93 | 3.18 | ⚠️ -1.17 | 14.8% | 120.07B | 15.943B | 188.03 | 30.0 | 59.1 |
-| 2021 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.88 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2021 | 365.82B | 94.68B | 5.76 | 0.88 | 3.84 | 0.57 | 15.3% | 109.11B | 16.427B | 168.59 | 29.2 | 43.9 |
-| 2020 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.81 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2020 | 347.53B | 89.95B | 5.30 | 0.81 | 3.53 | 0.52 | 15.3% | 103.65B | 16.977B | 151.05 | 28.5 | 42.8 |
-| 2019 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.73 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2019 | 330.15B | 85.45B | 4.81 | 0.73 | 3.20 | 0.48 | 15.3% | 98.47B | 17.773B | 135.25 | 28.1 | 42.3 |
-| 2018 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.68 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2018 | 313.64B | 81.18B | 4.48 | 0.68 | 2.98 | 0.44 | 15.3% | 93.54B | 18.128B | 121.00 | 27.0 | 40.6 |
-| 2017 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.64 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2017 | 297.96B | 77.12B | 4.17 | 0.64 | 2.78 | 0.41 | 15.3% | 88.87B | 18.491B | 108.17 | 25.9 | 38.9 |
-| 2016 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.59 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2016 | 283.06B | 73.26B | 3.88 | 0.59 | 2.59 | 0.38 | 15.3% | 84.42B | 18.861B | 96.62 | 24.9 | 37.3 |
-| 2015 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.55 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2015 | 268.91B | 69.60B | 3.62 | 0.55 | 2.41 | 0.36 | 15.3% | 80.20B | 19.238B | 104.89 | 29.0 | 43.5 |
-| 2014 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.51 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2014 | 255.46B | 66.12B | 3.37 | 0.51 | 2.25 | 0.33 | 15.3% | 76.19B | 19.623B | 94.05 | 27.9 | 41.8 |
 
 **Note on Data Completeness:**
-- Years marked '[Data Unavailable]' (2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014) show declared dividends but lack complete audited annual financial statements
-- **Graham's Principle**: Analysis and valuations use only complete annual data from audited financial statements
-- Declared dividends are shown for income investors but excluded from historical calculations
 
 **Graham Trend Analysis Columns:**
 - **WCPS (Working Capital Per Share)**: (Current Assets - Current Liabilities) / Shares Outstanding

@@ -60,9 +60,7 @@
 - Price Source: yfinance (primary source)
 - [VALIDATION] API data is 46 days old (last update: 2024-01-15). Price and market data may be stale.
 - [VALIDATION] ROA Difference: API shows 22.40% (TTM basis), calculated 27.50% (annual basis) (22.8% difference). Using annual data from audited financials per Graham methodology.
-- Insufficient History Warning: Only 5 years of data available (minimum 10 recommended)
-- Year 2022-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2021-09-30: Incomplete data (missing: revenue, net_income, eps, total_equity)
+- Insufficient History Warning: Only 3 years of data available (minimum 10 recommended)
 - TTM Analysis: Periodic data not available from API
 
 ### Normalized Graham Number Requirements:
@@ -93,7 +91,7 @@
 
 ### Dividend Sustainability Risk:
 - **Payout Ratio: 15.3%** - Conservative (sustainable)
-- **Dividend History: 5 consecutive years** - Uninterrupted record (excellent)
+- **Dividend History: 3 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
 - **Margin of Safety: -701.1%** - Trading above conservative intrinsic value
@@ -104,7 +102,7 @@
 ### Data Quality Risk:
 - **Institutional Ownership: 61.44%** - Verify with regulatory filings
 - **Price Source: yfinance** (current quote; the only price source)
-- **Financial History: 5 years** - ⚠️ Limited track record (Graham's defensive criteria use 10 years of earnings and 20 of dividends)
+- **Financial History: 3 years** - ⚠️ Limited track record (Graham's defensive criteria use 10 years of earnings and 20 of dividends)
 
 
 ---
@@ -156,15 +154,10 @@
 | Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
 | 2023 | 383.29B | 97.00B | 6.24 | 0.95 | 4.00 | ⚠️ -0.11 | 15.3% | 111.09B | 15.550B | 187.45 | 30.1 | 46.9 |
-| 2022 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.93 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2022 | 394.33B | 99.80B | 6.26 | 0.93 | 3.18 | ⚠️ -1.17 | 14.8% | 120.07B | 15.943B | 172.45 | 27.5 | 54.2 |
-| 2021 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.88 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2021 | 365.82B | 94.68B | 5.76 | 0.88 | 3.84 | 0.57 | 15.3% | 109.11B | 16.427B | 158.66 | 27.5 | 41.3 |
 
 **Note on Data Completeness:**
-- Years marked '[Data Unavailable]' (2022, 2021) show declared dividends but lack complete audited annual financial statements
-- **Graham's Principle**: Analysis and valuations use only complete annual data from audited financial statements
-- Declared dividends are shown for income investors but excluded from historical calculations
 
 **Graham Trend Analysis Columns:**
 - **WCPS (Working Capital Per Share)**: (Current Assets - Current Liabilities) / Shares Outstanding

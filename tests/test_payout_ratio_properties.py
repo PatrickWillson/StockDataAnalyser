@@ -434,5 +434,6 @@ def test_payout_ratio_not_computed_from_payment_counts():
     is_ = {'2023': {'revenue': 1000.0, 'net_income': 100.0, 'eps': 5.0}}
     history = FinancialDataProcessor.merge_financial_data(bs, is_, {'2023': 4.0}, 20.0,
                                                           dividends_are_amounts=False)
-    assert history['2023-12-31']['payout_ratio'] == "N/A"
-    assert history['2023-12-31']['dividend'] == 4.0  # kept as the payment count for display
+    assert list(history) == ['2023']  # the count joins the statement year (no second row)
+    assert history['2023']['payout_ratio'] == "N/A"
+    assert history['2023']['dividend'] == 4.0  # kept as the payment count for display

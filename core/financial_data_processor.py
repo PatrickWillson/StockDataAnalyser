@@ -360,10 +360,14 @@ class FinancialDataProcessor:
                     if len(parts) == 3:
                         fiscal_year_end = f"-{parts[1]}-{parts[2]}"
         
-        # Add years from dividend history that might not have financial statements yet
+        # Add years from dividend history that have no financial statements yet. A year that has a
+        # statement row already gets its dividend there: companies with 52/53-week years end on a
+        # different date each year (Apple 2024-09-28, 2023-09-30), so the detected month-day must
+        # not create a second, dividend-only row for it
+        statement_years = {year.split('-')[0] for year in all_years}
         for div_year in dividend_history.keys():
             # Convert year-only format to date format using detected fiscal year end
-            if '-' not in div_year:
+            if '-' not in div_year and div_year not in statement_years:
                 div_year_date = f"{div_year}{fiscal_year_end}"
                 all_years.add(div_year_date)
         
