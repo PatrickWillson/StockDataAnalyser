@@ -7,6 +7,7 @@ analysis dossier, including TTM Graham calculations and comparisons with annual 
 from typing import List, Dict, Any, Union, Optional
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
+from core.models import GrahamResult, TTMResult, or_default
 
 
 class TTMAnalysisSection(DossierSection):
@@ -21,7 +22,8 @@ class TTMAnalysisSection(DossierSection):
     Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7
     """
     
-    def __init__(self, ttm_metrics: Dict[str, Any], annual_metrics: Dict[str, Any], financial_data: Dict[str, Any], context: Optional[ReportContext] = None):
+    def __init__(self, ttm_metrics: Union[TTMResult, Dict[str, Any]], annual_metrics: Union[GrahamResult, Dict[str, Any]],
+                 financial_data: Dict[str, Any], context: Optional[ReportContext] = None):
         """Initialize TTM section generator.
         
         Args:
@@ -29,8 +31,8 @@ class TTMAnalysisSection(DossierSection):
             annual_metrics: Annual calculations for comparison
             financial_data: Full financial data dict (for TTM dividend)
         """
-        self.ttm_metrics = ttm_metrics
-        self.annual_metrics = annual_metrics
+        self.ttm_metrics = TTMResult.from_dict(ttm_metrics)
+        self.annual_metrics = GrahamResult.from_dict(annual_metrics)
         self.financial_data = financial_data
         self.context = context or build_report_context(financial_data, annual_metrics)
     
@@ -49,8 +51,8 @@ class TTMAnalysisSection(DossierSection):
         lines.append("")
         
         # Reporting frequency and date range
-        reporting_frequency = self.ttm_metrics.get('reporting_frequency', 'unknown')
-        date_range = self.ttm_metrics.get('date_range', 'N/A')
+        reporting_frequency = or_default(self.ttm_metrics.reporting_frequency, 'unknown')
+        date_range = or_default(self.ttm_metrics.date_range, 'N/A')
         
         if reporting_frequency != 'unknown':
             frequency_display = reporting_frequency.replace('_', '-').title()
@@ -79,14 +81,14 @@ class TTMAnalysisSection(DossierSection):
             lines: List to append lines to
         """
         # Get currency for display
-        currency = self.ttm_metrics.get('currency', 'USD')
+        currency = or_default(self.ttm_metrics.currency, 'USD')
         
         # TTM Graham Number
         self._add_metric_with_comparison(
             lines,
             "TTM Graham Number",
-            self.ttm_metrics.get('ttm_graham_number'),
-            self.annual_metrics.get('graham_number'),
+            or_default(self.ttm_metrics.ttm_graham_number, None),
+            or_default(self.annual_metrics.graham_number, None),
             currency,
             is_currency=True
         )
@@ -95,8 +97,8 @@ class TTMAnalysisSection(DossierSection):
         self._add_metric_with_comparison(
             lines,
             "TTM Tangible Book Value Per Share",
-            self.ttm_metrics.get('ttm_tbvps'),
-            self.annual_metrics.get('tbvps'),
+            or_default(self.ttm_metrics.ttm_tbvps, None),
+            or_default(self.annual_metrics.tbvps, None),
             currency,
             is_currency=True
         )
@@ -105,15 +107,15 @@ class TTMAnalysisSection(DossierSection):
         self._add_metric_with_comparison(
             lines,
             "TTM Net-Net Value",
-            self.ttm_metrics.get('ttm_net_net'),
-            self.annual_metrics.get('net_net_value'),
+            or_default(self.ttm_metrics.ttm_net_net, None),
+            or_default(self.annual_metrics.net_net_value, None),
             currency,
             is_currency=True
         )
         
         # TTM Margin of Safety: measured against the TTM Graham Number, a different basis from the
         # annual margin of safety (lower of normalized Graham Number and EPV), so no diff is shown
-        ttm_mos = self.ttm_metrics.get('ttm_margin_of_safety')
+        ttm_mos = or_default(self.ttm_metrics.ttm_margin_of_safety, None)
         if isinstance(ttm_mos, (int, float)):
             lines.append(f"- TTM Margin of Safety: {float(ttm_mos):.1f}% (vs the TTM Graham Number; the annual "
                          f"margin of safety uses the lower of the normalized Graham Number and EPV)")
@@ -124,7 +126,7 @@ class TTMAnalysisSection(DossierSection):
         self._add_metric_with_comparison(
             lines,
             "TTM P/E Ratio",
-            self.ttm_metrics.get('ttm_pe_ratio'),
+            or_default(self.ttm_metrics.ttm_pe_ratio, None),
             self._annual_ratio('pe_ratio'),
             currency,
             is_currency=False
@@ -133,7 +135,7 @@ class TTMAnalysisSection(DossierSection):
         self._add_metric_with_comparison(
             lines,
             "TTM P/B Ratio",
-            self.ttm_metrics.get('ttm_pb_ratio'),
+            or_default(self.ttm_metrics.ttm_pb_ratio, None),
             self._annual_ratio('price_to_book'),
             currency,
             is_currency=False

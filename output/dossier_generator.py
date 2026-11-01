@@ -10,8 +10,9 @@ modification of individual sections without affecting others.
 Requirements: 1.1, 1.2, 1.3
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Union
 from core.report_context import build_report_context
+from core.models import GrahamResult, TTMResult
 from output.sections.base import DossierSection
 from output.sections.critical_alerts import CriticalAlertsSection
 from output.sections.executive_summary import ExecutiveSummarySection
@@ -61,22 +62,23 @@ class DossierGenerator:
     """
     
     def __init__(self, ticker: str, financial_data: Dict[str, Any], 
-                 metrics: Dict[str, Any], anomalies: List[str],
-                 ttm_metrics: Optional[Dict[str, Any]] = None):
+                 metrics: Union[GrahamResult, Dict[str, Any]], anomalies: List[str],
+                 ttm_metrics: Union[TTMResult, Dict[str, Any], None] = None):
         """Initialize dossier generator with data and metrics.
         
         Args:
             ticker: Stock ticker symbol (e.g., 'AAPL.US', 'YU.LSE')
             financial_data: Dictionary containing financial data (FinancialData DTO)
-            metrics: Dictionary containing Graham metrics (GrahamMetrics DTO)
+            metrics: Graham metrics (GrahamResult, or its dict form)
             anomalies: List of anomaly detection results
-            ttm_metrics: Optional dictionary containing TTM metrics
+            ttm_metrics: Optional TTM metrics (TTMResult, or its dict form)
         """
         self.ticker = ticker
         self.financial_data = financial_data
-        self.metrics = metrics
+        self.metrics = metrics = GrahamResult.from_dict(metrics)
         self.anomalies = anomalies
-        self.ttm_metrics = ttm_metrics
+        # An empty TTM dict means no TTM metrics
+        self.ttm_metrics = ttm_metrics = TTMResult.from_dict(ttm_metrics) if ttm_metrics else None
         
         # The view model, derived once in core and shared by every section
         self.context = build_report_context(financial_data, metrics)
@@ -86,9 +88,7 @@ class DossierGenerator:
         self.header = HeaderSection(ticker, financial_data, context)
         self.executive_summary = ExecutiveSummarySection(financial_data, metrics, context)
         self.critical_alerts = CriticalAlertsSection(financial_data, metrics, anomalies)
-        self.key_metrics = KeyMetricsSection(financial_data, {'current_ratio': metrics.get('current_ratio'),
-                                                              'quick_ratio': metrics.get('quick_ratio'),
-                                                              'nca_details': metrics.get('nca_details')}, context)
+        self.key_metrics = KeyMetricsSection(financial_data, metrics, context)
         self.risk_factors = RiskFactorsSection(financial_data, metrics, context)
         self.methodology = MethodologySection(financial_data, metrics, context)
         self.calculation_details = CalculationDetailsSection(financial_data, metrics, context)
@@ -96,7 +96,7 @@ class DossierGenerator:
         self.financial_history = FinancialHistorySection(financial_data, context)
         
         # Initialize TTM section if data available
-        if ttm_metrics and ttm_metrics.get('ttm_graham_number') != "N/A":
+        if ttm_metrics and ttm_metrics.ttm_graham_number != "N/A":
             self.ttm_analysis = TTMAnalysisSection(ttm_metrics, metrics, financial_data, context)
         else:
             self.ttm_analysis = None

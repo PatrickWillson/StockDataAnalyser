@@ -136,7 +136,7 @@ def test_dossier_generator_initialization(sample_financial_data, sample_metrics,
     
     assert generator.ticker == 'TEST.US'
     assert generator.financial_data == sample_financial_data
-    assert generator.metrics == sample_metrics
+    assert generator.metrics.to_dict() == sample_metrics
     assert generator.anomalies == sample_anomalies
     
     # Verify section generators are initialized
