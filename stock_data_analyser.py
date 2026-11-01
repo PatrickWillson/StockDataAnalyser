@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import logging
+from dataclasses import replace
 from dotenv import load_dotenv
 
 # Import Core Modules
@@ -100,9 +101,12 @@ def main():
                 )
         apply_year_end_prices(financial_data, year_end_prices)
         
+        # Financial data is final from here on (TTM warnings are added below): a typed, frozen model (M7)
+        financial_data = FinancialData.from_dict(financial_data)
+        
         # 2. Parse Quarterly Data for TTM Calculations
         logger.info("[3/6] Parsing Quarterly Data for TTM Analysis...")
-        quarterly_data = financial_data.get('quarterly_data', {'balance_sheet': {}, 'income_statement': {}})
+        quarterly_data = or_default(financial_data.quarterly_data, {'balance_sheet': {}, 'income_statement': {}})
         
         # 3. Compute Metrics
         logger.info("[4/6] Calculating Graham Metrics (Strict Rules)...")
@@ -119,7 +123,7 @@ def main():
                 ttm_calculator = TTMCalculator(
                     quarterly_data=quarterly_data,
                     price=price,
-                    currency=financial_data.get('currency', 'USD'),
+                    currency=or_default(financial_data.currency, 'USD'),
                 )
                 
                 ttm_metrics = ttm_calculator.compute()
@@ -136,9 +140,7 @@ def main():
             logger.info("TTM Analysis: Quarterly data not available")
             ttm_warnings.append("TTM Analysis: Periodic data not available from API")
         
-        # Financial data is final from here on: a typed, frozen model (M7)
-        financial_data = FinancialData.from_dict({**financial_data,
-                                                  'warnings': [*financial_data.get('warnings', []), *ttm_warnings]})
+        financial_data = replace(financial_data, warnings=(*or_default(financial_data.warnings, ()), *ttm_warnings))
         
         # 5. Detect Anomalies (Statistical)
         logger.info("[6/6] Scanning for Statistical Anomalies...")
