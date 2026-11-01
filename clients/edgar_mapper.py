@@ -279,8 +279,10 @@ def _intangible_parts(facts: _Facts, end: str) -> Tuple[Optional[float], List[st
 
 
 _INTANGIBLE_TAG = re.compile(r"Intangible|Trademark|FranchiseRights|LicenseAgreements|TradeNames")
-_NOT_A_BALANCE = re.compile(r"Tax|Amortization|Impairment|Disposal|Acquired|Useful|Payments|Proceeds|Gross|"
-                            r"Accumulated|Expected|Increase|Decrease|Weighted|Percentage|Goodwill")
+# Tags about intangibles that are not the balance-sheet amount (taxes, amortisation, acquisitions'
+# purchase-price allocations, gross amounts, ...)
+_NOT_A_BALANCE = re.compile(r"Tax|Amortization|Impairment|Disposal|Acquired|Acquisition|Useful|Payments|Proceeds|"
+                            r"Gross|Accumulated|Expected|Increase|Decrease|Weighted|Percentage|Goodwill")
 _MAPPED_INTANGIBLES = set(INTANGIBLES + FINITE_INTANGIBLES + INDEFINITE_INTANGIBLES + NAMED_INDEFINITE_INTANGIBLES
                           + OTHER_INTANGIBLES + OTHER_INDEFINITE_INTANGIBLES)
 

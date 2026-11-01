@@ -292,10 +292,12 @@ def test_unmapped_intangible_tags_are_noted():
         "Assets": [(None, "2024-12-31", 100.0, "2025-02-01", "10-K", "USD")],
         "IndefiniteLivedBroadcastIntangibles": [(None, "2024-12-31", 30.0, "2025-02-01", "10-K", "USD")],
         "DeferredTaxLiabilitiesGoodwillAndIntangibleAssets": [(None, "2024-12-31", 5.0, "2025-02-01", "10-K", "USD")],
+        "BusinessAcquisitionPurchasePriceAllocationAmortizableIntangibleAssets": [
+            (None, "2024-12-31", 7.0, "2025-02-01", "10-K", "USD")],
     })
     notes = " ".join(annual_data(facts).notes)
     assert "IndefiniteLivedBroadcastIntangibles is tagged but not included" in notes
-    assert "DeferredTax" not in notes
+    assert "DeferredTax" not in notes and "BusinessAcquisition" not in notes   # not balance-sheet amounts
 
 
 def _profit_facts(minority=None, minority_share=None):
