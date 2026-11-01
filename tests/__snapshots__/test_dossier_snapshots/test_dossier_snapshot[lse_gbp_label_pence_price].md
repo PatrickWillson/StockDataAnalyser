@@ -79,7 +79,7 @@
 ### Financial Strength Risk:
 - **Current Ratio: 1.29x** - ⚠️ Below Graham's standards (defensive requires 2.0x)
 - **Long-Term Debt: $9,500,000 GBP** (5.0% of assets) - Conservative
-- **Debt Coverage: ✓** Long-term debt < Net Current Assets (passes Graham's defensive test)
+- **Debt Coverage: ✓** Long-term debt ≤ net current assets (passes Graham's defensive test)
 
 ### Operational Stability Risk:
 - **Profit Margin Stability: 1.2% average, 1.3% std dev** over 10 years
@@ -92,17 +92,15 @@
 - **Dividend History: 1 of 10 years** - ⚠️ Inconsistent payment history
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -349.6%** - Trading above intrinsic value
-  - Graham's Standard: 20-30% minimum for defensive investors
-  - Assessment: **High valuation risk** - no margin for error
-  - Intrinsic Value (Graham): 12.78 GBP
+- **Margin of Safety: -349.6%** - Trading above conservative intrinsic value
+  - Assessment: **High valuation risk** - no margin of safety
+  - Conservative Intrinsic Value: 3.67 GBP
   - Current Price: 16.50 GBP
 
 ### Data Quality Risk:
 - **Institutional Ownership: 13.73%** - Verify with regulatory filings
-- **Price Source: yfinance** - ⚠️ Using fallback source (EODHD unavailable)
+- **Price Source: yfinance** (current quote; the only price source)
 
-**Graham's Principle on Risk**: *"The essence of investment management is the management of risks, not the management of returns. Returns are the reward for taking risk, but the risk must be measured and managed."*
 
 ---
 
@@ -133,9 +131,9 @@
 ## SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS
 
 1. **Earnings Stability**: PASS
-   - Criterion: Profitability in most recent year and 5 of past 7 years
+   - Criterion: No deficit in the last 5 years
 2. **Current Ratio**: FAIL
-   - Criterion: Current Ratio > 1.5
+   - Criterion: Current Ratio ≥ 1.5
 3. **Debt to Assets**: PASS
    - Criterion: Long-term debt ≤ 110% of net current assets (current assets − current liabilities)
 4. **Dividend Record**: PASS
@@ -176,10 +174,10 @@
   - Values > 100% indicate unsustainable dividends (paying more than earned)
   - Values < 50% indicate conservative dividend policy with room for growth
   - 'N/A' shown for years with zero or negative earnings
-- **Total Debt**: Sum of long-term and short-term debt. Graham emphasized tracking debt trends to distinguish companies that grow through retained earnings vs leverage.
+- **Total Debt**: Reported total debt (short- and long-term, including lease obligations), else the sum of long- and short-term debt.
 - **Shares (B)**: Common shares outstanding in billions. Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).
 - **Price**: Year-end stock price on fiscal year end date (or last trading day within 7 days prior). Source: Yahoo Finance via yfinance.
-- **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates loss year (Graham's method: show losses explicitly).
+- **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates a loss year.
 - **P/B**: Historical Price-to-Book ratio (Price ÷ BVPS). Shows how the market valued net assets over time.
 
 *Note: Historical prices converted to unified currency using current FX rates. Historical FX rates not used - actual historical valuations may differ due to FX fluctuations.*
@@ -208,7 +206,7 @@
     - Comparability: Annual data allows year-over-year comparison of audited results
 - **Graham Number - Single-Year EPS (12.78 GBP)**: √(22.5 × EPS × TBVPS)
   - Conservative intrinsic value estimate
-  - Based on Benjamin Graham's formula from 'The Intelligent Investor'
+  - Not a formula Graham published: the highest price passing his defensive criteria 6 (P/E ≤ 15) and 7 (P/B ≤ 1.5), as 15 × 1.5 = 22.5
   - Uses most recent annual EPS
 
 - **Graham Number - 3-Year Average EPS (Normalized)**:
@@ -217,8 +215,8 @@
 
   **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year
   makes a cyclical company appear undervalued despite being a value destroyer over the
-  full business cycle. This aligns with Graham's actual criterion: *"Price should not exceed"*
-  *"15 times average earnings of the past three years."*
+  full business cycle. This follows Graham's sixth defensive criterion: price not more than
+  15 times average earnings of the past three years.
 
   **3-Year EPS**: [2023: 1.71 GBP, 2022: 0.26 GBP, 2021: 0.25 GBP] → Avg: 0.74 GBP
 - **EPV - Simplified Earnings Power Estimate**
@@ -228,10 +226,9 @@
   - **Includes ALL years** (profitable and unprofitable)
   - Loss years reduce the average (real value destruction)
   - Capitalizes earnings at 10% discount rate
-  - Inspired by Graham's emphasis on full-cycle earnings
+  - Graham's method: average past earnings capitalised at a multiplier kept "within a reasonable range of variation"; in 1976 he set a maximum multiple of 10
 
-  **Important**: This is a simplified approach, not Graham's original methodology.
-  Graham emphasized earnings power conceptually but didn't prescribe this exact formula.
+  **Note**: Dividing by 10% is a multiplier of 10. The name 'EPV' comes from Greenwald (2001), whose method differs (normalised EBIT, maintenance capex, cost of capital).
 
   **Calculation for YU:**
   - Years Used: 10
@@ -243,10 +240,10 @@
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
-  **Graham's Principle**: *"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle."*
-- **Net-Net Value (0.06 GBP)**: (Current Assets - Total Liabilities) / Shares
-  - Conservative liquidation value estimate
-  - Graham's 'cigar butt' valuation for distressed situations
+  **Graham on earning power**: *"Past earning power … should mean the average earnings over a stated period which would ordinarily be identified in the discussion. But if not so identified it would be some representative period such as five or seven or perhaps ten years in the past."* (Graham, Current Problems in Security Analysis, Lecture 4, 1946–47)
+- **Net-Net Value (0.06 GBP)**: (Current Assets - Total Liabilities - minority interests and other claims ahead of the common) / Shares
+  - Graham's net current asset value: "current assets alone, minus all liabilities and claims ahead of the issue"
+  - Graham bought at no more than two-thirds of it, as a diversified group
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
   - **Value**: -349.6%
@@ -276,7 +273,8 @@
   This is a red flag - the company may be destroying value over the full cycle.
 
   **Graham's Principle**: *"The margin of safety is always dependent on the price paid."*
-  Graham recommended a minimum 20-30% margin of safety for defensive investors.
+  Graham counted an issue a bargain when its indicated value was at least 50% above the price (price at most
+  two-thirds of value), and a net-current-asset issue at no more than two-thirds of NCAV.
 
 ### P/E Ratio (3-Year Average)
 
@@ -294,9 +292,9 @@ The Quick Ratio is a more stringent liquidity test than the Current Ratio. It ex
 
 **Formula**: Quick Ratio = (Current Assets - Inventory) / Current Liabilities
 
-A Quick Ratio > 1.0 indicates the company can meet short-term obligations without relying on inventory sales. Graham preferred companies with strong liquidity positions.
+A Quick Ratio > 1.0 indicates the company can meet short-term obligations without relying on inventory sales. It is shown for information only: Graham's criteria use the current ratio.
 
-**Note**: For Services and Technology companies with minimal inventory, if inventory data is unavailable, we use Current Assets directly (equivalent to Current Ratio).
+**Note**: When inventory is not reported in the annual balance sheet, the Quick Ratio is N/A (never estimated).
 
 ### Net Current Assets (NCA) and Debt Coverage
 
@@ -408,11 +406,10 @@ TTM calculations provide more current financial metrics by using the most recent
 - **Net Current Assets**: GBP1,000,000
 - **Divided by Shares**: 18,000,000
 - **Net-Net Value Per Share**: GBP0.06
-- **Formula Used**: NCAV (Net Current Asset Value) = (Current Assets - Total Liabilities) / Shares
-  - **Note**: This is the standard 'Net-Net' formula used by most value investors
-  - **Alternative**: Graham's more conservative NNWC formula applies haircuts to current assets
-    - NNWC = (Cash + 0.75×AR + 0.5×Inventory - Total Liabilities) / Shares
-    - We use NCAV for consistency with common practice
+- **Formula Used**: NCAV (Net Current Asset Value) = (Current Assets - Total Liabilities - claims ahead of the common) / Shares
+  - **Note**: Graham's own measure: "current assets alone, minus all liabilities and claims ahead of the issue"
+  - **Stricter alternative**: Graham's liquidating-value haircuts (Security Analysis ch. 43): cash 100%,
+    receivables 75-90%, inventories 50-75%, fixed assets 1-50% (not applied here)
 
 ### Currency Conversion Details:
 - **Stock Trading Currency**: GBP (price quoted in GBp)
@@ -429,14 +426,14 @@ TTM calculations provide more current financial metrics by using the most recent
 ### EPV Methodology Clarification:
 - **Approach Used**: Simplified Earnings Capitalization
 - **Formula**: Average Net Income (7-10 years) / 10%
-- **Inspiration**: Graham's emphasis on full-cycle earnings (not a direct Graham formula)
+- **Basis**: Graham capitalised average past earnings at a multiplier kept within a reasonable range (maximum 10 in 1976); dividing by 10% is a multiplier of 10
 - **Cost of Capital**: 10% (conservative fixed rate for simplicity)
 - **Includes Loss Years**: Yes (full business cycle)
 
-**This Differs From Graham's Original Work**:
-- Graham discussed 'earning power' conceptually but didn't provide this specific formula
-- Graham Number (√(22.5 × EPS × BVPS)) is Graham's actual intrinsic value formula
-- Our EPV is a simplified interpretation of Graham's principles
+**Relation to Graham's Work**:
+- Graham defined past earning power as average earnings over a stated period (five, seven or ten years)
+- The Graham Number (√(22.5 × EPS × TBVPS)) is not a formula Graham published; it is derived from his defensive criteria 6 and 7
+- This EPV uses net income, including loss years and special items, over 7-10 years
 
 **This Differs From Modern EPV (Greenwald, 2001)**:
 - Modern EPV uses normalized EBIT, not net income

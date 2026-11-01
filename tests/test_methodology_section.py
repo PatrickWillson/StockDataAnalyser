@@ -59,7 +59,7 @@ def test_methodology_with_all_new_metrics():
     # Assert - Quick Ratio
     assert 'Quick Ratio (Acid Test)' in content
     assert 'Quick Ratio = (Current Assets - Inventory) / Current Liabilities' in content
-    assert 'Services and Technology companies' in content
+    assert 'never estimated' in content
     
     # Assert - NCA and Debt Coverage
     assert 'Net Current Assets (NCA) and Debt Coverage' in content

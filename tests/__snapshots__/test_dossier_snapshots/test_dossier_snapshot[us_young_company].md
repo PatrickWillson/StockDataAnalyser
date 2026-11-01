@@ -88,18 +88,16 @@
 - **Dividend History: 5 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -701.1%** - Trading above intrinsic value
-  - Graham's Standard: 20-30% minimum for defensive investors
-  - Assessment: **High valuation risk** - no margin for error
-  - Intrinsic Value (Graham): 23.68 USD
+- **Margin of Safety: -701.1%** - Trading above conservative intrinsic value
+  - Assessment: **High valuation risk** - no margin of safety
+  - Conservative Intrinsic Value: 23.40 USD
   - Current Price: 187.45 USD
 
 ### Data Quality Risk:
 - **Institutional Ownership: 61.44%** - Verify with regulatory filings
-- **Price Source: yfinance** - ⚠️ Using fallback source (EODHD unavailable)
-- **Financial History: 5 years** - ⚠️ Limited track record (Graham preferred 10+ years)
+- **Price Source: yfinance** (current quote; the only price source)
+- **Financial History: 5 years** - ⚠️ Limited track record (Graham's defensive criteria use 10 years of earnings and 20 of dividends)
 
-**Graham's Principle on Risk**: *"The essence of investment management is the management of risks, not the management of returns. Returns are the reward for taking risk, but the risk must be measured and managed."*
 
 ---
 
@@ -130,9 +128,9 @@
 ## SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS
 
 1. **Earnings Stability**: FAIL
-   - Criterion: Profitability in most recent year and 5 of past 7 years
+   - Criterion: No deficit in the last 5 years
 2. **Current Ratio**: FAIL
-   - Criterion: Current Ratio > 1.5
+   - Criterion: Current Ratio ≥ 1.5
 3. **Debt to Assets**: FAIL
    - Criterion: Long-term debt ≤ 110% of net current assets (current assets − current liabilities)
 4. **Dividend Record**: PASS
@@ -171,10 +169,10 @@
   - Values > 100% indicate unsustainable dividends (paying more than earned)
   - Values < 50% indicate conservative dividend policy with room for growth
   - 'N/A' shown for years with zero or negative earnings
-- **Total Debt**: Sum of long-term and short-term debt. Graham emphasized tracking debt trends to distinguish companies that grow through retained earnings vs leverage.
+- **Total Debt**: Reported total debt (short- and long-term, including lease obligations), else the sum of long- and short-term debt.
 - **Shares (B)**: Common shares outstanding in billions. Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).
 - **Price**: Year-end stock price on fiscal year end date (or last trading day within 7 days prior). Source: Yahoo Finance via yfinance.
-- **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates loss year (Graham's method: show losses explicitly).
+- **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates a loss year.
 - **P/B**: Historical Price-to-Book ratio (Price ÷ BVPS). Shows how the market valued net assets over time.
 
 *Note: Historical prices converted to unified currency using current FX rates. Historical FX rates not used - actual historical valuations may differ due to FX fluctuations.*
@@ -203,7 +201,7 @@
     - Comparability: Annual data allows year-over-year comparison of audited results
 - **Graham Number - Single-Year EPS (23.68 USD)**: √(22.5 × EPS × TBVPS)
   - Conservative intrinsic value estimate
-  - Based on Benjamin Graham's formula from 'The Intelligent Investor'
+  - Not a formula Graham published: the highest price passing his defensive criteria 6 (P/E ≤ 15) and 7 (P/B ≤ 1.5), as 15 × 1.5 = 22.5
   - Uses most recent annual EPS
 
 - **Graham Number - 3-Year Average EPS (Normalized)**:
@@ -212,8 +210,8 @@
 
   **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year
   makes a cyclical company appear undervalued despite being a value destroyer over the
-  full business cycle. This aligns with Graham's actual criterion: *"Price should not exceed"*
-  *"15 times average earnings of the past three years."*
+  full business cycle. This follows Graham's sixth defensive criterion: price not more than
+  15 times average earnings of the past three years.
 
   **3-Year EPS**: [2023: 6.24 USD, 2022: 6.26 USD, 2021: 5.76 USD] → Avg: 6.09 USD
 
@@ -243,7 +241,8 @@
   **Interpretation**: Only the Normalized Graham Number is available (EPV unavailable: Insufficient history (3 complete years, minimum 7 required)).
 
   **Graham's Principle**: *"The margin of safety is always dependent on the price paid."*
-  Graham recommended a minimum 20-30% margin of safety for defensive investors.
+  Graham counted an issue a bargain when its indicated value was at least 50% above the price (price at most
+  two-thirds of value), and a net-current-asset issue at no more than two-thirds of NCAV.
 
 ### P/E Ratio (3-Year Average)
 
@@ -261,9 +260,9 @@ The Quick Ratio is a more stringent liquidity test than the Current Ratio. It ex
 
 **Formula**: Quick Ratio = (Current Assets - Inventory) / Current Liabilities
 
-A Quick Ratio > 1.0 indicates the company can meet short-term obligations without relying on inventory sales. Graham preferred companies with strong liquidity positions.
+A Quick Ratio > 1.0 indicates the company can meet short-term obligations without relying on inventory sales. It is shown for information only: Graham's criteria use the current ratio.
 
-**Note**: For Services and Technology companies with minimal inventory, if inventory data is unavailable, we use Current Assets directly (equivalent to Current Ratio).
+**Note**: When inventory is not reported in the annual balance sheet, the Quick Ratio is N/A (never estimated).
 
 ### Net Current Assets (NCA) and Debt Coverage
 

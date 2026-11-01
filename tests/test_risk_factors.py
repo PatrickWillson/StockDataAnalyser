@@ -213,7 +213,7 @@ def test_valuation_risk_with_negative_margin():
     lines = section.generate()
     
     # Check for overvaluation warning
-    overvaluation_lines = [line for line in lines if 'Overvaluation' in line or 'above intrinsic value' in line]
+    overvaluation_lines = [line for line in lines if 'above conservative intrinsic value' in line]
     assert len(overvaluation_lines) > 0, "Should warn about overvaluation"
 
 
@@ -234,17 +234,11 @@ def test_data_quality_risk_assessment():
     assert len(institutional_lines) > 0, "Should mention institutional ownership"
 
 
-def test_grahams_principle_included():
-    """Test that Graham's principle on risk is included."""
-    financial_data = create_test_financial_data()
-    metrics = create_test_metrics()
-    
-    section = RiskFactorsSection(financial_data, metrics)
-    lines = section.generate()
-    
-    # Check for Graham's principle quote
-    graham_quotes = [line for line in lines if "Graham's Principle" in line]
-    assert len(graham_quotes) >= 1, "Should include Graham's principle quote"
+def test_no_unverified_graham_quotes():
+    """F19: quotes and standards not found in Graham's work are not attributed to him."""
+    lines = RiskFactorsSection(create_test_financial_data(), create_test_metrics()).generate()
+    assert not any("essence of investment management" in line for line in lines)
+    assert not any("20-30%" in line for line in lines)
 
 
 def test_section_ends_with_separator():

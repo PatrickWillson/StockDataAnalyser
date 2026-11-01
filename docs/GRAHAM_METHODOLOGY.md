@@ -122,6 +122,7 @@ The ordered rules, implemented in `core/verdict.py` (F20): no intrinsic value �
 | Utility companies (4.2) | Debt ≤ 2 × book equity; no current-ratio test | For EODHD's regulated electric / gas / water industries: total debt ≤ 2 × stockholders' equity, current ratio not applied | **Fixed (F20)**. Decisions 2026-11-01 (user): regulated utilities only; total stockholders' equity. Total debt for the unqualified "debt" is this project's conservative reading **[I]** |
 | Per-share split basis (§2.4) | One share basis for every year | Yahoo closes and Dividend API `value` are split-adjusted to today; per-year EPS/BVPS use EODHD's yearly share counts (basis unverified, CODEBASE_GUIDE §11 E5) | **Open — confirm E5, then fix with F22** |
 | Quick ratio | Not a Graham criterion (he uses the current ratio) | Shown in Key Metrics as information only | Matches (informational; not used in any test or verdict) |
+| Dossier text attributed to Graham | Only verified statements, labelled | Removed: unsourced "essence of investment management" quote, "20-30% minimum margin of safety", "cigar butt" (Buffett's term), "Graham Number is Graham's formula", NNWC 0.75/0.5 haircuts; earning-power quote replaced by Lecture 4 [P] | **Fixed (F19)** |
 | Pre-computed EODHD values | Raw data (§8.1) | None in calculations (**removed**: market-cap price fallback; forward estimate in history and Risk Factors; dividend counts as amounts) | **Fixed (F21)** |
 
 ## 10. Sources

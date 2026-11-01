@@ -38,9 +38,9 @@ DIVIDEND_COVERAGE_ADEQUATE: Final[float] = 1.5
 DIVIDEND_COVERAGE_MIN: Final[float] = 1.0
 DIVIDEND_MOSTLY_CONSISTENT_FRACTION: Final[float] = 0.8
 
-# Valuation risk
-MOS_EXCELLENT_PCT: Final[float] = 30
-MOS_ACCEPTABLE_PCT: Final[float] = 20
+# Graham's bargain margin: indicated value at least 50% above price, so a margin of safety of
+# at least one-third of value (GRAHAM_METHODOLOGY §1.2, §3.3)
+MOS_GRAHAM_BARGAIN_PCT: Final[float] = 100 / 3
 
 # Data quality
 INSTITUTIONAL_HIGH_PCT: Final[float] = 20

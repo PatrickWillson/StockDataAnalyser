@@ -179,7 +179,7 @@ def test_end_to_end_graham_tests_section():
     assert '8. **Combined P/E × P/B Test**' in content
     assert 'Positive earnings in each of the past 10 years' in content
     assert 'SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS' in content
-    assert 'Profitability in most recent year and 5 of past 7 years' in content
+    assert 'No deficit in the last 5 years' in content
 
 
 def test_end_to_end_financial_history_section():

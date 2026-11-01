@@ -160,7 +160,7 @@ class TestMethodologySection:
         assert len(conservative_lines) >= 1
         
         # Check for Benjamin Graham reference
-        graham_ref_lines = [line for line in lines if "Benjamin Graham" in line and "Intelligent Investor" in line]
+        graham_ref_lines = [line for line in lines if "Not a formula Graham published" in line]
         assert len(graham_ref_lines) >= 1
     
     def test_graham_number_na(self):
@@ -202,7 +202,7 @@ class TestMethodologySection:
         assert any("Normalized Earnings:" in line for line in lines)
         
         # Check for Graham's principle quote
-        graham_quote_lines = [line for line in lines if "earning power" in line and "Graham's Principle" in line]
+        graham_quote_lines = [line for line in lines if "Graham on earning power" in line and "Lecture 4" in line]
         assert len(graham_quote_lines) >= 1
     
     def test_epv_years_range_display(self):
@@ -323,15 +323,15 @@ class TestMethodologySection:
         # Find Net-Net explanation
         net_net_lines = [line for line in lines if "Net-Net Value" in line and "15.50 USD" in line]
         assert len(net_net_lines) >= 1
-        assert any("(Current Assets - Total Liabilities) / Shares" in line for line in lines)
+        assert any("(Current Assets - Total Liabilities - minority interests and other claims ahead of the common) / Shares" in line for line in lines)
         
         # Check for liquidation value note
-        liquidation_lines = [line for line in lines if "liquidation value" in line]
+        liquidation_lines = [line for line in lines if "current assets alone, minus all liabilities and claims ahead of the issue" in line]
         assert len(liquidation_lines) >= 1
         
-        # Check for cigar butt reference
-        cigar_lines = [line for line in lines if "cigar butt" in line]
-        assert len(cigar_lines) >= 1
+        # "Cigar butt" is Buffett's term, not Graham's
+        assert not any("cigar butt" in line for line in lines)
+        assert any("two-thirds" in line for line in lines)
     
     def test_net_net_negative_value(self):
         """Test Net-Net explanation with negative value."""
@@ -374,8 +374,9 @@ class TestMethodologySection:
         assert any("((Intrinsic Value - Current Price) / Intrinsic Value) × 100" in line for line in lines)
 
         # Check for Graham's recommendation
-        graham_rec_lines = [line for line in lines if "20-30%" in line and "defensive investors" in line]
+        graham_rec_lines = [line for line in lines if "at least 50% above the price" in line]
         assert len(graham_rec_lines) >= 1
+        assert not any("20-30%" in line for line in lines)  # not a Graham standard
     
     def test_margin_of_safety_negative(self):
         """Test Margin of Safety explanation with negative value."""

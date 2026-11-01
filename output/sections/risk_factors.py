@@ -27,8 +27,7 @@ from config.risk_thresholds import (
     LT_DEBT_TO_ASSETS_MODERATE_PCT,
     MARGIN_VOLATILITY_LOW_PCT,
     MARGIN_VOLATILITY_MODERATE_PCT,
-    MOS_ACCEPTABLE_PCT,
-    MOS_EXCELLENT_PCT,
+    MOS_GRAHAM_BARGAIN_PCT,
     PAYOUT_CONSERVATIVE_PCT,
     PAYOUT_MAX_PCT,
     PAYOUT_MODERATE_PCT,
@@ -127,9 +126,7 @@ class RiskFactorsSection(DossierSection):
                 
                 # 6. Data Quality Risk
                 self._add_data_quality_risk_second(lines, sorted_years)
-                
-                # Graham's principle on risk
-                lines.append("**Graham's Principle on Risk**: *\"The essence of investment management is the management of risks, not the management of returns. Returns are the reward for taking risk, but the risk must be measured and managed.\"*")
+
         else:
             lines.append("Insufficient data available for risk assessment.")
         
@@ -232,10 +229,10 @@ class RiskFactorsSection(DossierSection):
                 total_debt_to_assets = (total_debt / total_assets) * 100
                 lines.append(f"  - Short-term debt and leases: ${other_debt:,.0f} {unified_currency} ({total_debt_to_assets:.1f}% of assets)")
         
-        # Graham's defensive test: Long-term debt < Net Current Assets
+        # Graham's defensive test: long-term debt not more than net current assets (working capital)
         if net_current_assets > 0 and long_term_debt > 0:
-            if long_term_debt < net_current_assets:
-                lines.append("- **Debt Coverage: ✓** Long-term debt < Net Current Assets (passes Graham's defensive test)")
+            if long_term_debt <= net_current_assets:
+                lines.append("- **Debt Coverage: ✓** Long-term debt ≤ net current assets (passes Graham's defensive test)")
             else:
                 debt_ratio = (long_term_debt / net_current_assets) * 100
                 lines.append(f"- **Debt Coverage: ⚠️** Long-term debt is {debt_ratio:.0f}% of Net Current Assets (fails Graham's defensive test)")
@@ -376,35 +373,29 @@ class RiskFactorsSection(DossierSection):
         lines.append("### Valuation Risk (Margin of Safety):")
         
         margin_of_safety = self.metrics.get('margin_of_safety', 'N/A')
-        graham_number = self.metrics.get('graham_number', 'N/A')
+        intrinsic_value = (self.metrics.get('margin_of_safety_details') or {}).get('intrinsic_value_used', 'N/A')
         price = self.financial_data.get('price', 0)
         
+        # Graham: a bargain needs indicated value at least 50% above price, i.e. a margin of at
+        # least one-third of value (GRAHAM_METHODOLOGY §1.2, §3.3)
         if isinstance(margin_of_safety, (int, float)):
-            if margin_of_safety >= MOS_EXCELLENT_PCT:
-                lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Excellent discount to intrinsic value")
-                lines.append("  - Graham's Standard: 20-30% minimum for defensive investors")
-                lines.append("  - Assessment: **Low valuation risk** - substantial cushion against estimation errors")
-            elif margin_of_safety >= MOS_ACCEPTABLE_PCT:
-                lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Meets Graham's minimum standard")
-                lines.append("  - Graham's Standard: 20-30% minimum for defensive investors")
-                lines.append("  - Assessment: **Acceptable valuation risk** for defensive investors")
+            if margin_of_safety >= MOS_GRAHAM_BARGAIN_PCT:
+                lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Bargain by Graham's standard")
+                lines.append("  - Graham: a bargain's indicated value is at least 50% above the price (margin ≥ 33.3%)")
             elif margin_of_safety > 0:
-                lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Below Graham's recommended minimum")
-                lines.append("  - Graham's Standard: 20-30% minimum for defensive investors")
-                lines.append("  - Assessment: **Moderate valuation risk** - limited cushion against errors or deterioration")
-                lines.append("  - More suitable for enterprising investors willing to accept higher risk")
+                lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Below conservative value, short of Graham's bargain margin")
+                lines.append("  - Graham: a bargain's indicated value is at least 50% above the price (margin ≥ 33.3%)")
             else:
-                lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Trading above intrinsic value")
-                lines.append("  - Graham's Standard: 20-30% minimum for defensive investors")
-                lines.append("  - Assessment: **High valuation risk** - no margin for error")
+                lines.append(f"- **Margin of Safety: {margin_of_safety:.1f}%** - Trading above conservative intrinsic value")
+                lines.append("  - Assessment: **High valuation risk** - no margin of safety")
         else:
             lines.append(f"- **Margin of Safety: {margin_of_safety}** - Cannot assess valuation risk")
         
-        # Show intrinsic value for context
-        if isinstance(graham_number, (int, float)) and graham_number > 0:
-            graham_display = format_price_display(graham_number, unified_currency, unified_currency)
+        # Show the intrinsic value the margin is measured against
+        if isinstance(intrinsic_value, (int, float)) and intrinsic_value > 0:
+            value_display = format_price_display(intrinsic_value, unified_currency, unified_currency)
             current_price_display = format_price_display(price, unified_currency, unified_currency)
-            lines.append(f"  - Intrinsic Value (Graham): {graham_display}")
+            lines.append(f"  - Conservative Intrinsic Value: {value_display}")
             lines.append(f"  - Current Price: {current_price_display}")
         
         lines.append("")
@@ -427,13 +418,12 @@ class RiskFactorsSection(DossierSection):
                 lines.append(f"- **Institutional Ownership: {institutional:.2f}%** - Verify with regulatory filings")
         
         # Price source
-        price_source = self.financial_data.get('price_source', 'EODHD')
-        if price_source != 'EODHD':
-            lines.append(f"- **Price Source: {price_source}** - ⚠️ Using fallback source (EODHD unavailable)")
+        price_source = self.financial_data.get('price_source', 'yfinance')
+        lines.append(f"- **Price Source: {price_source}** (current quote; the only price source)")
         
         # Years of history
         years_available = len(sorted_years)
         if years_available < MIN_HISTORY_YEARS_RECOMMENDED:
-            lines.append(f"- **Financial History: {years_available} years** - ⚠️ Limited track record (Graham preferred 10+ years)")
+            lines.append(f"- **Financial History: {years_available} years** - ⚠️ Limited track record (Graham's defensive criteria use 10 years of earnings and 20 of dividends)")
         
         lines.append("")

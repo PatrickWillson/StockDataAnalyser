@@ -92,7 +92,7 @@ def test_enterprising_tests_earnings_stability_text():
     content = '\n'.join(lines)
     
     # Assert
-    assert 'Profitability in most recent year and 5 of past 7 years' in content
+    assert 'No deficit in the last 5 years' in content
 
 
 def test_combined_test_with_na_values():

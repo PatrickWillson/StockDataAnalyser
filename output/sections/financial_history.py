@@ -269,10 +269,10 @@ class FinancialHistorySection:
         lines.append("  - Values > 100% indicate unsustainable dividends (paying more than earned)")
         lines.append("  - Values < 50% indicate conservative dividend policy with room for growth")
         lines.append("  - 'N/A' shown for years with zero or negative earnings")
-        lines.append("- **Total Debt**: Sum of long-term and short-term debt. Graham emphasized tracking debt trends to distinguish companies that grow through retained earnings vs leverage.")
+        lines.append("- **Total Debt**: Reported total debt (short- and long-term, including lease obligations), else the sum of long- and short-term debt.")
         lines.append("- **Shares (B)**: Common shares outstanding in billions. Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).")
         lines.append("- **Price**: Year-end stock price on fiscal year end date (or last trading day within 7 days prior). Source: Yahoo Finance via yfinance.")
-        lines.append("- **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates loss year (Graham's method: show losses explicitly).")
+        lines.append("- **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates a loss year.")
         lines.append("- **P/B**: Historical Price-to-Book ratio (Price ÷ BVPS). Shows how the market valued net assets over time.")
         lines.append("")
         

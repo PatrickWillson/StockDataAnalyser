@@ -324,10 +324,10 @@ class TestCalculationDetailsSection:
         assert len(formula_lines) >= 1
         
         # Check for alternative formula note
-        alternative_lines = [line for line in lines if "Alternative" in line and "NNWC" in line]
+        alternative_lines = [line for line in lines if "Stricter alternative" in line and "Security Analysis ch. 43" in line]
         assert len(alternative_lines) >= 1
-        assert any("0.75×AR" in line for line in lines)
-        assert any("0.5×Inventory" in line for line in lines)
+        assert any("receivables 75-90%, inventories 50-75%" in line for line in lines)  # Graham's own haircuts
+        assert any("fixed assets 1-50%" in line for line in lines)
     
     def test_net_net_negative_value(self):
         """Test Net-Net calculation when value is negative."""
@@ -436,7 +436,7 @@ class TestCalculationDetailsSection:
         assert len(approach_lines) >= 1
         
         # Check for inspiration (not direct Graham formula)
-        inspiration_lines = [line for line in lines if "Inspiration" in line and "Graham's emphasis on full-cycle earnings" in line]
+        inspiration_lines = [line for line in lines if "Basis" in line and "multiplier" in line]
         assert len(inspiration_lines) >= 1
         
         # Check for cost of capital
@@ -452,9 +452,9 @@ class TestCalculationDetailsSection:
         assert len(loss_lines) >= 1
         
         # Check for Graham's original work disclaimer
-        graham_disclaimer_lines = [line for line in lines if "This Differs From Graham's Original Work" in line]
+        graham_disclaimer_lines = [line for line in lines if "Relation to Graham's Work" in line]
         assert len(graham_disclaimer_lines) >= 1
-        assert any("Graham discussed 'earning power' conceptually" in line for line in lines)
+        assert any("average earnings over a stated period" in line for line in lines)
         
         # Check for modern EPV differences
         modern_lines = [line for line in lines if "This Differs From Modern EPV" in line and "Greenwald, 2001" in line]

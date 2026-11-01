@@ -168,7 +168,7 @@ class MethodologySection:
             graham_display = format_price_display(graham_number, unified_currency, unified_currency)
             lines.append(f"- **Graham Number - Single-Year EPS ({graham_display})**: √({GRAHAM_MULTIPLIER:g} × EPS × TBVPS)")
             lines.append("  - Conservative intrinsic value estimate")
-            lines.append("  - Based on Benjamin Graham's formula from 'The Intelligent Investor'")
+            lines.append(f"  - Not a formula Graham published: the highest price passing his defensive criteria 6 (P/E ≤ {DEFENSIVE.MAX_PE_RATIO:g}) and 7 (P/B ≤ {DEFENSIVE.MAX_PB_RATIO:g}), as {DEFENSIVE.MAX_PE_RATIO:g} × {DEFENSIVE.MAX_PB_RATIO:g} = {GRAHAM_MULTIPLIER:g}")
             lines.append("  - Uses most recent annual EPS")
         
         # Normalized Graham Number (3-Year Average)
@@ -182,8 +182,8 @@ class MethodologySection:
             lines.append("")
             lines.append("  **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year")
             lines.append("  makes a cyclical company appear undervalued despite being a value destroyer over the")
-            lines.append("  full business cycle. This aligns with Graham's actual criterion: *\"Price should not exceed\"*")
-            lines.append("  *\"15 times average earnings of the past three years.\"*")
+            lines.append("  full business cycle. This follows Graham's sixth defensive criterion: price not more than")
+            lines.append(f"  {DEFENSIVE.MAX_PE_RATIO:g} times average earnings of the past three years.")
             lines.append("")
             
             # Display 3-year EPS breakdown
@@ -226,10 +226,9 @@ class MethodologySection:
             lines.append("  - **Includes ALL years** (profitable and unprofitable)")
             lines.append("  - Loss years reduce the average (real value destruction)")
             lines.append(f"  - Capitalizes earnings at {COST_OF_CAPITAL:.0%} discount rate")
-            lines.append("  - Inspired by Graham's emphasis on full-cycle earnings")
+            lines.append("  - Graham's method: average past earnings capitalised at a multiplier kept \"within a reasonable range of variation\"; in 1976 he set a maximum multiple of 10")
             lines.append("")
-            lines.append("  **Important**: This is a simplified approach, not Graham's original methodology.")
-            lines.append("  Graham emphasized earnings power conceptually but didn't prescribe this exact formula.")
+            lines.append(f"  **Note**: Dividing by {COST_OF_CAPITAL:.0%} is a multiplier of {1 / COST_OF_CAPITAL:g}. The name 'EPV' comes from Greenwald (2001), whose method differs (normalised EBIT, maintenance capex, cost of capital).")
             lines.append("")
             lines.append(f"  **Calculation for {ticker}:**")
             lines.append(f"  - Years Used: {years_used}")
@@ -283,7 +282,7 @@ class MethodologySection:
                 lines.append(f"  **Note**: All {years_used} years were profitable, demonstrating consistent earnings power.")
             
             lines.append("")
-            lines.append("  **Graham's Principle**: *\"The concept of 'earning power' implies a fairly confident expectation of certain future results, based on past performance under varying conditions. The record must cover a number of years, first because a continued or repeated performance is always more impressive than a single occurrence and secondly because the average of a fairly long period will tend to absorb and equalize the distorting influences of the business cycle.\"*")
+            lines.append("  **Graham on earning power**: *\"Past earning power … should mean the average earnings over a stated period which would ordinarily be identified in the discussion. But if not so identified it would be some representative period such as five or seven or perhaps ten years in the past.\"* (Graham, Current Problems in Security Analysis, Lecture 4, 1946–47)")
     
     def _add_net_net_explanation(self, lines: List[str], unified_currency: str) -> None:
         """Add Net-Net Value calculation explanation.
@@ -296,9 +295,9 @@ class MethodologySection:
         
         if isinstance(net_net, (int, float)) and net_net > 0:
             net_net_display = format_price_display(net_net, unified_currency, unified_currency)
-            lines.append(f"- **Net-Net Value ({net_net_display})**: (Current Assets - Total Liabilities) / Shares")
-            lines.append("  - Conservative liquidation value estimate")
-            lines.append("  - Graham's 'cigar butt' valuation for distressed situations")
+            lines.append(f"- **Net-Net Value ({net_net_display})**: (Current Assets - Total Liabilities - minority interests and other claims ahead of the common) / Shares")
+            lines.append("  - Graham's net current asset value: \"current assets alone, minus all liabilities and claims ahead of the issue\"")
+            lines.append("  - Graham bought at no more than two-thirds of it, as a diversified group")
     
     def _add_margin_of_safety_explanation(self, lines: List[str]) -> None:
         """Add Margin of Safety calculation explanation.
@@ -382,7 +381,8 @@ class MethodologySection:
         
         lines.append("")
         lines.append("  **Graham's Principle**: *\"The margin of safety is always dependent on the price paid.\"*")
-        lines.append("  Graham recommended a minimum 20-30% margin of safety for defensive investors.")
+        lines.append("  Graham counted an issue a bargain when its indicated value was at least 50% above the price (price at most")
+        lines.append("  two-thirds of value), and a net-current-asset issue at no more than two-thirds of NCAV.")
     
     def _add_3year_eps_breakdown(self, lines: List[str], unified_currency: str) -> None:
         """Add 3-year EPS breakdown display.
@@ -460,9 +460,9 @@ class MethodologySection:
             lines.append("")
             lines.append("**Formula**: Quick Ratio = (Current Assets - Inventory) / Current Liabilities")
             lines.append("")
-            lines.append("A Quick Ratio > 1.0 indicates the company can meet short-term obligations without relying on inventory sales. Graham preferred companies with strong liquidity positions.")
+            lines.append("A Quick Ratio > 1.0 indicates the company can meet short-term obligations without relying on inventory sales. It is shown for information only: Graham's criteria use the current ratio.")
             lines.append("")
-            lines.append("**Note**: For Services and Technology companies with minimal inventory, if inventory data is unavailable, we use Current Assets directly (equivalent to Current Ratio).")
+            lines.append("**Note**: When inventory is not reported in the annual balance sheet, the Quick Ratio is N/A (never estimated).")
         
         # NCA and Debt Coverage
         nca_details = self.metrics.get('nca_details', {})

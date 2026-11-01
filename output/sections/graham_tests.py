@@ -143,12 +143,12 @@ class GrahamTestsSection:
         # Test 1: Earnings Stability
         earnings_stability = enterprising_tests.get('earnings_stability', 'N/A')
         lines.append(f"1. **Earnings Stability**: {earnings_stability}")
-        lines.append("   - Criterion: Profitability in most recent year and 5 of past 7 years")
+        lines.append(f"   - Criterion: No deficit in the last {ENTERPRISING.EARNINGS_STABILITY_YEARS} years")
         
         # Test 2: Current Ratio
         current_ratio = enterprising_tests.get('current_ratio', 'N/A')
         lines.append(f"2. **Current Ratio**: {current_ratio}")
-        lines.append("   - Criterion: Current Ratio > 1.5")
+        lines.append(f"   - Criterion: Current Ratio ≥ {ENTERPRISING.MIN_CURRENT_RATIO:.1f}")
         
         # Test 3: Debt to Assets
         debt_to_assets = enterprising_tests.get('debt_to_assets', 'N/A')
