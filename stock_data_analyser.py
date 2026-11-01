@@ -11,7 +11,7 @@ from core.graham_math import GrahamCalculator
 from core.anomaly_detector import AnomalyDetector
 from core.historical_prices import apply_year_end_prices
 from core.ttm_calculator import TTMCalculator
-from core.models import or_default
+from core.models import FinancialData, or_default
 from output.dossier_generator import DossierGenerator
 from logging_utils import install_secret_redaction
 
@@ -112,6 +112,7 @@ def main():
         # 4. Calculate TTM Metrics
         logger.info("[5/6] Calculating TTM Metrics...")
         ttm_metrics = None
+        ttm_warnings = []
         if quarterly_data and (quarterly_data.get('balance_sheet') or quarterly_data.get('income_statement')):
             try:
                 # Periodic statements are in the financials (= unified) currency
@@ -125,15 +126,19 @@ def main():
                 
                 # Add TTM warnings to financial data warnings
                 if ttm_metrics.warnings:
-                    financial_data['warnings'].extend(ttm_metrics.warnings)
+                    ttm_warnings.extend(ttm_metrics.warnings)
                 
                 logger.info(f"TTM Analysis: {or_default(ttm_metrics.reporting_frequency, 'N/A')} reporting detected")
             except Exception as e:
                 logger.warning(f"TTM calculation failed: {str(e)}")
-                financial_data['warnings'].append(f"TTM Analysis: Calculation failed - {str(e)}")
+                ttm_warnings.append(f"TTM Analysis: Calculation failed - {str(e)}")
         else:
             logger.info("TTM Analysis: Quarterly data not available")
-            financial_data['warnings'].append("TTM Analysis: Periodic data not available from API")
+            ttm_warnings.append("TTM Analysis: Periodic data not available from API")
+        
+        # Financial data is final from here on: a typed, frozen model (M7)
+        financial_data = FinancialData.from_dict({**financial_data,
+                                                  'warnings': [*financial_data.get('warnings', []), *ttm_warnings]})
         
         # 5. Detect Anomalies (Statistical)
         logger.info("[6/6] Scanning for Statistical Anomalies...")
