@@ -70,7 +70,8 @@ def test_statements_from_edgar_profile_and_dividends_from_yahoo():
     assert len(f.dividend_payments) == 26 and f.dividend_payments[0].currency == "USD"
     assert f.annual_dividends_paid["2024-12-31"] == 2_954e6
     assert f.forward_dividend_rate == 2.96 and f.market.institutional_ownership == pytest.approx(68.0)
-    assert f.updated_at and f.updated_at >= "2026-01-01"
+    assert f.updated_at is None                                 # no vendor refresh date for SEC filings
+    assert any(n.startswith("Statements as filed with the SEC; latest 10-K/10-Q filed 2026-") for n in f.notes)
     assert f.shares_outstanding > 1_100e6                      # cover-page count of the latest 10-K
 
 

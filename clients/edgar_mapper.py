@@ -166,6 +166,13 @@ class _Facts:
         return list(self.facts.get(GAAP, {}).get(tag, {}).get("units", {}).keys())
 
 
+def _shown(value: float, unit: str) -> str:
+    """A filed figure for a note: money in millions, shares in millions, per-share to the cent."""
+    if unit == PER_SHARE:
+        return f"{value:,.2f}"
+    return f"{value / 1e6:,.0f}M"
+
+
 class _Notes:
     """Collects derivation and restatement notes, grouped per field for the dossier."""
 
@@ -177,9 +184,9 @@ class _Notes:
     def derive(self, field: str, how: str, end: str):
         self.derived.setdefault(f"{field}: {how}", []).append(end[:4])
 
-    def fact(self, field: str, end: str, fact: Optional[Fact]):
+    def fact(self, field: str, end: str, fact: Optional[Fact], unit: str = MONEY):
         if fact is not None and fact.restated:
-            self.restated.append(f"FY{end[:4]} {field} {fact.first_value:,.6g} -> {fact.value:,.6g}")
+            self.restated.append(f"FY{end[:4]} {field} {_shown(fact.first_value, unit)} -> {_shown(fact.value, unit)}")
 
     def render(self) -> Tuple[str, ...]:
         out = [f"SEC EDGAR: {how} (FY{', FY'.join(sorted(set(years)))})" for how, years in self.derived.items()]
@@ -213,7 +220,7 @@ def _sum(facts: _Facts, chain: Sequence[str], end: str, unit: str) -> Tuple[Opti
     return (total, used) if used else (None, [])
 
 
-def _balance_row(facts: _Facts, end: str, notes: _Notes) -> Optional[BalanceSheetRow]:
+def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "year") -> Optional[BalanceSheetRow]:
     assets = facts.get(ASSETS, end, MONEY, "instant")
     liabilities_and_equity = facts.get(LIABILITIES_AND_EQUITY, end, MONEY, "instant")
     if assets is None and liabilities_and_equity is None:
@@ -223,7 +230,7 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes) -> Optional[BalanceShee
 
     def field(name: str, chain: Sequence[str], unit: str = MONEY) -> Optional[float]:
         fact = facts.get(chain, end, unit, "instant")
-        notes.fact(name, end, fact)
+        notes.fact(name, end, fact, unit)
         return _value(fact)
 
     minority = field("minority interest", MINORITY)
@@ -264,19 +271,24 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes) -> Optional[BalanceShee
     shares = field("shares outstanding", SHARES_OUTSTANDING, SHARES)
     if shares is None:
         issued = field("shares issued", SHARES_ISSUED, SHARES)
-        if issued is not None:
-            treasury = field("treasury shares", TREASURY_SHARES, SHARES)
-            shares = issued - (treasury or 0.0)
+        treasury = field("treasury shares", TREASURY_SHARES, SHARES)
+        cover = _cover_shares(facts, end)
+        derived = None if issued is None else issued - (treasury or 0.0)
+        # Some filers tag issued and treasury counts rounded to millions (Southern Co: "1.1 billion"):
+        # the cover-page count is then the precise figure
+        rounded = derived is not None and issued % 1e6 == 0 and (treasury or 0.0) % 1e6 == 0
+        if derived is not None and not (rounded and cover is not None):
+            shares = derived
             notes.derive("year-end shares", "derived as shares issued - treasury shares", end)
+        elif cover is not None:
+            shares = cover
+            notes.derive("year-end shares", "cover-page count of the filing (dated after the period end)"
+                         + ("; issued and treasury counts are tagged rounded to millions" if rounded else ""), end)
         else:
-            shares = _cover_shares(facts, end)
-            if shares is not None:
-                notes.derive("year-end shares", "cover-page count of the 10-K (dated after the year end)", end)
-            else:
-                weighted = facts.get(WEIGHTED_SHARES, end, SHARES, "year")
-                if weighted is not None:
-                    shares = weighted.value
-                    notes.derive("year-end shares", "weighted-average basic shares of the year (no year-end count tagged)", end)
+            weighted = facts.get(WEIGHTED_SHARES, end, SHARES, period_kind)
+            if weighted is not None:
+                shares = weighted.value
+                notes.derive("year-end shares", "weighted-average basic shares of the period (no period-end count tagged)", end)
 
     long_term_debt = field("long-term debt", LONG_TERM_DEBT)
     if long_term_debt is None:
@@ -303,10 +315,10 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes) -> Optional[BalanceShee
 
 
 def _cover_shares(facts: _Facts, end: str) -> Optional[float]:
-    """dei:EntityCommonStockSharesOutstanding of the 10-K for the year ending `end` (dated 0-150 days later)."""
+    """dei:EntityCommonStockSharesOutstanding of the filing for the period ending `end` (dated 0-150 days later)."""
     candidates = []
     for row in facts.facts.get(DEI, {}).get("EntityCommonStockSharesOutstanding", {}).get("units", {}).get(SHARES, []):
-        if _annual(row) and 0 <= _days(end, row["end"]) <= 150:
+        if row.get("form") in facts.forms and 0 <= _days(end, row["end"]) <= 150:
             candidates.append((row["filed"], row["end"], facts.adjusted(SHARES, row["filed"], row["val"])))
     if not candidates:
         return None
@@ -327,7 +339,7 @@ def _revenue(facts: _Facts, end: str, kind: str, utility: bool) -> Tuple[Optiona
 def _income_row(facts: _Facts, end: str, notes: _Notes, utility: bool = False) -> IncomeStatementRow:
     def field(name: str, chain: Sequence[str], unit: str = MONEY) -> Optional[float]:
         fact = facts.get(chain, end, unit, "year")
-        notes.fact(name, end, fact)
+        notes.fact(name, end, fact, unit)
         return _value(fact)
 
     revenue_fact, total = _revenue(facts, end, "year", utility)
@@ -458,7 +470,7 @@ def periodic_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, f
         if row_revenue is not None or row_income is not None:
             income.append(IncomeStatementRow(period_end=end, revenue=row_revenue, net_income=row_income,
                                              eps=_value(eps)))
-        row = _balance_row(facts, end, _Notes())
+        row = _balance_row(facts, end, _Notes(), period_kind="year" if end in year_ends else "quarter")
         if row is not None:
             balance.append(row)
     return EdgarPeriodicData(balance_sheets=tuple(balance), income_statements=tuple(income),

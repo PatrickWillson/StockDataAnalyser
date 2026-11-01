@@ -92,7 +92,7 @@ def test_genuine_restatement_uses_the_latest_figure_and_is_flagged():
     data = mapped("AAPL")
     assert row(data.income_statements, "2009-09-26").revenue == 42_905e6
     restated = next(n for n in data.notes if "restated" in n)
-    assert "FY2009 revenue 3.6537e+10 -> 4.2905e+10" in restated
+    assert "FY2009 revenue 36,537M -> 42,905M" in restated
 
 
 def test_derived_total_liabilities_and_shares_are_noted():
@@ -227,3 +227,19 @@ def test_utility_quarters_use_total_operating_revenues():
     revenues = fixture("SO")["companyfacts"]["facts"]["us-gaap"]["Revenues"]["units"]["USD"]
     nine_months = next(r["val"] for r in revenues if r.get("start") == "2025-01-01" and r["end"] == "2025-09-30")
     assert row(periodic("SO").income_statements, "2025-12-31").revenue == 29_553e6 - nine_months
+
+
+def test_rounded_issued_and_treasury_counts_yield_to_the_cover_page():
+    """Southern Co tags issued shares as 1.1 billion and treasury in millions: the cover page is exact."""
+    data = mapped("SO")
+    shares = row(data.balance_sheets, "2025-12-31").shares_outstanding
+    assert shares != 1_099_000_000 and 1_100e6 < shares < 1_130e6
+    assert any("issued and treasury counts are tagged rounded to millions" in n for n in data.notes)
+    # Coca-Cola's issued count is genuinely round but its treasury count is exact: kept
+    assert any("derived as shares issued - treasury shares" in n for n in mapped("KO").notes)
+
+
+def test_quarterly_balance_sheets_have_share_counts():
+    for ticker in ("SO", "AAPL", "KO", "JPM"):
+        latest = periodic(ticker).balance_sheets[0]
+        assert latest.shares_outstanding and latest.shares_outstanding > 0, ticker

@@ -93,6 +93,9 @@ class FreeUSFundamentalsSource:
             notes.append("Per-share figures and share counts adjusted to today's share basis for stock splits "
                          "(Yahoo Finance split history): " + ", ".join(f"{d} {r:g}:1" for d, r in splits))
         notes.append("Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)")
+        latest_filing = _latest_filing_date(submissions)
+        if latest_filing:
+            notes.append(f"Statements as filed with the SEC; latest 10-K/10-Q filed {latest_filing}")
 
         latest_balance = annual.balance_sheets[0] if annual.balance_sheets else None
         latest_shares = (latest_balance.shares_outstanding if latest_balance else None) or 0.0
@@ -108,7 +111,8 @@ class FreeUSFundamentalsSource:
             employees=profile.employees,
             ceo_name=profile.ceo_name,
             is_delisted=False,
-            updated_at=_latest_filing_date(submissions),
+            # No vendor refresh date: SEC figures are as filed (the latest filing date is in the notes)
+            updated_at=None,
             annual_balance_sheets=annual.balance_sheets,
             annual_income_statements=annual.income_statements,
             quarterly_balance_sheets=periodic.balance_sheets,

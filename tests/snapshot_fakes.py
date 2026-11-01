@@ -3,6 +3,7 @@ Fakes for the two external boundaries of the application, used by snapshot tests
 
 Only the outermost I/O is replaced, so all real client code still runs:
   - FakeEODHDSession stands in for the requests.Session inside EODHDClient
+  - FakeSecSession stands in for the requests.Session inside EdgarClient (free path)
   - FakeYFinanceModule stands in for the ``yfinance`` module that YFinanceClient and
     FXClient import lazily (``import yfinance as yf``); it serves prices and FX
     rates through the same ``yf.Ticker(...)`` interface
@@ -51,12 +52,23 @@ class FakeEODHDSession:
         pass
 
 
-class FakeTicker:
-    """The subset of yfinance.Ticker the clients use: fast_info, info, history()."""
+def _series(values: Optional[Dict[str, float]]) -> pd.Series:
+    items = sorted((values or {}).items())
+    return pd.Series([v for _, v in items], index=pd.DatetimeIndex([pd.Timestamp(d) for d, _ in items]),
+                     dtype=float)
 
-    def __init__(self, last_price: Optional[float], closes: Dict[str, float], currency: Optional[str] = None):
+
+class FakeTicker:
+    """The subset of yfinance.Ticker the clients use: fast_info, info, history(), dividends, splits."""
+
+    def __init__(self, last_price: Optional[float], closes: Dict[str, float], currency: Optional[str] = None,
+                 info: Optional[Dict[str, Any]] = None, dividends: Optional[Dict[str, float]] = None,
+                 splits: Optional[Dict[str, float]] = None):
         self.fast_info = {} if last_price is None else {"lastPrice": last_price, "currency": currency}
         self.info = {} if last_price is None else {"regularMarketPrice": last_price}
+        self.info.update(info or {})
+        self.dividends = _series(dividends)
+        self.splits = _series(splits)
         self._closes = closes
 
     def history(self, start=None, end=None, auto_adjust=False, **kwargs) -> pd.DataFrame:
@@ -72,7 +84,8 @@ class FakeYFinanceModule:
     Drop-in for the ``yfinance`` module.
 
     symbols maps a Yahoo symbol (e.g. "AAPL", "YU.L", "EURUSD=X") to
-    {"last": float, "currency": str, "closes": {"YYYY-MM-DD": float}}; currency is the quote
+    {"last": float, "currency": str, "closes": {"YYYY-MM-DD": float}} and optionally "info" (extra
+    Ticker.info keys), "dividends" and "splits" ({"YYYY-MM-DD": value}); currency is the quote
     currency as Yahoo reports it (e.g. "USD", "GBp" for pence). Unknown symbols behave like
     yfinance for a missing ticker: no price and an empty history.
     """
@@ -86,7 +99,35 @@ class FakeYFinanceModule:
     def Ticker(self, symbol: str) -> FakeTicker:  # noqa: N802 (mirrors yfinance API)
         self.requested.append(symbol)
         entry = self._symbols.get(symbol, {})
-        return FakeTicker(entry.get("last"), entry.get("closes", {}), entry.get("currency"))
+        return FakeTicker(entry.get("last"), entry.get("closes", {}), entry.get("currency"),
+                          entry.get("info"), entry.get("dividends"), entry.get("splits"))
+
+
+class FakeSecSession:
+    """Serves the SEC ticker index, companyfacts and submissions for {ticker: (cik, companyfacts, submissions)}."""
+
+    def __init__(self, companies: Dict[str, Any]):
+        self._index = {str(i): {"cik_str": int(cik), "ticker": ticker, "title": ticker}
+                       for i, (ticker, (cik, _, _)) in enumerate(companies.items())}
+        self._by_cik = {cik: (facts, submissions) for cik, facts, submissions in companies.values()}
+        self.requests: List[Any] = []
+
+    def get(self, url, params=None, headers=None, timeout=None):
+        self.requests.append((url, (headers or {}).get("User-Agent")))
+        if url.endswith("/files/company_tickers.json"):
+            return FakeResponse(200, self._index)
+        for cik, (facts, submissions) in self._by_cik.items():
+            if url.endswith(f"companyfacts/CIK{cik}.json"):
+                return FakeResponse(200, facts)
+            if url.endswith(f"submissions/CIK{cik}.json"):
+                return FakeResponse(200, submissions)
+        return FakeResponse(404, {"error": "not found"})
+
+    def mount(self, *args, **kwargs):
+        pass
+
+    def close(self):
+        pass
 
 
 def closes_around(dates: List[str], price_for, days_before: int = 4) -> Dict[str, float]:
