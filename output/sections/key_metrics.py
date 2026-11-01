@@ -4,9 +4,10 @@ This module generates the key metrics section of the stock analysis dossier,
 including profitability metrics, book value, ownership, and risk metrics.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
+from core.models import CurrentRatio, GrahamResult, NCADetails, or_default
 from output.formatting import format_price_display
 
 
@@ -24,15 +25,16 @@ class KeyMetricsSection(DossierSection):
     Requirements: 2.2
     """
     
-    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any] = None, context: Optional[ReportContext] = None):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Union[GrahamResult, Dict[str, Any], None] = None,
+                 context: Optional[ReportContext] = None):
         """Initialize key metrics section.
         
         Args:
             financial_data: Dictionary containing financial data (FinancialData DTO)
-            metrics: Dictionary containing Graham metrics (GrahamMetrics DTO) - optional for backward compatibility
+            metrics: Graham metrics (GrahamResult, or its dict form) - optional for backward compatibility
         """
         self.financial_data = financial_data
-        self.metrics = metrics or {}
+        self.metrics = GrahamResult.from_dict(metrics or {})
         self.context = context or build_report_context(financial_data, self.metrics)
     
     def generate(self) -> List[str]:
@@ -114,10 +116,10 @@ class KeyMetricsSection(DossierSection):
         lines.append("")
         
         # Current Ratio (calculated in core from the latest annual balance sheet)
-        current_ratio = self.metrics.get('current_ratio')
-        if isinstance(current_ratio, dict):
-            ratio = current_ratio.get('ratio')
-            fiscal_year_end = current_ratio.get('fiscal_year_end')
+        current_ratio = self.metrics.current_ratio
+        if isinstance(current_ratio, CurrentRatio):
+            ratio = or_default(current_ratio.ratio, None)
+            fiscal_year_end = or_default(current_ratio.fiscal_year_end, None)
             if isinstance(ratio, (int, float)):
                 lines.append(f"- **Current Ratio**: {ratio:.2f} (Current Assets / Current Liabilities, "
                              f"fiscal year ending {fiscal_year_end})")
@@ -125,25 +127,25 @@ class KeyMetricsSection(DossierSection):
                 lines.append("- **Current Ratio**: N/A (current liabilities not reported)")
         
         # Quick Ratio (from metrics if available)
-        quick_ratio = self.metrics.get('quick_ratio')
+        quick_ratio = or_default(self.metrics.quick_ratio, None)
         if quick_ratio and quick_ratio != 'N/A':
             lines.append(f"- **Quick Ratio**: {quick_ratio:.2f} (Acid Test - excludes inventory)")
         elif quick_ratio == 'N/A':
             lines.append("- **Quick Ratio**: N/A")
         
         # NCA Details (from metrics if available)
-        nca_details = self.metrics.get('nca_details', {})
-        if nca_details and isinstance(nca_details, dict):
+        nca_details = self.metrics.nca_details
+        if isinstance(nca_details, NCADetails) and nca_details.to_dict():
             lines.append("")
             lines.append("### Net Current Assets (Working Capital) and Debt")
             lines.append("")
             
-            current_assets = nca_details.get('current_assets')
-            current_liabilities = nca_details.get('current_liabilities')
-            nca = nca_details.get('nca')
-            long_term_debt = nca_details.get('long_term_debt')
-            debt_coverage_ratio = nca_details.get('debt_coverage_ratio')
-            debt_coverage_pct = nca_details.get('debt_coverage_pct')
+            current_assets = or_default(nca_details.current_assets, None)
+            current_liabilities = or_default(nca_details.current_liabilities, None)
+            nca = or_default(nca_details.nca, None)
+            long_term_debt = or_default(nca_details.long_term_debt, None)
+            debt_coverage_ratio = or_default(nca_details.debt_coverage_ratio, None)
+            debt_coverage_pct = or_default(nca_details.debt_coverage_pct, None)
             
             # Display values
             if current_assets is not None and current_assets != 'N/A':

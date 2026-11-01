@@ -1,17 +1,18 @@
 """Section 3: Critical Alerts — warnings from data assembly and metrics, plus EPS-growth anomalies."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 from config.data_quality_config import ANNUAL_REPORT_MAX_AGE_MONTHS
 from output.sections.base import DossierSection
+from core.models import GrahamResult, or_default
 
 
 class CriticalAlertsSection(DossierSection):
     """All accumulated warnings and statistical anomalies."""
 
-    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any], anomalies: List[str]):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Union[GrahamResult, Dict[str, Any]], anomalies: List[str]):
         self.financial_data = financial_data
-        self.metrics = metrics
+        self.metrics = GrahamResult.from_dict(metrics)
         self.anomalies = anomalies
 
     def generate(self) -> List[str]:
@@ -35,7 +36,7 @@ class CriticalAlertsSection(DossierSection):
         
         # Get warnings from financial data and metrics
         warnings = self.financial_data.get('warnings', [])
-        metric_warnings = self.metrics.get('warnings', [])
+        metric_warnings = list(or_default(self.metrics.warnings, ()))
         all_warnings = warnings + metric_warnings
         
         # Display warnings
