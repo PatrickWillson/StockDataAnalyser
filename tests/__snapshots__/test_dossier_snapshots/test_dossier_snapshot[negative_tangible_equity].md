@@ -161,27 +161,27 @@
 ## SECTION 6: 20-YEAR FINANCIALS (STANDARDIZED)
 *All values in USD*
 
-| Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares (B) | Price | P/E | P/B |
+| Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
-| 2023 | 383285000000.0 | 96995000000.0 | 6.237596109751595 | 0.9544014007404859 | 4.0 | ⚠️ -0.11 | 15.3% | 111.09B | 15.550B | 187.45 | 30.1 | 46.9 |
-| 2022 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.927843295904111 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2022 | 394328000000.0 | 99803000000.0 | 6.259821838783072 | 0.927843295904111 | 3.18 | ⚠️ -1.17 | 14.8% | 120.07B | 15.943B | 172.45 | 27.5 | 54.2 |
-| 2021 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.8806957124783874 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2021 | 365817000000.0 | 94680000000.0 | 5.763756829850952 | 0.8806957124783874 | 3.84 | 0.57 | 15.3% | 109.11B | 16.427B | 158.66 | 27.5 | 41.3 |
-| 2020 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.8095565685873096 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2020 | 347526150000.0 | 89946000000.0 | 5.298183169547693 | 0.8095565685873096 | 3.53 | 0.52 | 15.3% | 103.65B | 16.977B | 145.97 | 27.6 | 41.3 |
-| 2019 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.7346260416957371 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2019 | 330149842500.0 | 85448700000.0 | 4.807796614899591 | 0.7346260416957371 | 3.2 | 0.48 | 15.3% | 98.47B | 17.773B | 134.29 | 27.9 | 42.0 |
-| 2018 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.6842105290303433 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2018 | 313642350375.0 | 81176265000.0 | 4.477849788386874 | 0.6842105290303433 | 2.98 | 0.44 | 15.3% | 93.54B | 18.128B | 123.54 | 27.6 | 41.5 |
-| 2017 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.6372549045232432 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2017 | 297960232856.0 | 77117451750.0 | 4.170546371672121 | 0.6372549045232432 | 2.78 | 0.41 | 15.3% | 88.87B | 18.491B | 113.66 | 27.3 | 40.9 |
-| 2016 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.593521724790227 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2016 | 283062221213.0 | 73261579162.0 | 3.8843324049086845 | 0.593521724790227 | 2.59 | 0.38 | 15.3% | 84.42B | 18.861B | 104.57 | 26.9 | 40.4 |
-| 2015 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.5527898417276331 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2015 | 268909110153.0 | 69598500204.0 | 3.617760573227029 | 0.5527898417276331 | 2.41 | 0.36 | 15.3% | 80.20B | 19.238B | 96.20 | 26.6 | 39.9 |
-| 2014 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.514853283973929 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2014 | 255463654645.0 | 66118575194.0 | 3.3694828868839335 | 0.514853283973929 | 2.25 | 0.33 | 15.3% | 76.19B | 19.623B | 88.51 | 26.3 | 39.3 |
+| 2023 | 383.29B | 97.00B | 6.24 | 0.95 | 4.00 | ⚠️ -0.11 | 15.3% | 111.09B | 15.550B | 187.45 | 30.1 | 46.9 |
+| 2022 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.93 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2022 | 394.33B | 99.80B | 6.26 | 0.93 | 3.18 | ⚠️ -1.17 | 14.8% | 120.07B | 15.943B | 172.45 | 27.5 | 54.2 |
+| 2021 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.88 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2021 | 365.82B | 94.68B | 5.76 | 0.88 | 3.84 | 0.57 | 15.3% | 109.11B | 16.427B | 158.66 | 27.5 | 41.3 |
+| 2020 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.81 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2020 | 347.53B | 89.95B | 5.30 | 0.81 | 3.53 | 0.52 | 15.3% | 103.65B | 16.977B | 145.97 | 27.6 | 41.3 |
+| 2019 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.73 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2019 | 330.15B | 85.45B | 4.81 | 0.73 | 3.20 | 0.48 | 15.3% | 98.47B | 17.773B | 134.29 | 27.9 | 42.0 |
+| 2018 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.68 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2018 | 313.64B | 81.18B | 4.48 | 0.68 | 2.98 | 0.44 | 15.3% | 93.54B | 18.128B | 123.54 | 27.6 | 41.5 |
+| 2017 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.64 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2017 | 297.96B | 77.12B | 4.17 | 0.64 | 2.78 | 0.41 | 15.3% | 88.87B | 18.491B | 113.66 | 27.3 | 40.9 |
+| 2016 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.59 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2016 | 283.06B | 73.26B | 3.88 | 0.59 | 2.59 | 0.38 | 15.3% | 84.42B | 18.861B | 104.57 | 26.9 | 40.4 |
+| 2015 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.55 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2015 | 268.91B | 69.60B | 3.62 | 0.55 | 2.41 | 0.36 | 15.3% | 80.20B | 19.238B | 96.20 | 26.6 | 39.9 |
+| 2014 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.51 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2014 | 255.46B | 66.12B | 3.37 | 0.51 | 2.25 | 0.33 | 15.3% | 76.19B | 19.623B | 88.51 | 26.3 | 39.3 |
 
 **Note on Data Completeness:**
 - Years marked '[Data Unavailable]' (2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2014) show declared dividends but lack complete audited annual financial statements
@@ -200,7 +200,7 @@
   - Values < 50% indicate conservative dividend policy with room for growth
   - 'N/A' shown for years with zero or negative earnings
 - **Total Debt**: Reported total debt (short- and long-term, including lease obligations), else the sum of long- and short-term debt.
-- **Shares (B)**: Common shares outstanding in billions. Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).
+- **Shares**: Common shares outstanding (B = billions, M = millions). Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).
 - **Price**: Year-end stock price on fiscal year end date (or last trading day within 7 days prior). Source: Yahoo Finance via yfinance.
 - **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates a loss year.
 - **P/B**: Historical Price-to-Book ratio (Price ÷ BVPS). Shows how the market valued net assets over time.

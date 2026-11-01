@@ -55,6 +55,23 @@ class FinancialHistorySection:
         return f"{value / 1_000_000:.2f}M"
     
     @staticmethod
+    def format_amount(value: float) -> str:
+        """Signed money amount in billions or millions ("383.29B", "-25.23M"); "N/A" for 0."""
+        if value == 0:
+            return "N/A"
+        magnitude = abs(value)
+        if magnitude >= 1_000_000_000:
+            return f"{value / 1_000_000_000:.2f}B"
+        if magnitude >= 1_000_000:
+            return f"{value / 1_000_000:.2f}M"
+        return f"{value:,.0f}"
+    
+    @staticmethod
+    def format_per_share(value: float) -> str:
+        """Per-share amount: 2 decimals, 4 below 0.1 so small figures are not shown as 0.00."""
+        return f"{value:.4f}" if abs(value) < 0.1 else f"{value:.2f}"
+    
+    @staticmethod
     def format_shares(value: float) -> str:
         """
         Format shares in billions or millions.
@@ -153,7 +170,7 @@ class FinancialHistorySection:
         div_header = "Div/Share" if is_dividend_amounts else "Div Count"
         
         # Table header with 13 columns (added WCPS and Payout Ratio)
-        lines.append(f"| Year | Revenue | Net Income | EPS | {div_header} | BVPS | WCPS | Payout Ratio | Total Debt | Shares (B) | Price | P/E | P/B |")
+        lines.append(f"| Year | Revenue | Net Income | EPS | {div_header} | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |")
         lines.append("|------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|")
         
         # Get history and sort years descending (most recent first)
@@ -183,7 +200,7 @@ class FinancialHistorySection:
                 revenue_str = "[Data Unavailable]"
                 net_income_str = "[Data Unavailable]"
                 eps_str = "[Data Unavailable]"
-                dividend_str = str(dividend)
+                dividend_str = self.format_per_share(dividend) if is_dividend_amounts else f"{dividend:.0f}"
                 bvps_str = "[Data Unavailable]"
                 wcps_str = "[Data Unavailable]"
                 payout_ratio_str = "[Data Unavailable]"
@@ -198,16 +215,19 @@ class FinancialHistorySection:
                 incomplete_years.append(year_only)
             else:
                 # Normal year with financial data
-                revenue_str = str(revenue) if revenue != 0 else 'N/A'
-                net_income_str = str(net_income) if net_income != 0 else 'N/A'
-                eps_str = str(eps) if eps != 0 else 'N/A'
-                dividend_str = str(dividend) if dividend != 0 else 'N/A'
+                revenue_str = self.format_amount(revenue)
+                net_income_str = self.format_amount(net_income)
+                eps_str = self.format_per_share(eps) if eps != 0 else 'N/A'
+                if dividend == 0:
+                    dividend_str = 'N/A'
+                else:
+                    dividend_str = self.format_per_share(dividend) if is_dividend_amounts else f"{dividend:.0f}"
                 
                 # Calculate BVPS from balance sheet data
                 total_equity = data.get('total_equity', 0)
                 shares = data.get('shares_outstanding', 0)
                 bvps = round(total_equity / shares, 2) if shares > 0 and total_equity > 0 else 0
-                bvps_str = str(bvps) if bvps > 0 else 'N/A'
+                bvps_str = f"{bvps:.2f}" if bvps > 0 else 'N/A'
                 
                 # Get WCPS (already calculated in financial_data_processor)
                 wcps = data.get('wcps')
@@ -270,7 +290,7 @@ class FinancialHistorySection:
         lines.append("  - Values < 50% indicate conservative dividend policy with room for growth")
         lines.append("  - 'N/A' shown for years with zero or negative earnings")
         lines.append("- **Total Debt**: Reported total debt (short- and long-term, including lease obligations), else the sum of long- and short-term debt.")
-        lines.append("- **Shares (B)**: Common shares outstanding in billions. Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).")
+        lines.append("- **Shares**: Common shares outstanding (B = billions, M = millions). Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).")
         lines.append("- **Price**: Year-end stock price on fiscal year end date (or last trading day within 7 days prior). Source: Yahoo Finance via yfinance.")
         lines.append("- **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates a loss year.")
         lines.append("- **P/B**: Historical Price-to-Book ratio (Price ÷ BVPS). Shows how the market valued net assets over time.")

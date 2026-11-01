@@ -141,8 +141,8 @@ class TestFinancialHistorySection:
         row_2023 = next(line for line in lines if line.startswith("| 2023 |"))
         
         # Check all values are present
-        assert "383285000000.0" in row_2023  # Revenue
-        assert "96995000000.0" in row_2023  # Net Income
+        assert "383.29B" in row_2023  # Revenue
+        assert "97.00B" in row_2023  # Net Income
         assert "6.13" in row_2023  # EPS
         assert "0.96" in row_2023  # Dividend
         
@@ -389,7 +389,7 @@ class TestFinancialHistorySection:
         row_2020 = next(line for line in lines if line.startswith("| 2020 |"))
         
         # Check negative values are shown
-        assert "-5000000000.0" in row_2020
+        assert "-5.00B" in row_2020
         assert "-0.29" in row_2020
     
     def test_mixed_complete_and_incomplete_years(self):
@@ -447,7 +447,7 @@ class TestFinancialHistorySection:
         row_2023 = next(line for line in lines if line.startswith("| 2023 |"))
         
         # Check large number is shown (as string, no special formatting in table)
-        assert "1234567890123.0" in row_2023
+        assert "1234.57B" in row_2023
     
     def test_small_numbers_formatting(self):
         """Test formatting of small numbers in table."""

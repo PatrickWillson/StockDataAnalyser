@@ -158,18 +158,18 @@
 ## SECTION 6: 20-YEAR FINANCIALS (STANDARDIZED)
 *All values in GBP*
 
-| Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares (B) | Price | P/E | P/B |
+| Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
-| 2023 | 620000000.0 | 30860000.0 | 1.7144444444444444 | 0.5833333333333334 | 4.5 | 1.39 | 34.0% | 9.50M | 18.00M | 16.50 | 9.6 | 3.7 |
-| 2022 | 600000000.0 | 4769000.0 | 0.2649444444444444 | N/A | 4.17 | 1.11 | 0.0% | 9.00M | 18.00M | 15.18 | 57.3 | 3.6 |
-| 2021 | 570000000.0 | 4530550.0 | 0.25169722222222224 | N/A | 3.96 | 1.06 | 0.0% | 8.55M | 18.00M | 13.97 | 55.5 | 3.5 |
-| 2020 | 541500000.0 | 4304022.0 | 0.23442385620915032 | N/A | 3.69 | 0.98 | 0.0% | 8.12M | 18.36M | 12.85 | 54.8 | 3.5 |
-| 2019 | 514425000.0 | 4088821.0 | 0.21833594984834892 | N/A | 3.43 | 0.92 | 0.0% | 7.72M | 18.73M | 11.82 | 54.1 | 3.4 |
-| 2018 | 488703750.0 | 3884380.0 | 0.20335211277043605 | N/A | 3.2 | 0.85 | 0.0% | 7.33M | 19.10M | 10.87 | 53.5 | 3.4 |
-| 2017 | 464268562.0 | 3690161.0 | 0.18939658417376753 | N/A | 2.98 | 0.79 | 0.0% | 6.96M | 19.48M | 10.00 | 52.8 | 3.4 |
-| 2016 | 441055134.0 | 3505653.0 | 0.17639877798796325 | N/A | 2.77 | 0.74 | 0.0% | 6.62M | 19.87M | 9.20 | 52.2 | 3.3 |
-| 2015 | 419002378.0 | 3330371.0 | 0.16429301221261608 | N/A | 2.58 | 0.69 | 0.0% | 6.29M | 20.27M | 8.47 | 51.5 | 3.3 |
-| 2014 | 398052259.0 | 3163852.0 | 0.15301797581022794 | N/A | 2.41 | 0.64 | 0.0% | 5.97M | 20.68M | 7.79 | 50.9 | 3.2 |
+| 2023 | 620.00M | 30.86M | 1.71 | 0.58 | 4.50 | 1.39 | 34.0% | 9.50M | 18.00M | 16.50 | 9.6 | 3.7 |
+| 2022 | 600.00M | 4.77M | 0.26 | N/A | 4.17 | 1.11 | 0.0% | 9.00M | 18.00M | 15.18 | 57.3 | 3.6 |
+| 2021 | 570.00M | 4.53M | 0.25 | N/A | 3.96 | 1.06 | 0.0% | 8.55M | 18.00M | 13.97 | 55.5 | 3.5 |
+| 2020 | 541.50M | 4.30M | 0.23 | N/A | 3.69 | 0.98 | 0.0% | 8.12M | 18.36M | 12.85 | 54.8 | 3.5 |
+| 2019 | 514.42M | 4.09M | 0.22 | N/A | 3.43 | 0.92 | 0.0% | 7.72M | 18.73M | 11.82 | 54.1 | 3.4 |
+| 2018 | 488.70M | 3.88M | 0.20 | N/A | 3.20 | 0.85 | 0.0% | 7.33M | 19.10M | 10.87 | 53.5 | 3.4 |
+| 2017 | 464.27M | 3.69M | 0.19 | N/A | 2.98 | 0.79 | 0.0% | 6.96M | 19.48M | 10.00 | 52.8 | 3.4 |
+| 2016 | 441.06M | 3.51M | 0.18 | N/A | 2.77 | 0.74 | 0.0% | 6.62M | 19.87M | 9.20 | 52.2 | 3.3 |
+| 2015 | 419.00M | 3.33M | 0.16 | N/A | 2.58 | 0.69 | 0.0% | 6.29M | 20.27M | 8.47 | 51.5 | 3.3 |
+| 2014 | 398.05M | 3.16M | 0.15 | N/A | 2.41 | 0.64 | 0.0% | 5.97M | 20.68M | 7.79 | 50.9 | 3.2 |
 
 **Note on Data Completeness:**
 
@@ -185,7 +185,7 @@
   - Values < 50% indicate conservative dividend policy with room for growth
   - 'N/A' shown for years with zero or negative earnings
 - **Total Debt**: Reported total debt (short- and long-term, including lease obligations), else the sum of long- and short-term debt.
-- **Shares (B)**: Common shares outstanding in billions. Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).
+- **Shares**: Common shares outstanding (B = billions, M = millions). Tracks shareholder dilution (increasing shares) or buyback programs (decreasing shares).
 - **Price**: Year-end stock price on fiscal year end date (or last trading day within 7 days prior). Source: Yahoo Finance via yfinance.
 - **P/E**: Historical Price-to-Earnings ratio (Price ÷ EPS). Shows how the market valued earnings power over time. 'Negative' indicates a loss year.
 - **P/B**: Historical Price-to-Book ratio (Price ÷ BVPS). Shows how the market valued net assets over time.
