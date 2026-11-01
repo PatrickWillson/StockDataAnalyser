@@ -5,13 +5,15 @@ explaining how key valuation metrics are calculated including P/E ratio, Graham 
 EPV (Earnings Power Value), Net-Net Value, and Margin of Safety.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from output.formatting import format_price_display
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
 from config.investor_thresholds import DEFENSIVE
 from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
+from core.models import (CombinedPEPBTest, EPVDetails, GrahamResult, MarginOfSafetyDetails, NCADetails,
+                         ThreeYearAvgPE, or_default)
 
 
 class MethodologySection(DossierSection):
@@ -27,15 +29,16 @@ class MethodologySection(DossierSection):
     Requirements: 2.4
     """
     
-    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any], context: Optional[ReportContext] = None):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Union[GrahamResult, Dict[str, Any]],
+                 context: Optional[ReportContext] = None):
         """Initialize methodology section.
         
         Args:
             financial_data: Dictionary containing financial data (FinancialData DTO)
-            metrics: Dictionary containing Graham metrics (GrahamMetrics DTO)
+            metrics: Graham metrics (GrahamResult, or its dict form)
         """
         self.financial_data = financial_data
-        self.metrics = metrics
+        self.metrics = GrahamResult.from_dict(metrics)
         self.context = context or build_report_context(financial_data, metrics)
     
     def generate(self) -> List[str]:
@@ -56,7 +59,7 @@ class MethodologySection(DossierSection):
         unified_currency = self.financial_data.get('currency', 'USD')
         
         # Get EPV details
-        epv_details = self.metrics.get('epv_details', {})
+        epv_details = or_default(self.metrics.epv_details, EPVDetails())
         
         # Get most recent EPS for P/E explanation
         most_recent_eps = self.context.latest_row.get('eps', 0) if self.context.latest_year else 0
@@ -138,8 +141,8 @@ class MethodologySection(DossierSection):
             lines: List to append lines to
             unified_currency: Currency for display
         """
-        graham_number = self.metrics.get('graham_number', 0)
-        normalized_graham_number = self.metrics.get('normalized_graham_number', 0)
+        graham_number = or_default(self.metrics.graham_number, 0)
+        normalized_graham_number = or_default(self.metrics.normalized_graham_number, 0)
         
         # Get 3-year EPS data from calculator if available
         self.financial_data.get('history', {})
@@ -181,24 +184,24 @@ class MethodologySection(DossierSection):
             self._add_3year_eps_breakdown(lines, unified_currency)
     
     def _add_epv_explanation(self, lines: List[str], unified_currency: str, 
-                            epv_details: Dict[str, Any]) -> None:
+                            epv_details: EPVDetails) -> None:
         """Add EPV (Earnings Power Value) methodology explanation.
         
         Args:
             lines: List to append lines to
             unified_currency: Currency for display
-            epv_details: EPV calculation details dictionary
+            epv_details: EPV calculation details
         """
-        epv_value = self.metrics.get('epv', 0)
+        epv_value = or_default(self.metrics.epv, 0)
         
         if isinstance(epv_value, (int, float)) and epv_value > 0:
             ticker = self.financial_data.get('ticker', 'UNKNOWN')
-            epv_per_share = epv_details.get('epv_per_share', 0)
-            normalized_earnings = epv_details.get('normalized_earnings', 0)
-            years_used = epv_details.get('years_used', 0)
-            cost_of_capital = epv_details.get('cost_of_capital', COST_OF_CAPITAL)
-            years_included = epv_details.get('years_included', [])
-            net_incomes = epv_details.get('net_incomes', [])
+            epv_per_share = or_default(epv_details.epv_per_share, 0)
+            normalized_earnings = or_default(epv_details.normalized_earnings, 0)
+            years_used = or_default(epv_details.years_used, 0)
+            cost_of_capital = or_default(epv_details.cost_of_capital, COST_OF_CAPITAL)
+            years_included = or_default(epv_details.years_included, ())
+            net_incomes = or_default(epv_details.net_incomes, ())
             
             lines.append("- **EPV - Simplified Earnings Power Estimate**")
             lines.append("")
@@ -272,7 +275,7 @@ class MethodologySection(DossierSection):
             lines: List to append lines to
             unified_currency: Currency for display
         """
-        net_net = self.metrics.get('net_net_value', 0)
+        net_net = or_default(self.metrics.net_net_value, 0)
         
         if isinstance(net_net, (int, float)) and net_net > 0:
             net_net_display = format_price_display(net_net, unified_currency, unified_currency)
@@ -286,14 +289,14 @@ class MethodologySection(DossierSection):
         Args:
             lines: List to append lines to
         """
-        mos_details = self.metrics.get('margin_of_safety_details', {})
-        mos = self.metrics.get('margin_of_safety', 0)
+        mos_details = or_default(self.metrics.margin_of_safety_details, MarginOfSafetyDetails())
+        mos = or_default(self.metrics.margin_of_safety, 0)
         
         # Get values for explanation
-        normalized_gn = mos_details.get('normalized_graham_number', 0)
-        epv_per_share = mos_details.get('epv_per_share', 0)
-        intrinsic_value_used = mos_details.get('intrinsic_value_used', 0)
-        limiting_factor = mos_details.get('limiting_factor', 'N/A')
+        normalized_gn = or_default(mos_details.normalized_graham_number, 0)
+        epv_per_share = or_default(mos_details.epv_per_share, 0)
+        intrinsic_value_used = or_default(mos_details.intrinsic_value_used, 0)
+        limiting_factor = or_default(mos_details.limiting_factor, 'N/A')
         both_anchors = isinstance(normalized_gn, (int, float)) and isinstance(epv_per_share, (int, float))
         
         unified_currency = self.financial_data.get('currency', 'USD')
@@ -349,7 +352,7 @@ class MethodologySection(DossierSection):
             lines.append("")
             
             # Add interpretation based on limiting factor (a comparison only when both exist)
-            mos_note = mos_details.get('note')
+            mos_note = or_default(mos_details.note, None)
             if mos_note and not both_anchors:
                 lines.append(f"  **Interpretation**: Only the {limiting_factor} is available ({mos_note}).")
             elif limiting_factor == "EPV":
@@ -413,8 +416,8 @@ class MethodologySection(DossierSection):
         self.financial_data.get('currency', 'USD')
         
         # Three-Year Average P/E
-        three_year_pe = self.metrics.get('three_year_avg_pe', {})
-        if three_year_pe and isinstance(three_year_pe, dict):
+        three_year_pe = self.metrics.three_year_avg_pe
+        if isinstance(three_year_pe, ThreeYearAvgPE) and three_year_pe.to_dict():
             lines.append("")
             lines.append("### P/E Ratio (3-Year Average)")
             lines.append("")
@@ -427,7 +430,7 @@ class MethodologySection(DossierSection):
             lines.append("**Note**: Loss years are included in the average as negative values, which reduces the average EPS and increases the P/E ratio, reflecting the company's historical volatility.")
         
         # Quick Ratio
-        quick_ratio = self.metrics.get('quick_ratio')
+        quick_ratio = or_default(self.metrics.quick_ratio, None)
         if quick_ratio is not None:
             lines.append("")
             lines.append("### Quick Ratio (Acid Test)")
@@ -441,8 +444,8 @@ class MethodologySection(DossierSection):
             lines.append("**Note**: When inventory is not reported in the annual balance sheet, the Quick Ratio is N/A (never estimated).")
         
         # NCA and Debt Coverage
-        nca_details = self.metrics.get('nca_details', {})
-        if nca_details and isinstance(nca_details, dict):
+        nca_details = self.metrics.nca_details
+        if isinstance(nca_details, NCADetails) and nca_details.to_dict():
             lines.append("")
             lines.append("### Net Current Assets (Working Capital) and Debt Coverage")
             lines.append("")
@@ -457,8 +460,8 @@ class MethodologySection(DossierSection):
             lines.append("**Note**: For regulated utilities Graham uses debt ≤ 2 × stock equity instead; for financial companies NCA analysis may not be applicable.")
         
         # Combined P/E × P/B Test
-        combined_test = self.metrics.get('combined_pe_pb_test', {})
-        if combined_test and isinstance(combined_test, dict):
+        combined_test = self.metrics.combined_pe_pb_test
+        if isinstance(combined_test, CombinedPEPBTest) and combined_test.to_dict():
             lines.append("")
             lines.append("### Combined P/E × P/B Test")
             lines.append("")
