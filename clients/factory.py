@@ -7,7 +7,7 @@ writing its adapter and registering it in FUNDAMENTALS_PROVIDERS below.
 """
 
 from dataclasses import dataclass
-from typing import Callable, Optional
+from typing import Callable, Mapping, Optional, Tuple
 from clients.eodhd_client import EODHDClient
 from clients.yfinance_client import YFinanceClient
 from clients.fx_client import FXClient
@@ -17,10 +17,11 @@ from core.ports import FundamentalsSource, QuoteSource, RateSource
 
 @dataclass(frozen=True)
 class FundamentalsProvider:
-    """A registered fundamentals vendor."""
+    """A registered fundamentals vendor (or resolution path)."""
     name: str                                            # FUNDAMENTALS_PROVIDER value, e.g. "eodhd"
-    api_key_env: str                                     # environment variable holding its API key
-    create: Callable[[str, bool], FundamentalsSource]    # (api_key, debug) -> adapter
+    required_env: Tuple[str, ...]                        # environment variables it needs (API keys, contacts)
+    secret_env: Tuple[str, ...]                          # those whose values are redacted from logs
+    create: Callable[[Mapping[str, str], bool], FundamentalsSource]  # (required_env values, debug) -> adapter
 
 
 DEFAULT_FUNDAMENTALS_PROVIDER = "eodhd"
@@ -44,10 +45,15 @@ class ClientFactory:
         return FUNDAMENTALS_PROVIDERS[key]
     
     @staticmethod
-    def create_fundamentals_source(api_key: str, provider: Optional[str] = None,
+    def create_fundamentals_source(env: Mapping[str, str], provider: Optional[str] = None,
                                    debug: bool = False) -> FundamentalsSource:
-        """The fundamentals adapter for `provider` (default "eodhd")."""
-        return ClientFactory.fundamentals_provider(provider).create(api_key, debug)
+        """
+        The fundamentals adapter for `provider` (default "eodhd").
+        
+        Args:
+            env: values of the provider's required_env variables
+        """
+        return ClientFactory.fundamentals_provider(provider).create(env, debug)
     
     @staticmethod
     def create_quote_source(debug: bool = False) -> QuoteSource:
@@ -141,7 +147,8 @@ class ClientFactory:
 FUNDAMENTALS_PROVIDERS = {
     "eodhd": FundamentalsProvider(
         name="eodhd",
-        api_key_env="EODHD_API_KEY",
-        create=lambda api_key, debug: ClientFactory.create_eodhd_client(api_key, debug=debug),
+        required_env=("EODHD_API_KEY",),
+        secret_env=("EODHD_API_KEY",),
+        create=lambda env, debug: ClientFactory.create_eodhd_client(env["EODHD_API_KEY"], debug=debug),
     ),
 }

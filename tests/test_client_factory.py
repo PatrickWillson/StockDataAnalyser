@@ -101,9 +101,10 @@ class TestClientFactory:
     def test_default_fundamentals_provider_is_eodhd(self):
         provider = ClientFactory.fundamentals_provider()
         
-        assert provider.name == "eodhd" and provider.api_key_env == "EODHD_API_KEY"
+        assert provider.name == "eodhd" and provider.required_env == ("EODHD_API_KEY",)
+        assert provider.secret_env == ("EODHD_API_KEY",)
         assert ClientFactory.fundamentals_provider(" EODHD ") is provider
-        assert isinstance(ClientFactory.create_fundamentals_source("key", "eodhd"), EODHDClient)
+        assert isinstance(ClientFactory.create_fundamentals_source({"EODHD_API_KEY": "key"}, "eodhd"), EODHDClient)
     
     def test_unknown_fundamentals_provider_is_rejected(self):
         with pytest.raises(ValueError, match="registered: eodhd"):

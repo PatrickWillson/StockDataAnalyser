@@ -138,3 +138,47 @@ class TestEODHDClientErrorPath:
         assert exit_info.value.code == 1
         assert "Max retries" in output
         assert FAKE_KEY not in output
+
+
+class TestProviderEnvironment:
+    """Providers declare the environment they need; main() names every missing variable and
+    redacts only the secret ones."""
+
+    def _register(self, monkeypatch, created):
+        from clients import factory
+
+        def create(env, debug):
+            created.append(dict(env))
+            raise RuntimeError(f"stop after create (contact {env['TEST_CONTACT']})")
+
+        provider = factory.FundamentalsProvider(name="test", required_env=("TEST_SECRET", "TEST_CONTACT"),
+                                                secret_env=("TEST_SECRET",), create=create)
+        monkeypatch.setitem(factory.FUNDAMENTALS_PROVIDERS, "test", provider)
+        monkeypatch.setenv("FUNDAMENTALS_PROVIDER", "test")
+        monkeypatch.setattr(sys, "argv", ["stock_data_analyser.py", "AAPL.US"])
+
+    def test_missing_variables_are_all_named(self, root_stream, monkeypatch):
+        self._register(monkeypatch, [])
+        monkeypatch.delenv("TEST_SECRET", raising=False)
+        monkeypatch.delenv("TEST_CONTACT", raising=False)
+
+        with pytest.raises(SystemExit) as exit_info:
+            stock_data_analyser.main()
+
+        assert exit_info.value.code == 1
+        assert "TEST_SECRET, TEST_CONTACT not found in .env file." in root_stream.getvalue()
+
+    def test_values_passed_to_the_provider_and_only_secrets_redacted(self, root_stream, monkeypatch):
+        created = []
+        self._register(monkeypatch, created)
+        monkeypatch.setenv("TEST_SECRET", FAKE_KEY)
+        monkeypatch.setenv("TEST_CONTACT", "contact-value")
+
+        with pytest.raises(SystemExit):
+            stock_data_analyser.main()
+
+        assert created == [{"TEST_SECRET": FAKE_KEY, "TEST_CONTACT": "contact-value"}]
+        logging.getLogger("t").error(f"echo {FAKE_KEY} and contact-value")
+        output = root_stream.getvalue()
+        assert FAKE_KEY not in output
+        assert "contact-value" in output

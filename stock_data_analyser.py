@@ -18,7 +18,7 @@ from output.dossier_generator import DossierGenerator
 from logging_utils import install_secret_redaction
 
 # Load Environment Variables (FUNDAMENTALS_PROVIDER picks the fundamentals vendor, default "eodhd";
-# its API key is read from the variable the provider names, e.g. EODHD_API_KEY)
+# the variables it needs are read from the names the provider declares, e.g. EODHD_API_KEY)
 load_dotenv()
 
 # Configure logging
@@ -72,20 +72,21 @@ def main():
         configure_logging(debug=args.debug)
         logger.error(str(e))
         sys.exit(1)
-    api_key = os.getenv(provider.api_key_env)
+    env = {name: os.getenv(name) for name in provider.required_env}
 
     # Configure logging based on debug flag
-    configure_logging(debug=args.debug, secrets=[api_key])
+    configure_logging(debug=args.debug, secrets=[os.getenv(name) for name in provider.secret_env])
 
-    if not api_key:
-        logger.error(f"{provider.api_key_env} not found in .env file.")
+    missing = [name for name, value in env.items() if not value]
+    if missing:
+        logger.error(f"{', '.join(missing)} not found in .env file.")
         sys.exit(1)
 
     logger.info(f"Stock Data Analyser Starting for {ticker}")
 
     try:
         # 1. Fetch Data
-        fundamentals_source = ClientFactory.create_fundamentals_source(api_key, provider.name, debug=args.debug)
+        fundamentals_source = ClientFactory.create_fundamentals_source(env, provider.name, debug=args.debug)
         logger.info(f"[1/6] Fetching Fundamentals from {fundamentals_source.name}...")
         quote_source = ClientFactory.create_quote_source(debug=args.debug)
         financial_data = load_financial_data(ticker, fundamentals_source, quote_source,
