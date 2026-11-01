@@ -50,6 +50,7 @@ logging_utils.py            redact(), SecretRedactingFilter, install_secret_reda
 clients/
   base_client.py            BaseAPIClient: requests.Session, urllib3 Retry(3, backoff 1.0, 5xx, GET)
   eodhd_client.py           EODHDClient (name "EODHD"), the FundamentalsSource adapter: fetches fundamentals + dividend endpoint (and the --debug raw dump); fetch_fundamentals() → CompanyFundamentals; EODHD error subclasses
+  edgar_client.py           EdgarClient (free resolution path, US): SEC ticker index → CIK (sec_symbol: share classes as '-'; config SEC_CIK_OVERRIDES for reorganised companies, e.g. XOM → predecessor CIK 34088), companyfacts, submissions; SEC fair access: SEC_USER_AGENT with a contact email (validated), ≤ 10 req/s throttle; errors EdgarAuthError (403) / EdgarRateLimitError (429) / EdgarRequestError, 404 / unknown ticker → TickerNotCoveredError
   eodhd_mapper.py           the only code that knows EODHD's JSON: to_fundamentals(data, dividend_records, ticker) → CompanyFundamentals; statement rows (balance_sheet_row / income_statement_row, raw key names), CEO, share counts, dividend payments / cash-flow dividends / Dividends array / payment counts, forward rate, Highlights etc. as MarketData; corrects EODHD labels (LSE GBX → GBP for per-share dividend, book value, forward rate and Dividend API records, E1/E2)
   yfinance_client.py        YFinanceClient: EXCHANGE_MAPPING, get_quote (price + Yahoo quote currency), historical prices, FYE matching
   fx_client.py              FXClient: yfinance "{A}{B}=X" rates, current + historical, per-instance cache
@@ -61,7 +62,7 @@ core/
   fundamentals.py           provider-neutral input contract: CompanyFundamentals (profile, statement currency, annual + periodic BalanceSheetRow / IncomeStatementRow with Optional fields (None = not reported) and as_history_fields(), share counts, DividendPayment / DatedDividend, cash-flow dividends paid, payment counts, forward rate, MarketData = the vendor's labelled figures); optional_float, number_or_zero. Values carry their true currency; core reads no vendor format (tests/test_architecture.py)
   historical_prices.py      apply_year_end_prices(): year-end price currency handling + merge into history
   financial_data_assembler.py  load_financial_data(ticker, fundamentals_source, quote_source, rate_source) (fetch through the ports, then assemble); FinancialDataAssembler: CompanyFundamentals + quote → financial_data (price, London Fix, FX, ratios, cross-validation, data-quality warnings)
-  errors.py                 provider-neutral DataSourceError hierarchy (SourceAuthError, SourceRateLimitError, SourceRequestError, PriceUnavailableError) — raised instead of exiting
+  errors.py                 provider-neutral DataSourceError hierarchy (SourceAuthError, SourceRateLimitError, SourceRequestError, TickerNotCoveredError, PriceUnavailableError) — raised instead of exiting
   ports.py                  the data-source interfaces (typing.Protocol, @runtime_checkable): FundamentalsSource (name, fetch_fundamentals), QuoteSource (get_quote, fetch_historical_prices, match_fiscal_year_end_prices), RateSource (get_rate, fetch_historical_rates, match_fiscal_year_end_rates)
   financial_data_processor.py  FinancialDataProcessor: raw JSON → per-year history, dividends, price, validation
   currency_converter.py     CurrencyConverter: convert / convert_batch / try_convert_batch (None = no rate) / normalise_quote_unit (minor-unit quote → major ccy, the London Fix), conversion log
@@ -73,6 +74,7 @@ core/
   anomaly_detector.py       AnomalyDetector: EPS growth Z-scores
   models.py                 typed models (M7, D2): GrahamResult (+ EPVDetails, MarginOfSafetyDetails, NCADetails, CurrentRatio, ThreeYearAvgPE, CombinedPEPBTest), TTMResult, FinancialData (+ HistoryRow); frozen dataclasses whose to_dict() is exactly the dict shape of §4 and from_dict() reads it; MISSING = key absent, NA = "N/A"; read by attribute only (no dict interface); or_default(value, default) maps MISSING to a default. DossierGenerator, every section and AnomalyDetector read metrics / TTM metrics / financial data by attribute (each accepts a model or its dict and normalises with from_dict); GrahamCalculator normalises its input with FinancialData.from_dict and reads attributes (compute_epv_normalized(history) takes dict or model rows); core.history predicates, the investor tests (via core.history.row_at) and extract_3year_eps_data take HistoryRow rows or their dict form (normalised with HistoryRow.from_dict)
 config/
+  edgar_config.py           SEC endpoint URLs, request interval (0.11 s), SEC_CIK_OVERRIDES (ticker → predecessor CIK for reorganised companies)
   graham_constants.py       GRAHAM_MULTIPLIER=22.5, COST_OF_CAPITAL=0.10 (immutable)
   investor_thresholds.py    DEFENSIVE / ENTERPRISING frozen dataclasses (test thresholds and windows: earnings stability, dividend record, earnings growth)
   data_quality_config.py    data-check settings: cross-validation % limits, staleness (7 days API, 9 months report), FYE lookback 7 days, min history 10 years, missing-years limit 3, anomaly modified Z-score 3.5 (MAD floor 1 pp), history table 20 years
@@ -255,7 +257,7 @@ Every section subclasses `DossierSection`, receives the shared `core.report_cont
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Hypothesis profile** (`tests/conftest.py`): `deadline=None` project-wide — the per-example timing deadline caused intermittent failures on WSL; example counts are unchanged.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1285 pass / 20 skip as of 2026-11-01); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1302 pass / 20 skip as of 2026-11-01); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

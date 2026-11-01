@@ -23,5 +23,9 @@ class SourceRequestError(DataSourceError):
     """A data source request failed (network error, unexpected status or invalid response)."""
 
 
+class TickerNotCoveredError(DataSourceError):
+    """The data source has no data for this ticker or market (e.g. not an SEC filer)."""
+
+
 class PriceUnavailableError(DataSourceError):
     """No usable current price from the quote source."""
