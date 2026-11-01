@@ -55,7 +55,7 @@ clients/
   factory.py                ClientFactory: builds clients (validates API key)
 core/
   formulas.py               shared Graham formulas (plain arithmetic, no rounding/N/A): tangible_equity, net_current_asset_value, graham_number, margin_of_safety_pct, price_multiple; used by graham_math, ttm_calculator and Calculation Details
-  report_context.py         ReportContext (dossier view model, M5): latest reported year/row; RiskFigures (liquidity, current ratio, debt ratios, margin mean/stdev, loss years, payout, dividend coverage, dividend years); build_report_context(financial_data, metrics); built once by DossierGenerator and passed to every section
+  report_context.py         ReportContext (dossier view model, M5): latest reported year/row; RiskFigures (liquidity, current ratio, debt ratios, margin mean/stdev, loss years, payout, dividend coverage, dividend years; earnings window = latest 10 reported years); latest BVPS / tangible equity / TBVPS; trailing and forward dividend yields; build_report_context(financial_data, metrics); built once by DossierGenerator and passed to every section
   price_quote.py            PriceQuote(price, currency); major_currency / same_currency (minor units GBp/GBX→GBP, ZAc→ZAR, ILA→ILS; case-sensitive)
   statement_parsing.py      typed BalanceSheetRow / IncomeStatementRow (Optional fields; None = not reported) for yearly and quarterly statements; holds the raw EODHD key names; as_history_fields() → history-row dicts
   historical_prices.py      apply_year_end_prices(): year-end price currency handling + merge into history

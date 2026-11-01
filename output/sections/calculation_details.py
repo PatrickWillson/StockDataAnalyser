@@ -7,7 +7,7 @@ Net-Net Value calculation, currency conversion details, and EPV methodology clar
 """
 
 from typing import List, Dict, Any, Optional
-from core.formulas import net_current_asset_value, tangible_equity
+from core.formulas import net_current_asset_value
 from core.price_quote import is_minor_unit, major_currency
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
 from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
@@ -141,12 +141,12 @@ class CalculationDetailsSection(DossierSection):
             lines.append(f"- **Less: Intangible Assets**: {intangibles:,.0f} {unified_currency}")
             lines.append(f"- **Less: Goodwill**: {goodwill:,.0f} {unified_currency}")
             
-            tangible_book = tangible_equity(total_equity, intangibles, goodwill)
+            tangible_book = self.context.latest_tangible_equity
             lines.append(f"- **Tangible Book Value**: {tangible_book:,.0f} {unified_currency}")
             lines.append(f"- **Divided by Shares**: {shares_used:,.0f}")
             
-            tbvps = tangible_book / shares_used
-            bvps = total_equity / shares_used
+            tbvps = self.context.latest_tbvps
+            bvps = self.context.latest_bvps
             
             lines.append(f"- **Tangible Book Value Per Share (TBVPS)**: {tbvps:.2f} {unified_currency}")
             lines.append(f"- **Book Value Per Share (BVPS)**: {bvps:.2f} {unified_currency} (without subtracting intangibles)")

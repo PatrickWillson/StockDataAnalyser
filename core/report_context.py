@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Mapping, Optional, Tuple
 
 from config.risk_thresholds import PROFIT_MARGIN_SANITY_LIMIT_PCT, RISK_HISTORY_WINDOW_YEARS
+from core.formulas import tangible_equity
 from core.history import has_statement_data, latest_year
 
 
@@ -104,6 +105,17 @@ class ReportContext:
     latest_year: Optional[str]                 # newest history key with statement data ('YYYY-MM-DD')
     latest_row: Mapping[str, Any] = field(default_factory=dict)
     risk: RiskFigures = field(default_factory=RiskFigures)
+    # Latest reported year, when equity and shares are both positive
+    latest_bvps: Optional[float] = None
+    latest_tangible_equity: Optional[float] = None
+    latest_tbvps: Optional[float] = None
+    # Dividends per share and their yields on the current price; the trailing dividend is the
+    # latest reported year's (0 when the history holds payment counts), the forward one EODHD's
+    # labelled estimate (display only)
+    trailing_dividend: float = 0.0
+    trailing_yield_pct: Optional[float] = None
+    forward_dividend: float = 0.0
+    forward_yield_pct: Optional[float] = None
 
     @property
     def latest_year_label(self) -> Optional[str]:
@@ -117,4 +129,24 @@ def build_report_context(financial_data: Dict[str, Any], metrics: Optional[Dict[
     years = sorted(history.keys(), reverse=True)
     year = latest_year(history, years, has_statement_data)
     row = history[year] if year else {}
-    return ReportContext(latest_year=year, latest_row=row, risk=_risk_figures(financial_data, history, years, row))
+
+    equity = row.get('total_equity', 0)
+    shares = row.get('shares_outstanding', 0)
+    has_book = equity > 0 and shares > 0
+    tangible = tangible_equity(equity, row.get('intangible_assets', 0), row.get('goodwill', 0)) if has_book else None
+
+    price = financial_data.get('price') or 0
+    trailing = row.get('dividend', 0.0) if financial_data.get('is_dividend_amounts', False) else 0.0
+    forward = financial_data.get('forward_dividend_rate') or 0.0
+
+    def yield_pct(amount):
+        return (amount / price) * 100 if amount and amount > 0 and price > 0 else None
+
+    return ReportContext(
+        latest_year=year, latest_row=row, risk=_risk_figures(financial_data, history, years, row),
+        latest_bvps=equity / shares if has_book else None,
+        latest_tangible_equity=tangible,
+        latest_tbvps=tangible / shares if has_book else None,
+        trailing_dividend=trailing, trailing_yield_pct=yield_pct(trailing),
+        forward_dividend=forward, forward_yield_pct=yield_pct(forward),
+    )

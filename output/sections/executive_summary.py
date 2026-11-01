@@ -274,8 +274,8 @@ class ExecutiveSummarySection(DossierSection):
         # Requirement 2.7: Show both trailing (complete year) and forward rate when both available
         if most_recent_div_source in ['cash_flow', 'dividend_api'] and forward_div and forward_div > 0 and most_recent_div_amount > 0:
             # Both actual dividend (from complete year) and forward rate available - show both
-            actual_yield_trailing = (most_recent_div_amount / self.financial_data['price']) * 100
-            actual_yield_fwd = (forward_div / self.financial_data['price']) * 100
+            actual_yield_trailing = self.context.trailing_yield_pct
+            actual_yield_fwd = self.context.forward_yield_pct
             
             trailing_display = format_price_display(most_recent_div_amount, unified_currency, unified_currency)
             fwd_display = format_price_display(forward_div, unified_currency, unified_currency)
@@ -288,7 +288,7 @@ class ExecutiveSummarySection(DossierSection):
             lines.append(f"  - Forward Rate: {fwd_display} (Yield: {actual_yield_fwd:.2f}%)")
         elif most_recent_div_amount and most_recent_div_amount > 0:
             # Have trailing dividend from complete year, but no forward rate
-            actual_yield = (most_recent_div_amount / self.financial_data['price']) * 100
+            actual_yield = self.context.trailing_yield_pct
             div_display = format_price_display(most_recent_div_amount, unified_currency, unified_currency)
             
             # Determine label based on source (Requirements 2.6)
@@ -302,7 +302,7 @@ class ExecutiveSummarySection(DossierSection):
                 lines.append(f"- Trailing Dividend: {div_display} (Yield: {actual_yield:.2f}%) [{most_recent_complete_year}]")
         elif forward_div and forward_div > 0:
             # No trailing dividend from complete year, only forward rate available
-            actual_yield = (forward_div / self.financial_data['price']) * 100
+            actual_yield = self.context.forward_yield_pct
             div_display = format_price_display(forward_div, unified_currency, unified_currency)
             lines.append(f"- Forward Annual Dividend: {div_display} (Yield: {actual_yield:.2f}%)")
             lines.append("  - ⚠️ No historical dividend data available - using forward declared rate")

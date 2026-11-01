@@ -96,15 +96,11 @@ class KeyMetricsSection(DossierSection):
             lines: List to append lines to
             unified_currency: Currency for display
         """
-        if self.context.latest_year:
-            most_recent_data = self.context.latest_row
-            total_equity = most_recent_data.get('total_equity', 0)
-            shares = most_recent_data.get('shares_outstanding', 0)
-            if shares > 0 and total_equity > 0:
-                book_value = round(total_equity / shares, 2)
-                # Book value is already in unified currency
-                bvps_display = format_price_display(book_value, unified_currency, unified_currency)
-                lines.append(f"- Book Value Per Share: {bvps_display}")
+        if self.context.latest_year and self.context.latest_bvps is not None:
+            # Book value is already in unified currency
+            book_value = round(self.context.latest_bvps, 2)
+            bvps_display = format_price_display(book_value, unified_currency, unified_currency)
+            lines.append(f"- Book Value Per Share: {bvps_display}")
     
     def _add_liquidity_analysis(self, lines: List[str], unified_currency: str) -> None:
         """Add liquidity analysis including Current Ratio, Quick Ratio, and NCA details.
