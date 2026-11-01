@@ -2,8 +2,9 @@
 Typed models for the data passed between layers (decision D2, M7).
 
 Core produces these frozen dataclasses; `to_dict()` gives exactly the dict shape the pipeline
-has always used (docs/CODEBASE_GUIDE.md §4), and `from_dict()` reads it, so consumers migrate to
-attribute access one at a time.
+has always used (docs/CODEBASE_GUIDE.md §4), and `from_dict()` reads it. Models are read by
+attribute only; functions that also receive dicts (unit tests, assembly) normalise with `from_dict()`,
+which passes models through.
 
 Conventions:
 - A field holding `MISSING` means "key absent" (e.g. a dividend-only history row has no balance
@@ -104,22 +105,6 @@ class Model:
         extra = {key: value for key, value in data.items() if key not in names}
         return cls(extra=extra, **kwargs)
 
-    def __getitem__(self, key: str) -> Any:
-        """Dict-style subscript during the migration (shim)."""
-        value = self.get(key, MISSING)
-        if value is MISSING:
-            raise KeyError(key)
-        return value
-
-    def __contains__(self, key: str) -> bool:
-        return self.get(key, MISSING) is not MISSING
-
-    def get(self, key: str, default: Any = None) -> Any:
-        """Dict-style read during the migration (shim): the to_dict() value or `default`."""
-        value = getattr(self, key, MISSING) if key != 'extra' else MISSING
-        if value is MISSING:
-            return _dump(self.extra[key]) if key in self.extra else default
-        return _dump(value)
 
 
 # --- Graham calculator results (GrahamCalculator.compute_all) -------------------------------

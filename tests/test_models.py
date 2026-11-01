@@ -36,10 +36,21 @@ def test_models_are_typed_and_nested():
 
 
 def test_absent_keys_stay_absent_and_unknown_keys_are_kept():
-    row = HistoryRow.from_dict({'dividend': 0.5, 'operating_cash_flow': 9.0})
-    assert row.revenue is MISSING
-    assert row.to_dict() == {'dividend': 0.5, 'operating_cash_flow': 9.0}
-    assert row.get('revenue', 0.0) == 0.0 and row.get('operating_cash_flow') == 9.0
+    row = HistoryRow.from_dict({'dividend': 0.5, 'custom_key': 9.0})
+    assert row.revenue is MISSING and row.extra == {'custom_key': 9.0}
+    assert row.to_dict() == {'dividend': 0.5, 'custom_key': 9.0}
+
+
+def test_models_have_no_dict_interface():
+    """The migration shim is gone: models are read by attribute only."""
+    row = HistoryRow.from_dict({'eps': 1.0})
+    assert not hasattr(row, 'get')
+    try:
+        row['eps']
+    except TypeError:
+        pass
+    else:
+        raise AssertionError("models must not be subscriptable")
 
 
 def test_or_default_replaces_only_missing():

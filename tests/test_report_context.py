@@ -16,7 +16,7 @@ def test_latest_year_skips_dividend_only_rows():
     context = build_report_context(_fd(history))
     assert context.latest_year == '2023-12-31'
     assert context.latest_year_label == '2023'
-    assert context.latest_row['eps'] == 1.0
+    assert context.latest_row.eps == 1.0
 
 
 def test_no_reported_year():
