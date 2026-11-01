@@ -72,7 +72,8 @@ class FinancialDataAssembler:
         Raises:
             PriceUnavailableError: no usable current price from yfinance (missing, or quote currency mismatch)
         """
-        warnings = []
+        # The source's own data-quality notes (e.g. values derived from other filed figures) come first
+        warnings = list(fundamentals.notes)
         
         # Extract general information
         ticker_code = fundamentals.symbol

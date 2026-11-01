@@ -189,3 +189,4 @@ class CompanyFundamentals:
     forward_dividend_rate: Optional[float] = None  # vendor estimate: labelled display only (F21)
     forward_dividend_currency: str = "USD"
     market: MarketData = field(default_factory=MarketData)
+    notes: Tuple[str, ...] = ()                  # the adapter's data-quality notes (derived values, restatements)

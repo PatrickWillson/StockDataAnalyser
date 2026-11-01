@@ -3,12 +3,16 @@ Client Factory: the composition root for data sources.
 
 Chooses the adapter behind each port (core/ports.py). The fundamentals provider is selected by
 name (the FUNDAMENTALS_PROVIDER environment variable, default "eodhd"); adding a vendor means
-writing its adapter and registering it in FUNDAMENTALS_PROVIDERS below.
+writing its adapter and registering it in FUNDAMENTALS_PROVIDERS below. "free" is the no-cost
+resolution path: SEC EDGAR + Yahoo Finance for US tickers, routed per exchange.
 """
 
 from dataclasses import dataclass
 from typing import Callable, Mapping, Optional, Tuple
+from clients.edgar_client import EdgarClient
 from clients.eodhd_client import EODHDClient
+from clients.free_us_source import FreeUSFundamentalsSource
+from clients.routing_source import RoutingFundamentalsSource
 from clients.yfinance_client import YFinanceClient
 from clients.fx_client import FXClient
 from core.currency_converter import CurrencyConverter
@@ -54,6 +58,13 @@ class ClientFactory:
             env: values of the provider's required_env variables
         """
         return ClientFactory.fundamentals_provider(provider).create(env, debug)
+    
+    @staticmethod
+    def create_free_source(sec_user_agent: str, debug: bool = False) -> FundamentalsSource:
+        """The free resolution path: `.US` -> SEC EDGAR + Yahoo Finance (other markets: not yet)."""
+        us = FreeUSFundamentalsSource(EdgarClient(sec_user_agent, debug=debug),
+                                      ClientFactory.create_yfinance_client(debug=debug), debug=debug)
+        return RoutingFundamentalsSource({"US": us}, name="free (SEC EDGAR + Yahoo Finance)")
     
     @staticmethod
     def create_quote_source(debug: bool = False) -> QuoteSource:
@@ -150,5 +161,12 @@ FUNDAMENTALS_PROVIDERS = {
         required_env=("EODHD_API_KEY",),
         secret_env=("EODHD_API_KEY",),
         create=lambda env, debug: ClientFactory.create_eodhd_client(env["EODHD_API_KEY"], debug=debug),
+    ),
+    # SEC_USER_AGENT: your name and contact email, as the SEC fair-access policy requires; not a secret
+    "free": FundamentalsProvider(
+        name="free",
+        required_env=("SEC_USER_AGENT",),
+        secret_env=(),
+        create=lambda env, debug: ClientFactory.create_free_source(env["SEC_USER_AGENT"], debug=debug),
     ),
 }

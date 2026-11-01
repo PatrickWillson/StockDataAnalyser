@@ -71,13 +71,16 @@ def test_output_layer_reads_core_only_through_the_view_model():
     assert offenders == []
 
 
-# Raw EODHD JSON keys: only the EODHD adapter (clients/eodhd_mapper.py) may name them
+# Vendor payload keys: only the vendors' adapters (clients/*_mapper.py) may name them
 EODHD_PAYLOAD_KEYS = {
     'General', 'Highlights', 'Financials', 'Balance_Sheet', 'Income_Statement', 'Cash_Flow',
     'SplitsDividends', 'SharesStats', 'Technicals', 'Valuation', 'outstandingShares', 'Officers',
     'CurrencyCode', 'currency_symbol', 'totalStockholderEquity', 'commonStockSharesOutstanding',
     'totalRevenue', 'netIncome', 'dividendsPaid', 'paymentDate', 'NumberDividendsByYear',
     'ForwardAnnualDividendRate',
+    # SEC EDGAR (clients/edgar_mapper.py) and Yahoo Finance (clients/yahoo_mapper.py)
+    'StockholdersEquity', 'NetIncomeLoss', 'LiabilitiesAndStockholdersEquity', 'EarningsPerShareBasic',
+    'companyOfficers', 'heldPercentInsiders', 'heldPercentInstitutions', 'fiftyTwoWeekHigh', 'trailingPE',
 }
 
 
