@@ -368,11 +368,10 @@ TTM calculations provide more current financial metrics by using the most recent
    - Criterion: Long-term debt ≤ 110% of net current assets (current assets − current liabilities)
 4. **Dividend Record**: PASS
    - Criterion: Currently pays a dividend (last year > 0)
-5. **Earnings Growth**: N/A - Not Required
+5. **Earnings Growth**: PASS
+   - Criterion: Latest EPS above the EPS 5 reported years earlier
 6. **Price Test**: FAIL
    - Criterion: P/E < 10 AND Price < 120% of Net Tangible Assets
-
-**Note on Earnings Growth:** Earnings growth is intentionally not required for Enterprising Investors per Graham's methodology. Unlike Defensive Investors (who require 7 tests including ≥33% earnings growth over 10 years), Enterprising Investors require only 6 tests focused on current financial strength and price. Graham's logic: Enterprising investors actively seek bargains, turnarounds, or cyclical companies trading below intrinsic value—situations where historical growth may be absent but current fundamentals and price create opportunity.
 
 ---
 

@@ -174,7 +174,7 @@ Where EODHD pre-computed values are used today:
 | Verdict | GN "N/A" → "Rely on EPV - Negative Equity"; defensive fail & enterprising pass → "ENTERPRISING BUY"; MoS ≥ 20 → "STRONG BUY (Undervalued)"; > 0 → "UNDERVALUED"; else "OVERVALUED" |
 
 **Defensive tests** (`DEFENSIVE` thresholds): current ratio ≥ 2.0; LTD ≤ CA − CL; earnings stability (positive NI in last 10 years); dividend record (a dividend in each of the 20 calendar years ending with the newest year; fewer years or a missing year → FAIL); earnings growth (latest NI / NI 10 financial years ago ≥ 1.33, else "N/A (Too Young)"); P/E: price ≤ 15 × mean EPS of the 3 latest reported years (`extract_3year_eps_data`; fewer years or average ≤ 0 → FAIL); P/B: price ≤ 1.5 × tangible BVPS, or P/E (3-year average) × P/B (tangible) ≤ 22.5 (`defensive.pe_pb_multiples`, also behind `metrics['combined_pe_pb_test']`).
-**Enterprising tests** (`ENTERPRISING`): current ratio ≥ 1.5; LTD ≤ (CA − CL) × 1.10; earnings stability (5 of last 5); current dividend > 0; earnings growth; price: P/E < 10 AND price < TBVPS × 1.20.
+**Enterprising tests** (`ENTERPRISING`): current ratio ≥ 1.5; LTD ≤ (CA − CL) × 1.10; earnings stability (5 of last 5); current dividend > 0; earnings growth (latest EPS > EPS 5 reported years earlier; fewer years → FAIL); price: P/E < 10 AND price < TBVPS × 1.20.
 
 ### 5.2 TTM (`core/ttm_calculator.py`, `TTMCalculator`)
 1. `TTMCalculator(quarterly_data, price, currency)` uses the price exactly as given (already normalised in core — no second London Fix). Periodic statements are in the financials (= unified) currency, so there is no conversion and `quarterly_data` is never modified.

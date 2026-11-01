@@ -80,7 +80,7 @@ def test_enterprising_tests_earnings_stability_text():
             'current_ratio': 'PASS',
             'debt_to_assets': 'PASS',
             'dividend_record': 'PASS',
-            'earnings_growth': 'N/A - Not Required',
+            'earnings_growth': 'PASS',
             'price_test': 'PASS'
         }
     }
@@ -185,7 +185,7 @@ def test_all_test_criteria_present():
             'current_ratio': 'PASS',
             'debt_to_assets': 'PASS',
             'dividend_record': 'PASS',
-            'earnings_growth': 'N/A - Not Required',
+            'earnings_growth': 'PASS',
             'price_test': 'PASS'
         }
     }
@@ -208,4 +208,4 @@ def test_all_test_criteria_present():
     
     # Assert - Enterprising tests
     assert 'SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS' in content
-    assert 'Note on Earnings Growth' in content
+    assert 'Latest EPS above the EPS 5 reported years earlier' in content

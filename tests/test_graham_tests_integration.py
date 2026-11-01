@@ -25,7 +25,7 @@ def test_graham_tests_section_integration():
             'current_ratio': 'FAIL',
             'debt_to_assets': 'FAIL',
             'dividend_record': 'PASS',
-            'earnings_growth': 'N/A - Not Required',
+            'earnings_growth': 'PASS',
             'price_test': 'FAIL'
         }
     }
@@ -50,12 +50,12 @@ def test_graham_tests_section_integration():
     assert "2. **Current Ratio**: FAIL" in content
     assert "3. **Debt to Assets**: FAIL" in content
     assert "4. **Dividend Record**: PASS" in content
-    assert "5. **Earnings Growth**: N/A - Not Required" in content
+    assert "5. **Earnings Growth**: PASS" in content
     assert "6. **Price Test**: FAIL" in content
     
     # Verify note is present
-    assert "**Note on Earnings Growth:**" in content
-    assert "Earnings growth is intentionally not required for Enterprising Investors" in content
+    assert "Latest EPS above the EPS 5 reported years earlier" in content
+    assert "intentionally not required" not in content
     
     # Verify separators
     assert content.count("---") >= 2
@@ -78,7 +78,7 @@ def test_graham_tests_section_with_all_pass():
             'current_ratio': 'PASS',
             'debt_to_assets': 'PASS',
             'dividend_record': 'PASS',
-            'earnings_growth': 'N/A - Not Required',
+            'earnings_growth': 'PASS',
             'price_test': 'PASS'
         }
     }

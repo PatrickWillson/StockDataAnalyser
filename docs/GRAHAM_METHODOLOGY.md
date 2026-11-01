@@ -113,7 +113,7 @@ The ordered verdict rules are in `claude-output/REFACTOR_SCOPE.md` (D8) and will
 | Book value for Graham Number | Tangible book (§3.5 decision) | Tangible book (TBVPS) | **Decided** — matches |
 | Adequate size (4.1) | Required | Not implemented | Ignored by decision D7 |
 | Enterprising price (5.1, 5.6) | Low P/E **and** < 120% net tangible assets | P/E < 10 **and** price < 1.2 × TBVPS | **Fixed (F20)** |
-| Enterprising earnings growth (5.5) | Required (≈5-year) | "N/A - Not Required" | F20 |
+| Enterprising earnings growth (5.5) | Required (≈5-year) | Latest EPS > EPS of the reported year 5 years earlier | **Fixed (F20)** |
 | Verdict (§7) | Quality **and** margin of safety | ENTERPRISING BUY can override a negative MoS; N/A counts as pass | F20 (D8) |
 | Historical prices | Actual market price, adjusted only for splits / capital changes (§2.4, §8.3) | Split-adjusted, not dividend-adjusted | **Fixed (F8)**. Open check: Yahoo closes are split-adjusted to today's share basis while each year's EPS uses that year's share count, so a split year may mismatch — unverified against real data |
 | Total debt (display, Risk Factors) | Count every obligation ranking ahead of the stock; prefer the conservative figure (§8.4) | Reported total incl. leases, else component sum | **Decided 2026-10-31** (user: "go with what Graham would do"); debt tests (4.2, 5.2) still use long-term debt as Graham specified |

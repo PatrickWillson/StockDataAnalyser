@@ -497,7 +497,7 @@
       "current_ratio": "FAIL",
       "debt_to_assets": "FAIL",
       "dividend_record": "PASS",
-      "earnings_growth": "N/A - Not Required",
+      "earnings_growth": "PASS",
       "earnings_stability": "PASS",
       "price_test": "FAIL"
     },

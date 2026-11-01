@@ -152,16 +152,15 @@ class GrahamTestsSection:
         lines.append("   - Criterion: Currently pays a dividend (last year > 0)")
         
         # Test 5: Earnings Growth
-        earnings_growth = enterprising_tests.get('earnings_growth', 'N/A - Not Required')
+        earnings_growth = enterprising_tests.get('earnings_growth', 'N/A')
         lines.append(f"5. **Earnings Growth**: {earnings_growth}")
+        lines.append(f"   - Criterion: Latest EPS above the EPS {ENTERPRISING.EARNINGS_GROWTH_YEARS} reported years earlier")
         
         # Test 6: Price Test
         price_test = enterprising_tests.get('price_test', 'N/A')
         lines.append(f"6. **Price Test**: {price_test}")
         lines.append(f"   - Criterion: P/E < {ENTERPRISING.MAX_PE_RATIO:g} AND Price < {ENTERPRISING.MAX_PB_RATIO:.0%} of Net Tangible Assets")
         
-        lines.append("")
-        lines.append("**Note on Earnings Growth:** Earnings growth is intentionally not required for Enterprising Investors per Graham's methodology. Unlike Defensive Investors (who require 7 tests including ≥33% earnings growth over 10 years), Enterprising Investors require only 6 tests focused on current financial strength and price. Graham's logic: Enterprising investors actively seek bargains, turnarounds, or cyclical companies trading below intrinsic value—situations where historical growth may be absent but current fundamentals and price create opportunity.")
         lines.append("")
         lines.append("---")
         

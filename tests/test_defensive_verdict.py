@@ -116,8 +116,8 @@ def test_enterprising_tests_display_all_tests():
     assert "**Price Test**: PASS" in content  # Fixed: check for Price Test instead
 
 
-def test_enterprising_tests_includes_growth_note():
-    """Test that enterprising tests section includes note about earnings growth."""
+def test_enterprising_tests_includes_growth_criterion():
+    """Graham 5.5: the enterprising earnings growth criterion is shown (it is required)."""
     metrics = {
         'defensive_tests': {},
         'enterprising_tests': {
@@ -130,9 +130,9 @@ def test_enterprising_tests_includes_growth_note():
     content = '\n'.join(lines)
     
     # Check for the earnings growth note
-    assert "Note on Earnings Growth:" in content
-    assert "Earnings growth is intentionally not required for Enterprising Investors" in content
-    assert "Graham's logic:" in content
+    # Graham 5.5 (F20): growth is required, shown with its criterion
+    assert "Latest EPS above the EPS 5 reported years earlier" in content
+    assert "intentionally not required" not in content
 
 
 def test_both_sections_generated():
@@ -191,7 +191,7 @@ def test_empty_enterprising_tests():
     # Should still have the section header
     assert "## SECTION 5: GRAHAM ENTERPRISING INVESTOR TESTS" in content
     # Should still have the note
-    assert "Note on Earnings Growth:" in content
+    assert "Latest EPS above the EPS 5 reported years earlier" in content
 
 
 def test_test_name_formatting():

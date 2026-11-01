@@ -59,6 +59,8 @@ class EnterprisingThresholds:
         MAX_PE_RATIO: Maximum acceptable Price-to-Earnings ratio (10.0)
         MAX_PB_RATIO: Maximum price relative to net tangible assets (1.2 = 120%)
         EARNINGS_STABILITY_YEARS: Years examined for earnings stability (5)
+        EARNINGS_GROWTH_YEARS: Latest EPS must exceed the EPS this many reported years earlier (5;
+                               Graham: "last year's earnings more than those of 1966" in 1971 data)
     """
     MIN_CURRENT_RATIO: float = 1.5
     MAX_DEBT_ASSETS: float = 1.10  # Debt < 110% of Net Current Assets
@@ -66,6 +68,7 @@ class EnterprisingThresholds:
     MAX_PE_RATIO: float = 10.0
     MAX_PB_RATIO: float = 1.2  # Price < 120% of net tangible assets
     EARNINGS_STABILITY_YEARS: int = 5
+    EARNINGS_GROWTH_YEARS: int = 5
 
 
 # Singleton instances for use throughout the application
