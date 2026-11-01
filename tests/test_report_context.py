@@ -21,7 +21,7 @@ def test_latest_year_skips_dividend_only_rows():
 
 def test_no_reported_year():
     context = build_report_context(_fd({}))
-    assert context.latest_year is None and context.latest_year_label is None and context.latest_row == {}
+    assert context.latest_year is None and context.latest_year_label is None and context.latest_row.to_dict() == {}
 
 
 def test_generator_shares_one_context_with_every_section():

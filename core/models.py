@@ -256,11 +256,12 @@ class HistoryRow(Model):
     wcps: Number = MISSING
     payout_ratio: str = MISSING                      # "34.0%" or "N/A"
     year_end_price: Optional[float] = MISSING        # added by core.historical_prices
+    operating_cash_flow: float = MISSING             # read by the view model; not produced by the assembler today
 
 
 @dataclass(frozen=True)
 class FinancialData(Model):
-    """docs/CODEBASE_GUIDE.md §4.1. Keys not declared here (e.g. operating_cash_flow in tests) are kept in `extra`."""
+    """docs/CODEBASE_GUIDE.md §4.1. Keys not declared here are kept in `extra`."""
     ticker: str = MISSING
     exchange: str = MISSING
     currency: str = MISSING                          # unified calculation currency

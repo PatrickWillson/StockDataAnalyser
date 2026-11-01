@@ -6,7 +6,7 @@ built on its own (e.g. in a unit test) builds it from the same inputs.
 
 import statistics
 from dataclasses import dataclass, field
-from typing import Any, Dict, Mapping, Optional, Tuple
+from typing import Any, Dict, Mapping, Optional, Tuple, Union
 
 from config.risk_thresholds import PROFIT_MARGIN_SANITY_LIMIT_PCT, RISK_HISTORY_WINDOW_YEARS
 from core.financial_data_processor import FinancialDataProcessor
@@ -14,13 +14,14 @@ from core.formulas import net_current_asset_value, tangible_equity
 from core.price_quote import is_minor_unit, major_currency
 from config.data_quality_config import FINANCIAL_HISTORY_YEARS
 from core.history import has_income_data, has_statement_data, latest_year
+from core.models import FinancialData, GrahamResult, HistoryRow, or_default
 
 
 @dataclass(frozen=True)
 class HistoryTableRow:
     """One row of the 20-year financial history table."""
     year: str                      # history key ('YYYY-MM-DD')
-    row: Mapping[str, Any]
+    row: HistoryRow
     has_income: bool               # False: a dividend-only row ("[Data Unavailable]")
     bvps: float                    # total equity / shares rounded to 2 dp; 0 when not computable
 
@@ -52,15 +53,15 @@ class RiskFigures:
     history_years: int = 0
 
 
-def _risk_figures(financial_data: Dict[str, Any], history: Dict[str, Any], years: list,
-                  row: Mapping[str, Any]) -> RiskFigures:
-    avg_volume = financial_data.get('average_volume', 0)
-    shares = row.get('shares_outstanding', 0)
-    current_assets = row.get('current_assets', 0.0)
-    current_liabilities = row.get('current_liabilities', 0.0)
-    long_term_debt = row.get('long_term_debt', 0.0)
-    total_debt = row.get('total_debt', 0.0)
-    total_assets = row.get('total_assets', 0.0)
+def _risk_figures(financial_data: FinancialData, history: Mapping[str, HistoryRow], years: list,
+                  row: HistoryRow) -> RiskFigures:
+    avg_volume = or_default(financial_data.average_volume, 0)
+    shares = or_default(row.shares_outstanding, 0)
+    current_assets = or_default(row.current_assets, 0.0)
+    current_liabilities = or_default(row.current_liabilities, 0.0)
+    long_term_debt = or_default(row.long_term_debt, 0.0)
+    total_debt = or_default(row.total_debt, 0.0)
+    total_assets = or_default(row.total_assets, 0.0)
     net_current_assets = current_assets - current_liabilities
 
     # Payment years: every row (a dividend-only row is a real payment year)
@@ -70,8 +71,8 @@ def _risk_figures(financial_data: Dict[str, Any], history: Dict[str, Any], years
     margins = []
     loss_years = 0
     for year in earnings_window:
-        revenue = history[year].get('revenue', 0.0)
-        net_income = history[year].get('net_income', 0.0)
+        revenue = or_default(history[year].revenue, 0.0)
+        net_income = or_default(history[year].net_income, 0.0)
         if revenue > 0:
             margin = (net_income / revenue) * 100
             # Exclude non-finite margins from near-zero revenue
@@ -82,9 +83,9 @@ def _risk_figures(financial_data: Dict[str, Any], history: Dict[str, Any], years
 
     # The latest fiscal year's audited dividend per share, never EODHD's forward estimate (F21);
     # history 'dividend' values are payment counts when is_dividend_amounts is False
-    latest_div = row.get('dividend', 0.0) if financial_data.get('is_dividend_amounts', False) else 0.0
-    eps = row.get('eps', 0.0)
-    operating_cash_flow = row.get('operating_cash_flow', 0.0)
+    latest_div = or_default(row.dividend, 0.0) if or_default(financial_data.is_dividend_amounts, False) else 0.0
+    eps = or_default(row.eps, 0.0)
+    operating_cash_flow = or_default(row.operating_cash_flow, 0.0)
     return RiskFigures(
         liquidity_pct=(avg_volume / shares) * 100 if avg_volume > 0 and shares > 0 else None,
         current_ratio=current_assets / current_liabilities if current_liabilities > 0 else None,
@@ -103,11 +104,11 @@ def _risk_figures(financial_data: Dict[str, Any], history: Dict[str, Any], years
         margin_stdev=statistics.stdev(margins) if len(margins) > 1 else None,
         loss_years=loss_years,
         latest_dividend=latest_div,
-        paid_any=any(history[year].get('dividend', 0.0) > 0 for year in years),
+        paid_any=any(or_default(history[year].dividend, 0.0) > 0 for year in years),
         payout_pct=(latest_div / eps) * 100 if latest_div > 0 and eps > 0 else None,
         dividend_coverage=(operating_cash_flow / shares) / latest_div
                           if latest_div > 0 and operating_cash_flow > 0 and shares > 0 else None,
-        dividend_years=sum(1 for year in window if history[year].get('dividend', 0.0) > 0),
+        dividend_years=sum(1 for year in window if or_default(history[year].dividend, 0.0) > 0),
         history_years=len(years),
     )
 
@@ -115,7 +116,7 @@ def _risk_figures(financial_data: Dict[str, Any], history: Dict[str, Any], years
 @dataclass(frozen=True)
 class ReportContext:
     latest_year: Optional[str]                 # newest history key with statement data ('YYYY-MM-DD')
-    latest_row: Mapping[str, Any] = field(default_factory=dict)
+    latest_row: HistoryRow = field(default_factory=HistoryRow)
     risk: RiskFigures = field(default_factory=RiskFigures)
     # Latest reported year, when equity and shares are both positive
     latest_bvps: Optional[float] = None
@@ -149,26 +150,28 @@ class ReportContext:
         return self.latest_year.split('-')[0] if self.latest_year else None
 
 
-def build_report_context(financial_data: Dict[str, Any], metrics: Optional[Dict[str, Any]] = None) -> ReportContext:
+def build_report_context(financial_data: Union[FinancialData, Dict[str, Any]],
+                         metrics: Union[GrahamResult, Dict[str, Any], None] = None) -> ReportContext:
     """Derive the display values from the assembled financial data (and metrics)."""
-    history = financial_data.get('history') or {}
+    financial_data = FinancialData.from_dict(financial_data)
+    history = financial_data.history or {}
     years = sorted(history.keys(), reverse=True)
     year = latest_year(history, years, has_statement_data)
-    row = history[year] if year else {}
+    row = history[year] if year else HistoryRow()
 
-    equity = row.get('total_equity', 0)
-    shares = row.get('shares_outstanding', 0)
+    equity = or_default(row.total_equity, 0)
+    shares = or_default(row.shares_outstanding, 0)
     has_book = equity > 0 and shares > 0
-    tangible = tangible_equity(equity, row.get('intangible_assets', 0), row.get('goodwill', 0)) if has_book else None
+    tangible = tangible_equity(equity, or_default(row.intangible_assets, 0), or_default(row.goodwill, 0)) if has_book else None
 
-    price = financial_data.get('price') or 0
-    trailing = row.get('dividend', 0.0) if financial_data.get('is_dividend_amounts', False) else 0.0
-    forward = financial_data.get('forward_dividend_rate') or 0.0
+    price = financial_data.price or 0
+    trailing = or_default(row.dividend, 0.0) if or_default(financial_data.is_dividend_amounts, False) else 0.0
+    forward = financial_data.forward_dividend_rate or 0.0
 
     bvps = equity / shares if has_book else None
-    api_bvps = financial_data.get('book_value_per_share') or 0
+    api_bvps = financial_data.book_value_per_share or 0
     eps_data = FinancialDataProcessor.extract_3year_eps_data(history) if history else None
-    quote_currency = financial_data.get('price_quote_currency') or financial_data.get('original_stock_currency')
+    quote_currency = financial_data.price_quote_currency or or_default(financial_data.original_stock_currency, None)
 
     def yield_pct(amount):
         return (amount / price) * 100 if amount and amount > 0 and price > 0 else None
@@ -183,8 +186,8 @@ def build_report_context(financial_data: Dict[str, Any], metrics: Optional[Dict[
         api_bvps_diff_pct=abs(bvps - api_bvps) / api_bvps * 100 if bvps is not None and api_bvps > 0 else None,
         three_year_eps=eps_data,
         three_year_eps_avg=sum(eps_data['eps_values']) / 3 if eps_data and eps_data['valid'] else None,
-        latest_ncav=net_current_asset_value(row.get('current_assets', 0), row.get('total_liabilities', 0),
-                                            row.get('claims_outside_equity', 0.0)) if row else None,
+        latest_ncav=net_current_asset_value(or_default(row.current_assets, 0), or_default(row.total_liabilities, 0),
+                                            or_default(row.claims_outside_equity, 0.0)) if year else None,
         quote_currency=quote_currency,
         quote_is_minor_unit=is_minor_unit(quote_currency),
         quote_major_currency=major_currency(quote_currency),
@@ -192,8 +195,8 @@ def build_report_context(financial_data: Dict[str, Any], metrics: Optional[Dict[
     )
 
 
-def _history_table_row(year: str, row: Mapping[str, Any]) -> HistoryTableRow:
-    equity = row.get('total_equity', 0)
-    shares = row.get('shares_outstanding', 0)
+def _history_table_row(year: str, row: HistoryRow) -> HistoryTableRow:
+    equity = or_default(row.total_equity, 0)
+    shares = or_default(row.shares_outstanding, 0)
     return HistoryTableRow(year=year, row=row, has_income=has_income_data(row),
                            bvps=round(equity / shares, 2) if shares > 0 and equity > 0 else 0)
