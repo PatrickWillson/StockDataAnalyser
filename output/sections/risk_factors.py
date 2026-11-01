@@ -31,8 +31,6 @@ from config.risk_thresholds import (
     PAYOUT_CONSERVATIVE_PCT,
     PAYOUT_MAX_PCT,
     PAYOUT_MODERATE_PCT,
-    PROFIT_MARGIN_SANITY_LIMIT_PCT,
-    RISK_HISTORY_WINDOW_YEARS,
     ROE_ADEQUATE,
     ROE_STRONG,
 )
@@ -153,11 +151,8 @@ class RiskFactorsSection(DossierSection):
                 lines.append(f"- **Beta: {beta:.3f}** - High volatility (⚠️ Risk)")
         
         # Average volume and market cap for liquidity assessment
-        avg_volume = self.financial_data.get('average_volume', 0)
-        shares = latest_data.get('shares_outstanding', 0)
-        self.financial_data.get('price', 0)
-        if avg_volume > 0 and shares > 0:
-            liquidity_pct = (avg_volume / shares) * 100
+        liquidity_pct = self.context.risk.liquidity_pct
+        if liquidity_pct is not None:
             if liquidity_pct < LIQUIDITY_LOW_PCT:
                 lines.append(f"- **Daily Liquidity: {liquidity_pct:.3f}%** of shares outstanding (⚠️ Low liquidity - may be difficult to exit large positions)")
             elif liquidity_pct < LIQUIDITY_MODERATE_PCT:
@@ -178,11 +173,11 @@ class RiskFactorsSection(DossierSection):
         """
         lines.append("### Financial Strength Risk:")
         
+        risk = self.context.risk
+        
         # Current ratio
-        current_assets = latest_data.get('current_assets', 0.0)
-        current_liabilities = latest_data.get('current_liabilities', 0.0)
-        if current_liabilities > 0:
-            current_ratio = current_assets / current_liabilities
+        current_ratio = risk.current_ratio
+        if current_ratio is not None:
             if current_ratio >= DEFENSIVE.MIN_CURRENT_RATIO:
                 lines.append(f"- **Current Ratio: {current_ratio:.2f}x** - Strong liquidity (meets Graham's {DEFENSIVE.MIN_CURRENT_RATIO:.1f}x defensive standard)")
             elif current_ratio >= ENTERPRISING.MIN_CURRENT_RATIO:
@@ -192,17 +187,13 @@ class RiskFactorsSection(DossierSection):
             else:
                 lines.append(f"- **Current Ratio: {current_ratio:.2f}x** - ⚠️ Critical liquidity risk")
         
-        # Debt levels
-        long_term_debt = latest_data.get('long_term_debt', 0.0)
-        total_debt = latest_data.get('total_debt', 0.0)
-        # Total debt is the reported total (incl. leases), so the remainder is short-term debt and leases
-        other_debt = total_debt - long_term_debt if total_debt > long_term_debt else 0.0
-        total_assets = latest_data.get('total_assets', 0.0)
-        net_current_assets = current_assets - current_liabilities
+        # Debt levels (total debt is the reported total incl. leases; other_debt is the remainder)
+        long_term_debt, total_debt, other_debt = risk.long_term_debt, risk.total_debt, risk.other_debt
+        total_assets, net_current_assets = risk.total_assets, risk.net_current_assets
         
         if total_assets > 0 and long_term_debt > 0:
-            lt_debt_to_assets = (long_term_debt / total_assets) * 100
-            total_debt_to_assets = (total_debt / total_assets) * 100
+            lt_debt_to_assets = risk.lt_debt_to_assets_pct
+            total_debt_to_assets = risk.total_debt_to_assets_pct
             
             # Determine assessment based on long-term debt
             if lt_debt_to_assets < LT_DEBT_TO_ASSETS_LOW_PCT:
@@ -220,7 +211,7 @@ class RiskFactorsSection(DossierSection):
         elif total_assets > 0 and long_term_debt == 0:
             lines.append(f"- **Long-Term Debt: {long_term_debt:,.0f} {unified_currency}** - Debt-free (excellent)")
             if other_debt > 0:
-                total_debt_to_assets = (total_debt / total_assets) * 100
+                total_debt_to_assets = risk.total_debt_to_assets_pct
                 lines.append(f"  - Short-term debt and leases: {other_debt:,.0f} {unified_currency} ({total_debt_to_assets:.1f}% of assets)")
         
         # Graham's defensive test: long-term debt not more than net current assets (working capital)
@@ -228,7 +219,7 @@ class RiskFactorsSection(DossierSection):
             if long_term_debt <= net_current_assets:
                 lines.append("- **Debt Coverage: ✓** Long-term debt ≤ net current assets (passes Graham's defensive test)")
             else:
-                debt_ratio = (long_term_debt / net_current_assets) * 100
+                debt_ratio = risk.debt_to_nca_pct
                 lines.append(f"- **Debt Coverage: ⚠️** Long-term debt is {debt_ratio:.0f}% of Net Current Assets (fails Graham's defensive test)")
         
         lines.append("")
@@ -244,29 +235,16 @@ class RiskFactorsSection(DossierSection):
         """
         lines.append("### Operational Stability Risk:")
         
-        # Earnings volatility (last 10 years)
-        profit_margins = []
-        loss_years = 0
-        years_to_check = sorted_years[:RISK_HISTORY_WINDOW_YEARS] if len(sorted_years) >= RISK_HISTORY_WINDOW_YEARS else sorted_years
-        
-        for year in years_to_check:
-            year_data = history[year]
-            revenue = year_data.get('revenue', 0.0)
-            net_income = year_data.get('net_income', 0.0)
-            
-            if revenue > 0:
-                margin = (net_income / revenue) * 100
-                # Validate margin is finite (avoid infinity from near-zero revenue)
-                if abs(margin) < PROFIT_MARGIN_SANITY_LIMIT_PCT:  # Reasonable profit margin range
-                    profit_margins.append(margin)
-                if net_income < 0:
-                    loss_years += 1
+        # Earnings volatility (last RISK_HISTORY_WINDOW_YEARS years)
+        risk = self.context.risk
+        profit_margins = risk.profit_margins
+        loss_years = risk.loss_years
+        window_years = risk.window_years
         
         if profit_margins:
-            import statistics
-            avg_margin = statistics.mean(profit_margins)
-            if len(profit_margins) > 1:
-                margin_volatility = statistics.stdev(profit_margins)
+            avg_margin = risk.margin_mean
+            if risk.margin_stdev is not None:
+                margin_volatility = risk.margin_stdev
                 lines.append(f"- **Profit Margin Stability: {avg_margin:.1f}% average, {margin_volatility:.1f}% std dev** over {len(profit_margins)} years")
                 if margin_volatility < MARGIN_VOLATILITY_LOW_PCT:
                     lines.append("  - Low volatility indicates stable operations")
@@ -279,9 +257,9 @@ class RiskFactorsSection(DossierSection):
         
         # Loss years
         if loss_years > 0:
-            lines.append(f"- **Loss Years: {loss_years} of {len(years_to_check)}** - ⚠️ Earnings not consistently positive")
+            lines.append(f"- **Loss Years: {loss_years} of {window_years}** - ⚠️ Earnings not consistently positive")
         else:
-            lines.append(f"- **Loss Years: 0 of {len(years_to_check)}** - Consistent profitability (excellent)")
+            lines.append(f"- **Loss Years: 0 of {window_years}** - Consistent profitability (excellent)")
         
         # ROE consistency
         roe = self.financial_data.get('roe', 0)
@@ -305,18 +283,14 @@ class RiskFactorsSection(DossierSection):
             sorted_years: Sorted list of years
             latest_data: Most recent year's financial data
         """
-        # The latest fiscal year's audited dividend per share, never EODHD's forward estimate (F21);
-        # history 'dividend' values are payment counts when is_dividend_amounts is False
-        is_amounts = self.financial_data.get('is_dividend_amounts', False)
-        latest_div = latest_data.get('dividend', 0.0) if is_amounts else 0.0
-        paid_any = any(history[year].get('dividend', 0.0) > 0 for year in sorted_years)
-        if latest_div > 0 or paid_any:
+        risk = self.context.risk
+        latest_div = risk.latest_dividend
+        if latest_div > 0 or risk.paid_any:
             lines.append("### Dividend Sustainability Risk:")
             
             # Payout ratio (latest fiscal year: dividend per share / EPS)
-            eps = latest_data.get('eps', 0.0)
-            if latest_div > 0 and eps > 0:
-                payout_ratio = (latest_div / eps) * 100
+            payout_ratio = risk.payout_pct
+            if payout_ratio is not None:
                 if payout_ratio < PAYOUT_CONSERVATIVE_PCT:
                     lines.append(f"- **Payout Ratio: {payout_ratio:.1f}%** - Conservative (sustainable)")
                 elif payout_ratio < PAYOUT_MODERATE_PCT:
@@ -327,11 +301,8 @@ class RiskFactorsSection(DossierSection):
                     lines.append(f"- **Payout Ratio: {payout_ratio:.1f}%** - ⚠️ Unsustainable (paying more than earnings)")
             
             # Dividend coverage from cash flow
-            operating_cash_flow = latest_data.get('operating_cash_flow', 0.0)
-            shares = latest_data.get('shares_outstanding', 0)
-            if latest_div > 0 and operating_cash_flow > 0 and shares > 0:
-                cash_per_share = operating_cash_flow / shares
-                dividend_coverage = cash_per_share / latest_div
+            dividend_coverage = risk.dividend_coverage
+            if dividend_coverage is not None:
                 if dividend_coverage >= DIVIDEND_COVERAGE_STRONG:
                     lines.append(f"- **Dividend Coverage: {dividend_coverage:.1f}x** from operating cash flow - Well covered")
                 elif dividend_coverage >= DIVIDEND_COVERAGE_ADEQUATE:
@@ -342,18 +313,14 @@ class RiskFactorsSection(DossierSection):
                     lines.append(f"- **Dividend Coverage: {dividend_coverage:.1f}x** from operating cash flow - ⚠️ Not covered by cash flow")
             
             # Dividend history consistency
-            years_to_check = sorted_years[:RISK_HISTORY_WINDOW_YEARS] if len(sorted_years) >= RISK_HISTORY_WINDOW_YEARS else sorted_years
-            dividend_years = 0
-            for year in years_to_check:
-                if history[year].get('dividend', 0.0) > 0:
-                    dividend_years += 1
+            dividend_years, window_years = risk.dividend_years, risk.window_years
             
-            if dividend_years == len(years_to_check):
+            if dividend_years == window_years:
                 lines.append(f"- **Dividend History: {dividend_years} consecutive years** - Uninterrupted record (excellent)")
-            elif dividend_years >= len(years_to_check) * DIVIDEND_MOSTLY_CONSISTENT_FRACTION:
-                lines.append(f"- **Dividend History: {dividend_years} of {len(years_to_check)} years** - Mostly consistent")
+            elif dividend_years >= window_years * DIVIDEND_MOSTLY_CONSISTENT_FRACTION:
+                lines.append(f"- **Dividend History: {dividend_years} of {window_years} years** - Mostly consistent")
             else:
-                lines.append(f"- **Dividend History: {dividend_years} of {len(years_to_check)} years** - ⚠️ Inconsistent payment history")
+                lines.append(f"- **Dividend History: {dividend_years} of {window_years} years** - ⚠️ Inconsistent payment history")
             
             lines.append("")
     
@@ -416,7 +383,7 @@ class RiskFactorsSection(DossierSection):
         lines.append(f"- **Price Source: {price_source}** (current quote; the only price source)")
         
         # Years of history
-        years_available = len(sorted_years)
+        years_available = self.context.risk.history_years
         if years_available < MIN_HISTORY_YEARS_RECOMMENDED:
             lines.append(f"- **Financial History: {years_available} years** - ⚠️ Limited track record (Graham's defensive criteria use 10 years of earnings and 20 of dividends)")
         
