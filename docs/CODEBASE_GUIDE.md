@@ -55,6 +55,7 @@ clients/
   factory.py                ClientFactory: builds clients (validates API key)
 core/
   formulas.py               shared Graham formulas (plain arithmetic, no rounding/N/A): tangible_equity, net_current_asset_value, graham_number, margin_of_safety_pct, price_multiple; used by graham_math, ttm_calculator and Calculation Details
+  report_context.py         ReportContext (dossier view model, M5): latest reported year/row; build_report_context(financial_data, metrics); built once by DossierGenerator and passed to every section
   price_quote.py            PriceQuote(price, currency); major_currency / same_currency (minor units GBp/GBX→GBP, ZAc→ZAR, ILA→ILS; case-sensitive)
   statement_parsing.py      typed BalanceSheetRow / IncomeStatementRow (Optional fields; None = not reported) for yearly and quarterly statements; holds the raw EODHD key names; as_history_fields() → history-row dicts
   historical_prices.py      apply_year_end_prices(): year-end price currency handling + merge into history
@@ -232,7 +233,7 @@ Price-unit logic lives in `core/price_quote.py` (`is_minor_unit`, `to_major_unit
 | – | METHODOLOGY NOTES | `methodology.py` `MethodologySection` |
 | – | CALCULATION DETAILS | `calculation_details.py` `CalculationDetailsSection` |
 
-Every section subclasses `DossierSection` and its `generate()` returns `List[str]`; `DossierGenerator.sections()` is the ordered registry and `generate()` joins all their lines with `\n`. Money amounts are formatted with `output.formatting.format_price_display` (one shared definition), and inline amounts use the same amount-then-code style (`29.11 USD`, `1,234 GBP`). Several sections do their own arithmetic (BVPS, NCA, ratios, yields, risk bands) rather than reading core results. Criterion and formula text in Graham Tests, Methodology and Calculation Details is built from config (`GRAHAM_MULTIPLIER`, `COST_OF_CAPITAL`, `DEFENSIVE`/`ENTERPRISING`, `EPV_MIN/MAX_YEARS`); two enterprising lines ("5 of past 7 years", "Current Ratio > 1.5") are still literal because they misdescribe the code (code: 5 of 5, ≥) — fixed with F20.
+Every section subclasses `DossierSection`, receives the shared `core.report_context.ReportContext` (or builds it when constructed alone), and its `generate()` returns `List[str]`; `DossierGenerator.sections()` is the ordered registry and `generate()` joins all their lines with `\n`. Money amounts are formatted with `output.formatting.format_price_display` (one shared definition), and inline amounts use the same amount-then-code style (`29.11 USD`, `1,234 GBP`). Several sections do their own arithmetic (BVPS, NCA, ratios, yields, risk bands) rather than reading core results. Criterion and formula text in Graham Tests, Methodology and Calculation Details is built from config (`GRAHAM_MULTIPLIER`, `COST_OF_CAPITAL`, `DEFENSIVE`/`ENTERPRISING`, `EPV_MIN/MAX_YEARS`); two enterprising lines ("5 of past 7 years", "Current Ratio > 1.5") are still literal because they misdescribe the code (code: 5 of 5, ≥) — fixed with F20.
 
 ---
 

@@ -1,18 +1,19 @@
 """Dossier header: ticker, date, source, company metadata, latest annual data year, currency."""
 
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from core.history import has_statement_data
 from output.sections.base import DossierSection
+from core.report_context import ReportContext, build_report_context
 
 
 class HeaderSection(DossierSection):
     """The '# STOCK ANALYSIS DOSSIER' block at the top of the dossier."""
 
-    def __init__(self, ticker: str, financial_data: Dict[str, Any]):
+    def __init__(self, ticker: str, financial_data: Dict[str, Any], context: Optional[ReportContext] = None):
         self.ticker = ticker
         self.financial_data = financial_data
+        self.context = context or build_report_context(financial_data)
 
     def generate(self) -> List[str]:
         """Generate dossier header with metadata.
@@ -49,19 +50,8 @@ class HeaderSection(DossierSection):
         lines.append(f"# EMPLOYEES: {employees:,}" if employees > 0 else "# EMPLOYEES: N/A")
         
         # Add data freshness note - use most recent year with actual financial data
-        history = self.financial_data.get('history', {})
-        if history:
-            sorted_years = sorted(history.keys(), reverse=True)
-            # Find most recent year with financial data (not just dividend data)
-            most_recent_year = None
-            for year in sorted_years:
-                year_data = history[year]
-                if has_statement_data(year_data):
-                    most_recent_year = year.split('-')[0]
-                    break
-            
-            if most_recent_year:
-                lines.append(f"# MOST RECENT ANNUAL DATA: {most_recent_year}")
+        if self.context.latest_year_label:
+            lines.append(f"# MOST RECENT ANNUAL DATA: {self.context.latest_year_label}")
         
         # Add currency note if conversion was applied
         if original_stock_currency != unified_currency:

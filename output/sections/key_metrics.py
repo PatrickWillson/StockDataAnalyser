@@ -4,10 +4,10 @@ This module generates the key metrics section of the stock analysis dossier,
 including profitability metrics, book value, ownership, and risk metrics.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from output.sections.base import DossierSection
+from core.report_context import ReportContext, build_report_context
 from output.formatting import format_price_display
-from core.history import has_statement_data
 
 
 class KeyMetricsSection(DossierSection):
@@ -24,7 +24,7 @@ class KeyMetricsSection(DossierSection):
     Requirements: 2.2
     """
     
-    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any] = None):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any] = None, context: Optional[ReportContext] = None):
         """Initialize key metrics section.
         
         Args:
@@ -33,6 +33,7 @@ class KeyMetricsSection(DossierSection):
         """
         self.financial_data = financial_data
         self.metrics = metrics or {}
+        self.context = context or build_report_context(financial_data, self.metrics)
     
     def generate(self) -> List[str]:
         """Generate key metrics section content.
@@ -95,22 +96,15 @@ class KeyMetricsSection(DossierSection):
             lines: List to append lines to
             unified_currency: Currency for display
         """
-        history = self.financial_data.get('history', {})
-        if history:
-            sorted_years = sorted(history.keys(), reverse=True)
-            # Find most recent year with financial data
-            for year in sorted_years:
-                year_data = history[year]
-                if has_statement_data(year_data):
-                    most_recent_data = year_data
-                    total_equity = most_recent_data.get('total_equity', 0)
-                    shares = most_recent_data.get('shares_outstanding', 0)
-                    if shares > 0 and total_equity > 0:
-                        book_value = round(total_equity / shares, 2)
-                        # Book value is already in unified currency
-                        bvps_display = format_price_display(book_value, unified_currency, unified_currency)
-                        lines.append(f"- Book Value Per Share: {bvps_display}")
-                    break
+        if self.context.latest_year:
+            most_recent_data = self.context.latest_row
+            total_equity = most_recent_data.get('total_equity', 0)
+            shares = most_recent_data.get('shares_outstanding', 0)
+            if shares > 0 and total_equity > 0:
+                book_value = round(total_equity / shares, 2)
+                # Book value is already in unified currency
+                bvps_display = format_price_display(book_value, unified_currency, unified_currency)
+                lines.append(f"- Book Value Per Share: {bvps_display}")
     
     def _add_liquidity_analysis(self, lines: List[str], unified_currency: str) -> None:
         """Add liquidity analysis including Current Ratio, Quick Ratio, and NCA details.

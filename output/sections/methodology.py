@@ -5,13 +5,13 @@ explaining how key valuation metrics are calculated including P/E ratio, Graham 
 EPV (Earnings Power Value), Net-Net Value, and Margin of Safety.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from output.formatting import format_price_display
-from core.history import has_statement_data
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
 from config.investor_thresholds import DEFENSIVE
 from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 from output.sections.base import DossierSection
+from core.report_context import ReportContext, build_report_context
 
 
 class MethodologySection(DossierSection):
@@ -27,7 +27,7 @@ class MethodologySection(DossierSection):
     Requirements: 2.4
     """
     
-    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any]):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any], context: Optional[ReportContext] = None):
         """Initialize methodology section.
         
         Args:
@@ -36,6 +36,7 @@ class MethodologySection(DossierSection):
         """
         self.financial_data = financial_data
         self.metrics = metrics
+        self.context = context or build_report_context(financial_data, metrics)
     
     def generate(self) -> List[str]:
         """Generate methodology notes section content.
@@ -53,13 +54,12 @@ class MethodologySection(DossierSection):
         
         # Extract currency and history
         unified_currency = self.financial_data.get('currency', 'USD')
-        history = self.financial_data.get('history', {})
         
         # Get EPV details
         epv_details = self.metrics.get('epv_details', {})
         
         # Get most recent EPS for P/E explanation
-        most_recent_eps = self._get_most_recent_eps(history)
+        most_recent_eps = self.context.latest_row.get('eps', 0) if self.context.latest_year else 0
         
         lines.append("### Valuation Metrics:")
         
@@ -91,26 +91,6 @@ class MethodologySection(DossierSection):
         lines.append("---")
         
         return lines
-    
-    def _get_most_recent_eps(self, history: Dict[str, Any]) -> float:
-        """Get most recent EPS from history with financial data.
-        
-        Args:
-            history: Financial history dictionary
-            
-        Returns:
-            float: Most recent EPS value, or 0 if not found
-        """
-        if not history:
-            return 0
-        
-        sorted_years = sorted(history.keys(), reverse=True)
-        for year in sorted_years:
-            year_data = history[year]
-            if has_statement_data(year_data):
-                return year_data.get('eps', 0)
-        
-        return 0
     
     def _add_pe_ratio_explanation(self, lines: List[str], unified_currency: str, 
                                   most_recent_eps: float) -> None:

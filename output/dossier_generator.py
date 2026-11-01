@@ -11,6 +11,7 @@ Requirements: 1.1, 1.2, 1.3
 """
 
 from typing import List, Dict, Any, Optional
+from core.report_context import build_report_context
 from output.sections.base import DossierSection
 from output.sections.critical_alerts import CriticalAlertsSection
 from output.sections.executive_summary import ExecutiveSummarySection
@@ -77,22 +78,26 @@ class DossierGenerator:
         self.anomalies = anomalies
         self.ttm_metrics = ttm_metrics
         
+        # The view model, derived once in core and shared by every section
+        self.context = build_report_context(financial_data, metrics)
+        context = self.context
+        
         # Initialize section generators
-        self.header = HeaderSection(ticker, financial_data)
-        self.executive_summary = ExecutiveSummarySection(financial_data, metrics)
+        self.header = HeaderSection(ticker, financial_data, context)
+        self.executive_summary = ExecutiveSummarySection(financial_data, metrics, context)
         self.critical_alerts = CriticalAlertsSection(financial_data, metrics, anomalies)
         self.key_metrics = KeyMetricsSection(financial_data, {'current_ratio': metrics.get('current_ratio'),
                                                               'quick_ratio': metrics.get('quick_ratio'),
-                                                              'nca_details': metrics.get('nca_details')})
-        self.risk_factors = RiskFactorsSection(financial_data, metrics)
-        self.methodology = MethodologySection(financial_data, metrics)
-        self.calculation_details = CalculationDetailsSection(financial_data, metrics)
+                                                              'nca_details': metrics.get('nca_details')}, context)
+        self.risk_factors = RiskFactorsSection(financial_data, metrics, context)
+        self.methodology = MethodologySection(financial_data, metrics, context)
+        self.calculation_details = CalculationDetailsSection(financial_data, metrics, context)
         self.graham_tests = GrahamTestsSection(metrics)
         self.financial_history = FinancialHistorySection(financial_data)
         
         # Initialize TTM section if data available
         if ttm_metrics and ttm_metrics.get('ttm_graham_number') != "N/A":
-            self.ttm_analysis = TTMAnalysisSection(ttm_metrics, metrics, financial_data)
+            self.ttm_analysis = TTMAnalysisSection(ttm_metrics, metrics, financial_data, context)
         else:
             self.ttm_analysis = None
     

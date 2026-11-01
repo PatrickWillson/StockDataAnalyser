@@ -4,10 +4,10 @@ This module generates the executive summary section of the stock analysis dossie
 including verdict, intrinsic values, margin of safety, current price, and dividend information.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from output.sections.base import DossierSection
+from core.report_context import ReportContext, build_report_context
 from output.formatting import format_price_display
-from core.history import has_statement_data
 
 
 class ExecutiveSummarySection(DossierSection):
@@ -24,7 +24,7 @@ class ExecutiveSummarySection(DossierSection):
     Requirements: 1.4, 2.1
     """
     
-    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any]):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any], context: Optional[ReportContext] = None):
         """Initialize executive summary section.
         
         Args:
@@ -33,6 +33,7 @@ class ExecutiveSummarySection(DossierSection):
         """
         self.financial_data = financial_data
         self.metrics = metrics
+        self.context = context or build_report_context(financial_data, metrics)
     
     def generate(self) -> List[str]:
         """Generate executive summary section content.
@@ -257,20 +258,11 @@ class ExecutiveSummarySection(DossierSection):
         most_recent_div_source = None
         most_recent_div_amount = None
         
-        if history:
-            sorted_years = sorted(history.keys(), reverse=True)
-            
-            # Find the most recent year with complete financial data
-            for year_key in sorted_years:
-                year_data = history[year_key]
-                has_financial_data = has_statement_data(year_data)
-                
-                if has_financial_data:
-                    # This is a complete year - use it for trailing dividend
-                    most_recent_complete_year = year_key.split('-')[0]
-                    most_recent_div_source = source_indicators.get(most_recent_complete_year, 'unknown')
-                    most_recent_div_amount = year_data.get('dividend', 0.0)
-                    break
+        if history and self.context.latest_year:
+            # The most recent complete (reported) year gives the trailing dividend
+            most_recent_complete_year = self.context.latest_year_label
+            most_recent_div_source = source_indicators.get(most_recent_complete_year, 'unknown')
+            most_recent_div_amount = self.context.latest_row.get('dividend', 0.0)
         
         # Payment counts are not amounts (F21): report the count, never a per-share figure or yield
         if not self.financial_data.get('is_dividend_amounts', False):

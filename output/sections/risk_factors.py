@@ -5,10 +5,10 @@ including market risk, financial strength risk, operational stability risk,
 dividend risk, valuation risk, and data quality risk assessments.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from output.sections.base import DossierSection
+from core.report_context import ReportContext, build_report_context
 from output.formatting import format_price_display
-from core.history import has_statement_data
 from config.data_quality_config import MIN_HISTORY_YEARS_RECOMMENDED
 from config.investor_thresholds import DEFENSIVE, ENTERPRISING
 from config.risk_thresholds import (
@@ -53,7 +53,7 @@ class RiskFactorsSection(DossierSection):
     Requirements: 2.3
     """
     
-    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any]):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any], context: Optional[ReportContext] = None):
         """Initialize risk factors section.
         
         Args:
@@ -62,6 +62,7 @@ class RiskFactorsSection(DossierSection):
         """
         self.financial_data = financial_data
         self.metrics = metrics
+        self.context = context or build_report_context(financial_data, metrics)
     
     def generate(self) -> List[str]:
         """Generate risk factors section content.
@@ -97,17 +98,10 @@ class RiskFactorsSection(DossierSection):
         history = self.financial_data.get('history', {})
         if history:
             sorted_years = sorted(history.keys(), reverse=True)
-            
-            # Find most recent year with financial data
-            latest_year = None
-            for year in sorted_years:
-                year_data = history[year]
-                if has_statement_data(year_data):
-                    latest_year = year
-                    break
+            latest_year = self.context.latest_year
             
             if latest_year:
-                latest_data = history[latest_year]
+                latest_data = self.context.latest_row
                 
                 # 1. Market & Liquidity Risk
                 self._add_market_liquidity_risk_second(lines, latest_data)

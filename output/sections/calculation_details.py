@@ -6,13 +6,13 @@ This includes share count disclosure, BVPS calculation, Graham Number calculatio
 Net-Net Value calculation, currency conversion details, and EPV methodology clarification.
 """
 
-from typing import List, Dict, Any
-from core.history import has_statement_data
+from typing import List, Dict, Any, Optional
 from core.formulas import net_current_asset_value, tangible_equity
 from core.price_quote import is_minor_unit, major_currency
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
 from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 from output.sections.base import DossierSection
+from core.report_context import ReportContext, build_report_context
 
 
 class CalculationDetailsSection(DossierSection):
@@ -29,7 +29,7 @@ class CalculationDetailsSection(DossierSection):
     Requirements: 2.5
     """
     
-    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any]):
+    def __init__(self, financial_data: Dict[str, Any], metrics: Dict[str, Any], context: Optional[ReportContext] = None):
         """Initialize calculation details section.
         
         Args:
@@ -38,6 +38,7 @@ class CalculationDetailsSection(DossierSection):
         """
         self.financial_data = financial_data
         self.metrics = metrics
+        self.context = context or build_report_context(financial_data, metrics)
     
     def generate(self) -> List[str]:
         """Generate calculation details section content.
@@ -56,10 +57,10 @@ class CalculationDetailsSection(DossierSection):
         # Extract currency and history
         unified_currency = self.financial_data.get('currency', 'USD')
         original_stock_currency = self.financial_data.get('original_stock_currency', unified_currency)
-        history = self.financial_data.get('history', {})
         
         # Get most recent year data for calculations
-        latest_year_calc, latest_data_calc = self._get_latest_year_data(history)
+        latest_year_calc = self.context.latest_year
+        latest_data_calc = self.context.latest_row if latest_year_calc else None
         
         if latest_year_calc and latest_data_calc:
             year_label = latest_year_calc.split('-')[0]
@@ -87,26 +88,6 @@ class CalculationDetailsSection(DossierSection):
         lines.append("---")
         
         return lines
-    
-    def _get_latest_year_data(self, history: Dict[str, Any]) -> tuple:
-        """Get the most recent year with financial data.
-        
-        Args:
-            history: Financial history dictionary
-            
-        Returns:
-            tuple: (latest_year, latest_data) or (None, None) if not found
-        """
-        if not history:
-            return None, None
-        
-        sorted_years = sorted(history.keys(), reverse=True)
-        for year in sorted_years:
-            year_data = history[year]
-            if has_statement_data(year_data):
-                return year, year_data
-        
-        return None, None
     
     def _add_share_count_disclosure(self, lines: List[str], latest_data: Dict[str, Any], 
                                     year_label: str) -> None:

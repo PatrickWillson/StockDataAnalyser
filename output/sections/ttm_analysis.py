@@ -4,9 +4,9 @@ This module generates the TTM (Trailing Twelve Months) analysis section of the s
 analysis dossier, including TTM Graham calculations and comparisons with annual metrics.
 """
 
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Optional
 from output.sections.base import DossierSection
-from core.history import has_statement_data
+from core.report_context import ReportContext, build_report_context
 
 
 class TTMAnalysisSection(DossierSection):
@@ -21,7 +21,7 @@ class TTMAnalysisSection(DossierSection):
     Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7
     """
     
-    def __init__(self, ttm_metrics: Dict[str, Any], annual_metrics: Dict[str, Any], financial_data: Dict[str, Any]):
+    def __init__(self, ttm_metrics: Dict[str, Any], annual_metrics: Dict[str, Any], financial_data: Dict[str, Any], context: Optional[ReportContext] = None):
         """Initialize TTM section generator.
         
         Args:
@@ -32,6 +32,7 @@ class TTMAnalysisSection(DossierSection):
         self.ttm_metrics = ttm_metrics
         self.annual_metrics = annual_metrics
         self.financial_data = financial_data
+        self.context = context or build_report_context(financial_data, annual_metrics)
     
     def generate(self) -> List[str]:
         """Generate TTM section markdown lines.
@@ -268,17 +269,11 @@ class TTMAnalysisSection(DossierSection):
         fiscal_year_dividend = 0.0
         fiscal_year = None
         
-        if history:
-            sorted_years = sorted(history.keys(), reverse=True)
-            # Find most recent complete fiscal year
-            for year_key in sorted_years:
-                year_data = history[year_key]
-                has_financial_data = has_statement_data(year_data)
-                if has_financial_data:
-                    fiscal_year = year_key.split('-')[0]
-                    if self.financial_data.get('is_dividend_amounts', False):
-                        fiscal_year_dividend = year_data.get('dividend', 0.0)
-                    break
+        if history and self.context.latest_year:
+            # Most recent complete fiscal year
+            fiscal_year = self.context.latest_year_label
+            if self.financial_data.get('is_dividend_amounts', False):
+                fiscal_year_dividend = self.context.latest_row.get('dividend', 0.0)
         
         lines.append("")
         lines.append(f"- TTM Dividend (Last 12 Months): {ttm_dividend:.2f} {currency} (Yield: {ttm_yield:.2f}%)")
