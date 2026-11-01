@@ -9,7 +9,7 @@ import os
 
 import pytest
 
-from core.models import MISSING, FinancialData, GrahamResult, HistoryRow, TTMResult
+from core.models import MISSING, FinancialData, GrahamResult, HistoryRow, TTMResult, or_default
 
 SNAPSHOTS = sorted(glob.glob(os.path.join(os.path.dirname(__file__), "__snapshots__", "test_dossier_snapshots",
                                           "*[[]data[]].json")))
@@ -40,6 +40,13 @@ def test_absent_keys_stay_absent_and_unknown_keys_are_kept():
     assert row.revenue is MISSING
     assert row.to_dict() == {'dividend': 0.5, 'operating_cash_flow': 9.0}
     assert row.get('revenue', 0.0) == 0.0 and row.get('operating_cash_flow') == 9.0
+
+
+def test_or_default_replaces_only_missing():
+    assert or_default(MISSING, 'N/A') == 'N/A'
+    assert or_default(0.0, 'N/A') == 0.0
+    assert or_default(None, 'N/A') is None
+    assert or_default('', 'N/A') == ''
 
 
 def test_from_dict_passes_models_and_none_through():

@@ -35,6 +35,11 @@ class _Missing:
 
 MISSING: Any = _Missing()
 
+
+def or_default(value: Any, default: Any) -> Any:
+    """`default` when `value` is MISSING (only then: 0, "" and None are kept)."""
+    return default if value is MISSING else value
+
 NA = Literal["N/A"]
 Number = Union[float, NA]
 

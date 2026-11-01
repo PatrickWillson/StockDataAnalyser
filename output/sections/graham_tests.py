@@ -4,10 +4,11 @@ This module generates the Graham investor tests sections of the stock analysis d
 including both defensive and enterprising investor tests.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 from config.graham_constants import GRAHAM_MULTIPLIER
 from config.investor_thresholds import DEFENSIVE, ENTERPRISING
 from output.sections.base import DossierSection
+from core.models import CombinedPEPBTest, GrahamResult, or_default
 
 
 class GrahamTestsSection(DossierSection):
@@ -20,13 +21,13 @@ class GrahamTestsSection(DossierSection):
     Requirements: 2.6
     """
     
-    def __init__(self, metrics: Dict[str, Any]):
+    def __init__(self, metrics: Union[GrahamResult, Dict[str, Any]]):
         """Initialize Graham tests section.
         
         Args:
-            metrics: Dictionary containing Graham metrics (GrahamMetrics DTO)
+            metrics: Graham metrics (GrahamResult, or its dict form)
         """
-        self.metrics = metrics
+        self.metrics = GrahamResult.from_dict(metrics)
     
     def generate(self) -> List[str]:
         """Generate Graham tests sections content.
@@ -57,7 +58,7 @@ class GrahamTestsSection(DossierSection):
         lines.append("")
         
         # Get test results
-        defensive_tests = self.metrics.get('defensive_tests', {})
+        defensive_tests = or_default(self.metrics.defensive_tests, {})
         
         # Test 1: Earnings Stability
         earnings_stability = defensive_tests.get('earnings_stability', 'N/A')
@@ -67,7 +68,7 @@ class GrahamTestsSection(DossierSection):
         # Test 2: Current Ratio
         current_ratio = defensive_tests.get('current_ratio', 'N/A')
         lines.append(f"2. **Current Ratio**: {current_ratio}")
-        public_utility = self.metrics.get('public_utility', False)
+        public_utility = or_default(self.metrics.public_utility, False)
         if public_utility:
             lines.append("   - Criterion: Not applied to public utilities (Graham)")
         else:
@@ -105,12 +106,12 @@ class GrahamTestsSection(DossierSection):
                      f"or P/E (3-year average EPS) × P/B ≤ {GRAHAM_MULTIPLIER:g}")
         
         # Test 8: Combined P/E × P/B Test (NEW)
-        combined_test = self.metrics.get('combined_pe_pb_test', {})
-        if combined_test and isinstance(combined_test, dict):
-            result = combined_test.get('result', 'N/A')
-            product = combined_test.get('product')
-            pe = combined_test.get('pe_ratio')
-            pb = combined_test.get('pb_ratio')
+        combined_test = self.metrics.combined_pe_pb_test
+        if isinstance(combined_test, CombinedPEPBTest) and combined_test.to_dict():
+            result = or_default(combined_test.result, 'N/A')
+            product = or_default(combined_test.product, None)
+            pe = or_default(combined_test.pe_ratio, None)
+            pb = or_default(combined_test.pb_ratio, None)
             
             lines.append(f"8. **Combined P/E × P/B Test** (criterion 7 alternative): {result}")
             if product != 'N/A' and pe != 'N/A' and pb != 'N/A':
@@ -139,7 +140,7 @@ class GrahamTestsSection(DossierSection):
         lines.append("")
         
         # Get test results
-        enterprising_tests = self.metrics.get('enterprising_tests', {})
+        enterprising_tests = or_default(self.metrics.enterprising_tests, {})
         
         # Test 1: Earnings Stability
         earnings_stability = enterprising_tests.get('earnings_stability', 'N/A')

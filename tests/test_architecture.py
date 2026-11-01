@@ -54,7 +54,7 @@ def test_contracts_detect_a_layer_violation(tmp_path):
 
 
 def test_output_layer_reads_core_only_through_the_view_model():
-    """M5: sections only format — from core they import nothing but core.report_context."""
+    """M5/M7: sections only format — from core they import only the view model and the typed models."""
     import ast
     import glob
     root = os.path.join(os.path.dirname(__file__), "..")
@@ -64,7 +64,7 @@ def test_output_layer_reads_core_only_through_the_view_model():
             tree = ast.parse(handle.read())
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module and node.module.split('.')[0] == 'core':
-                if node.module != 'core.report_context':
+                if node.module not in ('core.report_context', 'core.models'):
                     offenders.append(f"{os.path.relpath(path, root)}: {node.module}")
             elif isinstance(node, ast.Import):
                 offenders += [f"{os.path.relpath(path, root)}: {a.name}" for a in node.names if a.name.startswith('core')]
