@@ -99,7 +99,7 @@
   - Total debt: 111,088,000,000 USD (31.5% of assets)
 
 ### Operational Stability Risk:
-- **Profit Margin Stability: 25.7% average, 0.3% std dev** over 5 years
+- **Profit Margin Stability: 25.8% average, 0.2% std dev** over 10 years
   - Low volatility indicates stable operations
 - **Loss Years: 0 of 10** - Consistent profitability (excellent)
 - **Return on Equity: 156.1%** - Strong capital efficiency

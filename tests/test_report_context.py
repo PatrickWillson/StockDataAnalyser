@@ -29,3 +29,16 @@ def test_generator_shares_one_context_with_every_section():
     generator = DossierGenerator('T.US', _fd(history), {}, [])
     contexts = {id(section.context) for section in generator.sections() if hasattr(section, 'context')}
     assert contexts == {id(generator.context)}
+
+
+def test_earnings_window_counts_reported_years_only():
+    """Dividend-only placeholder rows are not years of results (loss years, margins)."""
+    history = {f"{2023 - i}-12-31": {'revenue': 100.0, 'net_income': 10.0 if i else -5.0, 'total_equity': 50.0,
+                                     'eps': 1.0, 'dividend': 0.5} for i in range(3)}
+    for year in ('2024-12-31', '2025-12-31'):
+        history[year] = {'revenue': 0.0, 'net_income': 0.0, 'total_equity': 0.0, 'eps': 0.0, 'dividend': 0.5}
+    risk = build_report_context(_fd(history)).risk
+    assert risk.window_years == 3
+    assert risk.loss_years == 1
+    assert len(risk.profit_margins) == 3
+    assert risk.dividend_window_years == 5 and risk.dividend_years == 5  # payment years count every row

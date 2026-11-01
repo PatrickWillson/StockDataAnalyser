@@ -25,7 +25,8 @@ class RiskFigures:
     lt_debt_to_assets_pct: Optional[float] = None
     total_debt_to_assets_pct: Optional[float] = None
     debt_to_nca_pct: Optional[float] = None
-    window_years: int = 0                              # years examined (latest RISK_HISTORY_WINDOW_YEARS rows)
+    window_years: int = 0                              # reported years examined for margins and losses
+    dividend_window_years: int = 0                     # rows examined for the dividend record
     profit_margins: Tuple[float, ...] = ()
     margin_mean: Optional[float] = None
     margin_stdev: Optional[float] = None               # with at least two margins
@@ -49,10 +50,13 @@ def _risk_figures(financial_data: Dict[str, Any], history: Dict[str, Any], years
     total_assets = row.get('total_assets', 0.0)
     net_current_assets = current_assets - current_liabilities
 
-    window = years[:RISK_HISTORY_WINDOW_YEARS] if len(years) >= RISK_HISTORY_WINDOW_YEARS else years
+    # Payment years: every row (a dividend-only row is a real payment year)
+    window = years[:RISK_HISTORY_WINDOW_YEARS]
+    # Earnings years: reported years only (dividend-only placeholder rows are not years of results)
+    earnings_window = [year for year in years if has_statement_data(history[year])][:RISK_HISTORY_WINDOW_YEARS]
     margins = []
     loss_years = 0
-    for year in window:
+    for year in earnings_window:
         revenue = history[year].get('revenue', 0.0)
         net_income = history[year].get('net_income', 0.0)
         if revenue > 0:
@@ -79,7 +83,8 @@ def _risk_figures(financial_data: Dict[str, Any], history: Dict[str, Any], years
         lt_debt_to_assets_pct=(long_term_debt / total_assets) * 100 if total_assets > 0 and long_term_debt > 0 else None,
         total_debt_to_assets_pct=(total_debt / total_assets) * 100 if total_assets > 0 else None,
         debt_to_nca_pct=(long_term_debt / net_current_assets) * 100 if net_current_assets > 0 and long_term_debt > 0 else None,
-        window_years=len(window),
+        window_years=len(earnings_window),
+        dividend_window_years=len(window),
         profit_margins=tuple(margins),
         margin_mean=statistics.mean(margins) if margins else None,
         margin_stdev=statistics.stdev(margins) if len(margins) > 1 else None,

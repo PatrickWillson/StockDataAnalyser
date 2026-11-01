@@ -88,7 +88,7 @@
 ### Operational Stability Risk:
 - **Profit Margin Stability: 25.5% average, 0.3% std dev** over 3 years
   - Low volatility indicates stable operations
-- **Loss Years: 0 of 5** - Consistent profitability (excellent)
+- **Loss Years: 0 of 3** - Consistent profitability (excellent)
 - **Return on Equity: 156.1%** - Strong capital efficiency
 
 ### Dividend Sustainability Risk:

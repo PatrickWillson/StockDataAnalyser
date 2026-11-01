@@ -313,7 +313,7 @@ class RiskFactorsSection(DossierSection):
                     lines.append(f"- **Dividend Coverage: {dividend_coverage:.1f}x** from operating cash flow - ⚠️ Not covered by cash flow")
             
             # Dividend history consistency
-            dividend_years, window_years = risk.dividend_years, risk.window_years
+            dividend_years, window_years = risk.dividend_years, risk.dividend_window_years
             
             if dividend_years == window_years:
                 lines.append(f"- **Dividend History: {dividend_years} consecutive years** - Uninterrupted record (excellent)")
