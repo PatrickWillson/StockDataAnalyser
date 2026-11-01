@@ -28,6 +28,9 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 from core.fundamentals import BalanceSheetRow, IncomeStatementRow
 
 ANNUAL_FORMS = frozenset({"10-K", "10-K/A", "10-KT", "10-KT/A"})
+PERIODIC_FORMS = ANNUAL_FORMS | {"10-Q", "10-Q/A"}
+# Duration windows in days: a fiscal year, a quarter, nine months year-to-date
+DURATIONS = {"year": (350, 380), "quarter": (80, 100), "nine_months": (260, 285)}
 GAAP, DEI = "us-gaap", "dei"
 MONEY, PER_SHARE, SHARES = "USD", "USD/shares", "shares"
 
@@ -94,15 +97,18 @@ def _annual(row: Mapping[str, Any]) -> bool:
     return row.get("form") in ANNUAL_FORMS
 
 
-def _is_year(row: Mapping[str, Any]) -> bool:
-    return "start" in row and 350 <= _days(row["start"], row["end"]) <= 380
+def _lasts(row: Mapping[str, Any], kind: str) -> bool:
+    low, high = DURATIONS[kind]
+    return "start" in row and low <= _days(row["start"], row["end"]) <= high
 
 
 class _Facts:
     """Index of annual facts: (taxonomy, tag) -> {period end: [(filed, value)]}."""
 
-    def __init__(self, companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, float]] = ()):
+    def __init__(self, companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, float]] = (),
+                 forms: frozenset = ANNUAL_FORMS):
         self.facts = companyfacts.get("facts", {})
+        self.forms = forms
         self.splits = sorted((date, ratio) for date, ratio in splits if ratio and ratio > 0)
         self._cache: Dict[Tuple[str, str, str, str], Dict[str, List[Tuple[str, float]]]] = {}
 
@@ -126,11 +132,12 @@ class _Facts:
         if key not in self._cache:
             by_end: Dict[str, List[Tuple[str, float]]] = {}
             for row in self.facts.get(taxonomy, {}).get(tag, {}).get("units", {}).get(unit, []):
-                if not _annual(row):
+                if row.get("form") not in self.forms:
                     continue
-                if kind == "duration" and not _is_year(row):
-                    continue
-                if kind == "instant" and "start" in row:
+                if kind == "instant":
+                    if "start" in row:
+                        continue
+                elif not _lasts(row, kind):
                     continue
                 by_end.setdefault(row["end"], []).append((row["filed"], row["val"]))
             self._cache[key] = by_end
@@ -187,7 +194,7 @@ def fiscal_year_ends(facts: _Facts) -> List[str]:
     ends = set()
     for tag in YEAR_END_TAGS:
         for unit in (MONEY, PER_SHARE):
-            ends.update(facts.series(tag, unit, "duration"))
+            ends.update(facts.series(tag, unit, "year"))
     return sorted(ends, reverse=True)
 
 
@@ -266,7 +273,7 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes) -> Optional[BalanceShee
             if shares is not None:
                 notes.derive("year-end shares", "cover-page count of the 10-K (dated after the year end)", end)
             else:
-                weighted = facts.get(WEIGHTED_SHARES, end, SHARES, "duration")
+                weighted = facts.get(WEIGHTED_SHARES, end, SHARES, "year")
                 if weighted is not None:
                     shares = weighted.value
                     notes.derive("year-end shares", "weighted-average basic shares of the year (no year-end count tagged)", end)
@@ -311,14 +318,19 @@ def _cover_shares(facts: _Facts, end: str) -> Optional[float]:
     return float(sum(c[2] for c in same_filing if c[1] == date))
 
 
+def _revenue(facts: _Facts, end: str, kind: str, utility: bool) -> Tuple[Optional[Fact], Optional[Fact]]:
+    """(revenue fact, total `Revenues` fact) for the period."""
+    total = facts.get(("Revenues",), end, MONEY, kind)
+    return (total if utility and total is not None else None) or facts.get(REVENUE, end, MONEY, kind), total
+
+
 def _income_row(facts: _Facts, end: str, notes: _Notes, utility: bool = False) -> IncomeStatementRow:
     def field(name: str, chain: Sequence[str], unit: str = MONEY) -> Optional[float]:
-        fact = facts.get(chain, end, unit, "duration")
+        fact = facts.get(chain, end, unit, "year")
         notes.fact(name, end, fact)
         return _value(fact)
 
-    total = facts.get(("Revenues",), end, MONEY, "duration")
-    revenue_fact = (total if utility and total is not None else None) or facts.get(REVENUE, end, MONEY, "duration")
+    revenue_fact, total = _revenue(facts, end, "year", utility)
     notes.fact("revenue", end, revenue_fact)
     if revenue_fact is not None and total is not None and revenue_fact.tag != "Revenues" and total.value > 0 \
             and abs(total.value - revenue_fact.value) > 0.01 * total.value:
@@ -360,7 +372,7 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
             balance.append(row)
             if row.shares_outstanding:
                 shares_by_year[end[:4]] = row.shares_outstanding
-        paid = facts.get(DIVIDENDS_PAID, end, MONEY, "duration")
+        paid = facts.get(DIVIDENDS_PAID, end, MONEY, "year")
         notes.fact("dividends paid", end, paid)
         if paid is not None:
             dividends[end] = abs(paid.value)
@@ -373,3 +385,81 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         latest_cover_shares=latest_cover or 0.0,
         notes=notes.render(),
     )
+
+
+@dataclass(frozen=True)
+class EdgarPeriodicData:
+    """Quarterly statement rows for TTM figures (newest first)."""
+    balance_sheets: Tuple[BalanceSheetRow, ...]
+    income_statements: Tuple[IncomeStatementRow, ...]
+    notes: Tuple[str, ...]
+
+
+def _fiscal_q4(facts: _Facts, year_end: str, chain: Sequence[str], unit: str,
+               utility: bool = False) -> Optional[float]:
+    """
+    A fiscal fourth quarter, which 10-K filers do not tag as its own 3-month period: the year minus the
+    nine months to the third quarter's end (from the third-quarter 10-Q).
+    """
+    if chain is REVENUE:
+        year, _ = _revenue(facts, year_end, "year", utility)
+    else:
+        year = facts.get(chain, year_end, unit, "year")
+    if year is None:
+        return None
+    start = _year_start(facts, year_end)
+    if start is None:
+        return None
+    for tag in ([year.tag] + [t for t in chain if t != year.tag]):
+        for nine_end, values in facts.series(tag, unit, "nine_months").items():
+            rows = [r for r in facts.facts.get(GAAP, {}).get(tag, {}).get("units", {}).get(unit, [])
+                    if r["end"] == nine_end and r.get("start") == start and r.get("form") in facts.forms]
+            if rows and nine_end < year_end:
+                latest = max(rows, key=lambda r: r["filed"])
+                return year.value - latest["val"]
+    return None
+
+
+def _year_start(facts: _Facts, year_end: str) -> Optional[str]:
+    """Start date of the fiscal year ending `year_end` (from any 1-year income fact)."""
+    for tag in YEAR_END_TAGS:
+        for unit in (MONEY, PER_SHARE):
+            for row in facts.facts.get(GAAP, {}).get(tag, {}).get("units", {}).get(unit, []):
+                if row["end"] == year_end and _lasts(row, "year"):
+                    return row["start"]
+    return None
+
+
+def periodic_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, float]] = (),
+                  sic: Optional[str] = None, quarters: int = 8) -> EdgarPeriodicData:
+    """
+    The latest `quarters` fiscal quarters: 3-month income figures (fourth quarters derived as the year
+    minus nine months) and the balance sheet at each quarter end, from 10-Q and 10-K filings.
+    """
+    facts = _Facts(companyfacts, splits, forms=PERIODIC_FORMS)
+    utility = bool(sic) and str(sic).isdigit() and int(sic) in UTILITY_SIC
+    year_ends = set(fiscal_year_ends(_Facts(companyfacts, splits)))
+    quarter_ends = set()
+    for tag in YEAR_END_TAGS:
+        quarter_ends.update(facts.series(tag, MONEY, "quarter"))
+    ends = sorted(quarter_ends | year_ends, reverse=True)[:quarters]
+    notes = _Notes()
+    income, balance = [], []
+    for end in ends:
+        revenue, _ = _revenue(facts, end, "quarter", utility)
+        net_income = facts.get(NET_INCOME, end, MONEY, "quarter")
+        eps = facts.get(EPS, end, PER_SHARE, "quarter")
+        row_revenue, row_income = _value(revenue), _value(net_income)
+        if end in year_ends and (revenue is None or net_income is None):
+            row_revenue = row_revenue if revenue is not None else _fiscal_q4(facts, end, REVENUE, MONEY, utility)
+            row_income = row_income if net_income is not None else _fiscal_q4(facts, end, NET_INCOME, MONEY)
+            if row_revenue is not None or row_income is not None:
+                notes.derive("fourth quarter", "derived as the fiscal year minus the first nine months", end)
+        if row_revenue is not None or row_income is not None:
+            income.append(IncomeStatementRow(period_end=end, revenue=row_revenue, net_income=row_income,
+                                             eps=_value(eps)))
+        row = _balance_row(facts, end, _Notes())
+        if row is not None:
+            balance.append(row)
+    return EdgarPeriodicData(balance_sheets=tuple(balance), income_statements=tuple(income),
+                             notes=notes.render())

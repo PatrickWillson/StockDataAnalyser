@@ -185,3 +185,45 @@ def test_quarterly_and_partial_year_facts_are_not_annual():
                                       ("2021-01-01", "2021-12-31", 99.0, "2022-02-01", "10-Q", "USD")]})
     data = annual_data(facts)
     assert [(r.period_end, r.net_income) for r in data.income_statements] == [("2020-12-31", 10.0)]
+
+
+# --- Quarterly (TTM) ----------------------------------------------------------------------------
+
+def periodic(ticker, quarters=8):
+    from clients.edgar_mapper import periodic_data
+    data = fixture(ticker)
+    return periodic_data(data["companyfacts"], SPLITS.get(ticker, ()), data["submissions"]["sic"], quarters)
+
+
+def test_fiscal_fourth_quarter_is_the_year_minus_nine_months():
+    """Apple Q4 FY2025 (Jul-Sep 2025): revenue $102.5bn, net income $27.5bn (Q4 FY25 results)."""
+    data = periodic("AAPL")
+    q4 = row(data.income_statements, "2025-09-27")
+    assert q4.revenue == 416_161e6 - 313_695e6 == 102_466e6
+    assert q4.net_income == 27_466e6
+    assert any("fourth quarter: derived as the fiscal year minus the first nine months" in n for n in data.notes)
+
+
+def test_latest_quarters_newest_first_with_balance_sheets():
+    data = periodic("AAPL", quarters=8)
+    ends = [r.period_end for r in data.income_statements]
+    assert len(ends) == 8 and ends == sorted(ends, reverse=True)
+    assert [b.period_end for b in data.balance_sheets] == ends
+    spacing = {(row_a - row_b).days for row_a, row_b in zip(
+        *[[__import__("datetime").date.fromisoformat(e) for e in seq] for seq in (ends[:-1], ends[1:])])}
+    assert all(84 <= d <= 98 for d in spacing)                    # quarterly reporter
+
+
+def test_quarters_use_reported_three_month_figures():
+    """Coca-Cola reported 13,380 in both Q2 and Q3 2026 (nine months 39,232 - six months 25,852)."""
+    data = periodic("KO")
+    assert row(data.income_statements, "2026-07-03").revenue == 13_380e6
+    assert row(data.income_statements, "2026-10-02").revenue == 13_380e6
+    assert row(data.income_statements, "2026-04-03").revenue == 12_472e6
+
+
+def test_utility_quarters_use_total_operating_revenues():
+    """Southern Co Q4 2025 = total operating revenues for 2025 minus those of the first nine months."""
+    revenues = fixture("SO")["companyfacts"]["facts"]["us-gaap"]["Revenues"]["units"]["USD"]
+    nine_months = next(r["val"] for r in revenues if r.get("start") == "2025-01-01" and r["end"] == "2025-09-30")
+    assert row(periodic("SO").income_statements, "2025-12-31").revenue == 29_553e6 - nine_months
