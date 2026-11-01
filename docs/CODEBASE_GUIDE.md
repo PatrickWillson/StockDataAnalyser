@@ -79,7 +79,7 @@ config/
   api_config.py             APIConfig (unused in production)
   output_config.py          OutputConfig (unused in production)
 output/
-  dossier_generator.py      DossierGenerator: header, section assembly, Critical Alerts
+  dossier_generator.py      DossierGenerator: builds the sections and renders the ordered registry (sections())
   formatting.py             shared formatters (format_price_display) — sections import from here
   sections/base.py          DossierSection ABC (generate() -> List[str])
   sections/*.py             one module per dossier section (§6)
