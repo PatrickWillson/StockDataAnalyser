@@ -151,7 +151,7 @@ class TestCalculationDetailsSection:
         assert "### Book Value Per Share (BVPS) Calculation:" in lines
         
         # Check for total equity
-        equity_lines = [line for line in lines if "Total Stockholder Equity" in line and "USD62,146,000,000" in line]
+        equity_lines = [line for line in lines if "Total Stockholder Equity" in line and "62,146,000,000 USD" in line]
         assert len(equity_lines) >= 1
         
         # Check for intangibles
@@ -163,7 +163,7 @@ class TestCalculationDetailsSection:
         assert len(goodwill_lines) >= 1
         
         # Check for tangible book value
-        tbv_lines = [line for line in lines if "**Tangible Book Value**:" in line and "USD62,146,000,000" in line]
+        tbv_lines = [line for line in lines if "**Tangible Book Value**:" in line and "62,146,000,000 USD" in line]
         assert len(tbv_lines) >= 1
         
         # Check for divided by shares
@@ -171,11 +171,11 @@ class TestCalculationDetailsSection:
         assert len(divided_lines) >= 1
         
         # Check for TBVPS result
-        tbvps_lines = [line for line in lines if "Tangible Book Value Per Share (TBVPS)" in line and "USD3.93" in line]
+        tbvps_lines = [line for line in lines if "Tangible Book Value Per Share (TBVPS)" in line and "3.93 USD" in line]
         assert len(tbvps_lines) >= 1
         
         # Check for BVPS result
-        bvps_lines = [line for line in lines if "Book Value Per Share (BVPS)" in line and "USD3.93" in line and "without subtracting intangibles" in line]
+        bvps_lines = [line for line in lines if "Book Value Per Share (BVPS)" in line and "3.93 USD" in line and "without subtracting intangibles" in line]
         assert len(bvps_lines) >= 1
     
     def test_bvps_with_intangibles(self):
@@ -190,15 +190,15 @@ class TestCalculationDetailsSection:
         lines = section.generate()
         
         # Check for intangibles value
-        intangibles_lines = [line for line in lines if "Less: Intangible Assets" in line and "USD5,000,000,000" in line]
+        intangibles_lines = [line for line in lines if "Less: Intangible Assets" in line and "5,000,000,000 USD" in line]
         assert len(intangibles_lines) >= 1
         
         # Check for goodwill value
-        goodwill_lines = [line for line in lines if "Less: Goodwill" in line and "USD3,000,000,000" in line]
+        goodwill_lines = [line for line in lines if "Less: Goodwill" in line and "3,000,000,000 USD" in line]
         assert len(goodwill_lines) >= 1
         
         # Check tangible book value is reduced
-        tbv_lines = [line for line in lines if "**Tangible Book Value**:" in line and "USD54,146,000,000" in line]
+        tbv_lines = [line for line in lines if "**Tangible Book Value**:" in line and "54,146,000,000 USD" in line]
         assert len(tbv_lines) >= 1
     
     def test_bvps_api_comparison(self):
@@ -212,7 +212,7 @@ class TestCalculationDetailsSection:
         lines = section.generate()
         
         # Check for API book value comparison
-        api_lines = [line for line in lines if "API Book Value" in line and "USD4.80" in line]
+        api_lines = [line for line in lines if "API Book Value" in line and "4.80 USD" in line]
         assert len(api_lines) >= 1
         
         # Check for explanation of differences
@@ -255,11 +255,11 @@ class TestCalculationDetailsSection:
         assert len(formula_lines) >= 1
         
         # Check for EPS value
-        eps_lines = [line for line in lines if "EPS" in line and "USD6.13" in line]
+        eps_lines = [line for line in lines if "EPS" in line and "6.13 USD" in line]
         assert len(eps_lines) >= 1
         
         # Check for TBVPS value
-        tbvps_lines = [line for line in lines if "TBVPS" in line and "USD3.93" in line]
+        tbvps_lines = [line for line in lines if "TBVPS" in line and "3.93 USD" in line]
         assert len(tbvps_lines) >= 1
         
         # Check for calculation steps
@@ -267,7 +267,7 @@ class TestCalculationDetailsSection:
         assert len(calc_lines) >= 1
         
         # Check for Graham Number result
-        result_lines = [line for line in lines if "Graham Number" in line and "USD28.73" in line]
+        result_lines = [line for line in lines if "Graham Number" in line and "28.73 USD" in line]
         assert len(result_lines) >= 1
         
         # Check for precision note
@@ -300,11 +300,11 @@ class TestCalculationDetailsSection:
         assert "### Net-Net Value Calculation:" in lines
         
         # Check for current assets
-        assets_lines = [line for line in lines if "Current Assets" in line and "USD143,566,000,000" in line]
+        assets_lines = [line for line in lines if "Current Assets" in line and "143,566,000,000 USD" in line]
         assert len(assets_lines) >= 1
         
         # Check for total liabilities
-        liabilities_lines = [line for line in lines if "Total Liabilities" in line and "USD290,437,000,000" in line]
+        liabilities_lines = [line for line in lines if "Total Liabilities" in line and "290,437,000,000 USD" in line]
         assert len(liabilities_lines) >= 1
         
         # Check for net current assets
@@ -316,7 +316,7 @@ class TestCalculationDetailsSection:
         assert len(divided_lines) >= 1
         
         # Check for Net-Net result
-        result_lines = [line for line in lines if "Net-Net Value Per Share" in line and "USD15.50" in line]
+        result_lines = [line for line in lines if "Net-Net Value Per Share" in line and "15.50 USD" in line]
         assert len(result_lines) >= 1
         
         # Check for formula explanation

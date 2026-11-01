@@ -219,15 +219,15 @@ class RiskFactorsSection(DossierSection):
                 assessment = "⚠️ High leverage"
             
             # Show long-term debt with breakdown
-            lines.append(f"- **Long-Term Debt: ${long_term_debt:,.0f} {unified_currency}** ({lt_debt_to_assets:.1f}% of assets) - {assessment}")
+            lines.append(f"- **Long-Term Debt: {long_term_debt:,.0f} {unified_currency}** ({lt_debt_to_assets:.1f}% of assets) - {assessment}")
             if other_debt > 0:
-                lines.append(f"  - Short-term debt and leases: ${other_debt:,.0f} {unified_currency}")
-                lines.append(f"  - Total debt: ${total_debt:,.0f} {unified_currency} ({total_debt_to_assets:.1f}% of assets)")
+                lines.append(f"  - Short-term debt and leases: {other_debt:,.0f} {unified_currency}")
+                lines.append(f"  - Total debt: {total_debt:,.0f} {unified_currency} ({total_debt_to_assets:.1f}% of assets)")
         elif total_assets > 0 and long_term_debt == 0:
-            lines.append(f"- **Long-Term Debt: ${long_term_debt:,.0f} {unified_currency}** - Debt-free (excellent)")
+            lines.append(f"- **Long-Term Debt: {long_term_debt:,.0f} {unified_currency}** - Debt-free (excellent)")
             if other_debt > 0:
                 total_debt_to_assets = (total_debt / total_assets) * 100
-                lines.append(f"  - Short-term debt and leases: ${other_debt:,.0f} {unified_currency} ({total_debt_to_assets:.1f}% of assets)")
+                lines.append(f"  - Short-term debt and leases: {other_debt:,.0f} {unified_currency} ({total_debt_to_assets:.1f}% of assets)")
         
         # Graham's defensive test: long-term debt not more than net current assets (working capital)
         if net_current_assets > 0 and long_term_debt > 0:

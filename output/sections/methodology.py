@@ -239,9 +239,9 @@ class MethodologySection:
                 net_income_strs = []
                 for ni in net_incomes:
                     if ni >= 0:
-                        net_income_strs.append(f"{unified_currency}{ni:,.0f}")
+                        net_income_strs.append(f"{ni:,.0f} {unified_currency}")
                     else:
-                        net_income_strs.append(f"-{unified_currency}{abs(ni):,.0f}")
+                        net_income_strs.append(f"-{abs(ni):,.0f} {unified_currency}")
                 
                 # Show years range
                 if len(years_included) > 0:
@@ -253,9 +253,9 @@ class MethodologySection:
                 lines.append(f"  - Net Incomes: {', '.join(net_income_strs)}")
             
             if normalized_earnings > 0:
-                lines.append(f"  - Normalized Earnings: {unified_currency}{normalized_earnings:,.0f} (average including losses)")
+                lines.append(f"  - Normalized Earnings: {normalized_earnings:,.0f} {unified_currency} (average including losses)")
             
-            lines.append(f"  - EPV: {unified_currency}{epv_value:,.0f} ({unified_currency}{normalized_earnings:,.0f} / {cost_of_capital:.0%})")
+            lines.append(f"  - EPV: {epv_value:,.0f} {unified_currency} ({normalized_earnings:,.0f} {unified_currency} / {cost_of_capital:.0%})")
             
             if epv_per_share > 0:
                 epv_per_share_display = format_price_display(epv_per_share, unified_currency, unified_currency)

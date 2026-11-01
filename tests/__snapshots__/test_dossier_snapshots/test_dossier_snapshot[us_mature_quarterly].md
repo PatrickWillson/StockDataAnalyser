@@ -105,9 +105,9 @@
 
 ### Financial Strength Risk:
 - **Current Ratio: 0.99x** - ⚠️ Critical liquidity risk
-- **Long-Term Debt: $106,000,000,000 USD** (30.0% of assets) - ⚠️ High leverage
-  - Short-term debt and leases: $5,088,000,000 USD
-  - Total debt: $111,088,000,000 USD (31.5% of assets)
+- **Long-Term Debt: 106,000,000,000 USD** (30.0% of assets) - ⚠️ High leverage
+  - Short-term debt and leases: 5,088,000,000 USD
+  - Total debt: 111,088,000,000 USD (31.5% of assets)
 
 ### Operational Stability Risk:
 - **Profit Margin Stability: 25.8% average, 0.3% std dev** over 9 years
@@ -267,9 +267,9 @@
   **Calculation for AAPL:**
   - Years Used: 10
   - Years: 2014-2023
-  - Net Incomes: USD96,995,000,000, USD99,803,000,000, USD94,680,000,000, USD89,946,000,000, USD85,448,700,000, USD81,176,265,000, USD77,117,451,750, USD73,261,579,162, USD69,598,500,204, USD66,118,575,194
-  - Normalized Earnings: USD83,414,507,131 (average including losses)
-  - EPV: USD834,145,071,310 (USD83,414,507,131 / 10%)
+  - Net Incomes: 96,995,000,000 USD, 99,803,000,000 USD, 94,680,000,000 USD, 89,946,000,000 USD, 85,448,700,000 USD, 81,176,265,000 USD, 77,117,451,750 USD, 73,261,579,162 USD, 69,598,500,204 USD, 66,118,575,194 USD
+  - Normalized Earnings: 83,414,507,131 USD (average including losses)
+  - EPV: 834,145,071,310 USD (83,414,507,131 USD / 10%)
   - EPV Per Share: 53.64 USD
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
@@ -415,20 +415,20 @@ TTM calculations provide more current financial metrics by using the most recent
   - Using market float instead of financial statement shares can inflate per-share metrics by 5-10%
 
 ### Book Value Per Share (BVPS) Calculation:
-- **Total Stockholder Equity**: USD62,146,000,000
-- **Less: Intangible Assets**: USD0
-- **Less: Goodwill**: USD0
-- **Tangible Book Value**: USD62,146,000,000
+- **Total Stockholder Equity**: 62,146,000,000 USD
+- **Less: Intangible Assets**: 0 USD
+- **Less: Goodwill**: 0 USD
+- **Tangible Book Value**: 62,146,000,000 USD
 - **Divided by Shares**: 15,550,061,000
-- **Tangible Book Value Per Share (TBVPS)**: USD4.00
-- **Book Value Per Share (BVPS)**: USD4.00 (without subtracting intangibles)
+- **Tangible Book Value Per Share (TBVPS)**: 4.00 USD
+- **Book Value Per Share (BVPS)**: 4.00 USD (without subtracting intangibles)
 
 ### Graham Number Calculation:
 - **Formula**: √(22.5 × EPS × TBVPS)
-- **EPS**: USD6.24
-- **TBVPS**: USD4.00
+- **EPS**: 6.24 USD
+- **TBVPS**: 4.00 USD
 - **Calculation**: √(22.5 × 6.24 × 4.00) = √(560.89)
-- **Graham Number**: USD23.68
+- **Graham Number**: 23.68 USD
 - **Note**: Uses unrounded intermediate values for precision
 
 ### EPV Methodology Clarification:

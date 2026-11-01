@@ -230,7 +230,7 @@ class TestMethodologySection:
         assert len(net_income_lines) >= 1
         
         # Should contain formatted currency values
-        assert any("USD96,995,000,000" in line for line in lines)
+        assert any("96,995,000,000 USD" in line for line in lines)
     
     def test_epv_with_loss_years(self):
         """Test EPV explanation with loss years."""
@@ -257,8 +257,8 @@ class TestMethodologySection:
         assert len(loss_note_lines) >= 1
         
         # Check for negative values in net incomes
-        assert any("-USD5,000,000,000" in line for line in lines)
-        assert any("-USD2,000,000,000" in line for line in lines)
+        assert any("-5,000,000,000 USD" in line for line in lines)
+        assert any("-2,000,000,000 USD" in line for line in lines)
     
     def test_epv_all_profitable_years(self):
         """Test EPV explanation when all years are profitable."""
@@ -296,7 +296,7 @@ class TestMethodologySection:
         # Check for EPV formula
         formula_lines = [line for line in lines if "EPV:" in line and "/ 10%" in line]
         assert len(formula_lines) >= 1
-        assert any("USD497,224,000,000" in line for line in lines)
+        assert any("497,224,000,000 USD" in line for line in lines)
     
     def test_epv_missing_data(self):
         """Test EPV explanation when EPV is not calculated."""

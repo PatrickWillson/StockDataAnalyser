@@ -81,9 +81,9 @@
 
 ### Financial Strength Risk:
 - **Current Ratio: 0.99x** - ⚠️ Critical liquidity risk
-- **Long-Term Debt: $106,000,000,000 USD** (30.0% of assets) - ⚠️ High leverage
-  - Short-term debt and leases: $5,088,000,000 USD
-  - Total debt: $111,088,000,000 USD (31.5% of assets)
+- **Long-Term Debt: 106,000,000,000 USD** (30.0% of assets) - ⚠️ High leverage
+  - Short-term debt and leases: 5,088,000,000 USD
+  - Total debt: 111,088,000,000 USD (31.5% of assets)
 
 ### Operational Stability Risk:
 - **Profit Margin Stability: 25.5% average, 0.3% std dev** over 3 years
@@ -360,20 +360,20 @@ TTM calculations provide more current financial metrics by using the most recent
   - Using market float instead of financial statement shares can inflate per-share metrics by 5-10%
 
 ### Book Value Per Share (BVPS) Calculation:
-- **Total Stockholder Equity**: USD62,146,000,000
-- **Less: Intangible Assets**: USD0
-- **Less: Goodwill**: USD0
-- **Tangible Book Value**: USD62,146,000,000
+- **Total Stockholder Equity**: 62,146,000,000 USD
+- **Less: Intangible Assets**: 0 USD
+- **Less: Goodwill**: 0 USD
+- **Tangible Book Value**: 62,146,000,000 USD
 - **Divided by Shares**: 15,550,061,000
-- **Tangible Book Value Per Share (TBVPS)**: USD4.00
-- **Book Value Per Share (BVPS)**: USD4.00 (without subtracting intangibles)
+- **Tangible Book Value Per Share (TBVPS)**: 4.00 USD
+- **Book Value Per Share (BVPS)**: 4.00 USD (without subtracting intangibles)
 
 ### Graham Number Calculation:
 - **Formula**: √(22.5 × EPS × TBVPS)
-- **EPS**: USD6.24
-- **TBVPS**: USD4.00
+- **EPS**: 6.24 USD
+- **TBVPS**: 4.00 USD
 - **Calculation**: √(22.5 × 6.24 × 4.00) = √(560.89)
-- **Graham Number**: USD23.68
+- **Graham Number**: 23.68 USD
 - **Note**: Uses unrounded intermediate values for precision
 
 

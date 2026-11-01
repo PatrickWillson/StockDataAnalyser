@@ -153,7 +153,7 @@ def test_epv_methodology_shows_formula():
     dossier = DossierGenerator('TEST.US', financial_data, metrics, anomalies).generate()
     
     # Assert: Check for formula
-    assert "USD50,000 / 10%" in dossier or "50000 / 10%" in dossier
+    assert "50,000 USD / 10%" in dossier or "50000 / 10%" in dossier
     assert "EPV:" in dossier
 
 
@@ -202,9 +202,9 @@ def test_epv_methodology_lists_net_incomes():
     # Assert: Check that net incomes are listed
     assert "Net Incomes:" in dossier
     # Check for positive values
-    assert "USD50,000" in dossier or "50000" in dossier
+    assert "50,000 USD" in dossier or "50000" in dossier
     # Check for negative values (loss years)
-    assert "-USD10,000" in dossier or "-10000" in dossier
+    assert "-10,000 USD" in dossier or "-10000" in dossier
 
 
 def test_epv_methodology_shows_normalized_earnings():
@@ -252,7 +252,7 @@ def test_epv_methodology_shows_normalized_earnings():
     # Assert: Check for normalized earnings
     assert "Normalized Earnings:" in dossier
     assert "average including losses" in dossier
-    assert "USD50,000" in dossier or "50000" in dossier
+    assert "50,000 USD" in dossier or "50000" in dossier
 
 
 def test_epv_methodology_includes_graham_quote():

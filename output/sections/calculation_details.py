@@ -155,19 +155,19 @@ class CalculationDetailsSection:
         bvps = 0
         
         if total_equity > 0 and shares_used > 0:
-            lines.append(f"- **Total Stockholder Equity**: {unified_currency}{total_equity:,.0f}")
-            lines.append(f"- **Less: Intangible Assets**: {unified_currency}{intangibles:,.0f}")
-            lines.append(f"- **Less: Goodwill**: {unified_currency}{goodwill:,.0f}")
+            lines.append(f"- **Total Stockholder Equity**: {total_equity:,.0f} {unified_currency}")
+            lines.append(f"- **Less: Intangible Assets**: {intangibles:,.0f} {unified_currency}")
+            lines.append(f"- **Less: Goodwill**: {goodwill:,.0f} {unified_currency}")
             
             tangible_book = tangible_equity(total_equity, intangibles, goodwill)
-            lines.append(f"- **Tangible Book Value**: {unified_currency}{tangible_book:,.0f}")
+            lines.append(f"- **Tangible Book Value**: {tangible_book:,.0f} {unified_currency}")
             lines.append(f"- **Divided by Shares**: {shares_used:,.0f}")
             
             tbvps = tangible_book / shares_used
             bvps = total_equity / shares_used
             
-            lines.append(f"- **Tangible Book Value Per Share (TBVPS)**: {unified_currency}{tbvps:.2f}")
-            lines.append(f"- **Book Value Per Share (BVPS)**: {unified_currency}{bvps:.2f} (without subtracting intangibles)")
+            lines.append(f"- **Tangible Book Value Per Share (TBVPS)**: {tbvps:.2f} {unified_currency}")
+            lines.append(f"- **Book Value Per Share (BVPS)**: {bvps:.2f} {unified_currency} (without subtracting intangibles)")
             
             # Compare to API if available
             api_bvps = self.financial_data.get('book_value_per_share', 0)
@@ -176,7 +176,7 @@ class CalculationDetailsSection:
             if api_bvps > 0:
                 diff_pct = abs(bvps - api_bvps) / api_bvps * 100
                 if diff_pct > 15:
-                    lines.append(f"- **API Book Value**: {unified_currency}{api_bvps:.2f} ({diff_pct:.1f}% difference)")
+                    lines.append(f"- **API Book Value**: {api_bvps:.2f} {unified_currency} ({diff_pct:.1f}% difference)")
                     lines.append("  - **Explanation**: Differences may be due to:")
                     lines.append("    - Different share count (API may use basic vs. diluted)")
                     lines.append("    - Different accounting treatment of intangibles")
@@ -205,10 +205,10 @@ class CalculationDetailsSection:
             
             if eps_for_graham > 0 and tbvps > 0:
                 lines.append(f"- **Formula**: √({GRAHAM_MULTIPLIER:g} × EPS × TBVPS)")
-                lines.append(f"- **EPS**: {unified_currency}{eps_for_graham:.2f}")
-                lines.append(f"- **TBVPS**: {unified_currency}{tbvps:.2f}")
+                lines.append(f"- **EPS**: {eps_for_graham:.2f} {unified_currency}")
+                lines.append(f"- **TBVPS**: {tbvps:.2f} {unified_currency}")
                 lines.append(f"- **Calculation**: √({GRAHAM_MULTIPLIER:g} × {eps_for_graham:.2f} × {tbvps:.2f}) = √({GRAHAM_MULTIPLIER * eps_for_graham * tbvps:.2f})")
-                lines.append(f"- **Graham Number**: {unified_currency}{graham_number:.2f}")
+                lines.append(f"- **Graham Number**: {graham_number:.2f} {unified_currency}")
                 lines.append("- **Note**: Uses unrounded intermediate values for precision")
             
             lines.append("")
@@ -231,17 +231,17 @@ class CalculationDetailsSection:
             total_liabilities = latest_data.get('total_liabilities', 0)
             
             if current_assets > 0 and total_liabilities > 0 and shares_used > 0:
-                lines.append(f"- **Current Assets**: {unified_currency}{current_assets:,.0f}")
-                lines.append(f"- **Total Liabilities**: {unified_currency}{total_liabilities:,.0f}")
+                lines.append(f"- **Current Assets**: {current_assets:,.0f} {unified_currency}")
+                lines.append(f"- **Total Liabilities**: {total_liabilities:,.0f} {unified_currency}")
                 claims_outside_equity = latest_data.get('claims_outside_equity', 0.0)
                 if claims_outside_equity > 0:
                     lines.append(f"- **Less: Minority Interest and Other Claims Outside Common Equity**: "
-                                 f"{unified_currency}{claims_outside_equity:,.0f}")
+                                 f"{claims_outside_equity:,.0f} {unified_currency}")
                 
                 net_current_assets = net_current_asset_value(current_assets, total_liabilities, claims_outside_equity)
-                lines.append(f"- **Net Current Assets**: {unified_currency}{net_current_assets:,.0f}")
+                lines.append(f"- **Net Current Assets**: {net_current_assets:,.0f} {unified_currency}")
                 lines.append(f"- **Divided by Shares**: {shares_used:,.0f}")
-                lines.append(f"- **Net-Net Value Per Share**: {unified_currency}{net_net:.2f}")
+                lines.append(f"- **Net-Net Value Per Share**: {net_net:.2f} {unified_currency}")
                 lines.append("- **Formula Used**: NCAV (Net Current Asset Value) = (Current Assets - Total Liabilities - claims ahead of the common) / Shares")
                 lines.append("  - **Note**: Graham's own measure: \"current assets alone, minus all liabilities and claims ahead of the issue\"")
                 lines.append("  - **Stricter alternative**: Graham's liquidating-value haircuts (Security Analysis ch. 43): cash 100%,")

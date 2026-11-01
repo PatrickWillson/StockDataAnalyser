@@ -88,7 +88,7 @@
 
 ### Financial Strength Risk:
 - **Current Ratio: 1.29x** - ⚠️ Below Graham's standards (defensive requires 2.0x)
-- **Long-Term Debt: $9,500,000 GBP** (5.0% of assets) - Conservative
+- **Long-Term Debt: 9,500,000 GBP** (5.0% of assets) - Conservative
 - **Debt Coverage: ✓** Long-term debt ≤ net current assets (passes Graham's defensive test)
 
 ### Operational Stability Risk:
@@ -243,9 +243,9 @@
   **Calculation for YU:**
   - Years Used: 10
   - Years: 2014-2023
-  - Net Incomes: GBP30,860,000, GBP4,769,000, GBP4,530,550, GBP4,304,022, GBP4,088,821, GBP3,884,380, GBP3,690,161, GBP3,505,653, GBP3,330,371, GBP3,163,852
-  - Normalized Earnings: GBP6,612,681 (average including losses)
-  - EPV: GBP66,126,810 (GBP6,612,681 / 10%)
+  - Net Incomes: 30,860,000 GBP, 4,769,000 GBP, 4,530,550 GBP, 4,304,022 GBP, 4,088,821 GBP, 3,884,380 GBP, 3,690,161 GBP, 3,505,653 GBP, 3,330,371 GBP, 3,163,852 GBP
+  - Normalized Earnings: 6,612,681 GBP (average including losses)
+  - EPV: 66,126,810 GBP (6,612,681 GBP / 10%)
   - EPV Per Share: 3.67 GBP
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
@@ -394,28 +394,28 @@ TTM calculations provide more current financial metrics by using the most recent
   - Using market float instead of financial statement shares can inflate per-share metrics by 5-10%
 
 ### Book Value Per Share (BVPS) Calculation:
-- **Total Stockholder Equity**: GBP81,000,000
-- **Less: Intangible Assets**: GBP4,800,000
-- **Less: Goodwill**: GBP0
-- **Tangible Book Value**: GBP76,200,000
+- **Total Stockholder Equity**: 81,000,000 GBP
+- **Less: Intangible Assets**: 4,800,000 GBP
+- **Less: Goodwill**: 0 GBP
+- **Tangible Book Value**: 76,200,000 GBP
 - **Divided by Shares**: 18,000,000
-- **Tangible Book Value Per Share (TBVPS)**: GBP4.23
-- **Book Value Per Share (BVPS)**: GBP4.50 (without subtracting intangibles)
+- **Tangible Book Value Per Share (TBVPS)**: 4.23 GBP
+- **Book Value Per Share (BVPS)**: 4.50 GBP (without subtracting intangibles)
 
 ### Graham Number Calculation:
 - **Formula**: √(22.5 × EPS × TBVPS)
-- **EPS**: GBP1.71
-- **TBVPS**: GBP4.23
+- **EPS**: 1.71 GBP
+- **TBVPS**: 4.23 GBP
 - **Calculation**: √(22.5 × 1.71 × 4.23) = √(163.30)
-- **Graham Number**: GBP12.78
+- **Graham Number**: 12.78 GBP
 - **Note**: Uses unrounded intermediate values for precision
 
 ### Net-Net Value Calculation:
-- **Current Assets**: GBP110,000,000
-- **Total Liabilities**: GBP109,000,000
-- **Net Current Assets**: GBP1,000,000
+- **Current Assets**: 110,000,000 GBP
+- **Total Liabilities**: 109,000,000 GBP
+- **Net Current Assets**: 1,000,000 GBP
 - **Divided by Shares**: 18,000,000
-- **Net-Net Value Per Share**: GBP0.06
+- **Net-Net Value Per Share**: 0.06 GBP
 - **Formula Used**: NCAV (Net Current Asset Value) = (Current Assets - Total Liabilities - claims ahead of the common) / Shares
   - **Note**: Graham's own measure: "current assets alone, minus all liabilities and claims ahead of the issue"
   - **Stricter alternative**: Graham's liquidating-value haircuts (Security Analysis ch. 43): cash 100%,

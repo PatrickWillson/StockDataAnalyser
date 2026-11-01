@@ -93,9 +93,9 @@
 
 ### Financial Strength Risk:
 - **Current Ratio: 0.99x** - ⚠️ Critical liquidity risk
-- **Long-Term Debt: $106,000,000,000 CAD** (30.0% of assets) - ⚠️ High leverage
-  - Short-term debt and leases: $5,088,000,000 CAD
-  - Total debt: $111,088,000,000 CAD (31.5% of assets)
+- **Long-Term Debt: 106,000,000,000 CAD** (30.0% of assets) - ⚠️ High leverage
+  - Short-term debt and leases: 5,088,000,000 CAD
+  - Total debt: 111,088,000,000 CAD (31.5% of assets)
 
 ### Operational Stability Risk:
 - **Profit Margin Stability: 25.7% average, 0.3% std dev** over 5 years
@@ -261,9 +261,9 @@
   **Calculation for AAPL:**
   - Years Used: 10
   - Years: 2014-2023
-  - Net Incomes: CAD96,995,000,000, CAD99,803,000,000, CAD94,680,000,000, CAD89,946,000,000, CAD85,448,700,000, CAD81,176,265,000, CAD77,117,451,750, CAD73,261,579,162, CAD69,598,500,204, CAD66,118,575,194
-  - Normalized Earnings: CAD83,414,507,131 (average including losses)
-  - EPV: CAD834,145,071,310 (CAD83,414,507,131 / 10%)
+  - Net Incomes: 96,995,000,000 CAD, 99,803,000,000 CAD, 94,680,000,000 CAD, 89,946,000,000 CAD, 85,448,700,000 CAD, 81,176,265,000 CAD, 77,117,451,750 CAD, 73,261,579,162 CAD, 69,598,500,204 CAD, 66,118,575,194 CAD
+  - Normalized Earnings: 83,414,507,131 CAD (average including losses)
+  - EPV: 834,145,071,310 CAD (83,414,507,131 CAD / 10%)
   - EPV Per Share: 53.64 CAD
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
@@ -409,20 +409,20 @@ TTM calculations provide more current financial metrics by using the most recent
   - Using market float instead of financial statement shares can inflate per-share metrics by 5-10%
 
 ### Book Value Per Share (BVPS) Calculation:
-- **Total Stockholder Equity**: CAD62,146,000,000
-- **Less: Intangible Assets**: CAD0
-- **Less: Goodwill**: CAD0
-- **Tangible Book Value**: CAD62,146,000,000
+- **Total Stockholder Equity**: 62,146,000,000 CAD
+- **Less: Intangible Assets**: 0 CAD
+- **Less: Goodwill**: 0 CAD
+- **Tangible Book Value**: 62,146,000,000 CAD
 - **Divided by Shares**: 15,550,061,000
-- **Tangible Book Value Per Share (TBVPS)**: CAD4.00
-- **Book Value Per Share (BVPS)**: CAD4.00 (without subtracting intangibles)
+- **Tangible Book Value Per Share (TBVPS)**: 4.00 CAD
+- **Book Value Per Share (BVPS)**: 4.00 CAD (without subtracting intangibles)
 
 ### Graham Number Calculation:
 - **Formula**: √(22.5 × EPS × TBVPS)
-- **EPS**: CAD6.24
-- **TBVPS**: CAD4.00
+- **EPS**: 6.24 CAD
+- **TBVPS**: 4.00 CAD
 - **Calculation**: √(22.5 × 6.24 × 4.00) = √(560.89)
-- **Graham Number**: CAD23.68
+- **Graham Number**: 23.68 CAD
 - **Note**: Uses unrounded intermediate values for precision
 
 ### EPV Methodology Clarification:
