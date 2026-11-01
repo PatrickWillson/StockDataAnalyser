@@ -11,6 +11,7 @@ from core.graham_math import GrahamCalculator
 from core.anomaly_detector import AnomalyDetector
 from core.historical_prices import apply_year_end_prices
 from core.ttm_calculator import TTMCalculator
+from core.models import or_default
 from output.dossier_generator import DossierGenerator
 from logging_utils import install_secret_redaction
 
@@ -123,10 +124,10 @@ def main():
                 ttm_metrics = ttm_calculator.compute()
                 
                 # Add TTM warnings to financial data warnings
-                if ttm_metrics.get('warnings'):
-                    financial_data['warnings'].extend(ttm_metrics['warnings'])
+                if ttm_metrics.warnings:
+                    financial_data['warnings'].extend(ttm_metrics.warnings)
                 
-                logger.info(f"TTM Analysis: {ttm_metrics.get('reporting_frequency', 'N/A')} reporting detected")
+                logger.info(f"TTM Analysis: {or_default(ttm_metrics.reporting_frequency, 'N/A')} reporting detected")
             except Exception as e:
                 logger.warning(f"TTM calculation failed: {str(e)}")
                 financial_data['warnings'].append(f"TTM Analysis: Calculation failed - {str(e)}")
