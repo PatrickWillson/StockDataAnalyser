@@ -5,7 +5,7 @@ Moved verbatim from GrahamCalculator (M4.4); the Graham alignment of each criter
 """
 
 from config.graham_constants import GRAHAM_MULTIPLIER
-from config.investor_thresholds import DEFENSIVE
+from config.investor_thresholds import DEFENSIVE, REGULATED_UTILITY_INDUSTRIES
 from core.formulas import tangible_equity
 from core.financial_data_processor import FinancialDataProcessor
 from core.history import has_statement_data
@@ -127,13 +127,43 @@ def pb_ratio(history: dict, years: list, price: float, max_pb: float = 1.5) -> s
     return 'PASS' if product is not None and product <= GRAHAM_MULTIPLIER else 'FAIL'
 
 
-def run_defensive_tests(history: dict, years: list, num_years: int, price: float) -> dict:
+NOT_APPLICABLE_UTILITY = 'NOT APPLICABLE (public utility)'
+
+
+def is_public_utility(industry) -> bool:
+    """Graham's public utilities: EODHD's regulated-utility industries only (GRAHAM_METHODOLOGY §4.2)."""
+    return industry in REGULATED_UTILITY_INDUSTRIES
+
+
+def utility_debt_to_equity(history: dict, years: list) -> str:
+    """
+    Criterion 4.2 for public utilities: debt not more than twice the stock equity at book value.
+    Total debt (short- and long-term incl. leases) is used for Graham's unqualified "debt" — the
+    conservative reading (§8.4); equity is total stockholders' equity (user decision 2026-11-01).
+    """
+    if not years:
+        return 'FAIL'
+    latest_year = latest_financial_year(history, years)
+    if not latest_year:
+        return 'FAIL'
+    equity = history[latest_year].get('total_equity', 0.0)
+    if equity <= 0:
+        return 'FAIL'
+    total_debt = history[latest_year].get('total_debt', 0.0)
+    return 'PASS' if total_debt <= DEFENSIVE.UTILITY_MAX_DEBT_TO_EQUITY * equity else 'FAIL'
+
+
+def run_defensive_tests(history: dict, years: list, num_years: int, price: float, industry=None) -> dict:
     """All defensive criteria for a history with at least one year (years newest first)."""
+    utility = is_public_utility(industry)
     return {
         'earnings_stability': earnings_stability(history, years, min_years=DEFENSIVE.MIN_EARNINGS_YEARS,
                                                  period=DEFENSIVE.EARNINGS_STABILITY_YEARS),
-        'current_ratio': current_ratio_test(history, years, min_ratio=DEFENSIVE.MIN_CURRENT_RATIO),
-        'debt_to_assets': debt_to_net_current_assets(history, years),
+        # Graham drops the current-ratio test for public utilities
+        'current_ratio': NOT_APPLICABLE_UTILITY if utility else
+                         current_ratio_test(history, years, min_ratio=DEFENSIVE.MIN_CURRENT_RATIO),
+        'debt_to_assets': utility_debt_to_equity(history, years) if utility else
+                          debt_to_net_current_assets(history, years),
         'dividend_record': dividend_record(history, years, num_years),
         'earnings_growth': earnings_growth(history, years, num_years),
         'pe_ratio': pe_ratio(history, years, price, max_pe=DEFENSIVE.MAX_PE_RATIO),

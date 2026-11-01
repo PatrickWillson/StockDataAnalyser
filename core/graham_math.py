@@ -810,7 +810,7 @@ class GrahamCalculator:
             if tbvps is _UNSET:
                 tbvps = self.compute_tbvps(round_result=False)
             return enterprising.run_enterprising_tests(history, years, num_years, price, tbvps)
-        return defensive.run_defensive_tests(history, years, num_years, price)
+        return defensive.run_defensive_tests(history, years, num_years, price, self.data.get('industry'))
     
     # Keep old method name for backward compatibility
     def run_defensive_tests(self) -> dict:
@@ -893,6 +893,7 @@ class GrahamCalculator:
             'combined_pe_pb_test': combined_pe_pb_test,
             'verdict': verdict['verdict'],
             'verdict_reason': verdict['reason'],
+            'public_utility': defensive.is_public_utility(self.data.get('industry')),
             'defensive_tests': defensive_tests,
             'enterprising_tests': enterprising_tests,
             'warnings': self.warnings.copy()

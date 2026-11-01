@@ -351,6 +351,7 @@
     },
     "net_net_value": 0.06,
     "normalized_graham_number": 8.42,
+    "public_utility": false,
     "quick_ratio": 1.2,
     "tbvps": 4.23,
     "three_year_avg_pe": {

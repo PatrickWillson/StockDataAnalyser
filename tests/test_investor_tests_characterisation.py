@@ -394,3 +394,32 @@ class TestComputeCurrentRatio:
         unrounded = (ratio * 100.0) / 100.0
         assert calc.compute_current_ratio()["ratio"] == round(unrounded, 2)
         assert _run("_test_current_ratio", history, min_ratio=2.0) == ("PASS" if unrounded >= 2.0 else "FAIL")
+
+
+class TestPublicUtility:
+    """Defensive 4.2 for public utilities (F20): debt ≤ 2 × book equity; no current-ratio test."""
+
+    @staticmethod
+    def _tests(industry, **fields):
+        history = {f"{2023 - i}-12-31": _year(**fields) for i in range(3)}
+        return defensive.run_defensive_tests(history, _years(history), len(history), 20.0, industry)
+
+    def test_regulated_utility_uses_debt_to_equity_and_drops_current_ratio(self):
+        # current ratio 0.5 and total debt 900 > NCA, but 900 <= 2 x 500 equity
+        tests = self._tests("Utilities - Regulated Electric", current_assets=50.0, current_liabilities=100.0,
+                            total_debt=900.0)
+        assert tests['current_ratio'] == defensive.NOT_APPLICABLE_UTILITY
+        assert tests['debt_to_assets'] == "PASS"
+
+    def test_utility_debt_above_twice_equity_fails(self):
+        tests = self._tests("Utilities - Regulated Water", total_debt=1000.01)
+        assert tests['debt_to_assets'] == "FAIL"
+
+    def test_unregulated_utility_sector_keeps_industrial_tests(self):
+        tests = self._tests("Utilities - Diversified", current_assets=50.0, current_liabilities=100.0)
+        assert tests['current_ratio'] == "FAIL"
+
+    def test_not_applicable_does_not_block_the_verdict(self):
+        tests = {**ALL_PASS_DEFENSIVE, 'current_ratio': defensive.NOT_APPLICABLE_UTILITY}
+        result = determine_verdict({'mos_percentage': 10.0, 'intrinsic_value_used': 25.0}, "N/A", 20.0, tests, None)
+        assert result['verdict'] == "DEFENSIVE BUY"

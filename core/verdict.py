@@ -27,8 +27,12 @@ TEST_NAMES = {
 
 
 def _not_passed(tests: Optional[dict]) -> list:
-    """Criteria that did not PASS ("N/A" never counts as a pass)."""
-    return [TEST_NAMES.get(name, name) for name, result in (tests or {}).items() if result != 'PASS']
+    """
+    Criteria that did not PASS ("N/A" never counts as a pass). A criterion Graham does not apply
+    to the company ("NOT APPLICABLE ...", e.g. the current ratio for a public utility) is left out.
+    """
+    return [TEST_NAMES.get(name, name) for name, result in (tests or {}).items()
+            if result != 'PASS' and not str(result).startswith('NOT APPLICABLE')]
 
 
 def determine_verdict(margin_of_safety_details: dict, net_net_value: Union[float, str, None], price: float,

@@ -44,6 +44,8 @@ class DefensiveThresholds:
     MIN_DIVIDEND_YEARS: int = 20  # Graham: uninterrupted dividends for at least 20 years
     EARNINGS_GROWTH_AVERAGE_YEARS: int = 3
     EARNINGS_GROWTH_BASE_OFFSET: int = 9
+    # Public utilities (4.2): debt at most this multiple of stock equity at book value; no current-ratio test
+    UTILITY_MAX_DEBT_TO_EQUITY: float = 2.0
 
 
 @dataclass(frozen=True)
@@ -74,6 +76,14 @@ class EnterprisingThresholds:
     EARNINGS_STABILITY_YEARS: int = 5
     EARNINGS_GROWTH_YEARS: int = 5
 
+
+# EODHD General.Industry values treated as Graham's public utilities (user decision 2026-11-01:
+# regulated utilities only; GRAHAM_METHODOLOGY §4.2)
+REGULATED_UTILITY_INDUSTRIES: Final[frozenset] = frozenset({
+    "Utilities - Regulated Electric",
+    "Utilities - Regulated Gas",
+    "Utilities - Regulated Water",
+})
 
 # Singleton instances for use throughout the application
 DEFENSIVE: Final[DefensiveThresholds] = DefensiveThresholds()

@@ -66,12 +66,19 @@ class GrahamTestsSection:
         # Test 2: Current Ratio
         current_ratio = defensive_tests.get('current_ratio', 'N/A')
         lines.append(f"2. **Current Ratio**: {current_ratio}")
-        lines.append(f"   - Criterion: Current Ratio ≥ {DEFENSIVE.MIN_CURRENT_RATIO:.1f}")
+        public_utility = self.metrics.get('public_utility', False)
+        if public_utility:
+            lines.append("   - Criterion: Not applied to public utilities (Graham)")
+        else:
+            lines.append(f"   - Criterion: Current Ratio ≥ {DEFENSIVE.MIN_CURRENT_RATIO:.1f}")
         
         # Test 3: Debt to Assets
         debt_to_assets = defensive_tests.get('debt_to_assets', 'N/A')
         lines.append(f"3. **Debt to Assets**: {debt_to_assets}")
-        lines.append("   - Criterion: Long-term debt ≤ net current assets (current assets − current liabilities)")
+        if public_utility:
+            lines.append(f"   - Criterion (public utility): Total debt ≤ {DEFENSIVE.UTILITY_MAX_DEBT_TO_EQUITY:g} × stockholders' equity at book value")
+        else:
+            lines.append("   - Criterion: Long-term debt ≤ net current assets (current assets − current liabilities)")
         
         # Test 4: Dividend Record
         dividend_record = defensive_tests.get('dividend_record', 'N/A')
