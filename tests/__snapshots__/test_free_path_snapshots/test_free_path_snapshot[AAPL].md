@@ -81,7 +81,7 @@
 - Per-share figures and share counts adjusted to today's share basis for stock splits (Yahoo Finance split history): 2014-06-09 7:1, 2020-08-31 4:1
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
 - Statements as filed with the SEC; latest 10-K/10-Q filed 2026-07-31
-- SEC EDGAR: long-term debt: LongTermDebt used (may include the current portion) (FY2012, FY2013)
+- SEC EDGAR: long-term debt: LongTermDebt used (includes the current portion) (FY2012, FY2013)
 - SEC EDGAR: restated in later filings, latest figure used (first reported -> latest): FY2018 current liabilities 116,866M -> 115,929M; FY2016 dividends paid 11,965M -> 12,150M; FY2015 long-term debt 53,463M -> 53,329M; FY2015 dividends paid 11,431M -> 11,561M; FY2009 revenue 36,537M -> 42,905M; FY2009 net income 5,704M -> 8,235M; FY2009 EPS 0.23 -> 0.33; FY2009 total assets 53,851M -> 47,501M; FY2009 liabilities and equity 53,851M -> 47,501M; FY2009 stockholders' equity 27,832M -> 31,640M; FY2009 total liabilities 26,019M -> 15,861M; FY2009 current assets 36,265M -> 31,555M; FY2009 current liabilities 19,282M -> 11,506M; FY2008 revenue 32,479M -> 37,491M; FY2008 net income 4,834M -> 6,119M; FY2008 EPS 0.20 -> 0.25; FY2008 total assets 39,572M -> 36,171M; FY2008 liabilities and equity 39,572M -> 36,171M; FY2008 stockholders' equity 21,030M -> 22,297M; FY2008 total liabilities 18,542M -> 13,874M; FY2008 current assets 32,311M -> 30,006M; FY2008 current liabilities 14,092M -> 11,361M; FY2007 revenue 24,006M -> 24,578M
 - SEC EDGAR: fourth quarter: derived as the fiscal year minus the first nine months (FY2024, FY2025)
 - Price Source: yfinance (primary source)

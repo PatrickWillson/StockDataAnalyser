@@ -253,3 +253,46 @@ def test_years_without_share_count_or_eps_are_noted():
     notes = " ".join(annual_data(facts).notes)
     assert "share count: not in the SEC data" in notes and "(FY2020)" in notes
     assert "EPS: not in the SEC data" in notes
+
+
+# --- Intangibles, bank debt and energy inventory tagged by component ----------------------------
+
+def test_intangibles_tagged_by_kind_are_summed_once():
+    """Coca-Cola tags no intangibles total: trademarks + the 'other intangible assets' line."""
+    data = mapped("KO")
+    assert row(data.balance_sheets, "2024-12-31").intangible_assets == 13_301e6          # trademarks
+    assert row(data.balance_sheets, "2020-12-31").intangible_assets == pytest.approx(10_395e6 + 649e6, rel=0.001)
+    assert any("intangibles (ex goodwill): derived as the sum of IndefiniteLivedTrademarks" in n for n in data.notes)
+
+
+def test_bank_long_term_debt_including_current_maturities():
+    """JPMorgan tags long-term debt only including current maturities: not added again as short-term."""
+    data = mapped("JPM")
+    balance = row(data.balance_sheets, "2024-12-31")
+    assert balance.long_term_debt == 401_418e6 and balance.short_term_debt == 52_893e6
+    assert balance.total_debt == 454_311e6
+    assert any("LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities used" in n for n in data.notes)
+
+
+def test_energy_inventory_total_plus_supplies():
+    """ExxonMobil 2024: crude oil, products and merchandise 19,444 + materials and supplies 4,080."""
+    facts = _facts({
+        "NetIncomeLoss": [("2024-01-01", "2024-12-31", 1.0, "2025-02-01", "10-K", "USD")],
+        "Assets": [(None, "2024-12-31", 100.0, "2025-02-01", "10-K", "USD")],
+        "EnergyRelatedInventory": [(None, "2024-12-31", 19_444.0, "2025-02-01", "10-K", "USD")],
+        "EnergyRelatedInventoryPetroleum": [(None, "2024-12-31", 6_483.0, "2025-02-01", "10-K", "USD")],
+        "InventoryPartsAndComponentsNetOfReserves": [(None, "2024-12-31", 4_080.0, "2025-02-01", "10-K", "USD")],
+    })
+    assert annual_data(facts).balance_sheets[0].inventory == 23_524.0
+
+
+def test_unmapped_intangible_tags_are_noted():
+    facts = _facts({
+        "NetIncomeLoss": [("2024-01-01", "2024-12-31", 1.0, "2025-02-01", "10-K", "USD")],
+        "Assets": [(None, "2024-12-31", 100.0, "2025-02-01", "10-K", "USD")],
+        "IndefiniteLivedBroadcastIntangibles": [(None, "2024-12-31", 30.0, "2025-02-01", "10-K", "USD")],
+        "DeferredTaxLiabilitiesGoodwillAndIntangibleAssets": [(None, "2024-12-31", 5.0, "2025-02-01", "10-K", "USD")],
+    })
+    notes = " ".join(annual_data(facts).notes)
+    assert "IndefiniteLivedBroadcastIntangibles is tagged but not included" in notes
+    assert "DeferredTax" not in notes

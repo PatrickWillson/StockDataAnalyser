@@ -22,6 +22,7 @@ Only USD statements are mapped (foreign SEC filers are a later step).
 """
 
 import datetime as dt
+import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -46,16 +47,26 @@ TEMPORARY_EQUITY = ("TemporaryEquityCarryingAmountAttributableToParent", "Redeem
 GOODWILL = ("Goodwill",)
 INTANGIBLES = ("IntangibleAssetsNetExcludingGoodwill",)
 FINITE_INTANGIBLES, INDEFINITE_INTANGIBLES = ("FiniteLivedIntangibleAssetsNet",), ("IndefiniteLivedIntangibleAssetsExcludingGoodwill",)
+# Indefinite-lived intangibles tagged by kind (Coca-Cola: trademarks, bottlers' franchise rights)
+NAMED_INDEFINITE_INTANGIBLES = ("IndefiniteLivedTrademarks", "IndefiniteLivedFranchiseRights",
+                                "IndefiniteLivedLicenseAgreements", "IndefiniteLivedTradeNames",
+                                "IndefiniteLivedContractualRights")
+OTHER_INTANGIBLES = ("OtherIntangibleAssetsNet",)                 # finite + other indefinite, as one line
+OTHER_INDEFINITE_INTANGIBLES = ("OtherIndefiniteLivedIntangibleAssets",)
 CURRENT_ASSETS, CURRENT_LIABILITIES = ("AssetsCurrent",), ("LiabilitiesCurrent",)
 LIABILITIES, ASSETS, LIABILITIES_AND_EQUITY = ("Liabilities",), ("Assets",), ("LiabilitiesAndStockholdersEquity",)
 LONG_TERM_DEBT = ("LongTermDebtNoncurrent", "LongTermDebtAndCapitalLeaseObligations")
-LONG_TERM_DEBT_TOTAL = ("LongTermDebt",)   # incl. the current portion; banks report only this
+LONG_TERM_DEBT_TOTAL = ("LongTermDebt", "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities")
+# ^ incl. the current portion; banks report only these (JPMorgan: the second)
 DEBT_CURRENT = ("DebtCurrent",)
 SHORT_BORROWINGS, COMMERCIAL_PAPER = ("ShortTermBorrowings",), ("CommercialPaper",)
 LTD_CURRENT = ("LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCurrent")
 INVENTORY = ("InventoryNet",)
 UTILITY_INVENTORY = ("EnergyRelatedInventoryNaturalGasInStorage", "EnergyRelatedInventoryOtherFossilFuel",
                      "EnergyRelatedInventoryCoal", "EnergyRelatedInventoryPropaneGas", "OtherInventorySupplies")
+# Energy companies tagging a total (ExxonMobil: crude oil, products and merchandise + materials and supplies)
+ENERGY_INVENTORY_TOTAL = ("EnergyRelatedInventory",)
+SUPPLIES_INVENTORY = ("OtherInventorySupplies", "InventoryPartsAndComponentsNetOfReserves")
 PREFERRED = ("PreferredStockValue", "PreferredStockValueOutstanding")
 SHARES_OUTSTANDING = ("CommonStockSharesOutstanding",)
 SHARES_ISSUED, TREASURY_SHARES = ("CommonStockSharesIssued",), ("TreasuryStockCommonShares", "TreasuryStockShares")
@@ -220,6 +231,50 @@ def _sum(facts: _Facts, chain: Sequence[str], end: str, unit: str) -> Tuple[Opti
     return (total, used) if used else (None, [])
 
 
+def _first(facts: _Facts, chain: Sequence[str], end: str) -> Tuple[Optional[float], List[str]]:
+    """The first tag of `chain` with an instant value: (value, [tag]) or (None, [])."""
+    fact = facts.get(chain, end, MONEY, "instant")
+    return (None, []) if fact is None else (fact.value, [fact.tag])
+
+
+def _intangible_parts(facts: _Facts, end: str) -> Tuple[Optional[float], List[str]]:
+    """
+    Intangibles excluding goodwill when no total is tagged: the indefinite-lived total, else its named
+    kinds (trademarks, franchise rights, ...), plus the "other intangible assets" line (finite + other
+    indefinite), else finite-lived + other indefinite-lived. Each figure is counted once.
+    """
+    indefinite, used = _first(facts, INDEFINITE_INTANGIBLES, end)
+    if indefinite is None:
+        indefinite, used = _sum(facts, NAMED_INDEFINITE_INTANGIBLES, end, MONEY)
+        other, other_used = _first(facts, OTHER_INTANGIBLES, end)
+        if other is None:
+            finite, finite_used = _first(facts, FINITE_INTANGIBLES, end)
+            other_indefinite, oi_used = _first(facts, OTHER_INDEFINITE_INTANGIBLES, end)
+            parts = [v for v in (finite, other_indefinite) if v is not None]
+            other, other_used = (sum(parts) if parts else None), finite_used + oi_used
+    else:
+        other, other_used = _first(facts, FINITE_INTANGIBLES, end)
+    values = [v for v in (indefinite, other) if v is not None]
+    return (sum(values) if values else None), used + other_used
+
+
+_INTANGIBLE_TAG = re.compile(r"Intangible|Trademark|FranchiseRights|LicenseAgreements|TradeNames")
+_NOT_A_BALANCE = re.compile(r"Tax|Amortization|Impairment|Disposal|Acquired|Useful|Payments|Proceeds|Gross|"
+                            r"Accumulated|Expected|Increase|Decrease|Weighted|Percentage|Goodwill")
+_MAPPED_INTANGIBLES = set(INTANGIBLES + FINITE_INTANGIBLES + INDEFINITE_INTANGIBLES + NAMED_INDEFINITE_INTANGIBLES
+                          + OTHER_INTANGIBLES + OTHER_INDEFINITE_INTANGIBLES)
+
+
+def _note_unmapped_intangibles(facts: _Facts, end: str, notes: _Notes) -> None:
+    """List intangible-asset tags with a value at `end` that the mapping does not read (a gap to fix)."""
+    for tag, concept in facts.facts.get(GAAP, {}).items():
+        if tag in _MAPPED_INTANGIBLES or not _INTANGIBLE_TAG.search(tag) or _NOT_A_BALANCE.search(tag):
+            continue
+        values = facts.series(tag, MONEY, "instant").get(end)
+        if values and any(v for _, v in values):
+            notes.derive("intangibles", f"{tag} is tagged but not included (check the intangibles total)", end)
+
+
 def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "year") -> Optional[BalanceSheetRow]:
     assets = facts.get(ASSETS, end, MONEY, "instant")
     liabilities_and_equity = facts.get(LIABILITIES_AND_EQUITY, end, MONEY, "instant")
@@ -250,21 +305,37 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
 
     intangibles = field("intangibles", INTANGIBLES)
     if intangibles is None:
-        finite = field("intangibles", FINITE_INTANGIBLES)
-        indefinite = field("intangibles", INDEFINITE_INTANGIBLES)
-        if finite is not None or indefinite is not None:
-            intangibles = (finite or 0.0) + (indefinite or 0.0)
+        intangibles, used = _intangible_parts(facts, end)
+        if used:
+            notes.derive("intangibles (ex goodwill)", "derived as the sum of " + ", ".join(used), end)
+    _note_unmapped_intangibles(facts, end, notes)
+
+    long_term_debt = field("long-term debt", LONG_TERM_DEBT)
+    includes_current = False
+    if long_term_debt is None:
+        total_fact = facts.get(LONG_TERM_DEBT_TOTAL, end, MONEY, "instant")
+        notes.fact("long-term debt", end, total_fact)
+        if total_fact is not None:
+            long_term_debt, includes_current = total_fact.value, True
+            notes.derive("long-term debt", f"{total_fact.tag} used (includes the current portion)", end)
 
     debt_current = field("short-term debt", DEBT_CURRENT)
     if debt_current is None:
-        parts = [field("short-term debt", SHORT_BORROWINGS) or field("short-term debt", COMMERCIAL_PAPER),
-                 field("short-term debt", LTD_CURRENT)]
+        parts = [field("short-term debt", SHORT_BORROWINGS) or field("short-term debt", COMMERCIAL_PAPER)]
+        if not includes_current:   # the current portion is already in a long-term total
+            parts.append(field("short-term debt", LTD_CURRENT))
         if any(p is not None for p in parts):
             debt_current = sum(p or 0.0 for p in parts)
 
     inventory = field("inventory", INVENTORY)
     if inventory is None:
-        inventory, used = _sum(facts, UTILITY_INVENTORY, end, MONEY)
+        energy = facts.get(ENERGY_INVENTORY_TOTAL, end, MONEY, "instant")
+        if energy is not None:
+            supplies, supplies_used = _first(facts, SUPPLIES_INVENTORY, end)
+            inventory = energy.value + (supplies or 0.0)
+            used = [energy.tag] + supplies_used
+        else:
+            inventory, used = _sum(facts, UTILITY_INVENTORY, end, MONEY)
         if used:
             notes.derive("inventory", "derived as the sum of " + ", ".join(used), end)
 
@@ -289,12 +360,6 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
             if weighted is not None:
                 shares = weighted.value
                 notes.derive("year-end shares", "weighted-average basic shares of the period (no period-end count tagged)", end)
-
-    long_term_debt = field("long-term debt", LONG_TERM_DEBT)
-    if long_term_debt is None:
-        long_term_debt = field("long-term debt", LONG_TERM_DEBT_TOTAL)
-        if long_term_debt is not None:
-            notes.derive("long-term debt", "LongTermDebt used (may include the current portion)", end)
 
     return BalanceSheetRow(
         period_end=end,

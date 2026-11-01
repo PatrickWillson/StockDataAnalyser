@@ -68,7 +68,7 @@
 - **Current Assets**: 0.00 USD
 - **Current Liabilities**: 0.00 USD
 - **Net Current Assets**: 0.00 USD
-- **Long-term Debt**: 0.00 USD
+- **Long-term Debt**: 435,206,000,000.00 USD
 - **Debt Coverage Ratio**: N/A
 - Beta (Volatility): 1.100
 
@@ -78,8 +78,12 @@
 
 ### Data Quality & Limitations:
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
-- SEC EDGAR: long-term debt: LongTermDebt used (may include the current portion) (FY2008, FY2009, FY2010, FY2011, FY2012, FY2013)
-- SEC EDGAR: restated in later filings, latest figure used (first reported -> latest): FY2020 revenue 119,543M -> 119,951M; FY2019 revenue 115,627M -> 115,720M; FY2018 revenue 109,029M -> 108,783M; FY2017 revenue 99,624M -> 100,705M; FY2016 revenue 95,668M -> 96,569M; FY2016 net income 22,583M -> 22,834M; FY2015 net income 22,406M -> 22,651M; FY2014 revenue 94,205M -> 95,112M; FY2014 EPS 5.34 -> 5.33; FY2014 equity incl. minority interest 232,065M -> 231,727M; FY2014 stockholders' equity 232,065M -> 231,727M; FY2013 revenue 96,606M -> 97,367M; FY2013 net income 16,593M -> 16,557M; FY2013 EPS 4.39 -> 4.38; FY2013 equity incl. minority interest 211,178M -> 210,857M; FY2010 long-term debt 247,669M -> 270,653M; FY2009 total assets 2,031,989M -> 2,119,673M; FY2009 stockholders' equity 165,365M -> 160,845M; FY2009 total liabilities 1,866,624M -> 1,958,828M
+- SEC EDGAR: intangibles (ex goodwill): derived as the sum of IndefiniteLivedIntangibleAssetsExcludingGoodwill, FiniteLivedIntangibleAssetsNet (FY2022, FY2023, FY2024, FY2025)
+- SEC EDGAR: long-term debt: LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities used (includes the current portion) (FY2013, FY2014, FY2015, FY2016, FY2017, FY2018, FY2019, FY2020, FY2021, FY2022, FY2023, FY2024, FY2025)
+- SEC EDGAR: intangibles (ex goodwill): derived as the sum of OtherIntangibleAssetsNet (FY2009, FY2015, FY2016)
+- SEC EDGAR: intangibles (ex goodwill): derived as the sum of IndefiniteLivedIntangibleAssetsExcludingGoodwill (FY2010, FY2011, FY2012, FY2013, FY2014)
+- SEC EDGAR: long-term debt: LongTermDebt used (includes the current portion) (FY2008, FY2009, FY2010, FY2011, FY2012)
+- SEC EDGAR: restated in later filings, latest figure used (first reported -> latest): FY2020 revenue 119,543M -> 119,951M; FY2019 revenue 115,627M -> 115,720M; FY2018 revenue 109,029M -> 108,783M; FY2017 revenue 99,624M -> 100,705M; FY2016 revenue 95,668M -> 96,569M; FY2016 net income 22,583M -> 22,834M; FY2015 net income 22,406M -> 22,651M; FY2014 revenue 94,205M -> 95,112M; FY2014 EPS 5.34 -> 5.33; FY2014 equity incl. minority interest 232,065M -> 231,727M; FY2014 stockholders' equity 232,065M -> 231,727M; FY2014 long-term debt 276,836M -> 276,379M; FY2013 revenue 96,606M -> 97,367M; FY2013 net income 16,593M -> 16,557M; FY2013 EPS 4.39 -> 4.38; FY2013 equity incl. minority interest 211,178M -> 210,857M; FY2010 long-term debt 247,669M -> 270,653M; FY2009 total assets 2,031,989M -> 2,119,673M; FY2009 stockholders' equity 165,365M -> 160,845M; FY2009 total liabilities 1,866,624M -> 1,958,828M
 - SEC EDGAR: fourth quarter: derived as the fiscal year minus the first nine months (FY2024, FY2025)
 - Price Source: yfinance (primary source)
 - Year 2026-12-31: Incomplete data (missing: revenue, net_income, eps, total_equity)
@@ -107,8 +111,9 @@
 - **Beta: 1.100** - Above-market volatility
 
 ### Financial Strength Risk:
-- **Long-Term Debt: 0 USD** - Debt-free (excellent)
-  - Short-term debt and leases: 64,776,000,000 USD (1.5% of assets)
+- **Long-Term Debt: 435,206,000,000 USD** (9.8% of assets) - Conservative
+  - Short-term debt and leases: 64,776,000,000 USD
+  - Total debt: 499,982,000,000 USD (11.3% of assets)
 
 ### Operational Stability Risk:
 - **Profit Margin Stability: 28.6% average, 4.8% std dev** over 10 years
@@ -138,7 +143,7 @@
    - Criterion: Positive earnings in each of the past 10 years
 2. **Current Ratio**: FAIL
    - Criterion: Current Ratio ≥ 2.0
-3. **Debt to Assets**: PASS
+3. **Debt to Assets**: FAIL
    - Criterion: Long-term debt ≤ net current assets (current assets − current liabilities)
 4. **Dividend Record**: PASS
    - Criterion: Uninterrupted dividend payments for at least 20 years
@@ -162,7 +167,7 @@
    - Criterion: No deficit in the last 5 years
 2. **Current Ratio**: FAIL
    - Criterion: Current Ratio ≥ 1.5
-3. **Debt to Assets**: PASS
+3. **Debt to Assets**: FAIL
    - Criterion: Long-term debt ≤ 110% of net current assets (current assets − current liabilities)
 4. **Dividend Record**: PASS
    - Criterion: Currently pays a dividend (last year > 0)
@@ -179,18 +184,18 @@
 | Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
 | 2026 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 2.37 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2025 | 182.45B | 55.68B | 20.05 | 3.07 | 134.43 | 0.00 | 15.3% | 64.78B | 2.696B | 286.32 | 14.3 | 2.1 |
-| 2024 | 177.56B | 56.87B | 19.79 | 2.98 | 123.23 | 0.00 | 15.0% | 52.89B | 2.798B | 272.63 | 13.8 | 2.2 |
-| 2023 | 158.10B | 47.76B | 16.25 | 2.89 | 113.98 | 0.00 | 17.8% | 44.71B | 2.877B | 258.95 | 15.9 | 2.3 |
-| 2022 | 128.69B | 35.89B | 12.10 | 2.81 | 99.63 | 0.00 | 23.2% | 44.03B | 2.934B | 245.26 | 20.3 | 2.5 |
-| 2021 | 121.65B | 46.50B | 15.39 | 2.72 | 99.90 | 0.00 | 17.7% | 53.59B | 2.944B | 231.58 | 15.0 | 2.3 |
-| 2020 | 119.95B | 27.41B | 8.89 | 2.64 | 91.61 | 0.00 | 29.7% | 45.21B | 3.049B | 217.89 | 24.5 | 2.4 |
-| 2019 | 115.72B | 34.64B | 10.75 | 2.57 | 84.74 | 0.00 | 23.9% | 40.92B | 3.084B | 204.21 | 19.0 | 2.4 |
-| 2018 | 108.78B | 30.71B | 9.04 | 2.49 | 78.31 | 0.00 | 27.6% | 69.28B | 3.276B | 190.53 | 21.1 | 2.4 |
-| 2017 | 100.70B | 22.57B | 6.35 | 2.42 | 74.65 | 0.00 | 38.1% | 51.80B | 3.425B | 176.84 | 27.8 | 2.4 |
-| 2016 | 96.57B | 22.83B | 6.24 | 2.35 | 71.38 | 0.00 | 37.7% | 34.44B | 3.561B | 163.16 | 26.1 | 2.3 |
-| 2015 | 93.54B | 22.65B | 6.05 | 2.28 | 67.58 | 0.00 | 37.7% | 15.56B | 3.663B | 149.47 | 24.7 | 2.2 |
-| 2014 | 95.11B | 20.08B | 5.33 | 2.21 | 62.38 | 0.00 | 41.6% | 66.34B | 3.715B | 135.79 | 25.5 | 2.2 |
+| 2025 | 182.45B | 55.68B | 20.05 | 3.07 | 134.43 | 0.00 | 15.3% | 499.98B | 2.696B | 286.32 | 14.3 | 2.1 |
+| 2024 | 177.56B | 56.87B | 19.79 | 2.98 | 123.23 | 0.00 | 15.0% | 454.31B | 2.798B | 272.63 | 13.8 | 2.2 |
+| 2023 | 158.10B | 47.76B | 16.25 | 2.89 | 113.98 | 0.00 | 17.8% | 436.54B | 2.877B | 258.95 | 15.9 | 2.3 |
+| 2022 | 128.69B | 35.89B | 12.10 | 2.81 | 99.63 | 0.00 | 23.2% | 339.89B | 2.934B | 245.26 | 20.3 | 2.5 |
+| 2021 | 121.65B | 46.50B | 15.39 | 2.72 | 99.90 | 0.00 | 17.7% | 354.60B | 2.944B | 231.58 | 15.0 | 2.3 |
+| 2020 | 119.95B | 27.41B | 8.89 | 2.64 | 91.61 | 0.00 | 29.7% | 326.89B | 3.049B | 217.89 | 24.5 | 2.4 |
+| 2019 | 115.72B | 34.64B | 10.75 | 2.57 | 84.74 | 0.00 | 23.9% | 332.42B | 3.084B | 204.21 | 19.0 | 2.4 |
+| 2018 | 108.78B | 30.71B | 9.04 | 2.49 | 78.31 | 0.00 | 27.6% | 351.31B | 3.276B | 190.53 | 21.1 | 2.4 |
+| 2017 | 100.70B | 22.57B | 6.35 | 2.42 | 74.65 | 0.00 | 38.1% | 335.88B | 3.425B | 176.84 | 27.8 | 2.4 |
+| 2016 | 96.57B | 22.83B | 6.24 | 2.35 | 71.38 | 0.00 | 37.7% | 329.69B | 3.561B | 163.16 | 26.1 | 2.3 |
+| 2015 | 93.54B | 22.65B | 6.05 | 2.28 | 67.58 | 0.00 | 37.7% | 304.21B | 3.663B | 149.47 | 24.7 | 2.2 |
+| 2014 | 95.11B | 20.08B | 5.33 | 2.21 | 62.38 | 0.00 | 41.6% | 342.72B | 3.715B | 135.79 | 25.5 | 2.2 |
 | 2013 | 97.37B | 16.56B | 4.38 | 2.15 | 56.22 | 0.00 | 49.1% | 325.74B | 3.756B | 122.11 | 27.9 | 2.2 |
 | 2012 | 97.03B | 19.88B | 5.22 | 2.09 | 53.65 | 0.00 | 40.0% | 304.39B | 3.804B | 108.42 | 20.8 | 2.0 |
 | 2011 | 97.23B | 17.57B | 4.50 | 2.03 | 48.66 | 0.00 | 45.0% | 308.41B | 3.773B | 94.74 | 21.1 | 1.9 |
