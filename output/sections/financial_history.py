@@ -8,6 +8,7 @@ per share, total debt, shares outstanding, historical prices, and valuation rati
 from typing import List, Dict, Any, Optional
 
 from output.sections.base import DossierSection
+from core.models import FinancialData, or_default
 from core.report_context import ReportContext, build_report_context
 
 
@@ -32,7 +33,7 @@ class FinancialHistorySection(DossierSection):
             financial_data: Dictionary containing financial data (FinancialData DTO)
             context: Shared view model (built here when the section is used alone)
         """
-        self.financial_data = financial_data
+        self.financial_data = FinancialData.from_dict(financial_data)
         self.context = context or build_report_context(financial_data)
     
     @staticmethod
@@ -159,7 +160,7 @@ class FinancialHistorySection(DossierSection):
         lines = []
         
         # Extract currency information
-        unified_currency = self.financial_data.get('currency', 'USD')
+        unified_currency = or_default(self.financial_data.currency, 'USD')
         currency_symbol = unified_currency  # Use full currency code as symbol
         
         # Section header
@@ -169,7 +170,7 @@ class FinancialHistorySection(DossierSection):
         lines.append("")
         
         # Determine dividend column header
-        is_dividend_amounts = self.financial_data.get('is_dividend_amounts', False)
+        is_dividend_amounts = or_default(self.financial_data.is_dividend_amounts, False)
         div_header = "Div/Share" if is_dividend_amounts else "Div Count"
         
         # Table header with 13 columns (added WCPS and Payout Ratio)
@@ -183,13 +184,13 @@ class FinancialHistorySection(DossierSection):
         for table_row in self.context.history_table:
             year = table_row.year
             data = table_row.row
-            revenue = data.get('revenue', 0.0)
-            net_income = data.get('net_income', 0.0)
-            eps = data.get('eps', 0.0)
-            dividend = data.get('dividend', 0.0)
-            total_debt = data.get('total_debt', 0.0)
-            shares_outstanding = data.get('shares_outstanding', 0.0)
-            year_end_price = data.get('year_end_price')  # Can be None
+            revenue = or_default(data.revenue, 0.0)
+            net_income = or_default(data.net_income, 0.0)
+            eps = or_default(data.eps, 0.0)
+            dividend = or_default(data.dividend, 0.0)
+            total_debt = or_default(data.total_debt, 0.0)
+            shares_outstanding = or_default(data.shares_outstanding, 0.0)
+            year_end_price = or_default(data.year_end_price, None)  # Can be None
             
             # Does this year have actual financial data or just dividend data?
             has_financial_data = table_row.has_income
@@ -227,7 +228,7 @@ class FinancialHistorySection(DossierSection):
                 bvps_str = f"{bvps:.2f}" if bvps > 0 else 'N/A'
                 
                 # Get WCPS (already calculated in financial_data_processor)
-                wcps = data.get('wcps')
+                wcps = or_default(data.wcps, None)
                 if wcps == 'N/A' or wcps is None:
                     wcps_str = 'N/A'
                 elif isinstance(wcps, (int, float)):
@@ -240,7 +241,7 @@ class FinancialHistorySection(DossierSection):
                     wcps_str = str(wcps)
                 
                 # Get Payout Ratio (already calculated in financial_data_processor)
-                payout_ratio = data.get('payout_ratio', 'N/A')
+                payout_ratio = or_default(data.payout_ratio, 'N/A')
                 payout_ratio_str = str(payout_ratio)
                 
                 # Format new columns using helper functions
@@ -294,7 +295,7 @@ class FinancialHistorySection(DossierSection):
         lines.append("")
         
         # Add note about FX rate methodology
-        historical_fx_rates = self.financial_data.get('historical_fx_rates', {})
+        historical_fx_rates = or_default(self.financial_data.historical_fx_rates, {})
         if historical_fx_rates:
             # Historical FX rates were used
             lines.append("*Note: Historical prices converted to unified currency using date-matched historical FX rates from yfinance. This ensures accurate historical P/E and P/B ratios that reflect actual market conditions at the time.*")

@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from output.sections.base import DossierSection
+from core.models import FinancialData, or_default
 from core.report_context import ReportContext, build_report_context
 
 
@@ -12,7 +13,7 @@ class HeaderSection(DossierSection):
 
     def __init__(self, ticker: str, financial_data: Dict[str, Any], context: Optional[ReportContext] = None):
         self.ticker = ticker
-        self.financial_data = financial_data
+        self.financial_data = FinancialData.from_dict(financial_data)
         self.context = context or build_report_context(financial_data)
 
     def generate(self) -> List[str]:
@@ -34,12 +35,12 @@ class HeaderSection(DossierSection):
         lines = []
         
         # Extract metadata
-        unified_currency = self.financial_data.get('currency', 'USD')
-        original_stock_currency = self.financial_data.get('original_stock_currency', unified_currency)
-        ceo_name = self.financial_data.get('ceo_name', 'N/A')
-        sector = self.financial_data.get('sector', 'N/A')
-        industry = self.financial_data.get('industry', 'N/A')
-        employees = self.financial_data.get('employees', 0)
+        unified_currency = or_default(self.financial_data.currency, 'USD')
+        original_stock_currency = or_default(self.financial_data.original_stock_currency, unified_currency)
+        ceo_name = or_default(self.financial_data.ceo_name, 'N/A')
+        sector = or_default(self.financial_data.sector, 'N/A')
+        industry = or_default(self.financial_data.industry, 'N/A')
+        employees = or_default(self.financial_data.employees, 0)
         
         # Title and basic metadata
         lines.append(f"# STOCK ANALYSIS DOSSIER: {self.ticker}")

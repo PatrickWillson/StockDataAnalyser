@@ -4,14 +4,14 @@ from typing import Any, Dict, List, Union
 
 from config.data_quality_config import ANNUAL_REPORT_MAX_AGE_MONTHS
 from output.sections.base import DossierSection
-from core.models import GrahamResult, or_default
+from core.models import FinancialData, GrahamResult, or_default
 
 
 class CriticalAlertsSection(DossierSection):
     """All accumulated warnings and statistical anomalies."""
 
     def __init__(self, financial_data: Dict[str, Any], metrics: Union[GrahamResult, Dict[str, Any]], anomalies: List[str]):
-        self.financial_data = financial_data
+        self.financial_data = FinancialData.from_dict(financial_data)
         self.metrics = GrahamResult.from_dict(metrics)
         self.anomalies = anomalies
 
@@ -35,7 +35,7 @@ class CriticalAlertsSection(DossierSection):
         lines.append("")
         
         # Get warnings from financial data and metrics
-        warnings = self.financial_data.get('warnings', [])
+        warnings = list(or_default(self.financial_data.warnings, ()))
         metric_warnings = list(or_default(self.metrics.warnings, ()))
         all_warnings = warnings + metric_warnings
         

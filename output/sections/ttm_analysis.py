@@ -7,7 +7,7 @@ analysis dossier, including TTM Graham calculations and comparisons with annual 
 from typing import List, Dict, Any, Union, Optional
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
-from core.models import GrahamResult, TTMResult, or_default
+from core.models import FinancialData, GrahamResult, TTMResult, or_default
 
 
 class TTMAnalysisSection(DossierSection):
@@ -33,7 +33,7 @@ class TTMAnalysisSection(DossierSection):
         """
         self.ttm_metrics = TTMResult.from_dict(ttm_metrics)
         self.annual_metrics = GrahamResult.from_dict(annual_metrics)
-        self.financial_data = financial_data
+        self.financial_data = FinancialData.from_dict(financial_data)
         self.context = context or build_report_context(financial_data, annual_metrics)
     
     def generate(self) -> List[str]:
@@ -143,7 +143,7 @@ class TTMAnalysisSection(DossierSection):
     
     def _annual_ratio(self, key: str) -> Union[float, str]:
         """Latest annual P/E or P/B from financial_data, "N/A" when not positive."""
-        value = self.financial_data.get(key)
+        value = or_default(getattr(self.financial_data, key), None)
         return value if isinstance(value, (int, float)) and value > 0 else "N/A"
     
     def _add_metric_with_comparison(self, lines: List[str], label: str, 
@@ -253,10 +253,10 @@ class TTMAnalysisSection(DossierSection):
         Args:
             lines: List to append lines to
         """
-        ttm_dividend = self.financial_data.get('ttm_dividend', 0.0)
-        ttm_payments = self.financial_data.get('ttm_dividend_payments', [])
-        currency = self.financial_data.get('currency', 'USD')
-        price = self.financial_data.get('price', 0.0)
+        ttm_dividend = or_default(self.financial_data.ttm_dividend, 0.0)
+        ttm_payments = or_default(self.financial_data.ttm_dividend_payments, [])
+        currency = or_default(self.financial_data.currency, 'USD')
+        price = or_default(self.financial_data.price, 0.0)
         
         if not ttm_dividend or ttm_dividend <= 0:
             return
@@ -267,15 +267,15 @@ class TTMAnalysisSection(DossierSection):
             ttm_yield = (ttm_dividend / price) * 100
         
         # Get fiscal year dividend for comparison (from history)
-        history = self.financial_data.get('history', {})
+        history = or_default(self.financial_data.history, {})
         fiscal_year_dividend = 0.0
         fiscal_year = None
         
         if history and self.context.latest_year:
             # Most recent complete fiscal year
             fiscal_year = self.context.latest_year_label
-            if self.financial_data.get('is_dividend_amounts', False):
-                fiscal_year_dividend = self.context.latest_row.get('dividend', 0.0)
+            if or_default(self.financial_data.is_dividend_amounts, False):
+                fiscal_year_dividend = or_default(self.context.latest_row.dividend, 0.0)
         
         lines.append("")
         lines.append(f"- TTM Dividend (Last 12 Months): {ttm_dividend:.2f} {currency} (Yield: {ttm_yield:.2f}%)")

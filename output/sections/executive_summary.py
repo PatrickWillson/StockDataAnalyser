@@ -7,7 +7,7 @@ including verdict, intrinsic values, margin of safety, current price, and divide
 from typing import List, Dict, Any, Optional, Union
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
-from core.models import EPVDetails, GrahamResult, MarginOfSafetyDetails, ThreeYearAvgPE, or_default
+from core.models import FinancialData, EPVDetails, GrahamResult, MarginOfSafetyDetails, ThreeYearAvgPE, or_default
 from output.formatting import format_price_display
 
 
@@ -33,7 +33,7 @@ class ExecutiveSummarySection(DossierSection):
             financial_data: Dictionary containing financial data (FinancialData DTO)
             metrics: Graham metrics (GrahamResult, or its dict form)
         """
-        self.financial_data = financial_data
+        self.financial_data = FinancialData.from_dict(financial_data)
         self.metrics = GrahamResult.from_dict(metrics)
         self.context = context or build_report_context(financial_data, metrics)
     
@@ -52,8 +52,8 @@ class ExecutiveSummarySection(DossierSection):
         lines.append("")
         
         # Extract currency information
-        unified_currency = self.financial_data.get('currency', 'USD')
-        original_stock_currency = self.financial_data.get('original_stock_currency', unified_currency)
+        unified_currency = or_default(self.financial_data.currency, 'USD')
+        original_stock_currency = or_default(self.financial_data.original_stock_currency, unified_currency)
         
         # Verdict
         lines.append(f"- Verdict: **{self.metrics.verdict}**")
@@ -181,8 +181,8 @@ class ExecutiveSummarySection(DossierSection):
             unified_currency: Currency for financials
             original_stock_currency: Currency stock trades in
         """
-        exchange = self.financial_data.get('exchange', '')
-        price = self.financial_data['price']
+        exchange = or_default(self.financial_data.exchange, '')
+        price = self.financial_data.price
         
         # Special handling for LSE stocks
         if exchange == "LSE" and unified_currency == "GBP":
@@ -208,18 +208,18 @@ class ExecutiveSummarySection(DossierSection):
             unified_currency: Currency for financials
             original_stock_currency: Currency stock trades in
         """
-        week_52_high = self.financial_data.get('week_52_high', 0)
-        week_52_low = self.financial_data.get('week_52_low', 0)
+        week_52_high = or_default(self.financial_data.week_52_high, 0)
+        week_52_low = or_default(self.financial_data.week_52_low, 0)
         
         if week_52_high > 0 and week_52_low > 0:
             # Core already expressed the 52-week values in the quote's major currency
             # (e.g. pence -> GBP), the same currency as the price before FX
-            trading_currency = self.financial_data.get('price_currency_before_fx') or original_stock_currency
+            trading_currency = or_default(self.financial_data.price_currency_before_fx, None) or original_stock_currency
             
             # Convert to unified currency if needed, with the rate core already used for the price
             # (fx_rate_used: price currency -> financials currency; same pair as trading_currency here)
             if trading_currency != unified_currency:
-                fx_rate = self.financial_data.get('fx_rate_used')
+                fx_rate = or_default(self.financial_data.fx_rate_used, None)
                 
                 if fx_rate:
                     high_display = format_price_display(week_52_high, trading_currency, 
@@ -249,13 +249,13 @@ class ExecutiveSummarySection(DossierSection):
             lines: List to append lines to
             unified_currency: Currency for display
         """
-        forward_div = self.financial_data.get('forward_dividend_rate')
-        self.financial_data.get('dividend_source', 'Unknown')
-        source_indicators = self.financial_data.get('dividend_sources', {})
+        forward_div = or_default(self.financial_data.forward_dividend_rate, None)
+        or_default(self.financial_data.dividend_source, 'Unknown')
+        source_indicators = or_default(self.financial_data.dividend_sources, {})
         
         # Get most recent COMPLETE year dividend information
         # Trailing dividend should be from the last complete fiscal year, not an incomplete year
-        history = self.financial_data.get('history', {})
+        history = or_default(self.financial_data.history, {})
         most_recent_complete_year = None
         most_recent_div_source = None
         most_recent_div_amount = None
@@ -264,10 +264,10 @@ class ExecutiveSummarySection(DossierSection):
             # The most recent complete (reported) year gives the trailing dividend
             most_recent_complete_year = self.context.latest_year_label
             most_recent_div_source = source_indicators.get(most_recent_complete_year, 'unknown')
-            most_recent_div_amount = self.context.latest_row.get('dividend', 0.0)
+            most_recent_div_amount = or_default(self.context.latest_row.dividend, 0.0)
         
         # Payment counts are not amounts (F21): report the count, never a per-share figure or yield
-        if not self.financial_data.get('is_dividend_amounts', False):
+        if not or_default(self.financial_data.is_dividend_amounts, False):
             if most_recent_div_amount:
                 lines.append(f"- Dividend: amount not available ({most_recent_div_amount:.0f} payments "
                              f"in {most_recent_complete_year}; payment counts only)")
@@ -315,8 +315,8 @@ class ExecutiveSummarySection(DossierSection):
         Args:
             lines: List to append lines to
         """
-        pe_ratio = self.financial_data.get('pe_ratio', 0)
-        price_to_book = self.financial_data.get('price_to_book', 0)
+        pe_ratio = or_default(self.financial_data.pe_ratio, 0)
+        price_to_book = or_default(self.financial_data.price_to_book, 0)
         
         if pe_ratio > 0:
             lines.append(f"- P/E Ratio (Current Year): {pe_ratio:.2f}")

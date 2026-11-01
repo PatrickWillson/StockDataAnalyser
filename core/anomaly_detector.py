@@ -14,6 +14,7 @@ from typing import List
 from config.data_quality_config import (ANOMALY_MIN_DATA_POINTS, ANOMALY_MIN_SPREAD_PP,
                                         ANOMALY_Z_SCORE_THRESHOLD, FINANCIAL_HISTORY_YEARS)
 from core.history import has_income_data
+from core.models import FinancialData, or_default
 
 # Scales MAD to the standard deviation of normally distributed data
 MAD_SCALE = 0.6745
@@ -29,7 +30,7 @@ class AnomalyDetector:
         Args:
             financial_data: Dictionary containing ticker, price, currency, history, etc.
         """
-        self.data = financial_data
+        self.data = FinancialData.from_dict(financial_data)
 
     @staticmethod
     def modified_z_scores(values: List[float]) -> List[float]:
@@ -49,7 +50,7 @@ class AnomalyDetector:
             Descriptions such as "Year 2020-12-31: EPS growth modified Z-Score = 4.10 (Outlier: +250.0%
             vs median +8.0%)"
         """
-        history = self.data.get('history', {})
+        history = or_default(self.data.history, {})
         table_years = sorted(history.keys(), reverse=True)[:FINANCIAL_HISTORY_YEARS]
         years = [year for year in table_years if has_income_data(history[year])]
         if len(years) < ANOMALY_MIN_DATA_POINTS:
@@ -58,11 +59,11 @@ class AnomalyDetector:
         growth_rates = []
         growth_years = []
         for current_year, previous_year in zip(years, years[1:]):
-            previous_eps = history[previous_year].get('eps', 0.0)
+            previous_eps = or_default(history[previous_year].eps, 0.0)
             # Growth from a zero or negative base is not meaningful
             if previous_eps <= 0:
                 continue
-            current_eps = history[current_year].get('eps', 0.0)
+            current_eps = or_default(history[current_year].eps, 0.0)
             growth_rates.append((current_eps - previous_eps) / previous_eps * 100)
             growth_years.append(current_year)
 

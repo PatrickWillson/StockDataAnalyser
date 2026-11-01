@@ -12,7 +12,7 @@ from config.investor_thresholds import DEFENSIVE
 from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
-from core.models import (CombinedPEPBTest, EPVDetails, GrahamResult, MarginOfSafetyDetails, NCADetails,
+from core.models import (FinancialData, CombinedPEPBTest, EPVDetails, GrahamResult, MarginOfSafetyDetails, NCADetails,
                          ThreeYearAvgPE, or_default)
 
 
@@ -37,7 +37,7 @@ class MethodologySection(DossierSection):
             financial_data: Dictionary containing financial data (FinancialData DTO)
             metrics: Graham metrics (GrahamResult, or its dict form)
         """
-        self.financial_data = financial_data
+        self.financial_data = FinancialData.from_dict(financial_data)
         self.metrics = GrahamResult.from_dict(metrics)
         self.context = context or build_report_context(financial_data, metrics)
     
@@ -56,13 +56,13 @@ class MethodologySection(DossierSection):
         lines.append("")
         
         # Extract currency and history
-        unified_currency = self.financial_data.get('currency', 'USD')
+        unified_currency = or_default(self.financial_data.currency, 'USD')
         
         # Get EPV details
         epv_details = or_default(self.metrics.epv_details, EPVDetails())
         
         # Get most recent EPS for P/E explanation
-        most_recent_eps = self.context.latest_row.get('eps', 0) if self.context.latest_year else 0
+        most_recent_eps = or_default(self.context.latest_row.eps, 0) if self.context.latest_year else 0
         
         lines.append("### Valuation Metrics:")
         
@@ -104,7 +104,7 @@ class MethodologySection(DossierSection):
             unified_currency: Currency for display
             most_recent_eps: Most recent EPS value
         """
-        pe_ratio = self.financial_data.get('pe_ratio', 0)
+        pe_ratio = or_default(self.financial_data.pe_ratio, 0)
         
         if pe_ratio > 0 and most_recent_eps and most_recent_eps > 0:
             eps_display = format_price_display(most_recent_eps, unified_currency, unified_currency)
@@ -145,7 +145,7 @@ class MethodologySection(DossierSection):
         normalized_graham_number = or_default(self.metrics.normalized_graham_number, 0)
         
         # Get 3-year EPS data from calculator if available
-        self.financial_data.get('history', {})
+        or_default(self.financial_data.history, {})
         
         # Single-Year Graham Number (Legacy)
         if isinstance(graham_number, (int, float)) and graham_number > 0:
@@ -195,7 +195,7 @@ class MethodologySection(DossierSection):
         epv_value = or_default(self.metrics.epv, 0)
         
         if isinstance(epv_value, (int, float)) and epv_value > 0:
-            ticker = self.financial_data.get('ticker', 'UNKNOWN')
+            ticker = or_default(self.financial_data.ticker, 'UNKNOWN')
             epv_per_share = or_default(epv_details.epv_per_share, 0)
             normalized_earnings = or_default(epv_details.normalized_earnings, 0)
             years_used = or_default(epv_details.years_used, 0)
@@ -299,7 +299,7 @@ class MethodologySection(DossierSection):
         limiting_factor = or_default(mos_details.limiting_factor, 'N/A')
         both_anchors = isinstance(normalized_gn, (int, float)) and isinstance(epv_per_share, (int, float))
         
-        unified_currency = self.financial_data.get('currency', 'USD')
+        unified_currency = or_default(self.financial_data.currency, 'USD')
         
         lines.append("")
         lines.append("- **Margin of Safety - Conservative Dual-Anchor Approach**:")
@@ -413,7 +413,7 @@ class MethodologySection(DossierSection):
         Args:
             lines: List to append lines to
         """
-        self.financial_data.get('currency', 'USD')
+        or_default(self.financial_data.currency, 'USD')
         
         # Three-Year Average P/E
         three_year_pe = self.metrics.three_year_avg_pe
@@ -474,11 +474,11 @@ class MethodologySection(DossierSection):
             lines.append(f"**Formula**: P/E (3-year average EPS) × P/B (tangible book value per share) ≤ {GRAHAM_MULTIPLIER:g}")
         
         # WCPS and Payout Ratio (from financial history)
-        history = self.financial_data.get('history', {})
+        history = or_default(self.financial_data.history, {})
         if history:
             # Check if any year has WCPS or payout_ratio
-            has_wcps = any(year_data.get('wcps') is not None for year_data in history.values())
-            has_payout = any(year_data.get('payout_ratio') is not None for year_data in history.values())
+            has_wcps = any(or_default(year_data.wcps, None) is not None for year_data in history.values())
+            has_payout = any(or_default(year_data.payout_ratio, None) is not None for year_data in history.values())
             
             if has_wcps or has_payout:
                 lines.append("")

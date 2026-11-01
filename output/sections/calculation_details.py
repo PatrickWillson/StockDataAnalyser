@@ -12,7 +12,7 @@ from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 from config.data_quality_config import BVPS_MAX_DIFF_PCT
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
-from core.models import EPVDetails, GrahamResult, or_default
+from core.models import FinancialData, EPVDetails, GrahamResult, or_default
 
 
 class CalculationDetailsSection(DossierSection):
@@ -37,7 +37,7 @@ class CalculationDetailsSection(DossierSection):
             financial_data: Dictionary containing financial data (FinancialData DTO)
             metrics: Graham metrics (GrahamResult, or its dict form)
         """
-        self.financial_data = financial_data
+        self.financial_data = FinancialData.from_dict(financial_data)
         self.metrics = GrahamResult.from_dict(metrics)
         self.context = context or build_report_context(financial_data, metrics)
     
@@ -56,8 +56,8 @@ class CalculationDetailsSection(DossierSection):
         lines.append("")
         
         # Extract currency and history
-        unified_currency = self.financial_data.get('currency', 'USD')
-        original_stock_currency = self.financial_data.get('original_stock_currency', unified_currency)
+        unified_currency = or_default(self.financial_data.currency, 'USD')
+        original_stock_currency = or_default(self.financial_data.original_stock_currency, unified_currency)
         
         # Get most recent year data for calculations
         latest_year_calc = self.context.latest_year
@@ -70,7 +70,7 @@ class CalculationDetailsSection(DossierSection):
             self._add_share_count_disclosure(lines, latest_data_calc, year_label)
             
             # 2. Book Value Per Share Calculation
-            shares_used = latest_data_calc.get('shares_outstanding', 0)
+            shares_used = or_default(latest_data_calc.shares_outstanding, 0)
             tbvps, bvps = self._add_bvps_calculation(lines, latest_data_calc, shares_used, unified_currency)
             
             # 3. Graham Number Calculation
@@ -100,7 +100,7 @@ class CalculationDetailsSection(DossierSection):
             year_label: Year label for display
         """
         lines.append("### Share Count Used:")
-        shares_used = latest_data.get('shares_outstanding', 0)
+        shares_used = or_default(latest_data.shares_outstanding, 0)
         
         if shares_used > 0:
             lines.append(f"- **Shares Outstanding**: {shares_used:,.0f} shares")
@@ -129,9 +129,9 @@ class CalculationDetailsSection(DossierSection):
         """
         lines.append("### Book Value Per Share (BVPS) Calculation:")
         
-        total_equity = latest_data.get('total_equity', 0)
-        intangibles = latest_data.get('intangible_assets', 0)
-        goodwill = latest_data.get('goodwill', 0)
+        total_equity = or_default(latest_data.total_equity, 0)
+        intangibles = or_default(latest_data.intangible_assets, 0)
+        goodwill = or_default(latest_data.goodwill, 0)
         
         # Initialize tbvps and bvps to avoid UnboundLocalError
         tbvps = 0
@@ -153,7 +153,7 @@ class CalculationDetailsSection(DossierSection):
             lines.append(f"- **Book Value Per Share (BVPS)**: {bvps:.2f} {unified_currency} (without subtracting intangibles)")
             
             # Compare to API if available
-            api_bvps = self.financial_data.get('book_value_per_share') or 0
+            api_bvps = or_default(self.financial_data.book_value_per_share, None) or 0
             diff_pct = self.context.api_bvps_diff_pct
             if diff_pct is not None:
                 if diff_pct > BVPS_MAX_DIFF_PCT:
@@ -182,7 +182,7 @@ class CalculationDetailsSection(DossierSection):
         
         if isinstance(graham_number, (int, float)) and graham_number > 0:
             lines.append("### Graham Number Calculation:")
-            eps_for_graham = latest_data.get('eps', 0)
+            eps_for_graham = or_default(latest_data.eps, 0)
             
             if eps_for_graham > 0 and tbvps > 0:
                 lines.append(f"- **Formula**: √({GRAHAM_MULTIPLIER:g} × EPS × TBVPS)")
@@ -208,13 +208,13 @@ class CalculationDetailsSection(DossierSection):
         
         if isinstance(net_net, (int, float)) and net_net > 0:
             lines.append("### Net-Net Value Calculation:")
-            current_assets = latest_data.get('current_assets', 0)
-            total_liabilities = latest_data.get('total_liabilities', 0)
+            current_assets = or_default(latest_data.current_assets, 0)
+            total_liabilities = or_default(latest_data.total_liabilities, 0)
             
             if current_assets > 0 and total_liabilities > 0 and shares_used > 0:
                 lines.append(f"- **Current Assets**: {current_assets:,.0f} {unified_currency}")
                 lines.append(f"- **Total Liabilities**: {total_liabilities:,.0f} {unified_currency}")
-                claims_outside_equity = latest_data.get('claims_outside_equity', 0.0)
+                claims_outside_equity = or_default(latest_data.claims_outside_equity, 0.0)
                 if claims_outside_equity > 0:
                     lines.append(f"- **Less: Minority Interest and Other Claims Outside Common Equity**: "
                                  f"{claims_outside_equity:,.0f} {unified_currency}")
@@ -245,7 +245,7 @@ class CalculationDetailsSection(DossierSection):
         minor_unit_quote = self.context.quote_is_minor_unit
         if original_stock_currency != unified_currency or minor_unit_quote:
             lines.append("### Currency Conversion Details:")
-            fx_rate = self.financial_data.get('fx_rate_used', 0)
+            fx_rate = or_default(self.financial_data.fx_rate_used, 0)
             
             if minor_unit_quote:
                 major = self.context.quote_major_currency

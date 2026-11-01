@@ -8,7 +8,7 @@ dividend risk, valuation risk, and data quality risk assessments.
 from typing import List, Dict, Any, Optional, Union
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
-from core.models import GrahamResult, MarginOfSafetyDetails, or_default
+from core.models import FinancialData, GrahamResult, MarginOfSafetyDetails, or_default
 from output.formatting import format_price_display
 from config.data_quality_config import MIN_HISTORY_YEARS_RECOMMENDED
 from config.investor_thresholds import DEFENSIVE, ENTERPRISING
@@ -60,7 +60,7 @@ class RiskFactorsSection(DossierSection):
             financial_data: Dictionary containing financial data (FinancialData DTO)
             metrics: Graham metrics (GrahamResult, or its dict form)
         """
-        self.financial_data = financial_data
+        self.financial_data = FinancialData.from_dict(financial_data)
         self.metrics = GrahamResult.from_dict(metrics)
         self.context = context or build_report_context(financial_data, metrics)
     
@@ -92,10 +92,10 @@ class RiskFactorsSection(DossierSection):
         lines.append("")
         
         # Extract currency information
-        unified_currency = self.financial_data.get('currency', 'USD')
+        unified_currency = or_default(self.financial_data.currency, 'USD')
         
         # Calculate risk metrics from available data
-        history = self.financial_data.get('history', {})
+        history = or_default(self.financial_data.history, {})
         if history:
             sorted_years = sorted(history.keys(), reverse=True)
             latest_year = self.context.latest_year
@@ -137,7 +137,7 @@ class RiskFactorsSection(DossierSection):
             latest_data: Most recent year's financial data
         """
         lines.append("### Market & Liquidity Risk:")
-        beta = self.financial_data.get('beta', 0)
+        beta = or_default(self.financial_data.beta, 0)
         if beta is None:
             beta = 0
         if beta > 0:
@@ -264,7 +264,7 @@ class RiskFactorsSection(DossierSection):
             lines.append(f"- **Loss Years: 0 of {window_years}** - Consistent profitability (excellent)")
         
         # ROE consistency
-        roe = self.financial_data.get('roe', 0)
+        roe = or_default(self.financial_data.roe, 0)
         if roe > 0:
             if roe > ROE_STRONG:
                 lines.append(f"- **Return on Equity: {roe*100:.1f}%** - Strong capital efficiency")
@@ -337,7 +337,7 @@ class RiskFactorsSection(DossierSection):
         
         margin_of_safety = or_default(self.metrics.margin_of_safety, 'N/A')
         intrinsic_value = or_default((self.metrics.margin_of_safety_details or MarginOfSafetyDetails()).intrinsic_value_used, 'N/A')
-        price = self.financial_data.get('price', 0)
+        price = or_default(self.financial_data.price, 0)
         
         # Graham: a bargain needs indicated value at least 50% above price, i.e. a margin of at
         # least one-third of value (GRAHAM_METHODOLOGY §1.2, §3.3)
@@ -373,7 +373,7 @@ class RiskFactorsSection(DossierSection):
         lines.append("### Data Quality Risk:")
         
         # Institutional ownership verification
-        institutional = self.financial_data.get('institutional_ownership', 0)
+        institutional = or_default(self.financial_data.institutional_ownership, 0)
         if institutional > 0:
             if institutional > INSTITUTIONAL_HIGH_PCT:
                 lines.append(f"- **Institutional Ownership: {institutional:.2f}%** - Verify with regulatory filings")
@@ -381,7 +381,7 @@ class RiskFactorsSection(DossierSection):
                 lines.append(f"- **Institutional Ownership: {institutional:.2f}%** - Verify with regulatory filings")
         
         # Price source
-        price_source = self.financial_data.get('price_source', 'yfinance')
+        price_source = or_default(self.financial_data.price_source, 'yfinance')
         lines.append(f"- **Price Source: {price_source}** (current quote; the only price source)")
         
         # Years of history

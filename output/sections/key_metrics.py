@@ -7,7 +7,7 @@ including profitability metrics, book value, ownership, and risk metrics.
 from typing import List, Dict, Any, Optional, Union
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
-from core.models import CurrentRatio, GrahamResult, NCADetails, or_default
+from core.models import FinancialData, CurrentRatio, GrahamResult, NCADetails, or_default
 from output.formatting import format_price_display
 
 
@@ -33,7 +33,7 @@ class KeyMetricsSection(DossierSection):
             financial_data: Dictionary containing financial data (FinancialData DTO)
             metrics: Graham metrics (GrahamResult, or its dict form) - optional for backward compatibility
         """
-        self.financial_data = financial_data
+        self.financial_data = FinancialData.from_dict(financial_data)
         self.metrics = GrahamResult.from_dict(metrics or {})
         self.context = context or build_report_context(financial_data, self.metrics)
     
@@ -50,7 +50,7 @@ class KeyMetricsSection(DossierSection):
         lines.append("## SECTION 2: KEY METRICS")
         
         # Extract currency information
-        unified_currency = self.financial_data.get('currency', 'USD')
+        unified_currency = or_default(self.financial_data.currency, 'USD')
         
         # Profitability metrics
         self._add_profitability_metrics(lines)
@@ -78,9 +78,9 @@ class KeyMetricsSection(DossierSection):
         Args:
             lines: List to append lines to
         """
-        roe = self.financial_data.get('roe', 0)
-        roa = self.financial_data.get('roa', 0)
-        profit_margin = self.financial_data.get('profit_margin', 0)
+        roe = or_default(self.financial_data.roe, 0)
+        roa = or_default(self.financial_data.roa, 0)
+        profit_margin = or_default(self.financial_data.profit_margin, 0)
         
         if roe > 0:
             lines.append(f"- Return on Equity (ROE): {roe*100:.2f}%")
@@ -178,8 +178,8 @@ class KeyMetricsSection(DossierSection):
         Args:
             lines: List to append lines to
         """
-        insider = self.financial_data.get('insider_ownership', 0)
-        institutional = self.financial_data.get('institutional_ownership', 0)
+        insider = or_default(self.financial_data.insider_ownership, 0)
+        institutional = or_default(self.financial_data.institutional_ownership, 0)
         
         if insider > 0:
             lines.append(f"- Insider Ownership: {insider:.2f}%")
@@ -192,7 +192,7 @@ class KeyMetricsSection(DossierSection):
         Args:
             lines: List to append lines to
         """
-        beta = self.financial_data.get('beta', 0)
+        beta = or_default(self.financial_data.beta, 0)
         if beta is None:
             beta = 0
         if beta > 0:
