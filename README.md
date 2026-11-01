@@ -108,7 +108,9 @@ EODHD_API_KEY=your_api_key_here
 
 **Note**: yfinance (Yahoo Finance) is used for real-time price data and does not require an API key. Only the EODHD API key is required for fundamental financial data.
 
-**Data vendors are swappable**: the analysis core reads fundamentals, prices and FX rates only through interfaces (`core/ports.py`). EODHD is today's fundamentals provider (`FUNDAMENTALS_PROVIDER=eodhd`, the default); to use another vendor, write an adapter and register it in `clients/factory.py` — see `docs/CODEBASE_GUIDE.md` §12.
+**Data vendors are swappable**: the analysis core reads fundamentals, prices and FX rates only through interfaces (`core/ports.py`). EODHD is the default fundamentals provider (`FUNDAMENTALS_PROVIDER=eodhd`); to use another vendor, write an adapter and register it in `clients/factory.py` — see `docs/CODEBASE_GUIDE.md` §12.
+
+**Free path for US stocks (no API key)**: set `FUNDAMENTALS_PROVIDER=free` and `SEC_USER_AGENT="Your Name you@example.com"` (the SEC requires a contact) in `.env`. Statements come from SEC EDGAR filings and dividends/profile from Yahoo Finance. It covers US SEC filers only (about 18–19 years of statements), and other exchanges are refused until an adapter is added — see `docs/CODEBASE_GUIDE.md` §12.1.
 
 ### EODHD API Package Requirements
 

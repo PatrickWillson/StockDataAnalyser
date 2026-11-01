@@ -44,6 +44,9 @@ stock_data_analyser.py (CLI entry point)
 clients/ (Data Acquisition Layer)
     ├── eodhd_client.py - EODHD API integration for fundamentals
     ├── eodhd_mapper.py - EODHD JSON → CompanyFundamentals (the only code that knows EODHD keys)
+    ├── edgar_client.py / edgar_mapper.py - SEC EDGAR XBRL statements (free path, US)
+    ├── yahoo_mapper.py - Yahoo dividends, splits, profile (free path)
+    ├── free_us_source.py / routing_source.py - free resolution path (FUNDAMENTALS_PROVIDER=free)
     ├── yfinance_client.py - Yahoo Finance for real-time prices
     ├── fx_client.py - Live FX rates
     ├── base_client.py - HTTP retry logic & session management
@@ -348,6 +351,9 @@ EODHD_API_KEY=your_api_key_here
 
 # Optional: fundamentals vendor (registered in clients/factory.py; default eodhd)
 FUNDAMENTALS_PROVIDER=eodhd
+
+# Free path instead (US stocks, SEC EDGAR + Yahoo, no key): FUNDAMENTALS_PROVIDER=free plus
+# SEC_USER_AGENT=Your Name you@example.com   (SEC fair-access policy; see docs/CODEBASE_GUIDE.md §12.1)
 ```
 
 **Required EODHD Packages:**
