@@ -6,7 +6,7 @@ including verdict, intrinsic values, margin of safety, current price, and divide
 
 from typing import List, Dict, Any, Optional, Union
 from output.sections.base import DossierSection
-from core.report_context import ReportContext, build_report_context
+from core.report_context import ReportContext, build_report_context, fiscal_year
 from core.models import FinancialData, EPVDetails, GrahamResult, MarginOfSafetyDetails, ThreeYearAvgPE, or_default
 from output.formatting import format_price_display
 
@@ -333,8 +333,8 @@ class ExecutiveSummarySection(DossierSection):
             if pe_on_avg != 'N/A' and avg_eps != 'N/A' and years_used:
                 # Format years range
                 if len(years_used) >= 2:
-                    first_year = years_used[-1].split('-')[0]  # Oldest year
-                    last_year = years_used[0].split('-')[0]    # Most recent year
+                    first_year = fiscal_year(years_used[-1])  # Oldest year
+                    last_year = fiscal_year(years_used[0])    # Most recent year
                     years_str = f"{first_year}-{last_year}"
                 else:
                     years_str = "recent years"

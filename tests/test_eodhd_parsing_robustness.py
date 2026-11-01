@@ -3,6 +3,8 @@ EODHD payload edge cases: nulls and junk degrade gracefully, and LSE dividend re
 CODEBASE_GUIDE §11 E1 (amounts in pounds) on every dividend path.
 """
 
+import pytest
+
 from core.currency_converter import CurrencyConverter
 from core.financial_data_assembler import FinancialDataAssembler
 from core.financial_data_processor import FinancialDataProcessor
@@ -60,3 +62,27 @@ def test_52_53_week_years_get_no_phantom_dividend_rows():
     history = FinancialDataProcessor.merge_financial_data(balance, income, dividends, 15.0)
     assert sorted(history) == ['1995-09-27', '2023-09-30', '2024-09-28', '2025-09-27']
     assert history['2024-09-28']['dividend'] == 0.98
+
+
+@pytest.mark.parametrize("end, label", [("2023-01-01", "2022"), ("2023-01-07", "2022"), ("2023-01-08", "2023"),
+                                        ("2023-12-31", "2023"), ("2026-01-31", "2026"), ("2025-06-30", "2025"),
+                                        ("2023", "2023"), ("junk", "junk")])
+def test_fiscal_year_of_a_period_end(end, label):
+    from core.history import fiscal_year
+    assert fiscal_year(end) == label
+
+
+def test_years_ending_in_early_january_belong_to_the_previous_year():
+    """Johnson & Johnson: FY2022 ended 2023-01-01, FY2023 ended 2023-12-31 -> two years, not two '2023's."""
+    from core.investor_tests.defensive import dividend_record
+    balance = {'2023-12-31': {'total_equity': 70.0}, '2023-01-01': {'total_equity': 60.0},
+               '2022-01-02': {'total_equity': 55.0}}
+    income = {end: {'revenue': 100.0, 'net_income': 10.0, 'eps': 1.0} for end in balance}
+    dividends = {'2023': 4.76, '2022': 4.45, '2021': 4.19}
+    history = FinancialDataProcessor.merge_financial_data(balance, income, dividends, 2.6e9)
+    assert sorted(history) == ['2022-01-02', '2023-01-01', '2023-12-31']
+    assert history['2023-01-01']['dividend'] == 4.45          # FY2022 gets 2022's dividends
+    assert history['2023-12-31']['dividend'] == 4.76
+    assert history['2022-01-02']['dividend'] == 4.19
+    years = sorted(history, reverse=True)
+    assert dividend_record(history, years, 3) == 'FAIL'       # 3 years cannot show a 20-year record

@@ -8,6 +8,7 @@ differ on purpose and are kept distinct so existing behaviour is unchanged. Unif
 them is a behaviour change and must be done (and snapshot-reviewed) separately.
 """
 
+import datetime as dt
 from typing import Any, Callable, Iterable, Mapping, Optional, Union
 
 from core.models import MISSING, HistoryRow, or_default
@@ -58,6 +59,21 @@ def is_dividend_only_year(year_data: YearData) -> bool:
     statement_values = (row.revenue, row.net_income, row.total_equity)
     return (all(value is not MISSING and value in (0, 0.0) for value in statement_values)
             and or_default(row.eps, None) in (None, 0, 0.0))
+
+
+def fiscal_year(period_end: str) -> str:
+    """
+    The fiscal year a period end belongs to, as 'YYYY'. A 52/53-week year that ends in the first
+    week of January (Johnson & Johnson's FY2022 ended 2023-01-01) is the previous year's: the filer
+    declares it so (dei:DocumentFiscalYearFocus, SEC EDGAR XBRL Guide §3.1.8), and labelling it by
+    the calendar year of its last day would give two fiscal years the same label. Year-only keys
+    ('2023') are returned as they are.
+    """
+    try:
+        end = dt.date.fromisoformat(period_end)
+    except (TypeError, ValueError):
+        return str(period_end).split('-')[0]
+    return str(end.year - 1) if end.month == 1 and end.day <= 7 else str(end.year)
 
 
 def row_at(history: Mapping[str, YearData], year: str) -> HistoryRow:

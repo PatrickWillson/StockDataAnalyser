@@ -8,7 +8,7 @@ from config.graham_constants import GRAHAM_MULTIPLIER
 from config.investor_thresholds import DEFENSIVE, REGULATED_UTILITY_INDUSTRIES
 from core.formulas import tangible_equity
 from core.financial_data_processor import FinancialDataProcessor
-from core.history import has_statement_data, row_at
+from core.history import fiscal_year, has_statement_data, row_at
 from core.models import or_default
 from core.investor_tests.criteria import current_ratio_test, earnings_stability, latest_financial_year
 
@@ -39,8 +39,8 @@ def dividend_record(history: dict, years: list, num_years: int) -> str:
     """
     if not years:
         return 'FAIL'
-    paid_years = {year[:4] for year in years if or_default(row_at(history, year).dividend, 0.0) > 0}
-    newest = int(max(year[:4] for year in years))
+    paid_years = {fiscal_year(year) for year in years if or_default(row_at(history, year).dividend, 0.0) > 0}
+    newest = int(max(fiscal_year(year) for year in years))
     required = [str(newest - offset) for offset in range(DEFENSIVE.MIN_DIVIDEND_YEARS)]
     return 'PASS' if all(year in paid_years for year in required) else 'FAIL'
 

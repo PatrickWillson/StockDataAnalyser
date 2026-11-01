@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 
 from output.sections.base import DossierSection
 from core.models import FinancialData, or_default
-from core.report_context import ReportContext, build_report_context
+from core.report_context import ReportContext, build_report_context, fiscal_year
 
 
 class FinancialHistorySection(DossierSection):
@@ -212,7 +212,7 @@ class FinancialHistorySection(DossierSection):
                 pb_str = "[Data Unavailable]"
                 
                 # Track incomplete year
-                year_only = year.split('-')[0]
+                year_only = fiscal_year(year)
                 incomplete_years.append(year_only)
             else:
                 # Normal year with financial data
@@ -253,8 +253,8 @@ class FinancialHistorySection(DossierSection):
                 pe_str = self.calculate_historical_pe(year_end_price, eps)
                 pb_str = self.calculate_historical_pb(year_end_price, bvps if bvps > 0 else None)
             
-            # Extract year display (e.g., '2024-06-30' → '2024')
-            year_display = year.split('-')[0]
+            # Fiscal year display (e.g., '2024-06-30' → '2024'; '2023-01-01' → '2022', a 52/53-week year)
+            year_display = fiscal_year(year)
             
             row = f"| {year_display} | {revenue_str} | {net_income_str} | {eps_str} | {dividend_str} | {bvps_str} | {wcps_str} | {payout_ratio_str} | {debt_str} | {shares_str} | {price_str} | {pe_str} | {pb_str} |"
             lines.append(row)

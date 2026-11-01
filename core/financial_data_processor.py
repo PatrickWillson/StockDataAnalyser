@@ -10,7 +10,7 @@ import logging
 from typing import Dict, Any, List, Optional, Sequence
 from core.currency_converter import CurrencyConverter
 from core.fundamentals import CompanyFundamentals, DividendPayment, number_or_zero
-from core.history import has_statement_data, is_dividend_only_year
+from core.history import fiscal_year, has_statement_data, is_dividend_only_year
 from core.models import HistoryRow, or_default
 from core.price_quote import PriceQuote, same_currency
 from config.valuation_config import NORMALIZED_EPS_YEARS
@@ -212,7 +212,7 @@ class FinancialDataProcessor:
                 self._log(f"[DEBUG] Cash Flow currency: {fundamentals.cash_flow_currency}")
                 shares_by_year = fundamentals.shares_by_year
                 for period_end, div_amount in dividends_paid.items():
-                    year_only = period_end.split('-')[0]
+                    year_only = fiscal_year(period_end)
                     shares = shares_by_year.get(year_only, 0)
                     if shares > 0 and div_amount > 0:
                         div_per_share = div_amount / shares
@@ -364,7 +364,7 @@ class FinancialDataProcessor:
         # statement row already gets its dividend there: companies with 52/53-week years end on a
         # different date each year (Apple 2024-09-28, 2023-09-30), so the detected month-day must
         # not create a second, dividend-only row for it
-        statement_years = {year.split('-')[0] for year in all_years}
+        statement_years = {fiscal_year(year) for year in all_years}
         for div_year in dividend_history.keys():
             # Convert year-only format to date format using detected fiscal year end
             if '-' not in div_year and div_year not in statement_years:
@@ -382,7 +382,7 @@ class FinancialDataProcessor:
             is_data = income_statement.get(year, {})
             
             # Extract year from date string (e.g., '2023-09-30' -> '2023')
-            year_only = year.split('-')[0] if '-' in year else year
+            year_only = fiscal_year(year)
             div_amount = dividend_history.get(year_only, 0.0)
             
             if div_amount == 0.0 and year_only not in dividend_history:
@@ -511,8 +511,8 @@ class FinancialDataProcessor:
         
         # Check for data gaps: fiscal years with no annual report inside the reported range
         # (dividend-only placeholder years don't count as reports, so they can't hide a gap)
-        report_years = sorted({int(y.split('-')[0]) for y in sorted_years
-                               if y.split('-')[0].isdigit() and not is_dividend_only_year(history[y])})
+        report_years = sorted({int(fiscal_year(y)) for y in sorted_years
+                               if fiscal_year(y).isdigit() and not is_dividend_only_year(history[y])})
         if len(report_years) >= 2:
             missing_years = sorted(set(range(report_years[0], report_years[-1] + 1)) - set(report_years),
                                    reverse=True)
@@ -848,7 +848,7 @@ class FinancialDataProcessor:
             if fx_rate is None:
                 # No historical rate available, use current rate as fallback
                 fx_rate = current_fx_rate
-                year_only = year.split('-')[0] if '-' in year else year
+                year_only = fiscal_year(year)
                 fallback_years.append(year_only)
             
             # Convert all monetary fields

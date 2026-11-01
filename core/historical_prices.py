@@ -12,6 +12,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from config.data_quality_config import FISCAL_YEAR_END_LOOKBACK_DAYS
+from core.history import fiscal_year
 from core.price_quote import is_minor_unit, major_currency, to_major_unit
 
 logger = logging.getLogger(__name__)
@@ -76,7 +77,7 @@ def apply_year_end_prices(financial_data: Dict[str, Any],
                     if fx_rate is None:
                         # No historical rate available, use current rate as fallback
                         fx_rate = current_fx_rate
-                        year_only = date_key.split('-')[0]
+                        year_only = fiscal_year(date_key)
                         fallback_years.append(year_only)
                     
                     converted_prices[date_key] = price_value * fx_rate

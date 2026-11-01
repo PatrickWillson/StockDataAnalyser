@@ -13,7 +13,7 @@ from core.financial_data_processor import FinancialDataProcessor
 from core.formulas import net_current_asset_value, tangible_equity
 from core.price_quote import is_minor_unit, major_currency
 from config.data_quality_config import FINANCIAL_HISTORY_YEARS
-from core.history import has_income_data, has_statement_data, latest_year
+from core.history import fiscal_year, has_income_data, has_statement_data, latest_year
 from core.models import FinancialData, GrahamResult, HistoryRow, or_default
 
 
@@ -146,8 +146,8 @@ class ReportContext:
 
     @property
     def latest_year_label(self) -> Optional[str]:
-        """The latest reported year as 'YYYY', or None."""
-        return self.latest_year.split('-')[0] if self.latest_year else None
+        """The latest reported fiscal year as 'YYYY', or None."""
+        return fiscal_year(self.latest_year) if self.latest_year else None
 
 
 def build_report_context(financial_data: Union[FinancialData, Dict[str, Any]],

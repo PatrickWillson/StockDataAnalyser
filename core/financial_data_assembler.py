@@ -11,7 +11,7 @@ from core.errors import PriceUnavailableError
 from core.financial_data_processor import FinancialDataProcessor
 from core.fundamentals import CompanyFundamentals
 from core.ports import FundamentalsSource, QuoteSource, RateSource
-from core.history import has_statement_data
+from core.history import fiscal_year, has_statement_data
 from core.price_quote import PriceQuote, to_major_unit
 from config.data_quality_config import (API_DATA_MAX_AGE_DAYS, BVPS_MAX_DIFF_PCT, DIVIDEND_SOURCE_MAX_DIFF_PCT,
                                          PE_MAX_DIFF_PCT, PROFITABILITY_MAX_DIFF_PCT,
@@ -391,7 +391,7 @@ class FinancialDataAssembler:
         if history:
             sorted_years = sorted(history.keys(), reverse=True)
             if sorted_years:
-                most_recent_year = sorted_years[0].split('-')[0]
+                most_recent_year = fiscal_year(sorted_years[0])
                 if most_recent_year in dividend_sources:
                     if dividend_sources[most_recent_year] == 'cash_flow' and forward_dividend_rate and forward_dividend_rate > 0:
                         most_recent_div = history[sorted_years[0]].get('dividend', 0.0)

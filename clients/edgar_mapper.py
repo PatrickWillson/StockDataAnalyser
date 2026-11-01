@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from core.fundamentals import BalanceSheetRow, IncomeStatementRow
+from core.history import fiscal_year
 
 ANNUAL_FORMS = frozenset({"10-K", "10-K/A", "10-KT", "10-KT/A"})
 PERIODIC_FORMS = ANNUAL_FORMS | {"10-Q", "10-Q/A"}
@@ -214,6 +215,23 @@ def fiscal_year_ends(facts: _Facts) -> List[str]:
         for unit in (MONEY, PER_SHARE):
             ends.update(facts.series(tag, unit, "year"))
     return sorted(ends, reverse=True)
+
+
+def filer_fiscal_years(facts: _Facts) -> Dict[str, int]:
+    """
+    Period end -> the fiscal year the company declared for it: `fy` of the annual filing whose own
+    (latest) year it is. A fact's `fy` is that of its filing, comparatives included, so only the
+    filing's newest period end carries the filing's fiscal year (cf. EdgarTools issue #460).
+    """
+    newest: Dict[str, Tuple[str, int]] = {}
+    for tag in YEAR_END_TAGS:
+        for unit in (MONEY, PER_SHARE):
+            for row in facts.facts.get(GAAP, {}).get(tag, {}).get("units", {}).get(unit, []):
+                if _annual(row) and _lasts(row, "year") and row.get("fy") and row.get("accn"):
+                    current = newest.get(row["accn"])
+                    if current is None or row["end"] > current[0]:
+                        newest[row["accn"]] = (row["end"], int(row["fy"]))
+    return {end: fy for end, fy in newest.values()}
 
 
 def _value(fact: Optional[Fact]) -> Optional[float]:
@@ -448,7 +466,7 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         if row is not None:
             balance.append(row)
             if row.shares_outstanding:
-                shares_by_year[end[:4]] = row.shares_outstanding
+                shares_by_year[fiscal_year(end)] = row.shares_outstanding
         if row is not None and not row.shares_outstanding:
             notes.derive("share count", "not in the SEC data (the company uses its own tags); per-share figures N/A", end)
         if income[-1].eps is None:
@@ -457,6 +475,12 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         notes.fact("dividends paid", end, paid)
         if paid is not None:
             dividends[end] = abs(paid.value)
+    # The company's current labelling convention (older filings are not always consistent: Walmart's
+    # 10-Ks for FY2010-14 declared the year they started in, later ones the year they end in)
+    declared = filer_fiscal_years(facts)
+    if ends and ends[0] in declared and str(declared[ends[0]]) != fiscal_year(ends[0]):
+        notes.other.append(f"SEC EDGAR: the company calls the year ending {ends[0]} fiscal {declared[ends[0]]}; "
+                           f"years are labelled here by the fiscal year of their period end ({fiscal_year(ends[0])})")
     latest_cover = _cover_shares(facts, ends[0]) if ends else None
     return EdgarAnnualData(
         balance_sheets=tuple(balance),

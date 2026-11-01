@@ -11,7 +11,7 @@ from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
 from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 from config.data_quality_config import BVPS_MAX_DIFF_PCT
 from output.sections.base import DossierSection
-from core.report_context import ReportContext, build_report_context
+from core.report_context import ReportContext, build_report_context, fiscal_year
 from core.models import FinancialData, EPVDetails, GrahamResult, or_default
 
 
@@ -64,7 +64,7 @@ class CalculationDetailsSection(DossierSection):
         latest_data_calc = self.context.latest_row if latest_year_calc else None
         
         if latest_year_calc and latest_data_calc:
-            year_label = latest_year_calc.split('-')[0]
+            year_label = fiscal_year(latest_year_calc)
             
             # 1. Share Count Disclosure
             self._add_share_count_disclosure(lines, latest_data_calc, year_label)

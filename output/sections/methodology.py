@@ -11,7 +11,7 @@ from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
 from config.investor_thresholds import DEFENSIVE
 from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 from output.sections.base import DossierSection
-from core.report_context import ReportContext, build_report_context
+from core.report_context import ReportContext, build_report_context, fiscal_year
 from core.models import (FinancialData, CombinedPEPBTest, EPVDetails, GrahamResult, MarginOfSafetyDetails, NCADetails,
                          ThreeYearAvgPE, or_default)
 
@@ -229,8 +229,8 @@ class MethodologySection(DossierSection):
                 
                 # Show years range
                 if len(years_included) > 0:
-                    first_year = years_included[-1].split('-')[0]  # Oldest year
-                    last_year = years_included[0].split('-')[0]    # Most recent year
+                    first_year = fiscal_year(years_included[-1])  # Oldest year
+                    last_year = fiscal_year(years_included[0])    # Most recent year
                     lines.append(f"  - Years: {first_year}-{last_year}")
                 
                 # Show net incomes
@@ -257,7 +257,7 @@ class MethodologySection(DossierSection):
                 loss_year_labels = []
                 for i, ni in enumerate(net_incomes):
                     if ni < 0 and i < len(years_included):
-                        loss_year_labels.append(years_included[i].split('-')[0])
+                        loss_year_labels.append(fiscal_year(years_included[i]))
                 
                 if loss_year_labels:
                     loss_years_str = ', '.join(loss_year_labels)
@@ -398,7 +398,7 @@ class MethodologySection(DossierSection):
         # Display years in descending order (most recent first)
         eps_parts = []
         for i, (year, eps) in enumerate(zip(years, eps_values)):
-            year_label = year.split('-')[0]  # Extract year from ISO date
+            year_label = fiscal_year(year)  # Fiscal year of the period end
             eps_display = format_price_display(eps, unified_currency, unified_currency)
             eps_parts.append(f"{year_label}: {eps_display}")
         
