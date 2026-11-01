@@ -8,7 +8,7 @@ Net-Net Value calculation, currency conversion details, and EPV methodology clar
 
 from typing import List, Dict, Any, Optional
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
-from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
+from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 from config.data_quality_config import BVPS_MAX_DIFF_PCT
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context

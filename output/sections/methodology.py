@@ -9,7 +9,7 @@ from typing import List, Dict, Any, Optional
 from output.formatting import format_price_display
 from config.graham_constants import COST_OF_CAPITAL, GRAHAM_MULTIPLIER
 from config.investor_thresholds import DEFENSIVE
-from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
+from config.valuation_config import EPV_MAX_YEARS, EPV_MIN_YEARS
 from output.sections.base import DossierSection
 from core.report_context import ReportContext, build_report_context
 

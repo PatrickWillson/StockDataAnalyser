@@ -6,7 +6,7 @@ including both defensive and enterprising investor tests.
 
 from typing import List, Dict, Any
 from config.graham_constants import GRAHAM_MULTIPLIER
-from config.investor_thresholds import DEFENSIVE, ENTERPRISING
+from config.investor_thresholds import DEFENSIVE, ENTERPRISING
 from output.sections.base import DossierSection
 
 
