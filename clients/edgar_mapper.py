@@ -52,6 +52,8 @@ COMMON_EARNINGS_MAX_EXCESS = 0.02
 PREFERRED_GAP_TOLERANCE = 0.10
 # Consolidated profit incl. minority interests: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest
 PROFIT_LOSS, NCI_INCOME = ("ProfitLoss",), ("NetIncomeLossAttributableToNoncontrollingInterest",)
+# A minority balance below this share of ProfitLoss cannot move it materially (Ethan Allen FY2025: -85K of 51.6M)
+MINORITY_IMMATERIAL = 0.01
 EPS = ("EarningsPerShareBasic", "EarningsPerShareBasicAndDiluted")
 EQUITY = ("StockholdersEquity",)
 EQUITY_INCL_NCI = ("StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",)
@@ -106,6 +108,7 @@ OPERATING_CASH_FLOW = ("NetCashProvidedByUsedInOperatingActivities",
 YEAR_END_TAGS = ("NetIncomeLoss", "ProfitLoss", "Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax",
                  "EarningsPerShareBasic")
 
+MIN_DAYS_BETWEEN_YEAR_ENDS = 300
 RESTATEMENT_TOLERANCE = 0.001   # relative change below which two filed values are the same figure
 PER_SHARE_TOLERANCE = 0.005    # absolute, for per-share values (filed rounded to the cent)
 
@@ -238,12 +241,19 @@ class _Notes:
 
 
 def fiscal_year_ends(facts: _Facts) -> List[str]:
-    """Period ends of the company's fiscal years (from 1-year income facts in annual filings), newest first."""
+    """
+    Period ends of the company's fiscal years (from 1-year income facts in annual filings), newest first.
+    Two years cannot end months apart: the one without a balance sheet is a filer's misdated fact (Ethan Allen's
+    FY2022 10-K dates June-year revenue 2020-01-01 to 2020-12-31).
+    """
     ends = set()
     for tag in YEAR_END_TAGS:
         for unit in (MONEY, PER_SHARE):
             ends.update(facts.series(tag, unit, "year"))
-    return sorted(ends, reverse=True)
+    balance_sheets = facts.series(ASSETS[0], MONEY, "instant")
+    return sorted((end for end in ends if end in balance_sheets
+                   or not any(other in balance_sheets and 0 < abs(_days(end, other)) < MIN_DAYS_BETWEEN_YEAR_ENDS
+                              for other in ends)), reverse=True)
 
 
 def filer_fiscal_years(facts: _Facts) -> Dict[str, int]:
@@ -533,6 +543,8 @@ def _net_income(facts: _Facts, end: str, kind: str, notes: Optional["_Notes"] = 
         how, value = "derived as ProfitLoss - the minority interests' share", profit.value - minority_share.value
     elif not _value(facts.get(MINORITY, end, MONEY, "instant")):
         how, value = "ProfitLoss used (no minority interest reported)", profit.value
+    elif abs(_value(facts.get(MINORITY, end, MONEY, "instant"))) < MINORITY_IMMATERIAL * abs(profit.value):
+        how, value = "ProfitLoss used (minority interest immaterial)", profit.value
     else:
         if notes is not None:
             notes.derive("net income", "not available: only ProfitLoss is tagged and the minority interests' "

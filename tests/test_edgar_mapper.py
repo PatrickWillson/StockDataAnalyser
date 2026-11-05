@@ -493,3 +493,27 @@ def test_earnings_for_the_common_need_net_income_less_what_ranks_ahead(available
 def test_earnings_for_the_common_alone_are_used_as_tagged():
     data = _income(NetIncomeLossAvailableToCommonStockholdersBasic=5.0, Revenues=50.0)
     assert data.income_statements[0].net_income == 5.0
+
+
+def test_immaterial_minority_interest_does_not_block_profit_loss():
+    """Ethan Allen FY2025: only ProfitLoss 51,596K is tagged, minority balance -85K."""
+    facts = {"Assets": [(None, "2025-06-30", 700_000.0, "2025-08-01", "10-K", "USD")],
+             "MinorityInterest": [(None, "2025-06-30", -85.0, "2025-08-01", "10-K", "USD")],
+             "ProfitLoss": [("2024-07-01", "2025-06-30", 51_596.0, "2025-08-01", "10-K", "USD")]}
+    data = annual_data(_facts(facts))
+    assert data.income_statements[0].net_income == 51_596.0
+    assert any("ProfitLoss used (minority interest immaterial)" in n for n in data.notes)
+    facts["MinorityInterest"] = [(None, "2025-06-30", 9_000.0, "2025-08-01", "10-K", "USD")]   # material: unknown share
+    assert annual_data(_facts(facts)).income_statements[0].net_income is None
+
+
+def test_a_misdated_year_without_a_balance_sheet_is_dropped():
+    """Ethan Allen's FY2022 10-K dates June-year revenue as calendar 2020; a real fiscal-year change stays."""
+    def revenue(start, end):
+        return (start, end, 589_837.0, "2022-08-01", "10-K", "USD")
+    tag = "RevenueFromContractWithCustomerExcludingAssessedTax"
+    facts = {tag: [revenue("2019-07-01", "2020-06-30"), revenue("2020-01-01", "2020-12-31"), revenue("2020-07-01", "2021-06-30")],
+             "Assets": [(None, "2020-06-30", 1.0, "2022-08-01", "10-K", "USD"), (None, "2021-06-30", 1.0, "2022-08-01", "10-K", "USD")]}
+    assert [r.period_end for r in annual_data(_facts(facts)).income_statements] == ["2021-06-30", "2020-06-30"]
+    facts[tag] = [revenue("2018-07-01", "2019-06-30"), revenue("2020-01-01", "2020-12-31")]   # a year's gap: both real
+    assert [r.period_end for r in annual_data(_facts(facts)).income_statements] == ["2020-12-31", "2019-06-30"]
