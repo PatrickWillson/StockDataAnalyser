@@ -41,6 +41,15 @@ MONEY, PER_SHARE, SHARES = "USD", "USD/shares", "shares"
 REVENUE = ("RevenueFromContractWithCustomerExcludingAssessedTax", "RevenueFromContractWithCustomerIncludingAssessedTax",
            "SalesRevenueNet", "SalesRevenueGoodsNet", "Revenues", "RevenuesNetOfInterestExpense")
 NET_INCOME = ("NetIncomeLossAvailableToCommonStockholdersBasic", "NetIncomeLoss")
+AVAILABLE_TO_COMMON = NET_INCOME[0]
+PREFERRED_DIVIDENDS = ("PreferredStockDividendsAndOtherAdjustments", "PreferredStockDividendsIncomeStatementImpact",
+                       "DividendsPreferredStock")
+# How far below net income earnings for the common may sit without preferred dividends explaining the gap
+# (two-class allocations: Oil-Dri 5%; JPMorgan FY2009 25%, 8,774M of 11,728M), and how far above it (a loss
+# shared with participating securities: Hurco FY2020 1%)
+COMMON_EARNINGS_MAX_GAP = 1 / 3
+COMMON_EARNINGS_MAX_EXCESS = 0.02
+PREFERRED_GAP_TOLERANCE = 0.10
 # Consolidated profit incl. minority interests: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest
 PROFIT_LOSS, NCI_INCOME = ("ProfitLoss",), ("NetIncomeLossAttributableToNoncontrollingInterest",)
 EPS = ("EarningsPerShareBasic", "EarningsPerShareBasicAndDiluted")
@@ -482,6 +491,21 @@ def _cover_shares(facts: _Facts, end: str) -> Optional[float]:
     return float(sum(c[2] for c in same_filing if c[1] == date))
 
 
+def _sound_common_earnings(available: Fact, net: Fact, preferred: Optional[Fact]) -> bool:
+    """
+    Earnings for the common are net income less what ranks ahead (GRAHAM_METHODOLOGY §2.3). Filers also use the
+    tag for continuing operations only, above net income or not (Hooker FY2026: -12.9M, net loss 27.0M), or for a
+    small allocation (Arrow FY2012: -0.5M, net income 22.2M). A large gap needs preferred dividends to explain it
+    (Bank of America FY2009: -2.2bn, net income 6.3bn, preferred dividends 8.5bn).
+    """
+    gap = net.value - available.value
+    if gap < -COMMON_EARNINGS_MAX_EXCESS * abs(net.value):
+        return False
+    if gap <= COMMON_EARNINGS_MAX_GAP * abs(net.value):
+        return True
+    return preferred is not None and abs(gap - preferred.value) <= PREFERRED_GAP_TOLERANCE * abs(preferred.value)
+
+
 def _net_income(facts: _Facts, end: str, kind: str, notes: Optional["_Notes"] = None) -> Optional[Fact]:
     """
     Net income for the common: the NET_INCOME chain, else ProfitLoss minus the minority interests'
@@ -491,6 +515,13 @@ def _net_income(facts: _Facts, end: str, kind: str, notes: Optional["_Notes"] = 
     """
     fact = facts.get(NET_INCOME, end, MONEY, kind)
     if fact is not None:
+        if fact.tag == AVAILABLE_TO_COMMON:
+            net = facts.get(NET_INCOME[1:], end, MONEY, kind)
+            if net is not None and not _sound_common_earnings(fact, net, facts.get(PREFERRED_DIVIDENDS, end, MONEY, kind)):
+                if notes is not None:
+                    notes.derive("net income", f"NetIncomeLoss used: {AVAILABLE_TO_COMMON} is not net income less "
+                                 "preferred dividends", end)
+                fact = net
         if notes is not None:
             notes.fact("net income", end, fact)
         return fact

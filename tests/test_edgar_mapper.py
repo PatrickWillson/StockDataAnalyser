@@ -460,3 +460,36 @@ def test_junior_subordinated_debt_is_noted_but_never_added():
     data = _debt_facts(LongTermDebt=55_000.0, JuniorSubordinatedDebentureOwedToUnconsolidatedSubsidiaryTrust=20_000.0)
     assert data.balance_sheets[0].long_term_debt == 55_000.0
     assert any("junior subordinated debt is tagged separately and may not be included" in n for n in data.notes)
+
+
+# --- Earnings for the common: the tag is not always net income less preferred (GRAHAM_METHODOLOGY §2.3) -
+
+def _income(**tags):
+    facts = {"Assets": [(None, "2024-12-31", 100.0, "2025-03-01", "10-K", "USD")]}
+    facts.update({tag: [("2024-01-01", "2024-12-31", value, "2025-03-01", "10-K", "USD")] for tag, value in tags.items()})
+    return annual_data(_facts(facts))
+
+
+@pytest.mark.parametrize("available, net, preferred, expected", [
+    (-479_000.0, 22_179_000.0, None, 22_179_000.0),       # Arrow FY2012: a small allocation, not earnings
+    (-12_890.0, -26_967.0, None, -26_967.0),              # Hooker FY2026: continuing operations only
+    (12_040.0, 9_865.0, None, 9_865.0),                   # Hooker FY2024: above net income
+    (51_416.0, 53_996.0, None, 51_416.0),                 # Oil-Dri FY2025: two-class allocation, kept
+    (8_774.0, 11_728.0, None, 8_774.0),                   # JPMorgan FY2009: 25% below, kept
+    (-6_180.0, -6_254.0, None, -6_180.0),                 # Hurco FY2020: a loss shared with participating securities
+    (-2_204.0, 6_276.0, 8_480.0, -2_204.0),               # Bank of America FY2009: preferred dividends explain it
+    (-2_204.0, 6_276.0, 1_000.0, 6_276.0),                # the same gap, preferred dividends do not explain it
+    (-3_595.0, -2_238.0, 1_357.0, -3_595.0),              # Bank of America FY2010: a loss, deeper for the common
+])
+def test_earnings_for_the_common_need_net_income_less_what_ranks_ahead(available, net, preferred, expected):
+    tags = {"NetIncomeLossAvailableToCommonStockholdersBasic": available, "NetIncomeLoss": net}
+    if preferred is not None:
+        tags["PreferredStockDividendsAndOtherAdjustments"] = preferred
+    data = _income(**tags)
+    assert data.income_statements[0].net_income == expected
+    assert any("NetIncomeLoss used" in n for n in data.notes) == (expected == net and available != net)
+
+
+def test_earnings_for_the_common_alone_are_used_as_tagged():
+    data = _income(NetIncomeLossAvailableToCommonStockholdersBasic=5.0, Revenues=50.0)
+    assert data.income_statements[0].net_income == 5.0
