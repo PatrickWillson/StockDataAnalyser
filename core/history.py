@@ -9,7 +9,7 @@ them is a behaviour change and must be done (and snapshot-reviewed) separately.
 """
 
 import datetime as dt
-from typing import Any, Callable, Iterable, Mapping, Optional, Union
+from typing import Any, Callable, Iterable, Mapping, Optional, Sequence, Union
 
 from core.models import MISSING, HistoryRow, or_default
 
@@ -74,6 +74,23 @@ def fiscal_year(period_end: str) -> str:
     except (TypeError, ValueError):
         return str(period_end).split('-')[0]
     return str(end.year - 1) if end.month == 1 and end.day <= 7 else str(end.year)
+
+
+def fiscal_year_of_date(date: str, period_ends: Sequence[str]) -> str:
+    """
+    The fiscal year a date falls in, as 'YYYY': the year of the first reported period end on or after it, and
+    outside the reported years the company's usual year end decides. Without period ends, the calendar year.
+    E.g. with a June year end, 2025-08-15 belongs to fiscal 2026.
+    """
+    day = str(date)[:10]
+    if not period_ends:
+        return day[:4]
+    following = next((end for end in sorted(period_ends) if end >= day), None)
+    if following is not None and day >= min(period_ends):
+        return fiscal_year(following)
+    usual_end = min(period_ends)[5:10] if following is not None else max(period_ends)[5:10]
+    year = int(day[:4]) if day[5:10] <= usual_end else int(day[:4]) + 1
+    return fiscal_year(f"{year}-{usual_end}")
 
 
 def row_at(history: Mapping[str, YearData], year: str) -> HistoryRow:

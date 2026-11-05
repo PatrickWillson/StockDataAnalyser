@@ -22,8 +22,8 @@
   - Conservative Intrinsic Value: 23.40 USD
 - Current Price: 187.45 USD
 - 52-Week Range: 124.17 USD - 199.62 USD
-- Trailing Dividend: 0.24 USD (Yield: 0.13%) - Declared (Dividend API) [2023]
-  - Forward Rate: 0.96 USD (Yield: 0.51%)
+- Forward Annual Dividend: 0.96 USD (Yield: 0.51%)
+  - ⚠️ No historical dividend data available - using forward declared rate
 - P/E Ratio (Current Year): 30.05
 - P/E Ratio (3-Year Avg): 30.79 (based on avg EPS of 6.09 from 2021-2023)
 - Price/Book: 46.90
@@ -47,7 +47,6 @@
   - Based on 2 payment(s):
     - 2024-01-01: 0.2400 USD
     - 2023-10-01: 0.2400 USD
-  - FY2023 Dividend: 0.24 USD (Yield: 0.13%, Diff: +100.0%)
 
 ---
 
@@ -116,9 +115,7 @@
 - **Return on Equity: 156.1%** - Strong capital efficiency
 
 ### Dividend Sustainability Risk:
-- **Payout Ratio: 3.8%** - Conservative (sustainable)
-- **Dividend Coverage: 29.6x** from operating cash flow - Well covered
-- **Dividend History: 2 of 10 years** - ⚠️ Inconsistent payment history
+- **Dividend History: 1 of 10 years** - ⚠️ Inconsistent payment history
 
 ### Valuation Risk (Margin of Safety):
 - **Margin of Safety: -701.1%** - Trading above conservative intrinsic value
@@ -165,7 +162,7 @@
    - Criterion: Current Ratio ≥ 1.5
 3. **Debt to Assets**: FAIL
    - Criterion: Long-term debt ≤ 110% of net current assets (current assets − current liabilities)
-4. **Dividend Record**: PASS
+4. **Dividend Record**: FAIL
    - Criterion: Currently pays a dividend (last year > 0)
 5. **Earnings Growth**: PASS
    - Criterion: Latest EPS above the EPS 5 reported years earlier
@@ -179,8 +176,8 @@
 
 | Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
-| 2024 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.72 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2023 | 383.29B | 97.00B | 6.24 | 0.24 | 4.00 | ⚠️ -0.11 | 3.8% | 111.09B | 15.550B | 187.45 | 30.1 | 46.9 |
+| 2024 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.96 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
+| 2023 | 383.29B | 97.00B | 6.24 | N/A | 4.00 | ⚠️ -0.11 | 0.0% | 111.09B | 15.550B | 187.45 | 30.1 | 46.9 |
 | 2022 | 394.33B | 99.80B | 6.26 | N/A | 3.18 | ⚠️ -1.17 | 0.0% | 120.07B | 15.943B | 172.45 | 27.5 | 54.2 |
 | 2021 | 365.82B | 94.68B | 5.76 | N/A | 3.84 | 0.57 | 0.0% | 109.11B | 16.427B | 158.66 | 27.5 | 41.3 |
 | 2020 | 347.53B | 89.95B | 5.30 | N/A | 3.53 | 0.52 | 0.0% | 103.65B | 16.977B | 145.97 | 27.6 | 41.3 |

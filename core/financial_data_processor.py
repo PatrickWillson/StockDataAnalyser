@@ -10,7 +10,7 @@ import logging
 from typing import Dict, Any, List, Optional, Sequence
 from core.currency_converter import CurrencyConverter
 from core.fundamentals import CompanyFundamentals, DividendPayment, number_or_zero
-from core.history import fiscal_year, has_statement_data, is_dividend_only_year
+from core.history import fiscal_year, fiscal_year_of_date, has_statement_data, is_dividend_only_year
 from core.models import HistoryRow, or_default
 from core.price_quote import PriceQuote, same_currency
 from config.valuation_config import NORMALIZED_EPS_YEARS
@@ -182,6 +182,9 @@ class FinancialDataProcessor:
         
         try:
             # PRIORITY 1: Dividend payments (declared dividends)
+            # Dividends belong to the fiscal year they fall in, like the statements beside them
+            period_ends = sorted({row.period_end for row in (*fundamentals.annual_income_statements,
+                                                             *fundamentals.annual_balance_sheets)})
             payments = fundamentals.dividend_payments
             if payments:
                 self._log(f"[DEBUG] Processing {len(payments)} dividend payment records")
@@ -192,7 +195,7 @@ class FinancialDataProcessor:
                 for payment in payments:
                     # Payment date if available, otherwise ex-dividend date
                     if payment.date:
-                        year = payment.date[:4]  # Extract year from YYYY-MM-DD
+                        year = fiscal_year_of_date(payment.date, period_ends)
                         if payment.amount > 0:
                             year_totals[year] = year_totals.get(year, 0.0) + payment.amount
                             self._log(f"[DEBUG] Year {year}: Added dividend {payment.amount:.4f} (from dividend payments)")
@@ -231,7 +234,7 @@ class FinancialDataProcessor:
                 self._log(f"[DEBUG] Found {len(fundamentals.dividend_amounts)} dividend amount records")
                 year_totals = {}
                 for dividend in fundamentals.dividend_amounts:
-                    year = dividend.date[:4]
+                    year = fiscal_year_of_date(dividend.date, period_ends)
                     if dividend.amount > 0:
                         year_totals[year] = year_totals.get(year, 0.0) + dividend.amount
                         source_indicators[year] = 'dividends_array'

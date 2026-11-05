@@ -109,7 +109,7 @@ The ordered rules, implemented in `core/verdict.py` (F20): no intrinsic value �
 | Missing EPV | N/A, not zero (§2) | "N/A" with the reason; MoS uses the normalized Graham Number alone and says why. Negative average earnings over the cycle stay a real 0 (no earning power), so MoS is N/A rather than resting on the last three years (§2.1–2.3) | **Fixed (F3)** |
 | Defensive P/E (4.6) | 15 × 3-year average EPS | Price ≤ 15 × mean EPS of the 3 latest reported years | **Fixed (F20)** |
 | Defensive earnings growth (4.5) | Per-share, 3-year averages at both ends | Mean EPS of reported years 0–2 ≥ 4/3 × mean of years 9–11 | **Fixed (F20)** (split basis of per-share history: CODEBASE_GUIDE §11 E5) |
-| Defensive dividend record (4.4) | 20 uninterrupted years | Dividend in each of the 20 calendar years ending with the newest year | **Fixed (F20)** |
+| Defensive dividend record (4.4) | 20 uninterrupted years | Dividend in each of the 20 fiscal years ending with the newest year (payments are counted in the fiscal year they fall in, 2026-11-05; a December year end is the calendar year) | **Fixed (F20)** |
 | Defensive P/B (4.7) | ≤ 1.5 × tangible book (§3.5), or P/E × P/B ≤ 22.5 with the P/E on three-year average earnings (the 4.6 multiplier) | Same; the product relaxes P/B only (P/E ≤ 15 still required by 4.6) | **Fixed (F20)**; tangible book is after preferred stock (2026-11-05, see Senior claims) |
 | Book value for Graham Number | Tangible book (§3.5 decision) | Tangible book (TBVPS) | **Decided** — matches |
 | Adequate size (4.1) | Required | Not implemented | Ignored by decision D7 |

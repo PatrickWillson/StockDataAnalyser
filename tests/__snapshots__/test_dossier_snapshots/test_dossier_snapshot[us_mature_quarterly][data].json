@@ -13,7 +13,6 @@
     "dividend_per_share": 0.96,
     "dividend_source": "Dividend API",
     "dividend_sources": {
-      "2023": "dividend_api",
       "2024": "dividend_api"
     },
     "dividend_yield": 0.0051,
@@ -282,7 +281,7 @@
         "claims_outside_equity": 172000000.0,
         "current_assets": 143566000000.0,
         "current_liabilities": 145308000000.0,
-        "dividend": 0.24,
+        "dividend": 0.0,
         "eps": 6.237596109751595,
         "goodwill": 0.0,
         "intangible_assets": 0.0,
@@ -290,7 +289,7 @@
         "long_term_debt": 106000000000.0,
         "net_income": 96995000000.0,
         "operating_cash_flow": 110543000000.0,
-        "payout_ratio": "3.8%",
+        "payout_ratio": "0.0%",
         "preferred_stock": 0.0,
         "revenue": 383285000000.0,
         "shares_outstanding": 15550061000.0,
@@ -305,7 +304,7 @@
         "claims_outside_equity": 0.0,
         "current_assets": 0.0,
         "current_liabilities": 0.0,
-        "dividend": 0.72,
+        "dividend": 0.96,
         "eps": 0.0,
         "goodwill": 0.0,
         "intangible_assets": 0.0,
@@ -513,7 +512,7 @@
     "enterprising_tests": {
       "current_ratio": "FAIL",
       "debt_to_assets": "FAIL",
-      "dividend_record": "PASS",
+      "dividend_record": "FAIL",
       "earnings_growth": "PASS",
       "earnings_stability": "PASS",
       "price_test": "FAIL"
