@@ -408,3 +408,55 @@ def test_energy_inventory_tagged_as_finished_goods():
         "EnergyRelatedInventoryNaturalGasInStorage": [(None, "2012-12-31", 300.0, "2013-02-27", "10-K", "USD")],
     })
     assert annual_data(facts).balance_sheets[0].inventory == 14_542.0
+
+
+# --- Long-term debt due after a year, when no non-current total is tagged (GRAHAM_METHODOLOGY §4.2) -
+
+def _debt_facts(end="2024-12-31", **tags):
+    filed = str(int(end[:4]) + 1) + "-03-01"
+    facts = {"NetIncomeLoss": [(end[:4] + "-01-01", end, 1.0, filed, "10-K", "USD")],
+             "Assets": [(None, end, 100.0, filed, "10-K", "USD")]}
+    facts.update({tag: [(None, end, value, filed, "10-K", "USD")] for tag, value in tags.items()})
+    return annual_data(_facts(facts))
+
+
+def test_long_term_debt_from_its_tagged_kinds():
+    """Lifetime Brands FY2023 balance sheet: term loan 135,830 + revolving credit 60,395 = 196,225."""
+    data = _debt_facts(LongTermDebt=150_000.0, LongTermLoansPayable=135_830.0, LongTermLineOfCredit=60_395.0,
+                       LongTermDebtCurrent=4_742.0)
+    balance = data.balance_sheets[0]
+    assert balance.long_term_debt == 196_225.0 and balance.short_term_debt == 4_742.0
+    assert any("long-term debt: derived as the sum of LongTermLoansPayable, LongTermLineOfCredit" in n for n in data.notes)
+
+
+def test_long_term_notes_replace_a_mismatched_total():
+    """Utah Medical FY2013 balance sheet: notes payable 5,065, though LongTermDebt is tagged 7."""
+    assert _debt_facts(LongTermDebt=7.0, LongTermNotesPayable=5_065.0).balance_sheets[0].long_term_debt == 5_065.0
+
+
+def test_other_long_term_debt_counts_beside_a_named_line_or_alone_but_not_over_a_total():
+    """Village FY2023: 72,426 + Wakefern notes 1,686. Village FY2018: other 6.4M is a detail of the 48.2M total."""
+    assert _debt_facts(LongTermNotesPayable=72_426.0,
+                       OtherLongTermDebtNoncurrent=1_686.0).balance_sheets[0].long_term_debt == 74_112.0
+    assert _debt_facts(OtherLongTermDebtNoncurrent=900.0).balance_sheets[0].long_term_debt == 900.0
+    assert _debt_facts(LongTermDebt=48_200.0, OtherLongTermDebtNoncurrent=6_400.0).balance_sheets[0].long_term_debt == 48_200.0
+
+
+def test_a_tagged_part_smaller_than_the_total_is_only_a_piece_of_it():
+    """Village FY2018: notes payable 6,418 is one component of total long-term debt 48,186."""
+    assert _debt_facts(LongTermDebt=48_186.0, LongTermNotesPayable=6_418.0).balance_sheets[0].long_term_debt == 48_186.0
+    assert _debt_facts(LongTermDebt=42_646.0, LongTermNotesPayable=0.0).balance_sheets[0].long_term_debt == 42_646.0
+
+
+def test_long_term_debt_total_less_its_current_portion():
+    data = _debt_facts(LongTermDebt=349_822.0, LongTermDebtCurrent=96_000.0)
+    balance = data.balance_sheets[0]
+    assert balance.long_term_debt == 253_822.0 and balance.short_term_debt == 96_000.0  # not counted twice
+    assert any("derived as LongTermDebt - LongTermDebtCurrent" in n for n in data.notes)
+
+
+def test_junior_subordinated_debt_is_noted_but_never_added():
+    """Arrow Financial keeps it outside LongTermDebt, JPMorgan inside; the tags do not say which."""
+    data = _debt_facts(LongTermDebt=55_000.0, JuniorSubordinatedDebentureOwedToUnconsolidatedSubsidiaryTrust=20_000.0)
+    assert data.balance_sheets[0].long_term_debt == 55_000.0
+    assert any("junior subordinated debt is tagged separately and may not be included" in n for n in data.notes)

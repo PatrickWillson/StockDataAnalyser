@@ -62,6 +62,14 @@ LIABILITIES, ASSETS, LIABILITIES_AND_EQUITY = ("Liabilities",), ("Assets",), ("L
 LONG_TERM_DEBT = ("LongTermDebtNoncurrent", "LongTermDebtAndCapitalLeaseObligations")
 LONG_TERM_DEBT_TOTAL = ("LongTermDebt", "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities")
 # ^ incl. the current portion; banks report only these (JPMorgan: the second)
+# Non-current debt tagged by kind when no non-current total is (Lifetime Brands: term loan + revolver; Village
+# Super Market: notes + other). Some filers misuse "other" (Lifetime FY2024: 4,108K of other long-term
+# obligations): kept, the conservative reading of an ambiguous tag (GRAHAM_METHODOLOGY §8.4)
+LONG_TERM_NOTES = ("LongTermNotesPayable", "LongTermLoansPayable")
+LONG_TERM_REVOLVER, OTHER_LONG_TERM_DEBT = ("LongTermLineOfCredit",), ("OtherLongTermDebtNoncurrent",)
+# Outside LongTermDebt at some banks (Arrow Financial: 20,000K beside term advances), inside it at others
+# (JPMorgan), and the tags do not say which: noted, never added
+JUNIOR_SUBORDINATED = ("JuniorSubordinatedDebentureOwedToUnconsolidatedSubsidiaryTrust",)
 DEBT_CURRENT = ("DebtCurrent",)
 SHORT_BORROWINGS, COMMERCIAL_PAPER = ("ShortTermBorrowings",), ("CommercialPaper",)
 LTD_CURRENT = ("LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCurrent")
@@ -267,6 +275,50 @@ def _first(facts: _Facts, chain: Sequence[str], end: str) -> Tuple[Optional[floa
     return (None, []) if fact is None else (fact.value, [fact.tag])
 
 
+def _long_term_debt(facts: _Facts, end: str, notes: _Notes) -> Tuple[Optional[float], bool]:
+    """
+    Debt due after a year, as the long-term debt tests want it (GRAHAM_METHODOLOGY §4.2): the non-current
+    total, else the larger of its tagged kinds and the total less its current portion (the conservative
+    reading, §8.4). Returns (value, includes_current):
+    with no current portion tagged the total is used whole, and it is flagged so it is not counted again as
+    short-term debt (banks report only this).
+    """
+    fact = facts.get(LONG_TERM_DEBT, end, MONEY, "instant")
+    notes.fact("long-term debt", end, fact)
+    if fact is not None:
+        return fact.value, False
+    used, parts = [], 0.0
+    for chain in (LONG_TERM_NOTES, LONG_TERM_REVOLVER):
+        part = facts.get(chain, end, MONEY, "instant")
+        notes.fact("long-term debt", end, part)
+        if part is not None:
+            parts += part.value
+            used.append(part.tag)
+    other = facts.get(OTHER_LONG_TERM_DEBT, end, MONEY, "instant")
+    total = facts.get(LONG_TERM_DEBT_TOTAL, end, MONEY, "instant")
+    notes.fact("long-term debt", end, total)
+    # "Other" alone is only a detail beside a total (Village FY2018: 6.4M of 48.2M)
+    if other is not None and (used or total is None):
+        notes.fact("long-term debt", end, other)
+        parts += other.value
+        used.append(other.tag)
+    current, current_used = _first(facts, LTD_CURRENT, end)
+    net = None if total is None else total.value - (current or 0.0)
+    # The parts can be the whole debt (Lifetime Brands) or one piece of the total (Village FY2018: 6.4M of 48.2M)
+    if used and (net is None or parts >= net):
+        notes.derive("long-term debt", "derived as the sum of " + ", ".join(used), end)
+        return parts, False
+    if total is None:
+        return None, False
+    if facts.get(JUNIOR_SUBORDINATED, end, MONEY, "instant") is not None:
+        notes.derive("long-term debt", "junior subordinated debt is tagged separately and may not be included", end)
+    if current_used:
+        notes.derive("long-term debt", f"derived as {total.tag} - {current_used[0]}", end)
+        return net, False
+    notes.derive("long-term debt", f"{total.tag} used (includes the current portion)", end)
+    return total.value, True
+
+
 def _intangible_parts(facts: _Facts, end: str) -> Tuple[Optional[float], List[str]]:
     """
     Intangibles excluding goodwill when no total is tagged: the indefinite-lived total, else its named
@@ -342,14 +394,7 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
             notes.derive("intangibles (ex goodwill)", "derived as the sum of " + ", ".join(used), end)
     _note_unmapped_intangibles(facts, end, notes)
 
-    long_term_debt = field("long-term debt", LONG_TERM_DEBT)
-    includes_current = False
-    if long_term_debt is None:
-        total_fact = facts.get(LONG_TERM_DEBT_TOTAL, end, MONEY, "instant")
-        notes.fact("long-term debt", end, total_fact)
-        if total_fact is not None:
-            long_term_debt, includes_current = total_fact.value, True
-            notes.derive("long-term debt", f"{total_fact.tag} used (includes the current portion)", end)
+    long_term_debt, includes_current = _long_term_debt(facts, end, notes)
 
     debt_current = field("short-term debt", DEBT_CURRENT)
     if debt_current is None:
