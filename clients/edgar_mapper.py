@@ -71,7 +71,11 @@ UTILITY_INVENTORY = ("EnergyRelatedInventoryNaturalGasInStorage", "EnergyRelated
 # Energy companies tagging a total (ExxonMobil: crude oil, products and merchandise + materials and supplies)
 ENERGY_INVENTORY_TOTAL = ("EnergyRelatedInventory",)
 SUPPLIES_INVENTORY = ("OtherInventorySupplies", "InventoryPartsAndComponentsNetOfReserves")
-PREFERRED = ("PreferredStockValue", "PreferredStockValueOutstanding")
+# Carrying value of preferred stock inside equity; the "including additional paid-in capital" tags are the
+# full amount (JPMorgan), PreferredStockValue is sometimes par value only
+PREFERRED = ("PreferredStockIncludingAdditionalPaidInCapitalNetOfDiscount", "PreferredStockIncludingAdditionalPaidInCapital",
+             "PreferredStockValue", "PreferredStockValueOutstanding")
+PREFERRED_LIQUIDATION = ("PreferredStockLiquidationPreferenceValue",)
 SHARES_OUTSTANDING = ("CommonStockSharesOutstanding",)
 SHARES_ISSUED, TREASURY_SHARES = ("CommonStockSharesIssued",), ("TreasuryStockCommonShares", "TreasuryStockShares")
 COVER_SHARES = ("EntityCommonStockSharesOutstanding",)
@@ -384,6 +388,15 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
                 shares = weighted.value
                 notes.derive("year-end shares", "weighted-average basic shares of the period (no period-end count tagged)", end)
 
+    # Preferred stock inside equity, at the higher of its carrying value and its liquidation preference:
+    # Graham deducts it at "par (plus back dividends) or market, whichever is higher" (§3.5); market
+    # value is not in the filings
+    carrying = field("preferred stock", PREFERRED)
+    liquidation = field("preferred stock", PREFERRED_LIQUIDATION)
+    preferred = max((v for v in (carrying, liquidation) if v is not None), default=None)
+    if liquidation is not None and (carrying is None or liquidation > carrying):
+        notes.derive("preferred stock", "at its liquidation preference (above its carrying value)", end)
+
     return BalanceSheetRow(
         period_end=end,
         total_equity=equity,
@@ -399,6 +412,7 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
         inventory=inventory,
         noncontrolling_interest=minority,
         shares_outstanding=shares,
+        preferred_stock=preferred,
     )
 
 

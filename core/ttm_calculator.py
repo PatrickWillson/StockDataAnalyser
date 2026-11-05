@@ -16,7 +16,7 @@ import statistics
 from datetime import datetime
 from typing import Dict, Union, List, Any, Optional
 from core.models import TTMResult
-from core.formulas import graham_number, margin_of_safety_pct, net_current_asset_value, price_multiple, tangible_equity
+from core.formulas import common_equity, graham_number, margin_of_safety_pct, net_current_asset_value, price_multiple, tangible_equity
 from config.ttm_config import (
     EARLIEST_PERIOD_YEAR,
     FREQUENCY_DETECTION_MAX_PERIODS,
@@ -409,6 +409,7 @@ class TTMCalculator:
         current_assets = most_recent_balance.get('current_assets', 0.0)
         total_liabilities = most_recent_balance.get('total_liabilities', 0.0)
         claims_outside_equity = most_recent_balance.get('claims_outside_equity', 0.0)
+        preferred_stock = most_recent_balance.get('preferred_stock', 0.0)
         shares_outstanding = most_recent_balance.get('shares_outstanding', 0.0)
         
         # Calculate TTM EPS: Sum(Net Income) / Most Recent Shares Outstanding
@@ -428,6 +429,7 @@ class TTMCalculator:
             'current_assets': current_assets,
             'total_liabilities': total_liabilities,
             'claims_outside_equity': claims_outside_equity,
+            'preferred_stock': preferred_stock,
             'shares_outstanding': shares_outstanding,
             'reporting_frequency': frequency,
             'periods_used': selected_periods,
@@ -537,7 +539,8 @@ class TTMCalculator:
             return "N/A"
         
         # Calculate tangible book value
-        tbvps = tangible_equity(total_equity, intangible_assets, goodwill) / shares_outstanding
+        tbvps = tangible_equity(total_equity, intangible_assets, goodwill,
+                                ttm_metrics.get('preferred_stock', 0.0)) / shares_outstanding
         
         # Check for negative TBVPS
         if tbvps < 0:
@@ -606,7 +609,8 @@ class TTMCalculator:
         
         # Calculate net-net value
         claims_outside_equity = ttm_metrics.get('claims_outside_equity', 0.0)
-        net_net_value = net_current_asset_value(current_assets, total_liabilities, claims_outside_equity) / shares_outstanding
+        net_net_value = net_current_asset_value(current_assets, total_liabilities, claims_outside_equity,
+                                                ttm_metrics.get('preferred_stock', 0.0)) / shares_outstanding
         
         return round(net_net_value, 2)
     
@@ -665,7 +669,7 @@ class TTMCalculator:
             self.warnings.append("TTM P/B: Shares outstanding is zero or negative")
             ttm_pb_ratio = "N/A"
         else:
-            book_value_per_share = total_equity / shares_outstanding
+            book_value_per_share = common_equity(total_equity, ttm_metrics.get('preferred_stock', 0.0)) / shares_outstanding
             
             if book_value_per_share <= 0:
                 self.warnings.append("TTM P/B: Book value per share is zero or negative")

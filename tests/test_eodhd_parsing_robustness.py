@@ -86,3 +86,20 @@ def test_years_ending_in_early_january_belong_to_the_previous_year():
     assert history['2022-01-02']['dividend'] == 4.19
     years = sorted(history, reverse=True)
     assert dividend_record(history, years, 3) == 'FAIL'       # 3 years cannot show a 20-year record
+
+
+
+def test_preferred_stock_is_deducted_from_the_commons_book_and_net_current_assets():
+    from core.formulas import common_equity, net_current_asset_value, tangible_equity
+    assert common_equity(300.0, 20.0) == 280.0 and common_equity(300.0, None) == 300.0
+    assert tangible_equity(300.0, 30.0, 50.0, 20.0) == 200.0
+    assert net_current_asset_value(500.0, 300.0, 10.0, 20.0) == 170.0
+
+
+def test_eodhd_preferred_stock_deduction_is_noted_as_pending():
+    from clients.eodhd_mapper import to_fundamentals
+    data = {"General": {"CurrencyCode": "USD"}, "Financials": {"Balance_Sheet": {"currency_symbol": "USD", "yearly": {
+        "2024-12-31": {"totalStockholderEquity": 300, "preferredStockTotalEquity": 20, "totalAssets": 900}}}}}
+    notes = to_fundamentals(data, None, "BAC.US").notes
+    assert notes and "E10, pending" in notes[0] and "FY2024" in notes[0]
+    assert to_fundamentals({"General": {}}, None, "X.US").notes == ()

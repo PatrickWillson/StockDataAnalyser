@@ -9,6 +9,7 @@ from typing import Dict, Any, Optional, List
 from core.currency_converter import CurrencyConverter
 from core.errors import PriceUnavailableError
 from core.financial_data_processor import FinancialDataProcessor
+from core.formulas import common_equity
 from core.fundamentals import CompanyFundamentals
 from core.ports import FundamentalsSource, QuoteSource, RateSource
 from core.history import fiscal_year, has_statement_data
@@ -319,7 +320,9 @@ class FinancialDataAssembler:
             
             if most_recent_year:
                 most_recent_data = history[most_recent_year]
-                total_equity = most_recent_data.get('total_equity', 0.0)
+                # The common's book equity: preferred stock ranks ahead of it (GRAHAM_METHODOLOGY §3.5)
+                total_equity = common_equity(most_recent_data.get('total_equity', 0.0),
+                                             most_recent_data.get('preferred_stock', 0.0))
                 year_shares = most_recent_data.get('shares_outstanding', 0.0)
                 
                 if year_shares > 0:

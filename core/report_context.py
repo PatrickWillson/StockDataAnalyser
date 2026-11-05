@@ -10,7 +10,7 @@ from typing import Any, Dict, Mapping, Optional, Tuple, Union
 
 from config.risk_thresholds import PROFIT_MARGIN_SANITY_LIMIT_PCT, RISK_HISTORY_WINDOW_YEARS
 from core.financial_data_processor import FinancialDataProcessor
-from core.formulas import net_current_asset_value, tangible_equity
+from core.formulas import common_equity, net_current_asset_value, tangible_equity
 from core.price_quote import is_minor_unit, major_currency
 from config.data_quality_config import FINANCIAL_HISTORY_YEARS
 from core.history import fiscal_year, has_income_data, has_statement_data, latest_year
@@ -23,7 +23,7 @@ class HistoryTableRow:
     year: str                      # history key ('YYYY-MM-DD')
     row: HistoryRow
     has_income: bool               # False: a dividend-only row ("[Data Unavailable]")
-    bvps: float                    # total equity / shares rounded to 2 dp; 0 when not computable
+    bvps: float                    # common equity (total − preferred) / shares, 2 dp; 0 when not computable
 
 
 @dataclass(frozen=True)
@@ -159,7 +159,8 @@ def build_report_context(financial_data: Union[FinancialData, Dict[str, Any]],
     year = latest_year(history, years, has_statement_data)
     row = history[year] if year else HistoryRow()
 
-    equity = or_default(row.total_equity, 0)
+    preferred = or_default(row.preferred_stock, 0)
+    equity = common_equity(or_default(row.total_equity, 0), preferred)    # the common's equity (§3.5)
     shares = or_default(row.shares_outstanding, 0)
     has_book = equity > 0 and shares > 0
     tangible = tangible_equity(equity, or_default(row.intangible_assets, 0), or_default(row.goodwill, 0)) if has_book else None
@@ -187,7 +188,7 @@ def build_report_context(financial_data: Union[FinancialData, Dict[str, Any]],
         three_year_eps=eps_data,
         three_year_eps_avg=sum(eps_data['eps_values']) / 3 if eps_data and eps_data['valid'] else None,
         latest_ncav=net_current_asset_value(or_default(row.current_assets, 0), or_default(row.total_liabilities, 0),
-                                            or_default(row.claims_outside_equity, 0.0)) if year else None,
+                                            or_default(row.claims_outside_equity, 0.0), preferred) if year else None,
         quote_currency=quote_currency,
         quote_is_minor_unit=is_minor_unit(quote_currency),
         quote_major_currency=major_currency(quote_currency),
@@ -196,7 +197,7 @@ def build_report_context(financial_data: Union[FinancialData, Dict[str, Any]],
 
 
 def _history_table_row(year: str, row: HistoryRow) -> HistoryTableRow:
-    equity = or_default(row.total_equity, 0)
+    equity = common_equity(or_default(row.total_equity, 0), or_default(row.preferred_stock, 0))
     shares = or_default(row.shares_outstanding, 0)
     return HistoryTableRow(year=year, row=row, has_income=has_income_data(row),
                            bvps=round(equity / shares, 2) if shares > 0 and equity > 0 else 0)

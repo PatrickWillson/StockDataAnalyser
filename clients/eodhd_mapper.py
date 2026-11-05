@@ -57,6 +57,7 @@ def balance_sheet_row(period_end: str, raw: Mapping[str, Any]) -> BalanceSheetRo
         inventory=optional_float(raw.get('inventory')),
         noncontrolling_interest=optional_float(raw.get('noncontrollingInterestInConsolidatedEntity')),
         shares_outstanding=optional_float(shares_raw),
+        preferred_stock=optional_float(raw.get('preferredStockTotalEquity')),
     )
 
 
@@ -250,6 +251,13 @@ def to_fundamentals(data: Mapping[str, Any], dividend_records: Optional[List[Map
     highlights = _section(data.get('Highlights'))
     shares_stats = _section(data.get('SharesStats'))
     technicals = _section(data.get('Technicals'))
+    annual_balance_sheets = tuple(parse_balance_sheet_rows(data, 'yearly'))
+    notes = ()
+    preferred_years = [row.period_end[:4] for row in annual_balance_sheets if (row.preferred_stock or 0) > 0]
+    if preferred_years:
+        notes = ("Preferred stock (EODHD preferredStockTotalEquity) deducted from common equity for book value "
+                 "and net current asset value (FY" + ", FY".join(sorted(preferred_years)) + "): assumes EODHD's "
+                 "totalStockholderEquity includes it, as US-GAAP filings do (CODEBASE_GUIDE §11 E10, pending)",)
     return CompanyFundamentals(
         source=SOURCE_NAME,
         symbol=general.get('Code', ticker.split('.')[0]),
@@ -263,7 +271,7 @@ def to_fundamentals(data: Mapping[str, Any], dividend_records: Optional[List[Map
         ceo_name=extract_ceo_name(data),
         is_delisted=bool(general.get('IsDelisted', False)),
         updated_at=general.get('UpdatedAt'),
-        annual_balance_sheets=tuple(parse_balance_sheet_rows(data, 'yearly')),
+        annual_balance_sheets=annual_balance_sheets,
         annual_income_statements=tuple(parse_income_statement_rows(data, 'yearly')),
         quarterly_balance_sheets=tuple(parse_balance_sheet_rows(data, 'quarterly')),
         quarterly_income_statements=tuple(parse_income_statement_rows(data, 'quarterly')),
@@ -293,4 +301,5 @@ def to_fundamentals(data: Mapping[str, Any], dividend_records: Optional[List[Map
             week_52_low=sanitize(technicals.get('52WeekLow')),
             per_share_currency=_pound_scale(trading_currency, exchange),
         ),
+        notes=notes,
     )

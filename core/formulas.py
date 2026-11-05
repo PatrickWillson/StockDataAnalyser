@@ -11,25 +11,36 @@ import math
 from config.graham_constants import GRAHAM_MULTIPLIER
 
 
-def tangible_equity(total_equity, intangible_assets, goodwill):
+def common_equity(total_equity, preferred_stock=0):
     """
-    Book value for the common in Graham's sense: equity less goodwill and other intangibles
-    (GRAHAM_METHODOLOGY §3.5, Security Analysis ch. 42). Intangibles and goodwill are taken as
-    magnitudes because some filers report them as negative numbers.
+    Book equity of the common stock: stockholders' equity less the preferred stock inside it, a
+    stock issue "ahead of the common" (GRAHAM_METHODOLOGY §3.5). Under US GAAP total stockholders'
+    equity includes preferred stock.
     """
-    return total_equity - abs(intangible_assets) - abs(goodwill)
+    return total_equity - abs(preferred_stock or 0)
 
 
-def net_current_asset_value(current_assets, total_liabilities, claims_outside_equity=0):
+def tangible_equity(total_equity, intangible_assets, goodwill, preferred_stock=0):
+    """
+    Book value for the common in Graham's sense: equity less goodwill, other intangibles and the
+    preferred stock ahead of the common (GRAHAM_METHODOLOGY §3.5, Security Analysis ch. 42).
+    Intangibles and goodwill are taken as magnitudes because some filers report them as negative
+    numbers.
+    """
+    return common_equity(total_equity, preferred_stock) - abs(intangible_assets) - abs(goodwill)
+
+
+def net_current_asset_value(current_assets, total_liabilities, claims_outside_equity=0, preferred_stock=0):
     """
     Net current asset value: "current assets alone, minus all liabilities and claims ahead of
     the issue" (GRAHAM_METHODOLOGY §3.3). claims_outside_equity covers minority interests and
     redeemable equity; Graham excluded "the interest of the minority stockholders of a
     subsidiary" from working capital. Deducting the whole minority interest (not just its share
     of subsidiary current assets) is the conservative reading (§8.4).
-    Not working capital (current assets − current liabilities).
+    Preferred stock inside equity is such a claim too (§3.3). Not working capital (current assets −
+    current liabilities).
     """
-    return current_assets - total_liabilities - claims_outside_equity
+    return current_assets - total_liabilities - claims_outside_equity - abs(preferred_stock or 0)
 
 
 def graham_number(eps, book_value_per_share):

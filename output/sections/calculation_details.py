@@ -139,6 +139,9 @@ class CalculationDetailsSection(DossierSection):
         
         if total_equity > 0 and shares_used > 0:
             lines.append(f"- **Total Stockholder Equity**: {total_equity:,.0f} {unified_currency}")
+            preferred = or_default(latest_data.preferred_stock, 0.0)
+            if preferred > 0:
+                lines.append(f"- **Less: Preferred Stock** (ranks ahead of the common): {preferred:,.0f} {unified_currency}")
             lines.append(f"- **Less: Intangible Assets**: {intangibles:,.0f} {unified_currency}")
             lines.append(f"- **Less: Goodwill**: {goodwill:,.0f} {unified_currency}")
             
@@ -150,7 +153,8 @@ class CalculationDetailsSection(DossierSection):
             bvps = self.context.latest_bvps
             
             lines.append(f"- **Tangible Book Value Per Share (TBVPS)**: {tbvps:.2f} {unified_currency}")
-            lines.append(f"- **Book Value Per Share (BVPS)**: {bvps:.2f} {unified_currency} (without subtracting intangibles)")
+            lines.append(f"- **Book Value Per Share (BVPS)**: {bvps:.2f} {unified_currency} (without subtracting intangibles"
+                         + ("; after preferred stock)" if or_default(latest_data.preferred_stock, 0.0) > 0 else ")"))
             
             # Compare to API if available
             api_bvps = or_default(self.financial_data.book_value_per_share, None) or 0
@@ -218,6 +222,9 @@ class CalculationDetailsSection(DossierSection):
                 if claims_outside_equity > 0:
                     lines.append(f"- **Less: Minority Interest and Other Claims Outside Common Equity**: "
                                  f"{claims_outside_equity:,.0f} {unified_currency}")
+                preferred = or_default(latest_data.preferred_stock, 0.0)
+                if preferred > 0:
+                    lines.append(f"- **Less: Preferred Stock**: {preferred:,.0f} {unified_currency}")
                 
                 net_current_assets = self.context.latest_ncav
                 lines.append(f"- **Net Current Assets**: {net_current_assets:,.0f} {unified_currency}")

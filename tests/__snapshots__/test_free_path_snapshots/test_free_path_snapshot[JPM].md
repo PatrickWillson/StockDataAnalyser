@@ -14,10 +14,10 @@
 
 - Verdict: **OVERVALUED**
   - Price is not below conservative intrinsic value (margin of safety -112.4%)
-- Graham Number (Single-Year EPS): 226.68 USD
-- Graham Number (3-Year Avg EPS): 218.90 USD
+- Graham Number (Single-Year EPS): 219.14 USD
+- Graham Number (3-Year Avg EPS): 211.61 USD
 - Intrinsic Value (EPV per share): 141.26 USD (10-year average earnings)
-- Net-Net Value: -1,506.74 USD
+- Net-Net Value: -1,514.19 USD
 - Margin of Safety: -112.4% (Capped by EPV)
   - Conservative Intrinsic Value: 141.26 USD
 - Current Price: 300.00 USD
@@ -25,7 +25,7 @@
   - Forward Rate: 6.00 USD (Yield: 2.00%)
 - P/E Ratio (Current Year): 14.96
 - P/E Ratio (3-Year Avg): 16.05 (based on avg EPS of 18.70 from 2023-2025)
-- Price/Book: 2.23
+- Price/Book: 2.36
 
 ---
 
@@ -35,12 +35,12 @@
 - Reporting Frequency: Quarterly
 - Period Covered: Q3 2025 through Q2 2026
 
-- TTM Graham Number: 255.38 USD (Annual: 226.68 USD, Diff: +12.7%)
-- TTM Tangible Book Value Per Share: 121.09 USD (Annual: 113.90 USD, Diff: +6.3%)
-- TTM Net-Net Value: -1,745.73 USD (Annual: -1,506.74 USD, Diff: -15.9%)
-- TTM Margin of Safety: -17.5% (vs the TTM Graham Number; the annual margin of safety uses the lower of the normalized Graham Number and EPV)
+- TTM Graham Number: 246.84 USD (Annual: 219.14 USD, Diff: +12.6%)
+- TTM Tangible Book Value Per Share: 113.12 USD (Annual: 106.45 USD, Diff: +6.3%)
+- TTM Net-Net Value: -1,753.70 USD (Annual: -1,514.19 USD, Diff: -15.8%)
+- TTM Margin of Safety: -21.5% (vs the TTM Graham Number; the annual margin of safety uses the lower of the normalized Graham Number and EPV)
 - TTM P/E Ratio: 12.53 (Annual: 14.96, Diff: -16.3%)
-- TTM P/B Ratio: 2.13 (Annual: 2.23, Diff: -4.6%)
+- TTM P/B Ratio: 2.26 (Annual: 2.36, Diff: -4.3%)
 
 - TTM Dividend (Last 12 Months): 3.13 USD (Yield: 1.04%)
   - Based on 4 payment(s):
@@ -56,7 +56,7 @@
 - Return on Equity (ROE): 15.36%
 - Return on Assets (ROA): 1.26%
 - Profit Margin: 30.52%
-- Book Value Per Share: 134.43 USD
+- Book Value Per Share: 126.97 USD
 
 ### Liquidity Analysis
 
@@ -80,6 +80,7 @@
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
 - SEC EDGAR: intangibles (ex goodwill): derived as the sum of IndefiniteLivedIntangibleAssetsExcludingGoodwill, FiniteLivedIntangibleAssetsNet (FY2022, FY2023, FY2024, FY2025)
 - SEC EDGAR: long-term debt: LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities used (includes the current portion) (FY2013, FY2014, FY2015, FY2016, FY2017, FY2018, FY2019, FY2020, FY2021, FY2022, FY2023, FY2024, FY2025)
+- SEC EDGAR: preferred stock: at its liquidation preference (above its carrying value) (FY2019, FY2020, FY2021, FY2022, FY2023, FY2024, FY2025)
 - SEC EDGAR: intangibles (ex goodwill): derived as the sum of OtherIntangibleAssetsNet (FY2009, FY2015, FY2016)
 - SEC EDGAR: intangibles (ex goodwill): derived as the sum of IndefiniteLivedIntangibleAssetsExcludingGoodwill (FY2010, FY2011, FY2012, FY2013, FY2014)
 - SEC EDGAR: long-term debt: LongTermDebt used (includes the current portion) (FY2008, FY2009, FY2010, FY2011, FY2012)
@@ -155,8 +156,8 @@
    - Criterion: Price ≤ 1.5 × tangible book value per share, or P/E (3-year average EPS) × P/B ≤ 22.5
 8. **Combined P/E × P/B Test** (criterion 7 alternative): FAIL
    - P/E Ratio (3-year average EPS): 16.05
-   - P/B Ratio (tangible book): 2.63
-   - Product: 42.26 (must be ≤ 22.5)
+   - P/B Ratio (tangible book): 2.82
+   - Product: 45.22 (must be ≤ 22.5)
    - *Graham: "a multiplier of earnings below 15 could justify a correspondingly higher multiplier of assets"; the product should not exceed 22.5. It relaxes the P/B limit only; the P/E limit (criterion 6) still applies.*
 
 ---
@@ -184,23 +185,23 @@
 | Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
 | 2026 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 2.37 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2025 | 182.45B | 55.68B | 20.05 | 3.07 | 134.43 | 0.00 | 15.3% | 499.98B | 2.696B | 286.32 | 14.3 | 2.1 |
-| 2024 | 177.56B | 56.87B | 19.79 | 2.98 | 123.23 | 0.00 | 15.0% | 454.31B | 2.798B | 272.63 | 13.8 | 2.2 |
-| 2023 | 158.10B | 47.76B | 16.25 | 2.89 | 113.98 | 0.00 | 17.8% | 436.54B | 2.877B | 258.95 | 15.9 | 2.3 |
-| 2022 | 128.69B | 35.89B | 12.10 | 2.81 | 99.63 | 0.00 | 23.2% | 339.89B | 2.934B | 245.26 | 20.3 | 2.5 |
-| 2021 | 121.65B | 46.50B | 15.39 | 2.72 | 99.90 | 0.00 | 17.7% | 354.60B | 2.944B | 231.58 | 15.0 | 2.3 |
-| 2020 | 119.95B | 27.41B | 8.89 | 2.64 | 91.61 | 0.00 | 29.7% | 326.89B | 3.049B | 217.89 | 24.5 | 2.4 |
-| 2019 | 115.72B | 34.64B | 10.75 | 2.57 | 84.74 | 0.00 | 23.9% | 332.42B | 3.084B | 204.21 | 19.0 | 2.4 |
-| 2018 | 108.78B | 30.71B | 9.04 | 2.49 | 78.31 | 0.00 | 27.6% | 351.31B | 3.276B | 190.53 | 21.1 | 2.4 |
-| 2017 | 100.70B | 22.57B | 6.35 | 2.42 | 74.65 | 0.00 | 38.1% | 335.88B | 3.425B | 176.84 | 27.8 | 2.4 |
-| 2016 | 96.57B | 22.83B | 6.24 | 2.35 | 71.38 | 0.00 | 37.7% | 329.69B | 3.561B | 163.16 | 26.1 | 2.3 |
-| 2015 | 93.54B | 22.65B | 6.05 | 2.28 | 67.58 | 0.00 | 37.7% | 304.21B | 3.663B | 149.47 | 24.7 | 2.2 |
-| 2014 | 95.11B | 20.08B | 5.33 | 2.21 | 62.38 | 0.00 | 41.6% | 342.72B | 3.715B | 135.79 | 25.5 | 2.2 |
-| 2013 | 97.37B | 16.56B | 4.38 | 2.15 | 56.22 | 0.00 | 49.1% | 325.74B | 3.756B | 122.11 | 27.9 | 2.2 |
-| 2012 | 97.03B | 19.88B | 5.22 | 2.09 | 53.65 | 0.00 | 40.0% | 304.39B | 3.804B | 108.42 | 20.8 | 2.0 |
-| 2011 | 97.23B | 17.57B | 4.50 | 2.03 | 48.66 | 0.00 | 45.0% | 308.41B | 3.773B | 94.74 | 21.1 | 1.9 |
-| 2010 | 102.69B | 15.76B | 3.98 | 1.97 | 45.04 | 0.00 | 49.4% | 306.02B | 3.910B | 81.05 | 20.4 | 1.8 |
-| 2009 | 100.43B | 8.77B | 2.27 | 1.91 | 40.80 | 0.00 | 84.2% | 308.11B | 3.942B | 67.37 | 29.7 | 1.7 |
+| 2025 | 182.45B | 55.68B | 20.05 | 3.07 | 126.97 | 0.00 | 15.3% | 499.98B | 2.696B | 286.32 | 14.3 | 2.3 |
+| 2024 | 177.56B | 56.87B | 19.79 | 2.98 | 116.01 | 0.00 | 15.0% | 454.31B | 2.798B | 272.63 | 13.8 | 2.4 |
+| 2023 | 158.10B | 47.76B | 16.25 | 2.89 | 104.35 | 0.00 | 17.8% | 436.54B | 2.877B | 258.95 | 15.9 | 2.5 |
+| 2022 | 128.69B | 35.89B | 12.10 | 2.81 | 90.19 | 0.00 | 23.2% | 339.89B | 2.934B | 245.26 | 20.3 | 2.7 |
+| 2021 | 121.65B | 46.50B | 15.39 | 2.72 | 87.95 | 0.00 | 17.7% | 354.60B | 2.944B | 231.58 | 15.0 | 2.6 |
+| 2020 | 119.95B | 27.41B | 8.89 | 2.64 | 81.61 | 0.00 | 29.7% | 326.89B | 3.049B | 217.89 | 24.5 | 2.7 |
+| 2019 | 115.72B | 34.64B | 10.75 | 2.57 | 75.89 | 0.00 | 23.9% | 332.42B | 3.084B | 204.21 | 19.0 | 2.7 |
+| 2018 | 108.78B | 30.71B | 9.04 | 2.49 | 70.35 | 0.00 | 27.6% | 351.31B | 3.276B | 190.53 | 21.1 | 2.7 |
+| 2017 | 100.70B | 22.57B | 6.35 | 2.42 | 67.04 | 0.00 | 38.1% | 335.88B | 3.425B | 176.84 | 27.8 | 2.6 |
+| 2016 | 96.57B | 22.83B | 6.24 | 2.35 | 64.06 | 0.00 | 37.7% | 329.69B | 3.561B | 163.16 | 26.1 | 2.5 |
+| 2015 | 93.54B | 22.65B | 6.05 | 2.28 | 60.46 | 0.00 | 37.7% | 304.21B | 3.663B | 149.47 | 24.7 | 2.5 |
+| 2014 | 95.11B | 20.08B | 5.33 | 2.21 | 56.98 | 0.00 | 41.6% | 342.72B | 3.715B | 135.79 | 25.5 | 2.4 |
+| 2013 | 97.37B | 16.56B | 4.38 | 2.15 | 53.25 | 0.00 | 49.1% | 325.74B | 3.756B | 122.11 | 27.9 | 2.3 |
+| 2012 | 97.03B | 19.88B | 5.22 | 2.09 | 51.26 | 0.00 | 40.0% | 304.39B | 3.804B | 108.42 | 20.8 | 2.1 |
+| 2011 | 97.23B | 17.57B | 4.50 | 2.03 | 46.59 | 0.00 | 45.0% | 308.41B | 3.773B | 94.74 | 21.1 | 2.0 |
+| 2010 | 102.69B | 15.76B | 3.98 | 1.97 | 43.04 | 0.00 | 49.4% | 306.02B | 3.910B | 81.05 | 20.4 | 1.9 |
+| 2009 | 100.43B | 8.77B | 2.27 | 1.91 | 38.73 | 0.00 | 84.2% | 308.11B | 3.942B | 67.37 | 29.7 | 1.7 |
 | 2008 | 67.25B | 4.74B | 1.35 | 1.85 | 44.71 | 0.00 | 137.4% | 308.53B | 3.733B | 53.68 | 39.8 | 1.2 |
 | 2007 | 71.37B | 14.93B | 4.38 | 1.80 | N/A | 0.00 | 41.1% | N/A | 2.697B | 40.00 | 9.1 | N/A |
 
@@ -250,13 +251,13 @@
     - TTM data may include estimates and unaudited quarters
     - Consistency: All Graham metrics (P/E, P/B, BVPS, ROE, ROA, Margin) use same fiscal year
     - Comparability: Annual data allows year-over-year comparison of audited results
-- **Graham Number - Single-Year EPS (226.68 USD)**: √(22.5 × EPS × TBVPS)
+- **Graham Number - Single-Year EPS (219.14 USD)**: √(22.5 × EPS × TBVPS)
   - Conservative intrinsic value estimate
   - Not a formula Graham published: the highest price passing his defensive criteria 6 (P/E ≤ 15) and 7 (P/B ≤ 1.5), as 15 × 1.5 = 22.5
   - Uses most recent annual EPS
 
 - **Graham Number - 3-Year Average EPS (Normalized)**:
-  - **Value**: 218.90 USD
+  - **Value**: 211.61 USD
   - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)
 
   **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year
@@ -307,7 +308,7 @@
     (Graham Number), we use the more conservative asset-based valuation
 
   **For This Stock**:
-  - Normalized Graham Number: 218.90 USD
+  - Normalized Graham Number: 211.61 USD
   - EPV per share: 141.26 USD
   - **Intrinsic Value Used**: 141.26 USD (Capped by EPV)
 
@@ -428,19 +429,20 @@ TTM calculations provide more current financial metrics by using the most recent
 
 ### Book Value Per Share (BVPS) Calculation:
 - **Total Stockholder Equity**: 362,438,000,000 USD
+- **Less: Preferred Stock** (ranks ahead of the common): 20,100,000,000 USD
 - **Less: Intangible Assets**: 2,600,000,000 USD
 - **Less: Goodwill**: 52,731,000,000 USD
-- **Tangible Book Value**: 307,107,000,000 USD
+- **Tangible Book Value**: 287,007,000,000 USD
 - **Divided by Shares**: 2,696,200,000
-- **Tangible Book Value Per Share (TBVPS)**: 113.90 USD
-- **Book Value Per Share (BVPS)**: 134.43 USD (without subtracting intangibles)
+- **Tangible Book Value Per Share (TBVPS)**: 106.45 USD
+- **Book Value Per Share (BVPS)**: 126.97 USD (without subtracting intangibles; after preferred stock)
 
 ### Graham Number Calculation:
 - **Formula**: √(22.5 × EPS × TBVPS)
 - **EPS**: 20.05 USD
-- **TBVPS**: 113.90 USD
-- **Calculation**: √(22.5 × 20.05 × 113.90) = √(51384.78)
-- **Graham Number**: 226.68 USD
+- **TBVPS**: 106.45 USD
+- **Calculation**: √(22.5 × 20.05 × 106.45) = √(48021.67)
+- **Graham Number**: 219.14 USD
 - **Note**: Uses unrounded intermediate values for precision
 
 ### EPV Methodology Clarification:

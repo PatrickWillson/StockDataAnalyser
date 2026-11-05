@@ -60,6 +60,7 @@ class BalanceSheetRow:
     inventory: Optional[float]
     noncontrolling_interest: Optional[float]
     shares_outstanding: Optional[float]          # common shares at the period end
+    preferred_stock: Optional[float] = None      # preferred inside equity, at Graham's valuation (§3.5)
 
     @property
     def total_debt(self) -> float:
@@ -107,6 +108,7 @@ class BalanceSheetRow:
             'inventory': self.inventory,
             'claims_outside_equity': self.claims_outside_common_equity,
             'shares_outstanding': _zero_if_missing(self.shares_outstanding),
+            'preferred_stock': _zero_if_missing(self.preferred_stock),
         }
 
 

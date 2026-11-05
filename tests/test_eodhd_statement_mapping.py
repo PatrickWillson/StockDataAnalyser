@@ -34,7 +34,7 @@ def test_balance_sheet_field_mapping():
         "total_equity": 500.0, "intangible_assets": 10.0, "goodwill": 20.0, "current_assets": 300.0,
         "current_liabilities": 100.0, "total_liabilities": 250.0, "long_term_debt": 80.0,
         "total_assets": 750.0, "total_debt": 80.0, "shares_outstanding": 50.0, "inventory": 40.0,
-        "claims_outside_equity": 0.0}  # 750 - 250 - 500
+        "claims_outside_equity": 0.0, "preferred_stock": 0.0}  # 750 - 250 - 500
 
 
 def test_claims_outside_equity_from_balance_sheet_gap():
@@ -90,3 +90,10 @@ def test_malformed_row_keeps_rows_parsed_so_far():
 def test_unknown_period_is_rejected():
     with pytest.raises(ValueError):
         parse_balance_sheet_rows({}, "monthly")
+
+
+
+def test_preferred_stock_inside_equity_is_mapped():
+    row = balance_sheet_row("2024-12-31", {"totalStockholderEquity": 300, "preferredStockTotalEquity": 20})
+    assert row.preferred_stock == 20.0 and row.as_history_fields()["preferred_stock"] == 20.0
+    assert balance_sheet_row("2024-12-31", {}).preferred_stock is None

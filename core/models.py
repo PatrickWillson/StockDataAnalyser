@@ -237,6 +237,7 @@ class HistoryRow(Model):
     total_debt: float = MISSING
     inventory: Optional[float] = MISSING             # None = not reported
     claims_outside_equity: float = MISSING
+    preferred_stock: float = MISSING                 # preferred stock inside equity (deducted for the common)
     shares_outstanding: float = MISSING
     wcps: Number = MISSING
     payout_ratio: str = MISSING                      # "34.0%" or "N/A"

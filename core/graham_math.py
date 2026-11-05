@@ -113,7 +113,8 @@ class GrahamCalculator:
             return "N/A"
         
         # Calculate TBVPS - use absolute values to handle negative reporting
-        tbvps = tangible_equity(total_equity, intangible_assets, goodwill) / shares_outstanding
+        preferred_stock = or_default(year_data.preferred_stock, 0.0)
+        tbvps = tangible_equity(total_equity, intangible_assets, goodwill, preferred_stock) / shares_outstanding
         
         # Handle negative TBVPS
         if tbvps < 0:
@@ -264,7 +265,8 @@ class GrahamCalculator:
         
         # Calculate Net-Net Value
         claims_outside_equity = or_default(year_data.claims_outside_equity, 0.0)
-        net_net = net_current_asset_value(current_assets, total_liabilities, claims_outside_equity) / shares_outstanding
+        net_net = net_current_asset_value(current_assets, total_liabilities, claims_outside_equity,
+                                          or_default(year_data.preferred_stock, 0.0)) / shares_outstanding
         
         return round(net_net, 2) if round_result else net_net
     

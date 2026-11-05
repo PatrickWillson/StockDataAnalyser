@@ -104,7 +104,7 @@ def pe_pb_multiples(history: dict, years: list, price: float) -> dict:
             row = row_at(history, latest_year)
             shares = or_default(row.shares_outstanding, 0.0)
             book = tangible_equity(or_default(row.total_equity, 0.0), or_default(row.intangible_assets, 0.0),
-                                   or_default(row.goodwill, 0.0))
+                                   or_default(row.goodwill, 0.0), or_default(row.preferred_stock, 0.0))
             if shares > 0 and book > 0:
                 pb = price / (book / shares)
     return {'pe': pe, 'pb': pb, 'product': pe * pb if pe is not None and pb is not None else None}

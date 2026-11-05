@@ -360,3 +360,23 @@ def test_successor_figures_win_where_years_overlap():
     data = annual_data(merge_companyfacts(successor, [predecessor]))
     assert {r.period_end: r.net_income for r in data.income_statements} == {
         "2015-12-31": 158.0, "2014-12-31": 141.0, "2013-12-31": 127.0}     # 2014: the successor's later filing
+
+
+# --- Preferred stock ahead of the common (GRAHAM_METHODOLOGY §3.5) --------------------------------
+
+def test_preferred_stock_at_the_higher_of_carrying_value_and_liquidation_preference():
+    """JPMorgan FY2024: carrying 20,050 (incl. paid-in capital), liquidation preference 20,200."""
+    balance = row(mapped("JPM").balance_sheets, "2024-12-31")
+    assert balance.preferred_stock == 20_200e6
+    assert any("preferred stock: at its liquidation preference" in n for n in mapped("JPM").notes)
+    assert row(mapped("AAPL").balance_sheets, "2024-09-28").preferred_stock is None
+
+
+def test_preferred_stock_par_value_only_is_raised_to_its_liquidation_preference():
+    facts = _facts({
+        "NetIncomeLoss": [("2024-01-01", "2024-12-31", 1.0, "2025-02-01", "10-K", "USD")],
+        "Assets": [(None, "2024-12-31", 100.0, "2025-02-01", "10-K", "USD")],
+        "PreferredStockValue": [(None, "2024-12-31", 1.0, "2025-02-01", "10-K", "USD")],             # par only
+        "PreferredStockLiquidationPreferenceValue": [(None, "2024-12-31", 25.0, "2025-02-01", "10-K", "USD")],
+    })
+    assert annual_data(facts).balance_sheets[0].preferred_stock == 25.0

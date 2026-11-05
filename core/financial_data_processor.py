@@ -475,6 +475,7 @@ class FinancialDataProcessor:
                 'total_debt': bs_data.get('total_debt', 0.0),  # NEW: Total debt for Graham analysis
                 'inventory': bs_data.get('inventory'),  # None = not reported (quick ratio N/A)
                 'claims_outside_equity': bs_data.get('claims_outside_equity', 0.0),  # minority / redeemable equity (NCAV)
+                'preferred_stock': bs_data.get('preferred_stock', 0.0),  # inside equity, ahead of the common (§3.5)
                 'wcps': wcps,  # NEW: Working Capital Per Share
                 'payout_ratio': payout_ratio,  # NEW: Payout Ratio
             }
