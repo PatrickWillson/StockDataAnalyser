@@ -103,6 +103,8 @@ UTILITY_INVENTORY = ("EnergyRelatedInventoryNaturalGasInStorage", "EnergyRelated
 # EnergyRelatedInventoryNaturalGasInStorage (300M) is a detail of it, not a separate line
 ENERGY_INVENTORY_TOTAL = ("EnergyRelatedInventory", "InventoryFinishedGoodsAndWorkInProcess")
 SUPPLIES_INVENTORY = ("OtherInventorySupplies", "InventoryPartsAndComponentsNetOfReserves")
+# Water and electric utilities: materials and supplies is the whole inventory (Middlesex FY2025: 7,549K)
+SUPPLIES_ONLY_INVENTORY = ("InventoryRawMaterialsAndSupplies", "PublicUtilitiesInventory")
 # Carrying value of preferred stock inside equity; the "including additional paid-in capital" tags are the
 # full amount (JPMorgan), PreferredStockValue is sometimes par value only
 PREFERRED = ("PreferredStockIncludingAdditionalPaidInCapitalNetOfDiscount", "PreferredStockIncludingAdditionalPaidInCapital",
@@ -504,6 +506,8 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
             used = [energy.tag] + supplies_used
         else:
             inventory, used = _sum(facts, UTILITY_INVENTORY, end, MONEY)
+            if inventory is None:
+                inventory, used = _first(facts, SUPPLIES_ONLY_INVENTORY, end)
         if used:
             notes.derive("inventory", "derived as the sum of " + ", ".join(used), end)
 

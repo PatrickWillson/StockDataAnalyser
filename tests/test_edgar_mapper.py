@@ -707,3 +707,9 @@ def test_equity_from_total_capitalization():
     assert balance.total_equity == 209_130.0 and balance.preferred_stock == 2_436.0
     assert balance.total_liabilities == 581_383.0 - 209_130.0
     assert any("derived as total capitalization - long-term debt" in n for n in data.notes)
+
+
+def test_utility_inventory_of_materials_and_supplies():
+    """Middlesex Water FY2024: 6,719K; York Water tags PublicUtilitiesInventory."""
+    assert _debt_facts(InventoryRawMaterialsAndSupplies=6_719.0).balance_sheets[0].inventory == 6_719.0
+    assert _debt_facts(PublicUtilitiesInventory=3_410.0).balance_sheets[0].inventory == 3_410.0
