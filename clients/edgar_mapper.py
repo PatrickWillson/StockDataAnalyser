@@ -82,6 +82,8 @@ COVER_SHARES = ("EntityCommonStockSharesOutstanding",)
 WEIGHTED_SHARES = ("WeightedAverageNumberOfSharesOutstandingBasic",)
 UTILITY_SIC = range(4900, 5000)
 DIVIDENDS_PAID = ("PaymentsOfDividendsCommonStock", "PaymentsOfDividends", "PaymentsOfOrdinaryDividends")
+OPERATING_CASH_FLOW = ("NetCashProvidedByUsedInOperatingActivities",
+                       "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations")
 YEAR_END_TAGS = ("NetIncomeLoss", "ProfitLoss", "Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax",
                  "EarningsPerShareBasic")
 
@@ -103,6 +105,7 @@ class EdgarAnnualData:
     balance_sheets: Tuple[BalanceSheetRow, ...]
     income_statements: Tuple[IncomeStatementRow, ...]
     dividends_paid: Mapping[str, float]          # period end -> total cash dividends paid (>= 0)
+    operating_cash_flow: Mapping[str, float]     # period end -> net cash from operating activities
     shares_by_year: Mapping[str, float]          # 'YYYY' of the period end -> year-end shares
     latest_cover_shares: float                   # cover-page count of the latest 10-K (0.0 if none)
     notes: Tuple[str, ...]                       # data-quality notes for the dossier
@@ -508,7 +511,7 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         if currencies and MONEY not in currencies:
             raise ValueError(f"statements are reported in {', '.join(currencies)}; only USD is supported")
     notes = _Notes()
-    balance, income, dividends, shares_by_year = [], [], {}, {}
+    balance, income, dividends, shares_by_year, operating = [], [], {}, {}, {}
     for end in ends:
         income.append(_income_row(facts, end, notes, utility))
         row = _balance_row(facts, end, notes)
@@ -524,6 +527,10 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         notes.fact("dividends paid", end, paid)
         if paid is not None:
             dividends[end] = abs(paid.value)
+        cash = facts.get(OPERATING_CASH_FLOW, end, MONEY, "year")
+        notes.fact("operating cash flow", end, cash)
+        if cash is not None:
+            operating[end] = cash.value
     # The company's current labelling convention (older filings are not always consistent: Walmart's
     # 10-Ks for FY2010-14 declared the year they started in, later ones the year they end in)
     declared = filer_fiscal_years(facts)
@@ -535,6 +542,7 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         balance_sheets=tuple(balance),
         income_statements=tuple(income),
         dividends_paid=dividends,
+        operating_cash_flow=operating,
         shares_by_year=shares_by_year,
         latest_cover_shares=latest_cover or 0.0,
         notes=notes.render(),

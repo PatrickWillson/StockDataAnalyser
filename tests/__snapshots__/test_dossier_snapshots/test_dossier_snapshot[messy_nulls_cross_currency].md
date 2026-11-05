@@ -95,6 +95,7 @@
 
 ### Dividend Sustainability Risk:
 - **Payout Ratio: 15.3%** - Conservative (sustainable)
+- **Dividend Coverage: 7.4x** from operating cash flow - Well covered
 - **Dividend History: 9 of 10 years** - Mostly consistent
 
 ### Valuation Risk (Margin of Safety):

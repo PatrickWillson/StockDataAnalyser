@@ -155,6 +155,7 @@ class FreeUSFundamentalsSource:
             latest_statement_shares=latest_shares,
             dividend_payments=yahoo_mapper.dividend_payments(yahoo, quote_currency),
             annual_dividends_paid=dict(annual.dividends_paid),
+            annual_operating_cash_flow=dict(annual.operating_cash_flow),
             cash_flow_currency=STATEMENT_CURRENCY,
             forward_dividend_rate=yahoo_mapper.forward_dividend_rate(yahoo),
             forward_dividend_currency=quote_currency,

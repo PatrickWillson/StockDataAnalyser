@@ -97,3 +97,13 @@ def test_preferred_stock_inside_equity_is_mapped():
     row = balance_sheet_row("2024-12-31", {"totalStockholderEquity": 300, "preferredStockTotalEquity": 20})
     assert row.preferred_stock == 20.0 and row.as_history_fields()["preferred_stock"] == 20.0
     assert balance_sheet_row("2024-12-31", {}).preferred_stock is None
+
+
+def test_operating_cash_flow_from_the_yearly_cash_flow_statement():
+    from clients.eodhd_mapper import to_fundamentals
+    data = {"Financials": {"Cash_Flow": {"currency_symbol": "USD", "yearly": {
+        "2024-12-31": {"totalCashFromOperatingActivities": "120.5", "dividendsPaid": "-30"},
+        "2023-12-31": {"totalCashFromOperatingActivities": None},
+        "2022-12-31": {"totalCashFromOperatingActivities": "-15"}}}}}
+    assert dict(to_fundamentals(data, None, "X.US").annual_operating_cash_flow) == {
+        "2024-12-31": 120.5, "2022-12-31": -15.0}

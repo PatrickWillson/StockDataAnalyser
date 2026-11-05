@@ -59,6 +59,21 @@ class FinancialDataAssembler:
         self.fx_client = fx_client
         self.debug = debug
     
+
+    def _attach_operating_cash_flow(self, history: Dict, fundamentals: CompanyFundamentals,
+                                    financials_currency: str, warnings: List[str]) -> None:
+        """Annual net cash from operations onto each statement year's history row (display only:
+        Risk Factors' dividend coverage, not a Graham criterion), in the financials currency."""
+        cash_flow = {end: value for end, value in fundamentals.annual_operating_cash_flow.items() if end in history}
+        currency = fundamentals.cash_flow_currency
+        if cash_flow and currency != financials_currency:
+            cash_flow = self.currency_converter.try_convert_batch(cash_flow, currency, financials_currency)
+            if cash_flow is None:
+                warnings.append(f"WARNING: Could not convert operating cash flow from {currency} to "
+                                f"{financials_currency} - FX rate unavailable; dividend coverage not shown")
+                return
+        for end, value in cash_flow.items():
+            history[end]['operating_cash_flow'] = value
     def assemble(self, fundamentals: CompanyFundamentals, ticker: str,
                  quote: Optional[PriceQuote] = None) -> Dict[str, Any]:
         """
@@ -176,6 +191,7 @@ class FinancialDataAssembler:
                                                       dividend_history, shares_outstanding,
                                                       outstanding_shares_by_year=shares_by_year,
                                                       dividends_are_amounts=is_dividend_amounts)
+        self._attach_operating_cash_flow(history, fundamentals, financials_currency, warnings)
         
         # Get current price
         price, price_problem = self.processor.get_current_price(quote, currency, warnings=warnings,

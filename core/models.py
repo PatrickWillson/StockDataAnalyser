@@ -246,7 +246,7 @@ class HistoryRow(Model):
     wcps: Number = MISSING
     payout_ratio: str = MISSING                      # "34.0%" or "N/A"
     year_end_price: Optional[float] = MISSING        # added by core.historical_prices
-    operating_cash_flow: float = MISSING             # read by the view model; not produced by the assembler today
+    operating_cash_flow: float = MISSING             # annual net cash from operations (cash-flow currency converted); absent if not reported
 
 
 @dataclass(frozen=True)

@@ -380,3 +380,18 @@ def test_preferred_stock_par_value_only_is_raised_to_its_liquidation_preference(
         "PreferredStockLiquidationPreferenceValue": [(None, "2024-12-31", 25.0, "2025-02-01", "10-K", "USD")],
     })
     assert annual_data(facts).balance_sheets[0].preferred_stock == 25.0
+
+
+def test_operating_cash_flow_from_the_cash_flow_statement():
+    """Southern Company 10-K: net cash provided from operating activities, FY2025 9,802M; JPMorgan's is negative."""
+    assert mapped("SO").operating_cash_flow["2025-12-31"] == 9_802e6
+    assert mapped("JPM").operating_cash_flow["2025-12-31"] < 0
+
+
+def test_operating_cash_flow_falls_back_to_continuing_operations():
+    facts = _facts({
+        "NetIncomeLoss": [("2024-01-01", "2024-12-31", 1.0, "2025-02-01", "10-K", "USD")],
+        "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations":
+            [("2024-01-01", "2024-12-31", 7.0, "2025-02-01", "10-K", "USD")],
+    })
+    assert annual_data(facts).operating_cash_flow == {"2024-12-31": 7.0}

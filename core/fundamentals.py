@@ -186,6 +186,7 @@ class CompanyFundamentals:
     dividend_payments: Optional[Tuple[DividendPayment, ...]] = None    # None: no payment-level data
     annual_dividends_paid: Mapping[str, float] = field(default_factory=dict)  # period end -> total cash paid (>= 0)
     cash_flow_currency: str = "USD"
+    annual_operating_cash_flow: Mapping[str, float] = field(default_factory=dict)  # period end -> net cash from operations
     dividend_amounts: Tuple[DatedDividend, ...] = ()              # amounts without currency (fallback)
     dividend_counts_by_year: Mapping[str, float] = field(default_factory=dict)  # 'YYYY' -> payments (last resort)
     forward_dividend_rate: Optional[float] = None  # vendor estimate: labelled display only (F21)

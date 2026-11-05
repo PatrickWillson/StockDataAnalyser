@@ -195,6 +195,19 @@ def _annual_dividends_paid(data: Mapping[str, Any]) -> Dict[str, float]:
     return paid
 
 
+def _annual_cash_flow(data: Mapping[str, Any], key: str) -> Dict[str, float]:
+    """One Cash_Flow.yearly line item ({period end: amount}); missing or unparseable years are left out."""
+    values = {}
+    cash_flow = _section(_section(_section(data.get('Financials')).get('Cash_Flow')).get('yearly'))
+    for period_end, entry in cash_flow.items():
+        if not isinstance(entry, dict):
+            continue
+        value = optional_float(entry.get(key))
+        if value is not None:
+            values[period_end] = value
+    return values
+
+
 def _dividend_amounts(splits_divs: Mapping[str, Any]) -> tuple:
     """SplitsDividends.Dividends (date + amount, no currency)."""
     dividend_list = splits_divs.get('Dividends', [])
@@ -280,6 +293,7 @@ def to_fundamentals(data: Mapping[str, Any], dividend_records: Optional[List[Map
         latest_statement_shares=_latest_statement_shares(data),
         dividend_payments=dividend_payments(dividend_records, trading_currency, exchange),
         annual_dividends_paid=_annual_dividends_paid(data),
+        annual_operating_cash_flow=_annual_cash_flow(data, 'totalCashFromOperatingActivities'),  # §11 E21
         cash_flow_currency=_section(_section(data.get('Financials')).get('Cash_Flow')).get('currency_symbol', 'USD'),
         dividend_amounts=_dividend_amounts(splits_divs),
         dividend_counts_by_year=_dividend_counts(splits_divs),

@@ -3,6 +3,8 @@ Data-source ports (core/ports.py): every adapter satisfies its port, and the cor
 any FundamentalsSource, not only EODHD.
 """
 
+import pytest
+
 from clients.eodhd_client import EODHDClient
 from clients.eodhd_mapper import to_fundamentals
 from clients.fx_client import FXClient
@@ -118,3 +120,36 @@ def test_the_core_runs_on_any_fundamentals_source():
     assert financial_data["data_source"] == "In-memory vendor"
     header = DossierGenerator("TEST.US", financial_data, metrics, []).header.generate()
     assert "# SOURCE: In-memory vendor (Tier 1 Data)" in header
+
+
+def _with_cash_flow(cash_flow_currency, **operating):
+    years = [f"{year}-12-31" for year in range(2023, 2013, -1)]
+    return CompanyFundamentals(
+        source="In-memory vendor", symbol="TEST", exchange="US", trading_currency="USD", statement_currency="USD",
+        annual_balance_sheets=tuple(_balance_sheet(year) for year in years),
+        annual_income_statements=tuple(IncomeStatementRow(year, revenue=1000.0, net_income=50.0, eps=None)
+                                       for year in years),
+        dividend_payments=tuple(DividendPayment(f"{year[:4]}-06-30", 0.2, "USD") for year in years),
+        cash_flow_currency=cash_flow_currency,
+        annual_operating_cash_flow={"2023-12-31": 80.0, "2022-12-31": 70.0, "2030-12-31": 1.0, **operating})
+
+
+def test_operating_cash_flow_reaches_statement_years_and_dividend_coverage():
+    from core.report_context import build_report_context
+    data = load_financial_data("TEST.US", _InMemorySource(_with_cash_flow("USD")), _Quotes(), _Rates())
+    assert data["history"]["2023-12-31"]["operating_cash_flow"] == 80.0
+    assert "2030-12-31" not in data["history"]                  # no row is created for a cash-flow-only year
+    assert "operating_cash_flow" not in data["history"]["2021-12-31"]
+    # (80 / 100 shares) / 0.2 dividend per share
+    assert build_report_context(data).risk.dividend_coverage == pytest.approx(4.0)
+
+
+def test_operating_cash_flow_in_another_currency_is_converted_or_left_out():
+    class EurRates(_Rates):
+        def get_rate(self, from_currency, to_currency):
+            return 1.1 if (from_currency, to_currency) == ("EUR", "USD") else None
+    converted = load_financial_data("TEST.US", _InMemorySource(_with_cash_flow("EUR")), _Quotes(), EurRates())
+    assert converted["history"]["2023-12-31"]["operating_cash_flow"] == pytest.approx(88.0)
+    unconverted = load_financial_data("TEST.US", _InMemorySource(_with_cash_flow("EUR")), _Quotes(), _Rates())
+    assert "operating_cash_flow" not in unconverted["history"]["2023-12-31"]
+    assert any("Could not convert operating cash flow from EUR" in w for w in unconverted["warnings"])
