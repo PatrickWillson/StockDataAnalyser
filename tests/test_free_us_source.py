@@ -1,5 +1,7 @@
 """Free resolution path: FreeUSFundamentalsSource (EDGAR + Yahoo), the exchange router, the provider."""
 
+import copy
+
 import pytest
 
 from clients.factory import ClientFactory
@@ -11,7 +13,7 @@ from core.financial_data_assembler import load_financial_data
 from core.ports import FundamentalsSource
 from core.price_quote import PriceQuote
 from tests.test_data_source_ports import _Quotes, _Rates, assert_fundamentals_contract
-from tests.test_edgar_mapper import fixture
+from tests.test_edgar_mapper import _instance, fixture
 
 SO_YAHOO = YahooCompanyData(
     yahoo_symbol="SO",
@@ -189,3 +191,69 @@ def test_ceo_from_the_10k_certification_when_yahoo_has_none():
     assert any("Exhibit 31.1 certification" in n for n in f.notes)
     # Yahoo's CEO is preferred; the certification is not fetched then
     assert source().fetch_fundamentals("SO.US").ceo_name == "Mr. Christopher C. Womack"
+
+
+# --- Share counts reported per class ---------------------------------------------------------------
+
+def _no_shares(fixture_data):
+    """The fixture's filer with its share tags removed: what a dual-class company looks like in companyfacts."""
+    facts = copy.deepcopy(fixture_data)
+    for taxonomy in facts["companyfacts"]["facts"].values():
+        for tag in ("CommonStockSharesOutstanding", "CommonStockSharesIssued", "EntityCommonStockSharesOutstanding",
+                    "WeightedAverageNumberOfSharesOutstandingBasic", "TreasuryStockCommonShares", "TreasuryStockShares"):
+            taxonomy.pop(tag, None)
+    return facts
+
+
+class DualClassEdgar(FakeEdgar):
+    def __init__(self, a, b, cover=None):
+        super().__init__()
+        self.data = _no_shares(self.data)
+        self.a, self.b = a, b
+        self.requests = []
+        self.data["submissions"]["filings"]["recent"] = {
+            "form": ["10-K", "10-K"], "reportDate": ["2025-12-31", "2024-12-31"], "filingDate": ["2026-02-20", "2025-02-20"],
+            "accessionNumber": ["a-1", "a-2"], "primaryDocument": ["a.htm", "b.htm"], "isXBRL": [1, 1]}
+
+    def fetch_filing_instance(self, cik, accession):
+        self.requests.append(accession)
+        filing = dict(zip(self.data["submissions"]["filings"]["recent"]["accessionNumber"],
+                          self.data["submissions"]["filings"]["recent"]["reportDate"]))
+        end = filing[accession]
+        return _instance(("CommonStockSharesOutstanding", end, "us-gaap:CommonClassAMember", self.a),
+                         ("CommonStockSharesOutstanding", end, "us-gaap:CommonClassBMember", self.b))
+
+
+def _yahoo_total(total):
+    return YahooCompanyData(yahoo_symbol="SO", info={"currency": "USD", "impliedSharesOutstanding": total})
+
+
+def test_dual_class_share_counts_come_from_the_filings():
+    f = source(_yahoo_total(1_100e6), DualClassEdgar(100e6, 1_000e6)).fetch_fundamentals("SO.US")
+    assert f.annual_balance_sheets[0].shares_outstanding == 1_100e6
+    assert f.shares_by_year["2025"] == 1_100e6
+    assert f.quarterly_balance_sheets[0].shares_outstanding == 1_100e6   # for the TTM per-share figures
+    assert any("all classes added one for one" in n for n in f.notes)
+
+
+def test_classes_that_do_not_add_up_to_yahoos_total_are_not_used():
+    """Berkshire: one Class A is 1,500 Class B, so adding the counts is wrong. Yahoo's total stands for today."""
+    f = source(_yahoo_total(2_160e6), DualClassEdgar(600_000.0, 1_300e6)).fetch_fundamentals("SO.US")
+    assert not f.annual_balance_sheets[0].shares_outstanding
+    assert f.shares_outstanding == 2_160e6 and f.quarterly_balance_sheets[0].shares_outstanding == 2_160e6
+    assert any("today's total from Yahoo Finance" in n for n in f.notes)
+
+
+def test_filings_without_instances_leave_yahoos_total():
+    class NoInstances(DualClassEdgar):
+        def fetch_filing_instance(self, cik, accession):
+            return None
+    f = source(_yahoo_total(1_100e6), NoInstances(1, 1)).fetch_fundamentals("SO.US")
+    assert f.shares_outstanding == 1_100e6
+
+
+def test_single_class_companies_fetch_no_instances():
+    edgar = DualClassEdgar(1, 1)
+    edgar.data = fixture("SO")
+    assert source(edgar=edgar).fetch_fundamentals("SO.US").annual_balance_sheets[0].shares_outstanding
+    assert edgar.requests == []

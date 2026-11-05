@@ -524,10 +524,12 @@ def test_a_misdated_year_without_a_balance_sheet_is_dropped():
 def test_a_later_filing_tagged_in_thousands_is_ignored():
     """Ingles: FY2010 assets 1,532,358,110 (10-K 2011), re-tagged 1,532,358 (10-K 2012)."""
     data = annual_data(_facts({
-        "NetIncomeLoss": [("2009-09-27", "2010-09-25", 1.0, "2011-12-02", "10-K", "USD")],
+        "NetIncomeLoss": [("2009-09-27", "2010-09-25", 1.0, "2011-12-02", "10-K", "USD"),
+                          ("2010-09-26", "2011-09-24", 1.0, "2011-12-02", "10-K", "USD")],
         "Assets": [(None, "2010-09-25", 1_532_358_110.0, "2011-12-02", "10-K", "USD"),
-                   (None, "2010-09-25", 1_532_358.0, "2012-12-26", "10-K", "USD")]}))
-    assert data.balance_sheets[0].total_assets == 1_532_358_110.0
+                   (None, "2010-09-25", 1_532_358.0, "2012-12-26", "10-K", "USD"),
+                   (None, "2011-09-24", 1_618_349_808.0, "2011-12-02", "10-K", "USD")]}))
+    assert row(data.balance_sheets, "2010-09-25").total_assets == 1_532_358_110.0
     assert any("tagged in thousands or millions" in n and "Assets 2010" in n for n in data.notes)
     assert not any("restated" in n for n in data.notes)
 
@@ -572,3 +574,59 @@ def test_an_issued_count_far_below_the_cover_page_is_not_trusted():
         "dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
             {"end": "2011-02-01", "val": 10_891_621.0, "filed": "2011-02-01", "form": "10-K", "fy": 2010, "fp": "FY"}]}}}}})
     assert data.balance_sheets[0].shares_outstanding == 10_891_621.0
+
+
+# --- Share counts reported per class (dual-class companies) ----------------------------------------
+
+def _instance(*facts, extra_contexts=""):
+    """A minimal XBRL instance. facts: (tag, instant, member or None, value)."""
+    contexts, rows = [], []
+    for i, (tag, instant, member, value) in enumerate(facts):
+        segment = (f'<segment><xbrldi:explicitMember dimension="us-gaap:StatementClassOfStockAxis">{member}'
+                   "</xbrldi:explicitMember></segment>") if member else ""
+        contexts.append(f'<context id="c{i}"><entity>{segment}</entity><period><instant>{instant}</instant></period></context>')
+        prefix = "dei" if tag.startswith("Entity") else "us-gaap"
+        rows.append(f'<{prefix}:{tag} contextRef="c{i}">{value}</{prefix}:{tag}>')
+    return ('<xbrl xmlns="http://www.xbrl.org/2003/instance" xmlns:xbrldi="http://xbrl.org/2006/xbrldi" '
+            'xmlns:us-gaap="http://fasb.org/us-gaap/2024" xmlns:dei="http://xbrl.sec.gov/dei/2024">'
+            + "".join(contexts) + extra_contexts + "".join(rows) + "</xbrl>")
+
+
+def test_class_share_counts_add_the_classes_of_each_date():
+    """Bel Fuse FY2025 10-K: Class A 2,115,263 + Class B 10,543,368, and a year earlier."""
+    from clients.edgar_mapper import class_share_counts
+    counts, cover = class_share_counts(_instance(
+        ("CommonStockSharesOutstanding", "2025-12-31", "us-gaap:CommonClassAMember", 2_115_263),
+        ("CommonStockSharesOutstanding", "2025-12-31", "us-gaap:CommonClassBMember", 10_543_368),
+        ("CommonStockSharesOutstanding", "2024-12-31", "us-gaap:CommonClassAMember", 2_115_263),
+        ("CommonStockSharesOutstanding", "2024-12-31", "us-gaap:CommonClassBMember", 10_425_175),
+        ("CommonStockSharesIssued", "2025-12-31", "us-gaap:CommonClassBMember", 99_999_999),   # issued is not outstanding
+        ("EntityCommonStockSharesOutstanding", "2026-01-31", "us-gaap:CommonClassAMember", 2_115_263),
+        ("EntityCommonStockSharesOutstanding", "2026-01-31", "us-gaap:CommonClassBMember", 10_541_050)))
+    assert counts == {"2025-12-31": 12_658_631.0, "2024-12-31": 12_540_438.0}
+    assert cover == 12_656_313.0
+
+
+def test_class_share_counts_need_two_classes():
+    from clients.edgar_mapper import class_share_counts
+    assert class_share_counts(_instance(("CommonStockSharesOutstanding", "2025-12-31", None, 100),
+                                        ("CommonStockSharesOutstanding", "2024-12-31", "x:ClassBMember", 5))) == ({}, None)
+
+
+def test_instance_filename():
+    from clients.edgar_mapper import instance_filename
+    assert instance_filename(["a.htm", "belfb20251231d_10k_htm.xml", "x_cal.xml"]) == "belfb20251231d_10k_htm.xml"
+    assert instance_filename(["belfb-20181231.xml", "belfb-20181231_cal.xml"]) == "belfb-20181231.xml"
+    assert instance_filename(["R1.htm"]) is None
+
+
+def test_the_other_years_decide_which_scale_is_wrong():
+    """Berkshire FY2011 average shares: 1,649,891,000,000 (10-K 2012), corrected to 1,649,891 (10-K 2013)."""
+    tag = "WeightedAverageNumberOfSharesOutstandingBasic"
+    def year(y, value, filed):
+        return (f"{y}-01-01", f"{y}-12-31", value, filed, "10-K", "shares")
+    facts = {"NetIncomeLoss": [(f"{y}-01-01", f"{y}-12-31", 1.0, f"{y + 1}-03-01", "10-K", "USD") for y in (2011, 2012, 2013)],
+             "Assets": [(None, f"{y}-12-31", 1.0, f"{y + 1}-03-01", "10-K", "USD") for y in (2011, 2012, 2013)],
+             tag: [year(2011, 1_649_891_000_000.0, "2012-03-01"), year(2011, 1_649_891.0, "2013-03-01"),
+                   year(2012, 1_651_294.0, "2013-03-01"), year(2013, 1_643_613.0, "2014-03-01")]}
+    assert annual_data(_facts(facts)).shares_by_year["2011"] == 1_649_891.0

@@ -23,8 +23,10 @@ Only USD statements are mapped (foreign SEC filers are a later step).
 
 import datetime as dt
 import html
+import math
 import re
 import statistics
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass, replace
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -101,6 +103,7 @@ PREFERRED_LIQUIDATION = ("PreferredStockLiquidationPreferenceValue",)
 SHARES_OUTSTANDING = ("CommonStockSharesOutstanding",)
 SHARES_ISSUED, TREASURY_SHARES = ("CommonStockSharesIssued",), ("TreasuryStockCommonShares", "TreasuryStockShares")
 COVER_SHARES = ("EntityCommonStockSharesOutstanding",)
+CLASS_AXIS = "StatementClassOfStockAxis"
 WEIGHTED_SHARES = ("WeightedAverageNumberOfSharesOutstandingBasic",)
 UTILITY_SIC = range(4900, 5000)
 DIVIDENDS_PAID = ("PaymentsOfDividendsCommonStock", "PaymentsOfDividends", "PaymentsOfOrdinaryDividends")
@@ -193,19 +196,27 @@ class _Facts:
             self._cache[key] = by_end
         return self._cache[key]
 
-    def _without_scale_errors(self, ordered: List[Tuple[str, float]], tag: str, end: str, unit: str) -> List[Tuple[str, float]]:
+    def _without_scale_errors(self, ordered: List[Tuple[str, float]], tag: str, end: str, unit: str,
+                              kind: str) -> List[Tuple[str, float]]:
         """
-        Drop a figure a filing tagged in thousands or millions (Ingles' FY2012 10-K: FY2010 assets 1,532,358 against
-        1,532,358,110 filed before; Utah Medical FY2018: 2017 shares 3,721 against 3,721,000). Exact multiples only.
+        Drop a figure a filing tagged at the wrong scale, when another filing has it right: an exact 1,000x or
+        1,000,000x apart, whichever way. The other years of the tag show which is wrong (Ingles FY2010 assets:
+        1,532,358 filed after 1,532,358,110; Berkshire FY2011 average shares: 1,649,891,000,000 before 1,649,891).
         """
-        if unit == PER_SHARE or len(ordered) < 2:
+        values = [abs(value) for _, value in ordered if value]
+        if unit == PER_SHARE or len(values) < 2:
             return ordered
-        largest = max(abs(value) for _, value in ordered)
-        kept = [(filed, value) for filed, value in ordered
-                if not (value and any(abs(largest / abs(value) / scale - 1) <= SCALE_ERROR_TOLERANCE for scale in SCALE_ERRORS))]
-        if len(kept) != len(ordered):
-            self.scale_errors.add(f"{tag} {end[:4]}")
-        return kept
+        low, high = min(values), max(values)
+        if not any(abs(high / low / scale - 1) <= SCALE_ERROR_TOLERANCE for scale in SCALE_ERRORS):
+            return ordered
+        others = [abs(rows[-1][1]) for other, rows in self.series(tag, unit, kind).items() if other != end and rows[-1][1]]
+        if not others:
+            return ordered
+        typical = statistics.median(others)
+        keep_high = abs(math.log(high / typical)) <= abs(math.log(low / typical))
+        wrong = low if keep_high else high
+        self.scale_errors.add(f"{tag} {end[:4]}")
+        return [(filed, value) for filed, value in ordered if abs(value) != wrong]
 
     def get(self, chain: Sequence[str], end: str, unit: str, kind: str) -> Optional[Fact]:
         best = None
@@ -219,7 +230,7 @@ class _Facts:
         if best is None:
             return None
         _, tag, ordered = best
-        ordered = self._without_scale_errors(ordered, tag, end, unit)
+        ordered = self._without_scale_errors(ordered, tag, end, unit, kind)
         adjusted = [self.adjusted(unit, filed, value) for filed, value in ordered]
         first, latest = adjusted[0], adjusted[-1]
         # Per-share figures are filed rounded to the cent: within half a cent they are the same figure
@@ -786,6 +797,105 @@ def exhibit_filename(sgml_header: str, exhibit_type: str) -> Optional[str]:
     text = html.unescape(sgml_header)
     match = re.search(r"<TYPE>" + re.escape(exhibit_type) + r"\b.*?<FILENAME>([^\s<]+)", text, re.S)
     return match.group(1) if match else None
+
+
+def missing_latest_shares(annual: EdgarAnnualData) -> bool:
+    """No share count for the latest year: companyfacts leaves out figures reported per share class."""
+    return bool(annual.balance_sheets) and not annual.balance_sheets[0].shares_outstanding
+
+
+def annual_filings(submissions: Mapping[str, Any]) -> List[Tuple[str, str, str]]:
+    """(period end, filing date, accession number) of each 10-K with XBRL, newest first."""
+    recent = submissions.get("filings", {}).get("recent", {})
+    return [(end, filed, accession) for form, end, filed, accession, xbrl in
+            zip(recent.get("form", []), recent.get("reportDate", []), recent.get("filingDate", []),
+                recent.get("accessionNumber", []), recent.get("isXBRL", []))
+            if form == "10-K" and xbrl and end]
+
+
+def instance_filename(names: Sequence[str]) -> Optional[str]:
+    """A filing's XBRL instance among its files: name_htm.xml (inline XBRL), else ticker-YYYYMMDD.xml."""
+    return next((n for n in names if n.endswith("_htm.xml")),
+                next((n for n in names if re.fullmatch(r"[A-Za-z0-9-]+-\d{8}\.xml", n)), None))
+
+
+def class_share_counts(instance_xml: str) -> Tuple[Dict[str, float], Optional[float]]:
+    """
+    From a filing's XBRL instance: {balance date: shares outstanding, all classes added}, and the cover page's
+    total of the classes (None when not reported per class). Only dates with two or more classes count.
+    """
+    def local(name: str) -> str:
+        return name.split("}")[-1]
+
+    root = ET.fromstring(instance_xml)
+    contexts = {}
+    for context in (e for e in root if local(e.tag) == "context"):
+        members = [m for m in context.iter() if local(m.tag) == "explicitMember"]
+        instant = next((e.text for e in context.iter() if local(e.tag) == "instant"), None)
+        if len(members) == 1 and members[0].get("dimension", "").endswith(CLASS_AXIS) and instant:
+            contexts[context.get("id")] = (instant.strip(), members[0].text.strip())
+    outstanding: Dict[Tuple[str, str], float] = {}
+    cover: Dict[Tuple[str, str], float] = {}
+    for fact in root:
+        if fact.get("contextRef") not in contexts or not (fact.text or "").strip():
+            continue
+        target = {SHARES_OUTSTANDING[0]: outstanding, COVER_SHARES[0]: cover}.get(local(fact.tag))
+        if target is not None:
+            target[contexts[fact.get("contextRef")]] = float(fact.text)
+
+    def by_date(values: Mapping[Tuple[str, str], float]) -> Dict[str, List[float]]:
+        dates: Dict[str, List[float]] = {}
+        for (date, _), value in values.items():
+            dates.setdefault(date, []).append(value)
+        return {date: counts for date, counts in dates.items() if len(counts) >= 2}
+
+    latest_cover = by_date(cover)
+    return ({date: sum(counts) for date, counts in by_date(outstanding).items()},
+            sum(latest_cover[max(latest_cover)]) if latest_cover else None)
+
+
+def split_adjusted_shares(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, float]], filed: str, count: float) -> float:
+    """A share count from a filing, on today's share basis."""
+    return _Facts(companyfacts, splits).adjusted(SHARES, filed, count)
+
+
+def without_other_share_bases(annual: EdgarAnnualData, total: float) -> EdgarAnnualData:
+    """
+    Clear yearly counts far below today's total: another basis (Berkshire FY2011: 1.65M Class A equivalents, against
+    2.1bn Class B equivalents), which would make per-share history incomparable with the price.
+    """
+    rows = tuple(replace(row, shares_outstanding=None)
+                 if row.shares_outstanding and row.shares_outstanding * MAX_DERIVED_BELOW_COVER < total else row
+                 for row in annual.balance_sheets)
+    return replace(annual, balance_sheets=rows, shares_by_year={
+        fiscal_year(row.period_end): row.shares_outstanding for row in reversed(rows) if row.shares_outstanding})
+
+
+def with_shares_for_quarters(periodic: EdgarPeriodicData, shares: float) -> EdgarPeriodicData:
+    """Quarters without a share count take `shares`, for the TTM per-share figures."""
+    return replace(periodic, balance_sheets=tuple(row if row.shares_outstanding else replace(row, shares_outstanding=shares)
+                                                  for row in periodic.balance_sheets))
+
+
+def with_class_shares(annual: EdgarAnnualData, periodic: EdgarPeriodicData, totals: Mapping[str, float],
+                      cover: Optional[float]) -> Tuple[EdgarAnnualData, EdgarPeriodicData]:
+    """
+    Annual rows with the share totals of all classes (replacing a count that is one class only, as Village's
+    untagged one is: 4.2M Class B of 14.8M). Quarters without a count take the latest year's, for the TTM per-share
+    figures. Classes are added one for one: dollar figures per class differ slightly at some of these companies.
+    """
+    notes = _Notes()
+    balance = _repair_share_scale([replace(row, shares_outstanding=totals.get(row.period_end, row.shares_outstanding))
+                                   for row in annual.balance_sheets], notes)
+    latest = balance[0].shares_outstanding if balance else None
+    notes.other.append("SEC EDGAR: share counts are per class in this company's filings: all classes added one for "
+                       "one, from each 10-K's XBRL (dividends and voting rights can differ between classes; EPS "
+                       "derived on the total)")
+    return (replace(annual, balance_sheets=tuple(balance), latest_cover_shares=cover or annual.latest_cover_shares,
+                    shares_by_year={fiscal_year(row.period_end): row.shares_outstanding
+                                    for row in reversed(balance) if row.shares_outstanding},
+                    notes=annual.notes + notes.render()),
+            with_shares_for_quarters(periodic, latest))
 
 
 def certifying_officer(exhibit_html: str) -> Optional[str]:

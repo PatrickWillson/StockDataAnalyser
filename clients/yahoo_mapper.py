@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence, Tuple
 
 from clients.yfinance_client import YahooCompanyData
-from core.fundamentals import DividendPayment, MarketData, number_or_zero
+from core.fundamentals import DividendPayment, MarketData, number_or_zero, optional_float
 
 
 @dataclass(frozen=True)
@@ -85,6 +85,12 @@ def market_data(data: YahooCompanyData) -> MarketData:
         week_52_low=number_or_zero(info.get("fiftyTwoWeekLow")),
         per_share_currency=info.get("financialCurrency") or info.get("currency") or "USD",
     )
+
+
+def total_shares(data: YahooCompanyData) -> Optional[float]:
+    """Yahoo's share count across all classes (`impliedSharesOutstanding`), else the quoted class's."""
+    info = data.info or {}
+    return optional_float(info.get("impliedSharesOutstanding")) or optional_float(info.get("sharesOutstanding"))
 
 
 def forward_dividend_rate(data: YahooCompanyData) -> Optional[float]:

@@ -45,6 +45,10 @@ def _exchange(submissions: Mapping[str, Any]) -> str:
     return exchanges[0] if exchanges else "US"
 
 
+# Added-up share classes must be this close to Yahoo's total, or the classes do not add one for one
+MAX_CLASS_TOTAL_GAP = 0.25
+
+
 class FreeUSFundamentalsSource:
     """CompanyFundamentals for US SEC filers from EDGAR + Yahoo (core.ports.FundamentalsSource)."""
 
@@ -66,6 +70,51 @@ class FreeUSFundamentalsSource:
             logger.debug(f"Raw SEC {label} saved to: {path}")
         except OSError as e:
             logger.debug(f"Could not save raw SEC {label}: {e}")
+
+    def _share_counts_per_class(self, cik, facts, submissions, splits, annual, periodic, yahoo, notes):
+        """
+        Share counts of a company that reports them per class (dual-class companies), from its 10-Ks' XBRL: each
+        holds two years. The total must agree with Yahoo's (Berkshire's classes do not add one for one); otherwise
+        Yahoo's total stands for today only.
+        """
+        totals, cover, fetched = {}, None, set()
+        filings = edgar_mapper.annual_filings(submissions)
+
+        def read(position):
+            nonlocal cover
+            end, filed, accession = filings[position]
+            fetched.add(position)
+            instance = self.edgar.fetch_filing_instance(cik, accession)
+            if instance is None:
+                return
+            counts, filing_cover = edgar_mapper.class_share_counts(instance)
+            if cover is None:
+                cover = filing_cover
+            if end not in counts and filing_cover:
+                counts = {**counts, end: filing_cover}
+            for date, count in counts.items():
+                totals.setdefault(date, edgar_mapper.split_adjusted_shares(facts, splits, filed, count))
+
+        for position, (end, _, _) in enumerate(filings):
+            if end not in totals:
+                read(position)
+        # A filing also holds the year before: a year still uncovered (its own filing has no per-class counts)
+        # can be in the filing after it
+        for position, (end, _, _) in enumerate(filings):
+            if end not in totals and position > 0 and position - 1 not in fetched:
+                read(position - 1)
+        yahoo_total = yahoo_mapper.total_shares(yahoo)
+        latest = totals.get(annual.balance_sheets[0].period_end)
+        agrees = latest and (not yahoo_total or abs(latest - yahoo_total) <= MAX_CLASS_TOTAL_GAP * yahoo_total)
+        if agrees:
+            annual, periodic = edgar_mapper.with_class_shares(annual, periodic, totals, cover)
+            return annual, periodic, None
+        if yahoo_total:
+            annual = edgar_mapper.without_other_share_bases(annual, yahoo_total)
+            periodic = edgar_mapper.with_shares_for_quarters(periodic, yahoo_total)
+            notes.append("Share count: not in the SEC data as one figure; today's total from Yahoo Finance stands for "
+                         "every year without a count, so per-share history is approximate")
+        return annual, periodic, yahoo_total
 
     def fetch_fundamentals(self, ticker: str) -> CompanyFundamentals:
         """
@@ -113,6 +162,10 @@ class FreeUSFundamentalsSource:
         if not annual.income_statements:
             raise TickerNotCoveredError(f"{ticker}: no annual reports with XBRL financial data at the SEC")
         periodic = edgar_mapper.periodic_data(facts, splits, sic)
+        current_shares = None
+        if edgar_mapper.missing_latest_shares(annual):
+            annual, periodic, current_shares = self._share_counts_per_class(cik, facts, submissions, splits, annual,
+                                                                            periodic, yahoo, notes)
         profile = yahoo_mapper.profile(yahoo)
         ceo_name = profile.ceo_name
         if ceo_name == "N/A":
@@ -150,7 +203,7 @@ class FreeUSFundamentalsSource:
             annual_income_statements=annual.income_statements,
             quarterly_balance_sheets=periodic.balance_sheets,
             quarterly_income_statements=periodic.income_statements,
-            shares_outstanding=annual.latest_cover_shares or latest_shares,
+            shares_outstanding=annual.latest_cover_shares or latest_shares or current_shares or 0.0,
             shares_by_year=dict(annual.shares_by_year),
             latest_statement_shares=latest_shares,
             dividend_payments=yahoo_mapper.dividend_payments(yahoo, quote_currency),

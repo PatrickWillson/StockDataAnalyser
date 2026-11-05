@@ -140,6 +140,17 @@ class EdgarClient(BaseAPIClient):
             logger.debug(f"SEC: no Exhibit 31.1 officer for CIK {cik}: {e}")
             return None
 
+    def fetch_filing_instance(self, cik: str, accession: str) -> Optional[str]:
+        """A filing's XBRL instance (it has per-class figures, which companyfacts leaves out), or None."""
+        folder = SEC_ARCHIVES_URL.format(cik=int(cik), accession=accession.replace("-", ""))
+        try:
+            items = self._get_json(f"{folder}/index.json").get("directory", {}).get("item", [])
+            name = edgar_mapper.instance_filename([item.get("name", "") for item in items])
+            return self._get_text(f"{folder}/{name}") if name else None
+        except (SourceRequestError, SourceRateLimitError, SourceAuthError, TickerNotCoveredError) as e:
+            logger.debug(f"SEC: no XBRL instance for {accession}: {e}")
+            return None
+
     def fetch_submissions(self, cik: str) -> Dict[str, Any]:
         """Company metadata and recent filings (data.sec.gov submissions)."""
         return self._get_json(SEC_SUBMISSIONS_URL.format(cik=cik))
