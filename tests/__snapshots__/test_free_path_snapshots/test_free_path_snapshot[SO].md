@@ -85,6 +85,7 @@
 - SEC EDGAR: year-end shares: derived as shares issued - treasury shares (FY2008, FY2009, FY2010, FY2011, FY2013, FY2014, FY2015, FY2016, FY2017)
 - SEC EDGAR: inventory: derived as the sum of EnergyRelatedInventoryOtherFossilFuel, OtherInventorySupplies (FY2008, FY2009, FY2010, FY2011, FY2012, FY2013, FY2014)
 - SEC EDGAR: stockholders' equity: derived as equity incl. minority interest - minority interest (FY2008, FY2009, FY2010, FY2011)
+- SEC EDGAR: share count: weighted-average shares of the year (no balance sheet in the SEC data) (FY2007)
 - SEC EDGAR: restated in later filings, latest figure used (first reported -> latest): FY2014 total assets 70,923M -> 70,233M; FY2014 liabilities and equity 70,923M -> 70,233M; FY2014 total liabilities 49,583M -> 48,893M; FY2014 long-term debt 20,841M -> 20,644M; FY2014 short-term debt 3,333M -> 3,329M; FY2014 current assets 6,370M -> 5,864M; FY2013 total assets 64,546M -> 64,264M; FY2013 current assets 5,599M -> 5,614M; FY2013 current liabilities 5,536M -> 5,525M
 - SEC EDGAR: fourth quarter: derived as the fiscal year minus the first nine months (FY2024, FY2025)
 - Price Source: yfinance (primary source)
@@ -215,7 +216,7 @@
 | 2010 | 17.46B | 1.98B | 2.37 | 1.72 | 19.21 | ⚠️ -0.70 | 72.7% | 20.75B | 843.50M | 47.58 | 20.1 | 2.5 |
 | 2009 | 15.74B | 1.64B | 2.07 | 1.67 | 18.15 | 0.35 | 80.8% | 19.88B | 819.50M | 45.05 | 21.8 | 2.5 |
 | 2008 | 17.13B | 1.74B | 2.26 | 1.62 | 17.07 | 0.17 | 71.8% | 18.39B | 777.60M | 42.53 | 18.8 | 2.5 |
-| 2007 | 15.35B | 1.73B | 2.29 | 1.58 | N/A | 0.00 | 68.8% | N/A | 1.119B | 40.00 | 17.5 | N/A |
+| 2007 | 15.35B | 1.73B | 2.29 | 1.58 | N/A | 0.00 | 68.8% | N/A | 756.00M | 40.00 | 17.5 | N/A |
 
 **Note on Data Completeness:**
 - Years marked '[Data Unavailable]' (2026) show declared dividends but lack complete audited annual financial statements

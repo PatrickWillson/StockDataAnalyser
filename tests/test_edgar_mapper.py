@@ -713,3 +713,15 @@ def test_utility_inventory_of_materials_and_supplies():
     """Middlesex Water FY2024: 6,719K; York Water tags PublicUtilitiesInventory."""
     assert _debt_facts(InventoryRawMaterialsAndSupplies=6_719.0).balance_sheets[0].inventory == 6_719.0
     assert _debt_facts(PublicUtilitiesInventory=3_410.0).balance_sheets[0].inventory == 3_410.0
+
+
+def test_a_year_without_a_balance_sheet_takes_its_average_shares():
+    """Lifetime Brands FY2009 is a comparative with an income statement only: 12.0M average, not today's 22.7M."""
+    data = annual_data(_facts({
+        "NetIncomeLoss": [("2009-01-01", "2009-12-31", 2.7, "2011-03-01", "10-K", "USD"),
+                          ("2010-01-01", "2010-12-31", 20.3, "2011-03-01", "10-K", "USD")],
+        "WeightedAverageNumberOfSharesOutstandingBasic": [("2009-01-01", "2009-12-31", 12_000_000.0, "2011-03-01", "10-K", "shares")],
+        "Assets": [(None, "2010-12-31", 100.0, "2011-03-01", "10-K", "USD")],
+        "CommonStockSharesOutstanding": [(None, "2010-12-31", 12_060_000.0, "2011-03-01", "10-K", "shares")]}))
+    assert data.shares_by_year == {"2010": 12_060_000.0, "2009": 12_000_000.0}
+    assert any("weighted-average shares of the year" in n and "FY2009" in n for n in data.notes)

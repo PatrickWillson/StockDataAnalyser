@@ -82,6 +82,7 @@
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
 - Statements as filed with the SEC; latest 10-K/10-Q filed 2026-07-31
 - SEC EDGAR: long-term debt: LongTermDebt used (includes the current portion) (FY2012, FY2013)
+- SEC EDGAR: share count: weighted-average shares of the year (no balance sheet in the SEC data) (FY2007)
 - SEC EDGAR: restated in later filings, latest figure used (first reported -> latest): FY2018 current liabilities 116,866M -> 115,929M; FY2017 operating cash flow 63,598M -> 64,225M; FY2016 dividends paid 11,965M -> 12,150M; FY2016 operating cash flow 65,824M -> 66,231M; FY2015 long-term debt 53,463M -> 53,329M; FY2015 dividends paid 11,431M -> 11,561M; FY2009 revenue 36,537M -> 42,905M; FY2009 net income 5,704M -> 8,235M; FY2009 EPS 0.23 -> 0.33; FY2009 total assets 53,851M -> 47,501M; FY2009 liabilities and equity 53,851M -> 47,501M; FY2009 stockholders' equity 27,832M -> 31,640M; FY2009 total liabilities 26,019M -> 15,861M; FY2009 current assets 36,265M -> 31,555M; FY2009 current liabilities 19,282M -> 11,506M; FY2008 revenue 32,479M -> 37,491M; FY2008 net income 4,834M -> 6,119M; FY2008 EPS 0.20 -> 0.25; FY2008 total assets 39,572M -> 36,171M; FY2008 liabilities and equity 39,572M -> 36,171M; FY2008 stockholders' equity 21,030M -> 22,297M; FY2008 total liabilities 18,542M -> 13,874M; FY2008 current assets 32,311M -> 30,006M; FY2008 current liabilities 14,092M -> 11,361M; FY2007 revenue 24,006M -> 24,578M
 - SEC EDGAR: fourth quarter: derived as the fiscal year minus the first nine months (FY2024, FY2025)
 - Price Source: yfinance (primary source)
@@ -202,7 +203,7 @@
 | 2010 | 65.22B | 14.01B | 0.55 | 0.24 | 1.86 | 0.82 | 44.4% | N/A | 25.647B | 53.16 | 96.6 | 28.6 |
 | 2009 | 42.91B | 8.23B | 0.33 | 0.24 | 1.26 | 0.80 | 72.0% | N/A | 25.195B | 42.11 | 127.9 | 33.4 |
 | 2008 | 37.49B | 6.12B | 0.25 | 0.23 | 0.90 | 0.75 | 92.9% | N/A | 24.873B | 31.05 | 125.3 | 34.5 |
-| 2007 | 24.58B | 3.50B | 0.14 | 0.22 | N/A | 0.00 | 154.9% | N/A | 14.776B | 20.00 | 138.6 | N/A |
+| 2007 | 24.58B | 3.50B | 0.14 | 0.22 | N/A | 0.00 | 154.9% | N/A | 24.209B | 20.00 | 138.6 | N/A |
 
 **Note on Data Completeness:**
 - Years marked '[Data Unavailable]' (2026) show declared dividends but lack complete audited annual financial statements

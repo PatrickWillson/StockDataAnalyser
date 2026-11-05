@@ -85,6 +85,7 @@
 - SEC EDGAR: long-term debt: junior subordinated debt is tagged separately and may not be included (FY2010, FY2011, FY2012, FY2013, FY2014, FY2015, FY2016)
 - SEC EDGAR: intangibles (ex goodwill): derived as the sum of IndefiniteLivedIntangibleAssetsExcludingGoodwill, OtherIntangibleAssetsNet (FY2010, FY2011, FY2012, FY2013, FY2014)
 - SEC EDGAR: long-term debt: LongTermDebt used (includes the current portion) (FY2008, FY2009, FY2010, FY2011, FY2012)
+- SEC EDGAR: share count: weighted-average shares of the year (no balance sheet in the SEC data) (FY2007)
 - SEC EDGAR: restated in later filings, latest figure used (first reported -> latest): FY2020 revenue 119,543M -> 119,951M; FY2019 revenue 115,627M -> 115,720M; FY2019 operating cash flow 6,046M -> 4,092M; FY2018 revenue 109,029M -> 108,783M; FY2018 operating cash flow 14,187M -> 15,614M; FY2017 revenue 99,624M -> 100,705M; FY2017 operating cash flow -2,501M -> -10,827M; FY2016 revenue 95,668M -> 96,569M; FY2016 net income 22,583M -> 22,834M; FY2016 operating cash flow 20,196M -> 21,884M; FY2015 net income 22,406M -> 22,651M; FY2014 revenue 94,205M -> 95,112M; FY2014 EPS 5.34 -> 5.33; FY2014 equity incl. minority interest 232,065M -> 231,727M; FY2014 stockholders' equity 232,065M -> 231,727M; FY2014 long-term debt 276,836M -> 276,379M; FY2013 revenue 96,606M -> 97,367M; FY2013 net income 16,593M -> 16,557M; FY2013 EPS 4.39 -> 4.38; FY2013 equity incl. minority interest 211,178M -> 210,857M; FY2010 long-term debt 247,669M -> 270,653M; FY2009 total assets 2,031,989M -> 2,119,673M; FY2009 stockholders' equity 165,365M -> 160,845M; FY2009 total liabilities 1,866,624M -> 1,958,828M; FY2009 operating cash flow 121,897M -> 122,797M; FY2008 operating cash flow 23,098M -> 23,930M
 - SEC EDGAR: fourth quarter: derived as the fiscal year minus the first nine months (FY2024, FY2025)
 - Price Source: yfinance (primary source)
@@ -204,7 +205,7 @@
 | 2010 | 102.69B | 15.76B | 3.98 | 1.97 | 43.04 | 0.00 | 49.4% | 306.02B | 3.910B | 81.05 | 20.4 | 1.9 |
 | 2009 | 100.43B | 8.77B | 2.27 | 1.91 | 38.73 | 0.00 | 84.2% | 308.11B | 3.942B | 67.37 | 29.7 | 1.7 |
 | 2008 | 67.25B | 4.74B | 1.35 | 1.85 | 44.71 | 0.00 | 137.4% | 308.53B | 3.733B | 53.68 | 39.8 | 1.2 |
-| 2007 | 71.37B | 14.93B | 4.38 | 1.80 | N/A | 0.00 | 41.1% | N/A | 2.697B | 40.00 | 9.1 | N/A |
+| 2007 | 71.37B | 14.93B | 4.38 | 1.80 | N/A | 0.00 | 41.1% | N/A | 3.404B | 40.00 | 9.1 | N/A |
 
 **Note on Data Completeness:**
 - Years marked '[Data Unavailable]' (2026) show declared dividends but lack complete audited annual financial statements

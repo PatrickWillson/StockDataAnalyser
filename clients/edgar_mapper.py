@@ -709,6 +709,12 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
             operating[end] = cash.value
     balance = _repair_share_scale(balance, notes)
     shares_by_year = {fiscal_year(row.period_end): row.shares_outstanding for row in reversed(balance) if row.shares_outstanding}
+    # The oldest year often has an income statement only (a comparative): its own average, not today's count
+    for end in ends:
+        average = facts.get(WEIGHTED_SHARES, end, SHARES, "year")
+        if fiscal_year(end) not in shares_by_year and average is not None:
+            shares_by_year[fiscal_year(end)] = average.value
+            notes.derive("share count", "weighted-average shares of the year (no balance sheet in the SEC data)", end)
     if facts.scale_errors:
         notes.other.append("SEC EDGAR: figures a later filing tagged in thousands or millions as units were ignored: "
                            + ", ".join(sorted(facts.scale_errors)))
@@ -947,7 +953,7 @@ def without_other_share_bases(annual: EdgarAnnualData, total: float) -> EdgarAnn
                  if row.shares_outstanding and row.shares_outstanding * MAX_DERIVED_BELOW_COVER < total else row
                  for row in annual.balance_sheets)
     return replace(annual, balance_sheets=rows, shares_by_year={
-        fiscal_year(row.period_end): row.shares_outstanding for row in reversed(rows) if row.shares_outstanding})
+        year: count for year, count in annual.shares_by_year.items() if count * MAX_DERIVED_BELOW_COVER >= total})
 
 
 def with_shares_for_quarters(periodic: EdgarPeriodicData, shares: float) -> EdgarPeriodicData:
@@ -971,8 +977,8 @@ def with_class_shares(annual: EdgarAnnualData, periodic: EdgarPeriodicData, tota
                        "one, from each 10-K's XBRL (dividends and voting rights can differ between classes; EPS "
                        "derived on the total)")
     return (replace(annual, balance_sheets=tuple(balance), latest_cover_shares=cover or annual.latest_cover_shares,
-                    shares_by_year={fiscal_year(row.period_end): row.shares_outstanding
-                                    for row in reversed(balance) if row.shares_outstanding},
+                    shares_by_year={**annual.shares_by_year, **{fiscal_year(row.period_end): row.shares_outstanding
+                                                                 for row in reversed(balance) if row.shares_outstanding}},
                     notes=annual.notes + notes.render()),
             with_shares_for_quarters(periodic, latest))
 
