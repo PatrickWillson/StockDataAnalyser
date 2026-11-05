@@ -630,3 +630,9 @@ def test_the_other_years_decide_which_scale_is_wrong():
              tag: [year(2011, 1_649_891_000_000.0, "2012-03-01"), year(2011, 1_649_891.0, "2013-03-01"),
                    year(2012, 1_651_294.0, "2013-03-01"), year(2013, 1_643_613.0, "2014-03-01")]}
     assert annual_data(_facts(facts)).shares_by_year["2011"] == 1_649_891.0
+
+
+def test_other_intangibles_count_beside_an_indefinite_lived_total():
+    """Preformed Line Products FY2025: indefinite-lived 0, other intangible assets 10,140."""
+    assert _debt_facts(IndefiniteLivedIntangibleAssetsExcludingGoodwill=0.0,
+                       OtherIntangibleAssetsNet=10_140.0).balance_sheets[0].intangible_assets == 10_140.0

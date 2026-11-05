@@ -407,6 +407,10 @@ def _intangible_parts(facts: _Facts, end: str) -> Tuple[Optional[float], List[st
             other, other_used = (sum(parts) if parts else None), finite_used + oi_used
     else:
         other, other_used = _first(facts, FINITE_INTANGIBLES, end)
+        if other is None:
+            # Preformed Line Products: indefinite-lived 0, other intangible assets 10.1M. Separate lines at Graham Corp;
+            # JPMorgan's "other" likely includes its 600M: the sum errs on the conservative side (GRAHAM_METHODOLOGY §8.4)
+            other, other_used = _first(facts, OTHER_INTANGIBLES, end)
     values = [v for v in (indefinite, other) if v is not None]
     return (sum(values) if values else None), used + other_used
 
