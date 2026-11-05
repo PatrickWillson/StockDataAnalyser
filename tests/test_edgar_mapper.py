@@ -697,3 +697,13 @@ def test_revenue_tagged_with_the_companys_own_tags_is_noted():
     data = _income(NetIncomeLoss=1.0)
     assert data.income_statements[0].revenue is None
     assert any("revenue: not in the SEC data" in n for n in data.notes)
+
+
+def test_equity_from_total_capitalization():
+    """Middlesex Water FY2015 balance sheet, which tags no StockholdersEquity: common equity 206,694 + preferred 2,436."""
+    data = _debt_facts(CapitalizationLongtermDebtAndEquity=342_038.0, LongTermDebtNoncurrent=132_908.0,
+                       PreferredStockValue=2_436.0, LiabilitiesAndStockholdersEquity=581_383.0)
+    balance = data.balance_sheets[0]
+    assert balance.total_equity == 209_130.0 and balance.preferred_stock == 2_436.0
+    assert balance.total_liabilities == 581_383.0 - 209_130.0
+    assert any("derived as total capitalization - long-term debt" in n for n in data.notes)

@@ -63,6 +63,8 @@ MINORITY_IMMATERIAL = 0.01
 EPS = ("EarningsPerShareBasic", "EarningsPerShareBasicAndDiluted")
 EQUITY = ("StockholdersEquity",)
 EQUITY_INCL_NCI = ("StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",)
+# Water utilities' balance sheets: total capitalization = equity (with preferred) + long-term debt
+CAPITALIZATION = ("CapitalizationLongtermDebtAndEquity",)
 MINORITY = ("MinorityInterest",)
 TEMPORARY_EQUITY = ("TemporaryEquityCarryingAmountAttributableToParent", "RedeemableNoncontrollingInterestEquityCarryingAmount")
 GOODWILL = ("Goodwill",)
@@ -460,6 +462,13 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
     if equity is None and equity_incl is not None:
         equity = equity_incl - (minority or 0.0)
         notes.derive("stockholders' equity", "derived as equity incl. minority interest - minority interest", end)
+    if equity is None:
+        # Middlesex Water FY2015: 342,038 - 132,908 = 209,130, common equity 206,694 + preferred 2,436
+        capitalization = facts.get(CAPITALIZATION, end, MONEY, "instant")
+        noncurrent_debt = facts.get(LONG_TERM_DEBT[:1], end, MONEY, "instant")
+        if capitalization is not None and noncurrent_debt is not None:
+            equity = capitalization.value - noncurrent_debt.value
+            notes.derive("stockholders' equity", "derived as total capitalization - long-term debt", end)
 
     liabilities = field("total liabilities", LIABILITIES)
     if liabilities is None and liabilities_and_equity is not None and (equity_incl is not None or equity is not None):
