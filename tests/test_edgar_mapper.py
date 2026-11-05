@@ -517,3 +517,58 @@ def test_a_misdated_year_without_a_balance_sheet_is_dropped():
     assert [r.period_end for r in annual_data(_facts(facts)).income_statements] == ["2021-06-30", "2020-06-30"]
     facts[tag] = [revenue("2018-07-01", "2019-06-30"), revenue("2020-01-01", "2020-12-31")]   # a year's gap: both real
     assert [r.period_end for r in annual_data(_facts(facts)).income_statements] == ["2020-12-31", "2019-06-30"]
+
+
+# --- Filers tagging figures in thousands as units ---------------------------------------------------
+
+def test_a_later_filing_tagged_in_thousands_is_ignored():
+    """Ingles: FY2010 assets 1,532,358,110 (10-K 2011), re-tagged 1,532,358 (10-K 2012)."""
+    data = annual_data(_facts({
+        "NetIncomeLoss": [("2009-09-27", "2010-09-25", 1.0, "2011-12-02", "10-K", "USD")],
+        "Assets": [(None, "2010-09-25", 1_532_358_110.0, "2011-12-02", "10-K", "USD"),
+                   (None, "2010-09-25", 1_532_358.0, "2012-12-26", "10-K", "USD")]}))
+    assert data.balance_sheets[0].total_assets == 1_532_358_110.0
+    assert any("tagged in thousands or millions" in n and "Assets 2010" in n for n in data.notes)
+    assert not any("restated" in n for n in data.notes)
+
+
+def test_a_genuine_restatement_is_not_a_scale_error():
+    data = annual_data(_facts({
+        "NetIncomeLoss": [("2010-01-01", "2010-12-31", 1.0, "2011-03-01", "10-K", "USD")],
+        "Assets": [(None, "2010-12-31", 1_000.0, "2011-03-01", "10-K", "USD"),
+                   (None, "2010-12-31", 900.0, "2012-03-01", "10-K", "USD")]}))
+    assert data.balance_sheets[0].total_assets == 900.0
+
+
+def _shares_by_year(counts):
+    facts = {"NetIncomeLoss": [], "Assets": [], "CommonStockSharesOutstanding": []}
+    for year, count in counts.items():
+        filed = f"{year + 1}-03-01"
+        facts["NetIncomeLoss"].append((f"{year}-01-01", f"{year}-12-31", 1.0, filed, "10-K", "USD"))
+        facts["Assets"].append((None, f"{year}-12-31", 100.0, filed, "10-K", "USD"))
+        facts["CommonStockSharesOutstanding"].append((None, f"{year}-12-31", count, filed, "10-K", "shares"))
+    return annual_data(_facts(facts))
+
+
+def test_a_share_count_in_thousands_is_repaired_from_the_other_years():
+    """Graham Corp: FY2011 10,216 among about 10 million a year."""
+    data = _shares_by_year({2010: 9_900_000.0, 2011: 10_216.0, 2012: 10_297_000.0, 2013: 10_400_000.0})
+    assert data.shares_by_year["2011"] == 10_216_000.0
+    assert row(data.balance_sheets, "2011-12-31").shares_outstanding == 10_216_000.0
+    assert any("share count: tagged in thousands" in n and "FY2011" in n for n in data.notes)
+
+
+def test_share_counts_that_really_changed_are_left_alone():
+    counts = {2010: 1_000_000.0, 2011: 2_000_000.0, 2012: 4_000_000.0, 2013: 50_000.0}   # 80x: not a 1,000x slip
+    assert _shares_by_year(counts).shares_by_year["2013"] == 50_000.0
+
+
+def test_an_issued_count_far_below_the_cover_page_is_not_trusted():
+    """Unitil FY2010: CommonStockSharesIssued 41,455; 10,891,621 shares on the cover of the 10-K."""
+    data = annual_data({"facts": {**_facts({
+        "NetIncomeLoss": [("2010-01-01", "2010-12-31", 1.0, "2011-02-01", "10-K", "USD")],
+        "Assets": [(None, "2010-12-31", 100.0, "2011-02-01", "10-K", "USD")],
+        "CommonStockSharesIssued": [(None, "2010-12-31", 41_455.0, "2011-02-01", "10-K", "shares")]})["facts"],
+        "dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
+            {"end": "2011-02-01", "val": 10_891_621.0, "filed": "2011-02-01", "form": "10-K", "fy": 2010, "fp": "FY"}]}}}}})
+    assert data.balance_sheets[0].shares_outstanding == 10_891_621.0

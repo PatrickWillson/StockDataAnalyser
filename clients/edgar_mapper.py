@@ -24,7 +24,8 @@ Only USD statements are mapped (foreign SEC filers are a later step).
 import datetime as dt
 import html
 import re
-from dataclasses import dataclass
+import statistics
+from dataclasses import dataclass, replace
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from core.fundamentals import BalanceSheetRow, IncomeStatementRow
@@ -109,6 +110,10 @@ YEAR_END_TAGS = ("NetIncomeLoss", "ProfitLoss", "Revenues", "RevenueFromContract
                  "EarningsPerShareBasic")
 
 MIN_DAYS_BETWEEN_YEAR_ENDS = 300
+SCALE_ERRORS = (1e3, 1e6)        # filers tagging figures in thousands or millions as units
+SCALE_ERROR_TOLERANCE = 0.005
+MIN_YEARS_FOR_SHARE_SCALE = 3
+MAX_DERIVED_BELOW_COVER = 100
 RESTATEMENT_TOLERANCE = 0.001   # relative change below which two filed values are the same figure
 PER_SHARE_TOLERANCE = 0.005    # absolute, for per-share values (filed rounded to the cent)
 
@@ -155,6 +160,7 @@ class _Facts:
         self.forms = forms
         self.splits = sorted((date, ratio) for date, ratio in splits if ratio and ratio > 0)
         self._cache: Dict[Tuple[str, str, str, str], Dict[str, List[Tuple[str, float]]]] = {}
+        self.scale_errors: set = set()
 
     def split_factor(self, filed: str) -> float:
         """Shares today per share at the filing date: product of the splits after `filed`."""
@@ -187,6 +193,20 @@ class _Facts:
             self._cache[key] = by_end
         return self._cache[key]
 
+    def _without_scale_errors(self, ordered: List[Tuple[str, float]], tag: str, end: str, unit: str) -> List[Tuple[str, float]]:
+        """
+        Drop a figure a filing tagged in thousands or millions (Ingles' FY2012 10-K: FY2010 assets 1,532,358 against
+        1,532,358,110 filed before; Utah Medical FY2018: 2017 shares 3,721 against 3,721,000). Exact multiples only.
+        """
+        if unit == PER_SHARE or len(ordered) < 2:
+            return ordered
+        largest = max(abs(value) for _, value in ordered)
+        kept = [(filed, value) for filed, value in ordered
+                if not (value and any(abs(largest / abs(value) / scale - 1) <= SCALE_ERROR_TOLERANCE for scale in SCALE_ERRORS))]
+        if len(kept) != len(ordered):
+            self.scale_errors.add(f"{tag} {end[:4]}")
+        return kept
+
     def get(self, chain: Sequence[str], end: str, unit: str, kind: str) -> Optional[Fact]:
         best = None
         for rank, tag in enumerate(chain):
@@ -199,6 +219,7 @@ class _Facts:
         if best is None:
             return None
         _, tag, ordered = best
+        ordered = self._without_scale_errors(ordered, tag, end, unit)
         adjusted = [self.adjusted(unit, filed, value) for filed, value in ordered]
         first, latest = adjusted[0], adjusted[-1]
         # Per-share figures are filed rounded to the cent: within half a cent they are the same figure
@@ -292,6 +313,26 @@ def _first(facts: _Facts, chain: Sequence[str], end: str) -> Tuple[Optional[floa
     """The first tag of `chain` with an instant value: (value, [tag]) or (None, [])."""
     fact = facts.get(chain, end, MONEY, "instant")
     return (None, []) if fact is None else (fact.value, [fact.tag])
+
+
+def _repair_share_scale(rows: List[BalanceSheetRow], notes: _Notes) -> List[BalanceSheetRow]:
+    """
+    Share counts a filer tagged in thousands with no other filing to correct them (Graham Corp FY2011: 10,216 among
+    about 10 million a year). Split-adjusted counts of one company do not move 1,000x, so the other years expose
+    them. Only share counts: money can (Southern Co's goodwill: 2M in FY2015, 5bn after an acquisition).
+    """
+    counts = [row.shares_outstanding for row in rows if row.shares_outstanding]
+    if len(counts) < MIN_YEARS_FOR_SHARE_SCALE:
+        return rows
+    typical = statistics.median(counts)
+    repaired = []
+    for row in rows:
+        shares = row.shares_outstanding
+        if shares and typical / 2 <= shares * 1000 <= typical * 2:
+            notes.derive("share count", "tagged in thousands by the filer; multiplied by 1,000", row.period_end)
+            row = replace(row, shares_outstanding=shares * 1000)
+        repaired.append(row)
+    return repaired
 
 
 def _long_term_debt(facts: _Facts, end: str, notes: _Notes) -> Tuple[Optional[float], bool]:
@@ -444,7 +485,9 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
         # Some filers tag issued and treasury counts rounded to millions (Southern Co: "1.1 billion"):
         # the cover-page count is then the precise figure
         rounded = derived is not None and issued % 1e6 == 0 and (treasury or 0.0) % 1e6 == 0
-        if derived is not None and not (rounded and cover is not None):
+        # Or the issued tag holds something else (Unitil FY2010: 41,455, with 10.9 million on the cover)
+        implausible = derived is not None and cover is not None and derived * MAX_DERIVED_BELOW_COVER < cover
+        if derived is not None and not ((rounded or implausible) and cover is not None):
             shares = derived
             notes.derive("year-end shares", "derived as shares issued - treasury shares", end)
         elif cover is not None:
@@ -601,14 +644,12 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         if currencies and MONEY not in currencies:
             raise ValueError(f"statements are reported in {', '.join(currencies)}; only USD is supported")
     notes = _Notes()
-    balance, income, dividends, shares_by_year, operating = [], [], {}, {}, {}
+    balance, income, dividends, operating = [], [], {}, {}
     for end in ends:
         income.append(_income_row(facts, end, notes, utility))
         row = _balance_row(facts, end, notes)
         if row is not None:
             balance.append(row)
-            if row.shares_outstanding:
-                shares_by_year[fiscal_year(end)] = row.shares_outstanding
         if row is not None and not row.shares_outstanding:
             notes.derive("share count", "not in the SEC data (the company uses its own tags); per-share figures N/A", end)
         if income[-1].eps is None:
@@ -621,6 +662,11 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         notes.fact("operating cash flow", end, cash)
         if cash is not None:
             operating[end] = cash.value
+    balance = _repair_share_scale(balance, notes)
+    shares_by_year = {fiscal_year(row.period_end): row.shares_outstanding for row in reversed(balance) if row.shares_outstanding}
+    if facts.scale_errors:
+        notes.other.append("SEC EDGAR: figures a later filing tagged in thousands or millions as units were ignored: "
+                           + ", ".join(sorted(facts.scale_errors)))
     # The company's current labelling convention (older filings are not always consistent: Walmart's
     # 10-Ks for FY2010-14 declared the year they started in, later ones the year they end in)
     declared = filer_fiscal_years(facts)
@@ -713,6 +759,7 @@ def periodic_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, f
         row = _balance_row(facts, end, _Notes(), period_kind="year" if end in year_ends else "quarter")
         if row is not None:
             balance.append(row)
+    balance = _repair_share_scale(balance, notes)
     return EdgarPeriodicData(balance_sheets=tuple(balance), income_statements=tuple(income),
                              notes=notes.render())
 
