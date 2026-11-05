@@ -337,6 +337,10 @@ def _first(facts: _Facts, chain: Sequence[str], end: str) -> Tuple[Optional[floa
     return (None, []) if fact is None else (fact.value, [fact.tag])
 
 
+def _in_thousands(shares: float, typical: float) -> bool:
+    return typical / 2 <= shares * 1000 <= typical * 2
+
+
 def _repair_share_scale(rows: List[BalanceSheetRow], notes: _Notes) -> List[BalanceSheetRow]:
     """
     Share counts a filer tagged in thousands with no other filing to correct them (Graham Corp FY2011: 10,216 among
@@ -350,7 +354,7 @@ def _repair_share_scale(rows: List[BalanceSheetRow], notes: _Notes) -> List[Bala
     repaired = []
     for row in rows:
         shares = row.shares_outstanding
-        if shares and typical / 2 <= shares * 1000 <= typical * 2:
+        if shares and _in_thousands(shares, typical):
             notes.derive("share count", "tagged in thousands by the filer; multiplied by 1,000", row.period_end)
             row = replace(row, shares_outstanding=shares * 1000)
         repaired.append(row)
@@ -710,10 +714,12 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
     balance = _repair_share_scale(balance, notes)
     shares_by_year = {fiscal_year(row.period_end): row.shares_outstanding for row in reversed(balance) if row.shares_outstanding}
     # The oldest year often has an income statement only (a comparative): its own average, not today's count
+    typical = statistics.median(shares_by_year.values()) if len(shares_by_year) >= MIN_YEARS_FOR_SHARE_SCALE else None
     for end in ends:
         average = facts.get(WEIGHTED_SHARES, end, SHARES, "year")
         if fiscal_year(end) not in shares_by_year and average is not None:
-            shares_by_year[fiscal_year(end)] = average.value
+            in_thousands = typical is not None and _in_thousands(average.value, typical)
+            shares_by_year[fiscal_year(end)] = average.value * 1000 if in_thousands else average.value
             notes.derive("share count", "weighted-average shares of the year (no balance sheet in the SEC data)", end)
     if facts.scale_errors:
         notes.other.append("SEC EDGAR: figures a later filing tagged in thousands or millions as units were ignored: "

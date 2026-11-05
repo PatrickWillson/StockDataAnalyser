@@ -725,3 +725,15 @@ def test_a_year_without_a_balance_sheet_takes_its_average_shares():
         "CommonStockSharesOutstanding": [(None, "2010-12-31", 12_060_000.0, "2011-03-01", "10-K", "shares")]}))
     assert data.shares_by_year == {"2010": 12_060_000.0, "2009": 12_000_000.0}
     assert any("weighted-average shares of the year" in n and "FY2009" in n for n in data.notes)
+
+
+def test_an_average_share_count_in_thousands_is_repaired():
+    """Artesian FY2009 is a comparative tagged 7,500 (thousands) among about 7.5 million shares a year."""
+    facts = {"NetIncomeLoss": [("2009-01-01", "2009-12-31", 1.0, "2011-03-01", "10-K", "USD")],
+             "WeightedAverageNumberOfSharesOutstandingBasic": [("2009-01-01", "2009-12-31", 7_500.0, "2011-03-01", "10-K", "shares")],
+             "Assets": [], "CommonStockSharesOutstanding": []}
+    for year in (2010, 2011, 2012):
+        facts["NetIncomeLoss"].append((f"{year}-01-01", f"{year}-12-31", 1.0, f"{year + 1}-03-01", "10-K", "USD"))
+        facts["Assets"].append((None, f"{year}-12-31", 1.0, f"{year + 1}-03-01", "10-K", "USD"))
+        facts["CommonStockSharesOutstanding"].append((None, f"{year}-12-31", 7_600_000.0, f"{year + 1}-03-01", "10-K", "shares"))
+    assert annual_data(_facts(facts)).shares_by_year["2009"] == 7_500_000.0
