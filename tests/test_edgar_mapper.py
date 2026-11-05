@@ -682,3 +682,18 @@ def test_only_filings_for_later_years_are_unreported():
     recent = {"form": ["10-K", "10-K", "10-Q"], "reportDate": ["2025-12-31", "2024-12-31", "2026-06-27"],
               "filingDate": ["2026-02-11", "2025-02-11", "2026-08-06"], "accessionNumber": ["a", "b", "c"], "isXBRL": [1, 1, 1]}
     assert unreported_annual_filings(data, {"filings": {"recent": recent}}) == [("2025-12-31", "2026-02-11", "a")]
+
+
+def test_revenue_of_regulated_utilities_and_banks():
+    """Middlesex Water FY2014: 117.14M tagged as regulated and unregulated revenue. Arrow FY2015: 65.92M + 28.12M."""
+    assert _income(RegulatedAndUnregulatedOperatingRevenue=117.14, NetIncomeLoss=1.0).income_statements[0].revenue == 117.14
+    assert _income(RegulatedOperatingRevenue=41.45, NetIncomeLoss=1.0).income_statements[0].revenue == 41.45
+    bank = _income(InterestIncomeExpenseNet=65.92, NoninterestIncome=28.12, NetIncomeLoss=1.0)
+    assert bank.income_statements[0].revenue == pytest.approx(94.04)
+    assert any("derived as InterestIncomeExpenseNet + NoninterestIncome (net revenue of a bank)" in n for n in bank.notes)
+
+
+def test_revenue_tagged_with_the_companys_own_tags_is_noted():
+    data = _income(NetIncomeLoss=1.0)
+    assert data.income_statements[0].revenue is None
+    assert any("revenue: not in the SEC data" in n for n in data.notes)

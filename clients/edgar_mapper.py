@@ -42,7 +42,10 @@ MONEY, PER_SHARE, SHARES = "USD", "USD/shares", "shares"
 
 # Field -> tag chain (first tag with a value for the year wins)
 REVENUE = ("RevenueFromContractWithCustomerExcludingAssessedTax", "RevenueFromContractWithCustomerIncludingAssessedTax",
-           "SalesRevenueNet", "SalesRevenueGoodsNet", "Revenues", "RevenuesNetOfInterestExpense")
+           "SalesRevenueNet", "SalesRevenueGoodsNet", "Revenues", "RevenuesNetOfInterestExpense",
+           "RegulatedAndUnregulatedOperatingRevenue", "RegulatedOperatingRevenue")   # water and electric utilities
+# Banks with no revenue tag: net revenue, as JPMorgan's RevenuesNetOfInterestExpense
+NET_INTEREST_INCOME, NONINTEREST_INCOME = ("InterestIncomeExpenseNet", "InterestRevenueExpenseNet"), ("NoninterestIncome",)
 NET_INCOME = ("NetIncomeLossAvailableToCommonStockholdersBasic", "NetIncomeLoss")
 AVAILABLE_TO_COMMON = NET_INCOME[0]
 PREFERRED_DIVIDENDS = ("PreferredStockDividendsAndOtherAdjustments", "PreferredStockDividendsIncomeStatementImpact",
@@ -620,7 +623,13 @@ def _net_income(facts: _Facts, end: str, kind: str, notes: Optional["_Notes"] = 
 def _revenue(facts: _Facts, end: str, kind: str, utility: bool) -> Tuple[Optional[Fact], Optional[Fact]]:
     """(revenue fact, total `Revenues` fact) for the period."""
     total = facts.get(("Revenues",), end, MONEY, kind)
-    return (total if utility and total is not None else None) or facts.get(REVENUE, end, MONEY, kind), total
+    revenue = (total if utility and total is not None else None) or facts.get(REVENUE, end, MONEY, kind)
+    if revenue is None:
+        interest, other = facts.get(NET_INTEREST_INCOME, end, MONEY, kind), facts.get(NONINTEREST_INCOME, end, MONEY, kind)
+        if interest is not None and other is not None:
+            revenue = Fact(value=interest.value + other.value, first_value=interest.value + other.value,
+                           tag=f"{interest.tag} + {other.tag}", restated=False)
+    return revenue, total
 
 
 def _income_row(facts: _Facts, end: str, notes: _Notes, utility: bool = False) -> IncomeStatementRow:
@@ -631,6 +640,10 @@ def _income_row(facts: _Facts, end: str, notes: _Notes, utility: bool = False) -
 
     revenue_fact, total = _revenue(facts, end, "year", utility)
     notes.fact("revenue", end, revenue_fact)
+    if revenue_fact is None:
+        notes.derive("revenue", "not in the SEC data (the company uses its own tags)", end)
+    elif " + " in revenue_fact.tag:
+        notes.derive("revenue", f"derived as {revenue_fact.tag} (net revenue of a bank)", end)
     if revenue_fact is not None and total is not None and revenue_fact.tag != "Revenues" and total.value > 0 \
             and abs(total.value - revenue_fact.value) > 0.01 * total.value:
         notes.other.append(f"SEC EDGAR: FY{end[:4]} revenue uses {revenue_fact.tag} ({revenue_fact.value:,.0f}); "
