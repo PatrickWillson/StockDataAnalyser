@@ -219,3 +219,45 @@ def test_epv_normalized_all_years_included():
     # Verify average includes all years
     expected_avg = sum(net_incomes) / len(net_incomes)
     assert result['normalized_earnings'] == pytest.approx(expected_avg, rel=1e-6)
+
+
+# --- Per share: average of each year's EPS (GRAHAM_METHODOLOGY §2.4, F22) ------------------------
+
+from hypothesis import given, settings, strategies as st  # noqa: E402
+
+from config.graham_constants import COST_OF_CAPITAL  # noqa: E402
+
+
+def _history(net_incomes, shares):
+    return {f"{2024 - i}-12-31": {'net_income': ni, 'revenue': 1.0, 'total_equity': 1.0,
+                                  'shares_outstanding': s, 'eps': ni / s}
+            for i, (ni, s) in enumerate(zip(net_incomes, shares))}
+
+
+@settings(max_examples=100, deadline=None)
+@given(st.lists(st.tuples(st.floats(1e3, 1e9), st.floats(1e3, 1e8)), min_size=7, max_size=12))
+def test_epv_per_share_is_average_eps_capitalized(years):
+    """Each year's earnings over that year's shares, averaged, divided by the cost of capital."""
+    net_incomes, shares = zip(*years)
+    result = GrahamCalculator({'history': _history(net_incomes, shares)}).compute_epv_normalized(
+        _history(net_incomes, shares), round_result=False)
+    used = min(len(years), 10)
+    expected = sum(ni / s for ni, s in years[:used]) / used / COST_OF_CAPITAL
+    assert result['epv_per_share'] == pytest.approx(expected)
+    assert result['epv'] == pytest.approx(sum(net_incomes[:used]) / used / COST_OF_CAPITAL)
+
+
+def test_epv_per_share_is_not_company_value_over_todays_shares():
+    """A buyback (1,000 -> 500 shares) must not raise past years' per-share earnings."""
+    history = _history([100.0] * 10, [500.0] + [1000.0] * 9)    # latest year: 500 shares after buybacks
+    result = GrahamCalculator({'history': history}).compute_epv()
+    assert result['epv_per_share'] == pytest.approx((0.2 + 9 * 0.1) / 10 / COST_OF_CAPITAL)   # 1.10, not 2.00
+    assert result['normalized_eps'] == pytest.approx(0.11)
+
+
+def test_epv_per_share_na_when_a_year_has_no_eps():
+    history = _history([100.0] * 8, [1000.0] * 8)
+    history["2020-12-31"].update(eps=0.0, shares_outstanding=0.0)
+    result = GrahamCalculator({'history': history}).compute_epv()
+    assert result['epv_per_share'] == "N/A" and result['epv'] == 1000.0
+    assert result['epv_per_share_reason'] == "no per-share earnings for FY2020"

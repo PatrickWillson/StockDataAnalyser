@@ -13,13 +13,13 @@
 *Current metrics (P/E, Price) reflect most recent available data*
 
 - Verdict: **OVERVALUED**
-  - Price is not below conservative intrinsic value (margin of safety -112.4%)
+  - Price is not below conservative intrinsic value (margin of safety -140.3%)
 - Graham Number (Single-Year EPS): 219.14 USD
 - Graham Number (3-Year Avg EPS): 211.61 USD
-- Intrinsic Value (EPV per share): 141.26 USD (10-year average earnings)
+- Intrinsic Value (EPV per share): 124.85 USD (10-year average EPS)
 - Net-Net Value: -1,514.19 USD
-- Margin of Safety: -112.4% (Capped by EPV)
-  - Conservative Intrinsic Value: 141.26 USD
+- Margin of Safety: -140.3% (Capped by EPV)
+  - Conservative Intrinsic Value: 124.85 USD
 - Current Price: 300.00 USD
 - Trailing Dividend: 3.07 USD (Yield: 1.02%) - Declared (Dividend API) [2025]
   - Forward Rate: 6.00 USD (Yield: 2.00%)
@@ -127,9 +127,9 @@
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -112.4%** - Trading above conservative intrinsic value
+- **Margin of Safety: -140.3%** - Trading above conservative intrinsic value
   - Assessment: **High valuation risk** - no margin of safety
-  - Conservative Intrinsic Value: 141.26 USD
+  - Conservative Intrinsic Value: 124.85 USD
   - Current Price: 300.00 USD
 
 ### Data Quality Risk:
@@ -273,6 +273,7 @@
   - **Includes ALL years** (profitable and unprofitable)
   - Loss years reduce the average (real value destruction)
   - Capitalizes earnings at 10% discount rate
+  - Per share: the same years' average EPS (each year's earnings over that year's shares), capitalized the same way
   - Graham's method: average past earnings capitalised at a multiplier kept "within a reasonable range of variation"; in 1976 he set a maximum multiple of 10
 
   **Note**: Dividing by 10% is a multiplier of 10. The name 'EPV' comes from Greenwald (2001), whose method differs (normalised EBIT, maintenance capex, cost of capital).
@@ -283,14 +284,15 @@
   - Net Incomes: 55,681,000,000 USD, 56,868,000,000 USD, 47,760,000,000 USD, 35,892,000,000 USD, 46,503,000,000 USD, 27,410,000,000 USD, 34,642,000,000 USD, 30,709,000,000 USD, 22,567,000,000 USD, 22,834,000,000 USD
   - Normalized Earnings: 38,086,600,000 USD (average including losses)
   - EPV: 380,866,000,000 USD (38,086,600,000 USD / 10%)
-  - EPV Per Share: 141.26 USD
+  - EPS: 20.05, 19.79, 16.25, 12.10, 15.39, 8.89, 10.75, 9.04, 6.35, 6.24 USD
+  - EPV Per Share: 124.85 USD (average EPS 12.48 USD / 10%)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
   **Graham on earning power**: *"Past earning power … should mean the average earnings over a stated period which would ordinarily be identified in the discussion. But if not so identified it would be some representative period such as five or seven or perhaps ten years in the past."* (Graham, Current Problems in Security Analysis, Lecture 4, 1946–47)
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
-  - **Value**: -112.4%
+  - **Value**: -140.3%
   - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
 
   **Conservative Dual-Anchor Methodology**:
@@ -309,8 +311,8 @@
 
   **For This Stock**:
   - Normalized Graham Number: 211.61 USD
-  - EPV per share: 141.26 USD
-  - **Intrinsic Value Used**: 141.26 USD (Capped by EPV)
+  - EPV per share: 124.85 USD
+  - **Intrinsic Value Used**: 124.85 USD (Capped by EPV)
 
   **Interpretation**: EPV is lower than Normalized Graham Number, indicating
   that long-term earnings power is weaker than asset-based valuation suggests.

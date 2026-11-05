@@ -210,6 +210,7 @@ class MethodologySection(DossierSection):
             lines.append("  - **Includes ALL years** (profitable and unprofitable)")
             lines.append("  - Loss years reduce the average (real value destruction)")
             lines.append(f"  - Capitalizes earnings at {COST_OF_CAPITAL:.0%} discount rate")
+            lines.append("  - Per share: the same years' average EPS (each year's earnings over that year's shares), capitalized the same way")
             lines.append("  - Graham's method: average past earnings capitalised at a multiplier kept \"within a reasonable range of variation\"; in 1976 he set a maximum multiple of 10")
             lines.append("")
             lines.append(f"  **Note**: Dividing by {COST_OF_CAPITAL:.0%} is a multiplier of {1 / COST_OF_CAPITAL:g}. The name 'EPV' comes from Greenwald (2001), whose method differs (normalised EBIT, maintenance capex, cost of capital).")
@@ -241,11 +242,18 @@ class MethodologySection(DossierSection):
             
             lines.append(f"  - EPV: {epv_value:,.0f} {unified_currency} ({normalized_earnings:,.0f} {unified_currency} / {cost_of_capital:.0%})")
             
-            if isinstance(epv_per_share, (int, float)) and epv_per_share > 0:
+            eps_values = or_default(epv_details.eps_values, ())
+            normalized_eps = or_default(epv_details.normalized_eps, None)
+            if eps_values and all(eps is not None for eps in eps_values):
+                lines.append(f"  - EPS: {', '.join(f'{eps:,.2f}' for eps in eps_values)} {unified_currency}")
+            if isinstance(epv_per_share, (int, float)):
                 epv_per_share_display = format_price_display(epv_per_share, unified_currency, unified_currency)
-                lines.append(f"  - EPV Per Share: {epv_per_share_display}")
+                basis = (f" (average EPS {normalized_eps:,.2f} {unified_currency} / {cost_of_capital:.0%})"
+                         if isinstance(normalized_eps, (int, float)) else "")
+                lines.append(f"  - EPV Per Share: {epv_per_share_display}{basis}")
             elif not isinstance(epv_per_share, (int, float)):
-                lines.append("  - EPV Per Share: N/A (no share count for the latest year)")
+                reason = or_default(epv_details.epv_per_share_reason, "no per-share earnings")
+                lines.append(f"  - EPV Per Share: N/A ({reason})")
             
             lines.append("")
             

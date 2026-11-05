@@ -838,8 +838,20 @@
     "epv": 32009000000.0,
     "epv_details": {
       "cost_of_capital": 0.1,
+      "eps_values": [
+        3.94,
+        4.02,
+        3.64,
+        3.28,
+        2.26,
+        2.95,
+        4.53,
+        2.18,
+        0.84,
+        2.57
+      ],
       "epv": 32009000000.0,
-      "epv_per_share": 28.6,
+      "epv_per_share": 30.21,
       "net_incomes": [
         4341000000.0,
         4401000000.0,
@@ -853,6 +865,7 @@
         2448000000.0
       ],
       "normalized_earnings": 3200900000.0,
+      "normalized_eps": 3.021,
       "years_included": [
         "2025-12-31",
         "2024-12-31",
@@ -868,12 +881,12 @@
       "years_used": 10
     },
     "graham_number": 49.19,
-    "margin_of_safety": -207.7,
+    "margin_of_safety": -191.3,
     "margin_of_safety_details": {
-      "epv_per_share": 28.6,
-      "intrinsic_value_used": 28.6,
+      "epv_per_share": 30.21,
+      "intrinsic_value_used": 30.21,
       "limiting_factor": "EPV",
-      "mos_percentage": -207.7,
+      "mos_percentage": -191.3,
       "normalized_graham_number": 48.73,
       "note": null
     },
@@ -903,7 +916,7 @@
       ]
     },
     "verdict": "OVERVALUED",
-    "verdict_reason": "Price is not below conservative intrinsic value (margin of safety -207.7%)",
+    "verdict_reason": "Price is not below conservative intrinsic value (margin of safety -191.3%)",
     "warnings": []
   },
   "ttm_metrics": {

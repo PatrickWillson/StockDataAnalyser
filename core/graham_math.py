@@ -16,7 +16,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Union
 
 from config.graham_constants import GRAHAM_MULTIPLIER, COST_OF_CAPITAL
-from core.history import has_statement_data, has_statement_or_current_assets, row_at
+from core.history import fiscal_year, has_statement_data, has_statement_or_current_assets, row_at
 from core.investor_tests import defensive, enterprising
 from core.investor_tests.criteria import latest_current_ratio
 from core.verdict import determine_verdict
@@ -604,7 +604,9 @@ class GrahamCalculator:
         
         This method uses a simplified approach inspired by Graham's emphasis on
         full-cycle earnings, but is not a direct Graham formula. It capitalizes
-        the average of 7-10 years of net income at a 10% discount rate.
+        the average of 7-10 years of net income at a 10% discount rate. Per share it
+        capitalizes the average of the same years' EPS (each year's earnings over that year's
+        shares, GRAHAM_METHODOLOGY §2.4), not the company value over today's shares (F22).
         
         Methodology:
         - Use 7-10 years of earnings data
@@ -662,23 +664,38 @@ class GrahamCalculator:
         # Calculate EPV
         epv = normalized_earnings / COST_OF_CAPITAL
         
-        # Get shares for per-share calculation from most recent year with financial data
-        latest_year = self._get_latest_financial_year(history, sorted_years)
-        if not latest_year:
-            return "N/A - No financial data available"
-        
-        shares = or_default(row_at(history, latest_year).shares_outstanding, 0)
-        epv_per_share = epv / shares if shares > 0 else "N/A"  # no share count: unknown, not zero
-        
+        # Per share: average of each year's EPS (reported, else that year's net income / that
+        # year's shares). A year whose EPS is 0 despite non-zero earnings had no share count.
+        eps_values = []
+        for year, net_income in zip(years_to_use, net_incomes):
+            eps = or_default(row_at(history, year).eps, None)
+            eps_values.append(None if eps is None or (eps == 0 and net_income != 0) else float(eps))
+        missing = [fiscal_year(year) for year, eps in zip(years_to_use, eps_values) if eps is None]
+        per_share_reason = None
+        if missing:
+            normalized_eps = epv_per_share = "N/A"
+            per_share_reason = f"no per-share earnings for FY{', FY'.join(missing)}"
+        else:
+            normalized_eps = sum(eps_values) / len(eps_values)
+            # share changes can turn a positive company average negative per share: no earning power
+            epv_per_share = max(normalized_eps, 0.0) / COST_OF_CAPITAL
+
+        def rounded(value):
+            return round(value, 2) if round_result and isinstance(value, float) else value
+
         result = {
-            'epv': round(epv, 2) if round_result else epv,
-            'epv_per_share': (round(epv_per_share, 2) if round_result else epv_per_share)
-                             if isinstance(epv_per_share, float) else epv_per_share,
-            'normalized_earnings': round(normalized_earnings, 2) if round_result else normalized_earnings,
+            'epv': rounded(epv),
+            'epv_per_share': rounded(epv_per_share),
+            'normalized_earnings': rounded(normalized_earnings),
+            'normalized_eps': round(normalized_eps, 4) if round_result and isinstance(normalized_eps, float)
+                              else normalized_eps,
+            'eps_values': eps_values,
             'years_used': len(years_to_use),
             'years_included': years_to_use,
             'net_incomes': [round(ni, 2) if round_result else ni for ni in net_incomes]
         }
+        if per_share_reason:
+            result['epv_per_share_reason'] = per_share_reason
         
         return result
     

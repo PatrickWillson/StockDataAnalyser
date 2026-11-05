@@ -16,7 +16,7 @@
   - Price is not below conservative intrinsic value (margin of safety -990.2%)
 - Graham Number (Single-Year EPS): 23.68 CAD
 - Graham Number (3-Year Avg EPS): 23.40 CAD
-- Intrinsic Value (EPV per share): 53.64 CAD (10-year average earnings)
+- Intrinsic Value (EPV per share): 47.89 CAD (10-year average EPS)
 - Net-Net Value: -9.46 CAD
 - Margin of Safety: -990.2% (Capped by Normalized Graham Number)
   - Conservative Intrinsic Value: 23.40 CAD
@@ -233,6 +233,7 @@
   - **Includes ALL years** (profitable and unprofitable)
   - Loss years reduce the average (real value destruction)
   - Capitalizes earnings at 10% discount rate
+  - Per share: the same years' average EPS (each year's earnings over that year's shares), capitalized the same way
   - Graham's method: average past earnings capitalised at a multiplier kept "within a reasonable range of variation"; in 1976 he set a maximum multiple of 10
 
   **Note**: Dividing by 10% is a multiplier of 10. The name 'EPV' comes from Greenwald (2001), whose method differs (normalised EBIT, maintenance capex, cost of capital).
@@ -243,7 +244,8 @@
   - Net Incomes: 96,995,000,000 CAD, 99,803,000,000 CAD, 94,680,000,000 CAD, 89,946,000,000 CAD, 85,448,700,000 CAD, 81,176,265,000 CAD, 77,117,451,750 CAD, 73,261,579,162 CAD, 69,598,500,204 CAD, 66,118,575,194 CAD
   - Normalized Earnings: 83,414,507,131 CAD (average including losses)
   - EPV: 834,145,071,310 CAD (83,414,507,131 CAD / 10%)
-  - EPV Per Share: 53.64 CAD
+  - EPS: 6.24, 6.26, 5.76, 5.30, 4.81, 4.48, 4.17, 3.88, 3.62, 3.37 CAD
+  - EPV Per Share: 47.89 CAD (average EPS 4.79 CAD / 10%)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
@@ -269,7 +271,7 @@
 
   **For This Stock**:
   - Normalized Graham Number: 23.40 CAD
-  - EPV per share: 53.64 CAD
+  - EPV per share: 47.89 CAD
   - **Intrinsic Value Used**: 23.40 CAD (Capped by Normalized Graham Number)
 
   **Interpretation**: Normalized Graham Number is lower than EPV, indicating

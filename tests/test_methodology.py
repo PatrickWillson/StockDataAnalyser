@@ -184,7 +184,7 @@ class TestMethodologySection:
         
         lines = MethodologySection(financial_data, metrics).generate()
         
-        assert any("EPV Per Share: N/A (no share count for the latest year)" in line for line in lines)
+        assert any("EPV Per Share: N/A (no per-share earnings)" in line for line in lines)
     
     def test_executive_summary_explains_missing_epv_per_share(self):
         from output.sections.executive_summary import ExecutiveSummarySection
@@ -195,7 +195,7 @@ class TestMethodologySection:
         
         lines = ExecutiveSummarySection(financial_data, metrics).generate()
         
-        assert "- Intrinsic Value (EPV per share): N/A (no share count for the latest year)" in lines
+        assert "- Intrinsic Value (EPV per share): N/A (no per-share earnings)" in lines
     
     def test_epv_methodology_explanation(self):
         """Test EPV methodology explanation with full-cycle method."""

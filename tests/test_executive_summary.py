@@ -146,7 +146,7 @@ class TestExecutiveSummarySection:
         # Check EPV: per-share value with the number of years averaged (not the whole-company EPV)
         epv_lines = [line for line in lines if "Intrinsic Value (EPV per share):" in line]
         assert len(epv_lines) == 1
-        assert "31.42 USD (10-year average earnings)" in epv_lines[0]
+        assert "31.42 USD (10-year average EPS)" in epv_lines[0]
         assert "497,224,000,000" not in epv_lines[0]
         
         # Check Net-Net (negative value)
@@ -184,14 +184,17 @@ class TestExecutiveSummarySection:
 
         lines = ExecutiveSummarySection(financial_data, metrics).generate()
 
-        assert "- Intrinsic Value (EPV per share): 41.20 USD (7-year average earnings)" in lines
+        assert "- Intrinsic Value (EPV per share): 41.20 USD (7-year average EPS)" in lines
 
     TOO_SHORT = "- Intrinsic Value (EPV per share): N/A (requires 7+ years of annual earnings with a positive average)"
-    NO_SHARES = "- Intrinsic Value (EPV per share): N/A (no share count for the latest year)"
+    NO_EPS = "- Intrinsic Value (EPV per share): N/A (no per-share earnings for FY2019)"
+    EPS_NOT_POSITIVE = "- Intrinsic Value (EPV per share): 0.00 USD (average EPS not positive)"
 
     @pytest.mark.parametrize("epv_details, epv, expected", [
         ({'epv': 0.0, 'epv_per_share': 0.0, 'years_used': 0}, 0.0, TOO_SHORT),        # how core reports unavailable EPV
-        ({'epv': 1000.0, 'epv_per_share': 0.0, 'years_used': 10}, 1000.0, NO_SHARES),  # share count unavailable
+        ({'epv': 1000.0, 'epv_per_share': 'N/A', 'years_used': 10,                    # a year without EPS
+          'epv_per_share_reason': 'no per-share earnings for FY2019'}, 1000.0, NO_EPS),
+        ({'epv': 1000.0, 'epv_per_share': 0.0, 'years_used': 10}, 1000.0, EPS_NOT_POSITIVE),  # share changes
         (None, 0.0, TOO_SHORT),                                                        # no details at all
     ])
     def test_unavailable_epv_shows_na_with_reason_not_zero(self, epv_details, epv, expected):

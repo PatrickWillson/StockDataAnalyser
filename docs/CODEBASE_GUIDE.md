@@ -179,7 +179,7 @@ Where EODHD pre-computed values are used today:
 | Quick ratio | (CA − Inventory) / CL from the latest annual balance sheet (`inventory` parsed; a reported 0 counts). Inventory not reported → N/A with a warning, never imputed from the sector (F14) |
 | 3-yr avg P/E | price / mean(EPS of 3 latest complete years) |
 | Combined P/E×P/B | round(P/E) × round(P/B, BVPS-based) ≤ 22.5 |
-| EPV | mean(net income, up to 10 complete years, min 7) / COST_OF_CAPITAL; per share = EPV / latest shares. Unavailable (fewer than 7 complete years, no data, no share count) → `epv`/`epv_per_share` "N/A" with `unavailable_reason`; negative average earnings over the cycle → 0.0 (no earning power), also with the reason (F3) |
+| EPV | mean(net income, up to 10 complete years, min 7) / COST_OF_CAPITAL; per share = mean(each of those years' history `eps`) / COST_OF_CAPITAL (F22; `normalized_eps`, `eps_values`), floored at 0; a year whose EPS is missing or 0 with non-zero net income → `epv_per_share` "N/A" with `epv_per_share_reason`. Unavailable (fewer than 7 complete years, no data) → `epv`/`epv_per_share` "N/A" with `unavailable_reason`; negative average earnings over the cycle → 0.0 (no earning power), also with the reason (F3) |
 | Margin of Safety | IV = min(Normalized GN, EPV/share) over the anchors that are available; MoS = (IV − Price)/IV × 100; IV 0 (no earning power) or both unavailable → "N/A". `margin_of_safety_details['note']` gives the reason when an anchor is missing or IV is 0, and the Executive Summary shows it |
 | Verdict | `core.verdict.determine_verdict` (D8), first match: no intrinsic value → INSUFFICIENT DATA; price ≤ ⅔ × NCAV/share → NET-NET BARGAIN; MoS ≤ 0 or N/A → OVERVALUED; all defensive PASS → DEFENSIVE BUY; all enterprising PASS → ENTERPRISING BUY; else UNDERVALUED – FAILS GRAHAM CRITERIA. "N/A" never counts as a pass. `metrics['verdict_reason']` names the rule and failed criteria; the Executive Summary shows it |
 
@@ -262,7 +262,7 @@ Every section subclasses `DossierSection`, receives the shared `core.report_cont
 - Note: `tests/fixtures.py` spells goodwill `goodwill`, but EODHD (and the parser) use `goodWill`, so fixture goodwill is never parsed.
 - **Hypothesis profile** (`tests/conftest.py`): `deadline=None` project-wide — the per-example timing deadline caused intermittent failures on WSL; example counts are unchanged.
 - **Network guard** (`tests/conftest.py`, autouse): non-`live` tests cannot reach the network. It blocks `socket` connect/DNS (requests/urllib3 → EODHD) and `curl_cffi` `Curl.perform` (yfinance prices and FX), allows localhost, and fails the test at teardown if any attempt was made — even if application code swallowed the error. Mock clients (e.g. `Mock(spec=FXClient)`, patch `EODHDClient._make_eodhd_request` **and** `_fetch_dividend_history`) or mark the test `@pytest.mark.live`. Guard behaviour is tested in `tests/test_network_guard.py`.
-- Status: all non-live tests pass (1377 pass / 20 skip as of 2026-11-05); 89.7% branch coverage; weakest: base_client, yfinance_client.
+- Status: all non-live tests pass (1380 pass / 20 skip as of 2026-11-05); 89.7% branch coverage; weakest: base_client, yfinance_client.
 
 ---
 

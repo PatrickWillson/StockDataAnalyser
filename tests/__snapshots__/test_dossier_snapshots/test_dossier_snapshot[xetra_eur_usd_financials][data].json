@@ -330,8 +330,20 @@
     "epv": 834145071310.0,
     "epv_details": {
       "cost_of_capital": 0.1,
+      "eps_values": [
+        6.237596109751595,
+        6.259821838783072,
+        5.763756829850952,
+        5.298183169547693,
+        4.807796614899591,
+        4.477849788386874,
+        4.170546371672121,
+        3.8843324049086845,
+        3.617760573227029,
+        3.3694828868839335
+      ],
       "epv": 834145071310.0,
-      "epv_per_share": 53.64,
+      "epv_per_share": 47.89,
       "net_incomes": [
         96995000000.0,
         99803000000.0,
@@ -345,6 +357,7 @@
         66118575194.0
       ],
       "normalized_earnings": 83414507131.0,
+      "normalized_eps": 4.7887,
       "years_included": [
         "2023-09-30",
         "2022-09-24",
@@ -362,7 +375,7 @@
     "graham_number": 23.68,
     "margin_of_safety": -701.2,
     "margin_of_safety_details": {
-      "epv_per_share": 53.64,
+      "epv_per_share": 47.89,
       "intrinsic_value_used": 23.4,
       "limiting_factor": "Normalized Graham Number",
       "mos_percentage": -701.2,

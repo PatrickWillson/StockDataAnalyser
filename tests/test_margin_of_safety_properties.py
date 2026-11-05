@@ -334,7 +334,7 @@ def test_margin_of_safety_formula_correctness(intrinsic_value, current_price):
             'intangible_assets': 0.0,
             'goodwill': 0.0,
             'shares_outstanding': shares,
-            'eps': eps_values[i] if i < 3 else eps_avg,
+            'eps': eps_values[i] if i < 3 else net_income / shares,   # EPV averages each year's EPS
             'revenue': 1000000.0,
             'net_income': net_income
         }

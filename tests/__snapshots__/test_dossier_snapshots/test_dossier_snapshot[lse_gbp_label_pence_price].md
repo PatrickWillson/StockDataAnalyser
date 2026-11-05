@@ -13,14 +13,14 @@
 *Current metrics (P/E, Price) reflect most recent available data*
 
 - Verdict: **OVERVALUED**
-  - Price is not below conservative intrinsic value (margin of safety -349.6%)
+  - Price is not below conservative intrinsic value (margin of safety -362.2%)
 - Graham Number (Single-Year EPS): 12.78 GBP
 - Graham Number (3-Year Avg EPS): 8.42 GBP
   - ⚠️ Note: 3-year average (34% lower) reveals earnings peaked in recent year
-- Intrinsic Value (EPV per share): 3.67 GBP (10-year average earnings)
+- Intrinsic Value (EPV per share): 3.57 GBP (10-year average EPS)
 - Net-Net Value: 0.06 GBP
-- Margin of Safety: -349.6% (Capped by EPV)
-  - Conservative Intrinsic Value: 3.67 GBP
+- Margin of Safety: -362.2% (Capped by EPV)
+  - Conservative Intrinsic Value: 3.57 GBP
 - Current Price: 16.50 GBP (1,650 pence)
 - 52-Week Range: 12.35 GBP - 18.34 GBP
 - Trailing Dividend: 0.58 GBP (Yield: 3.54%) - Paid (Cash Flow) [2023]
@@ -102,9 +102,9 @@
 - **Dividend History: 1 of 10 years** - ⚠️ Inconsistent payment history
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -349.6%** - Trading above conservative intrinsic value
+- **Margin of Safety: -362.2%** - Trading above conservative intrinsic value
   - Assessment: **High valuation risk** - no margin of safety
-  - Conservative Intrinsic Value: 3.67 GBP
+  - Conservative Intrinsic Value: 3.57 GBP
   - Current Price: 16.50 GBP
 
 ### Data Quality Risk:
@@ -236,6 +236,7 @@
   - **Includes ALL years** (profitable and unprofitable)
   - Loss years reduce the average (real value destruction)
   - Capitalizes earnings at 10% discount rate
+  - Per share: the same years' average EPS (each year's earnings over that year's shares), capitalized the same way
   - Graham's method: average past earnings capitalised at a multiplier kept "within a reasonable range of variation"; in 1976 he set a maximum multiple of 10
 
   **Note**: Dividing by 10% is a multiplier of 10. The name 'EPV' comes from Greenwald (2001), whose method differs (normalised EBIT, maintenance capex, cost of capital).
@@ -246,7 +247,8 @@
   - Net Incomes: 30,860,000 GBP, 4,769,000 GBP, 4,530,550 GBP, 4,304,022 GBP, 4,088,821 GBP, 3,884,380 GBP, 3,690,161 GBP, 3,505,653 GBP, 3,330,371 GBP, 3,163,852 GBP
   - Normalized Earnings: 6,612,681 GBP (average including losses)
   - EPV: 66,126,810 GBP (6,612,681 GBP / 10%)
-  - EPV Per Share: 3.67 GBP
+  - EPS: 1.71, 0.26, 0.25, 0.23, 0.22, 0.20, 0.19, 0.18, 0.16, 0.15 GBP
+  - EPV Per Share: 3.57 GBP (average EPS 0.36 GBP / 10%)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
@@ -256,7 +258,7 @@
   - Graham bought at no more than two-thirds of it, as a diversified group
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
-  - **Value**: -349.6%
+  - **Value**: -362.2%
   - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
 
   **Conservative Dual-Anchor Methodology**:
@@ -275,8 +277,8 @@
 
   **For This Stock**:
   - Normalized Graham Number: 8.42 GBP
-  - EPV per share: 3.67 GBP
-  - **Intrinsic Value Used**: 3.67 GBP (Capped by EPV)
+  - EPV per share: 3.57 GBP
+  - **Intrinsic Value Used**: 3.57 GBP (Capped by EPV)
 
   **Interpretation**: EPV is lower than Normalized Graham Number, indicating
   that long-term earnings power is weaker than asset-based valuation suggests.
