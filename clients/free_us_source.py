@@ -159,6 +159,15 @@ class FreeUSFundamentalsSource:
             annual = edgar_mapper.annual_data(facts, splits, sic)
         except ValueError as e:
             raise TickerNotCoveredError(f"{ticker}: {e}") from e
+        unreported = edgar_mapper.unreported_annual_filings(annual, submissions)
+        instances = [(filing, self.edgar.fetch_filing_instance(cik, filing[2])) for filing in unreported]
+        instances = [(filing, instance) for filing, instance in instances if instance]
+        if instances:
+            facts = edgar_mapper.merge_companyfacts(facts, [
+                edgar_mapper.instance_companyfacts(instance, "10-K", filing[1], filing[2]) for filing, instance in instances])
+            annual = edgar_mapper.annual_data(facts, splits, sic)
+            notes.append(f"SEC EDGAR: FY ending {', '.join(filing[0] for filing, _ in instances)} read from the 10-K's own "
+                         "XBRL file: the SEC's company facts do not yet include it")
         if not annual.income_statements:
             raise TickerNotCoveredError(f"{ticker}: no annual reports with XBRL financial data at the SEC")
         periodic = edgar_mapper.periodic_data(facts, splits, sic)

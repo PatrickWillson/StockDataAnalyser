@@ -119,6 +119,7 @@ MIN_DAYS_BETWEEN_YEAR_ENDS = 300
 SCALE_ERRORS = (1e3, 1e6)        # filers tagging figures in thousands or millions as units
 SCALE_ERROR_TOLERANCE = 0.005
 MIN_YEARS_FOR_SHARE_SCALE = 3
+MAX_UNREPORTED_FILINGS = 3
 MAX_DERIVED_BELOW_COVER = 100
 RESTATEMENT_TOLERANCE = 0.001   # relative change below which two filed values are the same figure
 PER_SHARE_TOLERANCE = 0.005    # absolute, for per-share values (filed rounded to the cent)
@@ -804,6 +805,51 @@ def exhibit_filename(sgml_header: str, exhibit_type: str) -> Optional[str]:
     text = html.unescape(sgml_header)
     match = re.search(r"<TYPE>" + re.escape(exhibit_type) + r"\b.*?<FILENAME>([^\s<]+)", text, re.S)
     return match.group(1) if match else None
+
+
+def unreported_annual_filings(annual: EdgarAnnualData, submissions: Mapping[str, Any]) -> List[Tuple[str, str, str]]:
+    """10-Ks filed for years after the latest one in companyfacts (Seneca's FY2026 10-K was never in it)."""
+    latest = annual.income_statements[0].period_end if annual.income_statements else ""
+    return [filing for filing in annual_filings(submissions) if filing[0] > latest
+            and (not latest or _days(latest, filing[0]) > MIN_DAYS_BETWEEN_YEAR_ENDS)][:MAX_UNREPORTED_FILINGS]
+
+
+def instance_companyfacts(instance_xml: str, form: str, filed: str, accession: str) -> Dict[str, Any]:
+    """A filing's XBRL instance as companyfacts: company-wide figures only, as companyfacts itself keeps."""
+    def local(name: str) -> str:
+        return name.split("}")[-1]
+
+    root = ET.fromstring(instance_xml)
+    periods: Dict[Optional[str], Tuple[Optional[str], str]] = {}
+    for context in (e for e in root if local(e.tag) == "context"):
+        if any(local(e.tag) in ("explicitMember", "typedMember") for e in context.iter()):
+            continue
+        dates = {local(e.tag): (e.text or "").strip() for e in context.iter()}
+        if dates.get("instant"):
+            periods[context.get("id")] = (None, dates["instant"])
+        elif dates.get("endDate"):
+            periods[context.get("id")] = (dates.get("startDate"), dates["endDate"])
+    units: Dict[Optional[str], str] = {}
+    for unit in (e for e in root if local(e.tag) == "unit"):
+        measures = [(e.text or "").strip().split(":")[-1] for e in unit.iter() if local(e.tag) == "measure"]
+        units[unit.get("id")] = "/".join(measures)
+    facts: Dict[str, Dict[str, Any]] = {GAAP: {}, DEI: {}}
+    for fact in root:
+        taxonomy = next((t for t in (GAAP, DEI) if f"/{t}/" in fact.tag), None)
+        period, unit = periods.get(fact.get("contextRef")), units.get(fact.get("unitRef"))
+        if taxonomy is None or period is None or unit is None or not (fact.text or "").strip():
+            continue
+        try:
+            value = float(fact.text)
+        except ValueError:
+            continue
+        row = {"end": period[1], "val": value, "filed": filed, "form": form, "accn": accession}
+        if period[0]:
+            row["start"] = period[0]
+        rows = facts[taxonomy].setdefault(local(fact.tag), {"units": {}})["units"].setdefault(unit, [])
+        if row not in rows:
+            rows.append(row)
+    return {"facts": facts}
 
 
 def missing_latest_shares(annual: EdgarAnnualData) -> bool:

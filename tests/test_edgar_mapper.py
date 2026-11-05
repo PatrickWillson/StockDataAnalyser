@@ -644,3 +644,41 @@ def test_long_term_debt_from_senior_notes_and_bank_advances():
     assert _debt_facts(SeniorLongTermNotes=37_860.0, SeniorNotesCurrent=1_000.0).balance_sheets[0].short_term_debt == 1_000.0
     balance = _debt_facts(FederalHomeLoanBankAdvancesLongTerm=165.45, SeniorNotes=14.9, SubordinatedDebt=24.83).balance_sheets[0]
     assert balance.long_term_debt == pytest.approx(205.18)
+
+
+# --- A 10-K the SEC's company facts do not include -----------------------------------------------
+
+_SENECA_INSTANCE = """<xbrl xmlns="http://www.xbrl.org/2003/instance" xmlns:xbrldi="http://xbrl.org/2006/xbrldi"
+  xmlns:us-gaap="http://fasb.org/us-gaap/2025" xmlns:dei="http://xbrl.sec.gov/dei/2025" xmlns:iso4217="iso">
+  <context id="i"><entity><identifier>88948</identifier></entity><period><instant>2026-03-31</instant></period></context>
+  <context id="d"><entity><identifier>88948</identifier></entity><period><startDate>2025-04-01</startDate><endDate>2026-03-31</endDate></period></context>
+  <context id="seg"><entity><segment><xbrldi:explicitMember dimension="x:SegAxis">x:Veg</xbrldi:explicitMember></segment></entity><period><instant>2026-03-31</instant></period></context>
+  <unit id="USD"><measure>iso4217:USD</measure></unit>
+  <unit id="Share"><measure>shares</measure></unit>
+  <unit id="EPS"><divide><unitNumerator><measure>iso4217:USD</measure></unitNumerator><unitDenominator><measure>shares</measure></unitDenominator></divide></unit>
+  <us-gaap:Assets contextRef="i" unitRef="USD" decimals="-3">1247758000</us-gaap:Assets>
+  <us-gaap:Assets contextRef="seg" unitRef="USD" decimals="-3">1473285000</us-gaap:Assets>
+  <us-gaap:NetIncomeLoss contextRef="d" unitRef="USD" decimals="-3">114674000</us-gaap:NetIncomeLoss>
+  <us-gaap:NetIncomeLoss contextRef="d" unitRef="USD" decimals="-3">114674000</us-gaap:NetIncomeLoss>
+  <us-gaap:EarningsPerShareBasic contextRef="d" unitRef="EPS" decimals="2">16.30</us-gaap:EarningsPerShareBasic>
+  <us-gaap:CommonStockSharesOutstanding contextRef="i" unitRef="Share" decimals="0">7000000</us-gaap:CommonStockSharesOutstanding>
+  <us-gaap:Notes contextRef="d">text</us-gaap:Notes>
+</xbrl>"""
+
+
+def test_an_instance_reads_as_company_wide_companyfacts():
+    from clients.edgar_mapper import instance_companyfacts
+    facts = instance_companyfacts(_SENECA_INSTANCE, "10-K", "2026-06-11", "acc-1")
+    data = annual_data(facts)
+    assert data.income_statements[0].net_income == 114_674_000.0 and data.income_statements[0].eps == 16.30
+    assert data.balance_sheets[0].total_assets == 1_247_758_000.0            # the segment's figure is left out
+    assert data.balance_sheets[0].shares_outstanding == 7_000_000.0
+    assert len(facts["facts"]["us-gaap"]["NetIncomeLoss"]["units"]["USD"]) == 1   # repeated in the filing
+
+
+def test_only_filings_for_later_years_are_unreported():
+    from clients.edgar_mapper import unreported_annual_filings
+    data = _debt_facts(end="2024-12-31")
+    recent = {"form": ["10-K", "10-K", "10-Q"], "reportDate": ["2025-12-31", "2024-12-31", "2026-06-27"],
+              "filingDate": ["2026-02-11", "2025-02-11", "2026-08-06"], "accessionNumber": ["a", "b", "c"], "isXBRL": [1, 1, 1]}
+    assert unreported_annual_filings(data, {"filings": {"recent": recent}}) == [("2025-12-31", "2026-02-11", "a")]

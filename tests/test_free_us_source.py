@@ -257,3 +257,24 @@ def test_single_class_companies_fetch_no_instances():
     edgar.data = fixture("SO")
     assert source(edgar=edgar).fetch_fundamentals("SO.US").annual_balance_sheets[0].shares_outstanding
     assert edgar.requests == []
+
+
+def test_a_10k_missing_from_company_facts_is_read_from_its_own_file():
+    class LateFiling(FakeEdgar):
+        def __init__(self):
+            super().__init__()
+            self.data = dict(self.data, submissions=dict(self.data["submissions"], filings={"recent": {
+                "form": ["10-K"], "reportDate": ["2026-12-31"], "filingDate": ["2027-02-20"], "accessionNumber": ["late"],
+                "primaryDocument": ["a.htm"], "isXBRL": [1]}}))
+
+        def fetch_filing_instance(self, cik, accession):
+            assert accession == "late"
+            return _instance(("Assets", "2026-12-31", None, 1)).replace(
+                "<us-gaap:Assets contextRef=\"c0\">1</us-gaap:Assets>",
+                "<unit id=\"U\"><measure>iso4217:USD</measure></unit>"
+                "<context id=\"d\"><period><startDate>2026-01-01</startDate><endDate>2026-12-31</endDate></period></context>"
+                "<us-gaap:Assets contextRef=\"c0\" unitRef=\"U\">900</us-gaap:Assets>"
+                "<us-gaap:NetIncomeLoss contextRef=\"d\" unitRef=\"U\">77</us-gaap:NetIncomeLoss>")
+    f = source(edgar=LateFiling()).fetch_fundamentals("SO.US")
+    assert f.annual_income_statements[0].period_end == "2026-12-31" and f.annual_income_statements[0].net_income == 77.0
+    assert any("read from the 10-K's own XBRL file" in n for n in f.notes)
