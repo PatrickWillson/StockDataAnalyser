@@ -68,8 +68,10 @@ LTD_CURRENT = ("LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCur
 INVENTORY = ("InventoryNet",)
 UTILITY_INVENTORY = ("EnergyRelatedInventoryNaturalGasInStorage", "EnergyRelatedInventoryOtherFossilFuel",
                      "EnergyRelatedInventoryCoal", "EnergyRelatedInventoryPropaneGas", "OtherInventorySupplies")
-# Energy companies tagging a total (ExxonMobil: crude oil, products and merchandise + materials and supplies)
-ENERGY_INVENTORY_TOTAL = ("EnergyRelatedInventory",)
+# Energy companies tagging a total (ExxonMobil: crude oil, products and merchandise + materials and supplies).
+# ExxonMobil's FY2012-13 10-Ks tag the same line InventoryFinishedGoodsAndWorkInProcess; their
+# EnergyRelatedInventoryNaturalGasInStorage (300M) is a detail of it, not a separate line
+ENERGY_INVENTORY_TOTAL = ("EnergyRelatedInventory", "InventoryFinishedGoodsAndWorkInProcess")
 SUPPLIES_INVENTORY = ("OtherInventorySupplies", "InventoryPartsAndComponentsNetOfReserves")
 # Carrying value of preferred stock inside equity; the "including additional paid-in capital" tags are the
 # full amount (JPMorgan), PreferredStockValue is sometimes par value only

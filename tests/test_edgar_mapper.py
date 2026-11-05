@@ -395,3 +395,16 @@ def test_operating_cash_flow_falls_back_to_continuing_operations():
             [("2024-01-01", "2024-12-31", 7.0, "2025-02-01", "10-K", "USD")],
     })
     assert annual_data(facts).operating_cash_flow == {"2024-12-31": 7.0}
+
+
+def test_energy_inventory_tagged_as_finished_goods():
+    """ExxonMobil FY2012 10-K: crude oil, products and merchandise 10,836 + materials and supplies 3,706;
+    natural gas in storage (300) is a detail of the first line, not added again."""
+    facts = _facts({
+        "NetIncomeLoss": [("2012-01-01", "2012-12-31", 1.0, "2013-02-27", "10-K", "USD")],
+        "Assets": [(None, "2012-12-31", 100.0, "2013-02-27", "10-K", "USD")],
+        "InventoryFinishedGoodsAndWorkInProcess": [(None, "2012-12-31", 10_836.0, "2013-02-27", "10-K", "USD")],
+        "InventoryPartsAndComponentsNetOfReserves": [(None, "2012-12-31", 3_706.0, "2013-02-27", "10-K", "USD")],
+        "EnergyRelatedInventoryNaturalGasInStorage": [(None, "2012-12-31", 300.0, "2013-02-27", "10-K", "USD")],
+    })
+    assert annual_data(facts).balance_sheets[0].inventory == 14_542.0
