@@ -81,12 +81,15 @@ LONG_TERM_DEBT_TOTAL = ("LongTermDebt", "LongTermDebtAndCapitalLeaseObligationsI
 # obligations): kept, the conservative reading of an ambiguous tag (GRAHAM_METHODOLOGY §8.4)
 LONG_TERM_NOTES = ("LongTermNotesPayable", "LongTermLoansPayable")
 LONG_TERM_REVOLVER, OTHER_LONG_TERM_DEBT = ("LongTermLineOfCredit",), ("OtherLongTermDebtNoncurrent",)
+# Oil-Dri: senior notes. Citizens & Northern, a bank: FHLB advances 165.45M + senior 14.9M + subordinated 24.83M
+SENIOR_NOTES, SUBORDINATED_DEBT = ("SeniorLongTermNotes", "SeniorNotesNoncurrent", "SeniorNotes"), ("SubordinatedDebt",)
+FHLB_ADVANCES = ("FederalHomeLoanBankAdvancesLongTerm",)
 # Outside LongTermDebt at some banks (Arrow Financial: 20,000K beside term advances), inside it at others
 # (JPMorgan), and the tags do not say which: noted, never added
 JUNIOR_SUBORDINATED = ("JuniorSubordinatedDebentureOwedToUnconsolidatedSubsidiaryTrust",)
 DEBT_CURRENT = ("DebtCurrent",)
 SHORT_BORROWINGS, COMMERCIAL_PAPER = ("ShortTermBorrowings",), ("CommercialPaper",)
-LTD_CURRENT = ("LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCurrent")
+LTD_CURRENT = ("LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCurrent", "SeniorNotesCurrent")
 INVENTORY = ("InventoryNet",)
 UTILITY_INVENTORY = ("EnergyRelatedInventoryNaturalGasInStorage", "EnergyRelatedInventoryOtherFossilFuel",
                      "EnergyRelatedInventoryCoal", "EnergyRelatedInventoryPropaneGas", "OtherInventorySupplies")
@@ -359,7 +362,7 @@ def _long_term_debt(facts: _Facts, end: str, notes: _Notes) -> Tuple[Optional[fl
     if fact is not None:
         return fact.value, False
     used, parts = [], 0.0
-    for chain in (LONG_TERM_NOTES, LONG_TERM_REVOLVER):
+    for chain in (LONG_TERM_NOTES, LONG_TERM_REVOLVER, SENIOR_NOTES, SUBORDINATED_DEBT, FHLB_ADVANCES):
         part = facts.get(chain, end, MONEY, "instant")
         notes.fact("long-term debt", end, part)
         if part is not None:

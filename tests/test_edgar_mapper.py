@@ -636,3 +636,11 @@ def test_other_intangibles_count_beside_an_indefinite_lived_total():
     """Preformed Line Products FY2025: indefinite-lived 0, other intangible assets 10,140."""
     assert _debt_facts(IndefiniteLivedIntangibleAssetsExcludingGoodwill=0.0,
                        OtherIntangibleAssetsNet=10_140.0).balance_sheets[0].intangible_assets == 10_140.0
+
+
+def test_long_term_debt_from_senior_notes_and_bank_advances():
+    """Oil-Dri FY2026: senior notes 37,860K. Citizens & Northern FY2024: 165.45M + 14.9M + 24.83M."""
+    assert _debt_facts(SeniorLongTermNotes=37_860.0, SeniorNotesCurrent=1_000.0).balance_sheets[0].long_term_debt == 37_860.0
+    assert _debt_facts(SeniorLongTermNotes=37_860.0, SeniorNotesCurrent=1_000.0).balance_sheets[0].short_term_debt == 1_000.0
+    balance = _debt_facts(FederalHomeLoanBankAdvancesLongTerm=165.45, SeniorNotes=14.9, SubordinatedDebt=24.83).balance_sheets[0]
+    assert balance.long_term_debt == pytest.approx(205.18)
