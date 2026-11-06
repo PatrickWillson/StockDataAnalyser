@@ -737,3 +737,24 @@ def test_an_average_share_count_in_thousands_is_repaired():
         facts["Assets"].append((None, f"{year}-12-31", 1.0, f"{year + 1}-03-01", "10-K", "USD"))
         facts["CommonStockSharesOutstanding"].append((None, f"{year}-12-31", 7_600_000.0, f"{year + 1}-03-01", "10-K", "shares"))
     assert annual_data(_facts(facts)).shares_by_year["2009"] == 7_500_000.0
+
+
+def _earnings_with_eps(available, net, eps, average):
+    facts = {"Assets": [(None, "2024-12-31", 100.0, "2025-03-01", "10-K", "USD")],
+             "EarningsPerShareBasic": [("2024-01-01", "2024-12-31", eps, "2025-03-01", "10-K", "USD/shares")],
+             "WeightedAverageNumberOfSharesOutstandingBasic": [("2024-01-01", "2024-12-31", average, "2025-03-01", "10-K", "shares")],
+             "NetIncomeLossAvailableToCommonStockholdersBasic": [("2024-01-01", "2024-12-31", available, "2025-03-01", "10-K", "USD")],
+             "NetIncomeLoss": [("2024-01-01", "2024-12-31", net, "2025-03-01", "10-K", "USD")]}
+    return annual_data(_facts(facts)).income_statements[0].net_income
+
+
+@pytest.mark.parametrize("available, net, eps, average, expected", [
+    (-689e6, 361e6, -1.64, 420.2e6, -689e6),            # Ally FY2013: no preferred tag, EPS confirms it
+    (-9_246e6, -1_606e6, -7.99, 1_156.8e6, -9_246e6),   # Citigroup FY2009
+    (789.5e6, 753.6e6, 12.80, 61.7e6, 789.5e6),         # Lear FY2019: above net income, EPS confirms it
+    (-479e3, 22_179e3, 1.55, 14.3e6, 22_179e3),         # Arrow FY2012: EPS rejects it
+    (-12.89e6, -26.97e6, -2.54, 10.6e6, -26.97e6),      # Hooker FY2026
+    (1_503e6, -183e6, -0.56, 326e6, -183e6),            # Edison FY2012
+])
+def test_the_companys_eps_decides_a_doubtful_figure_for_the_common(available, net, eps, average, expected):
+    assert _earnings_with_eps(available, net, eps, average) == expected

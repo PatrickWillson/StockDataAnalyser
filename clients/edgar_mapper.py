@@ -56,6 +56,7 @@ PREFERRED_DIVIDENDS = ("PreferredStockDividendsAndOtherAdjustments", "PreferredS
 COMMON_EARNINGS_MAX_GAP = 1 / 3
 COMMON_EARNINGS_MAX_EXCESS = 0.02
 PREFERRED_GAP_TOLERANCE = 0.10
+EPS_CHECK_TOLERANCE = 0.05
 # Consolidated profit incl. minority interests: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest
 PROFIT_LOSS, NCI_INCOME = ("ProfitLoss",), ("NetIncomeLossAttributableToNoncontrollingInterest",)
 # A minority balance below this share of ProfitLoss cannot move it materially (Ethan Allen FY2025: -85K of 51.6M)
@@ -598,6 +599,17 @@ def _sound_common_earnings(available: Fact, net: Fact, preferred: Optional[Fact]
     return preferred is not None and abs(gap - preferred.value) <= PREFERRED_GAP_TOLERANCE * abs(preferred.value)
 
 
+def _matches_reported_eps(available: Fact, eps: Optional[Fact], weighted: Optional[Fact]) -> bool:
+    """
+    The company's own EPS confirms the figure when it divides out to the year's average shares (Ally FY2013:
+    -689M / -1.64 = 420M shares, net income 361M; Arrow FY2012, a small allocation: -0.5M / 1.55 is nowhere near).
+    Filers often tag no preferred dividends to explain the gap.
+    """
+    if eps is None or weighted is None or not eps.value or not weighted.value:
+        return False
+    return abs(available.value / eps.value - weighted.value) <= EPS_CHECK_TOLERANCE * abs(weighted.value)
+
+
 def _net_income(facts: _Facts, end: str, kind: str, notes: Optional["_Notes"] = None) -> Optional[Fact]:
     """
     Net income for the common: the NET_INCOME chain, else ProfitLoss minus the minority interests'
@@ -609,7 +621,9 @@ def _net_income(facts: _Facts, end: str, kind: str, notes: Optional["_Notes"] = 
     if fact is not None:
         if fact.tag == AVAILABLE_TO_COMMON:
             net = facts.get(NET_INCOME[1:], end, MONEY, kind)
-            if net is not None and not _sound_common_earnings(fact, net, facts.get(PREFERRED_DIVIDENDS, end, MONEY, kind)):
+            if net is not None and not (_sound_common_earnings(fact, net, facts.get(PREFERRED_DIVIDENDS, end, MONEY, kind))
+                                        or _matches_reported_eps(fact, facts.get(EPS, end, PER_SHARE, kind),
+                                                                 facts.get(WEIGHTED_SHARES, end, SHARES, kind))):
                 if notes is not None:
                     notes.derive("net income", f"NetIncomeLoss used: {AVAILABLE_TO_COMMON} is not net income less "
                                  "preferred dividends", end)
