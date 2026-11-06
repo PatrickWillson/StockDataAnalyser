@@ -676,12 +676,14 @@ def test_an_instance_reads_as_company_wide_companyfacts():
     assert len(facts["facts"]["us-gaap"]["NetIncomeLoss"]["units"]["USD"]) == 1   # repeated in the filing
 
 
-def test_only_filings_for_later_years_are_unreported():
-    from clients.edgar_mapper import unreported_annual_filings
-    data = _debt_facts(end="2024-12-31")
-    recent = {"form": ["10-K", "10-K", "10-Q"], "reportDate": ["2025-12-31", "2024-12-31", "2026-06-27"],
-              "filingDate": ["2026-02-11", "2025-02-11", "2026-08-06"], "accessionNumber": ["a", "b", "c"], "isXBRL": [1, 1, 1]}
-    assert unreported_annual_filings(data, {"filings": {"recent": recent}}) == [("2025-12-31", "2026-02-11", "a")]
+def test_filings_that_left_no_fact_in_companyfacts():
+    from clients.edgar_mapper import filings_missing_from_companyfacts
+    facts = {"facts": {"us-gaap": {"Assets": {"units": {"USD": [{"accn": "in-facts", "end": "2026-03-31", "val": 1}]}}}}}
+    recent = {"form": ["10-Q", "8-K", "10-K", "10-Q"], "reportDate": ["2026-06-30", "2026-05-01", "2025-12-31", "2026-03-31"],
+              "filingDate": ["2026-08-01", "2026-05-01", "2026-02-11", "2026-05-02"], "accessionNumber": ["q2", "8k", "k", "in-facts"],
+              "isXBRL": [1, 1, 0, 1]}
+    assert filings_missing_from_companyfacts(facts, {"filings": {"recent": recent}}) == [("10-Q", "2026-06-30", "2026-08-01", "q2")]
+
 
 
 def test_revenue_of_regulated_utilities_and_banks():

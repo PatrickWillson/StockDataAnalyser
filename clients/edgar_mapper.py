@@ -128,7 +128,7 @@ MIN_DAYS_BETWEEN_YEAR_ENDS = 300
 SCALE_ERRORS = (1e3, 1e6)        # filers tagging figures in thousands or millions as units
 SCALE_ERROR_TOLERANCE = 0.005
 MIN_YEARS_FOR_SHARE_SCALE = 3
-MAX_UNREPORTED_FILINGS = 3
+RECENT_FILINGS_CHECKED = 6
 MAX_DERIVED_BELOW_COVER = 100
 SHARE_CHECK_MAX_GAP, SHARE_CHECK_CLOSE = 0.20, 0.05   # relative to the year's average shares
 RESTATEMENT_TOLERANCE = 0.001   # relative change below which two filed values are the same figure
@@ -893,11 +893,19 @@ def exhibit_filename(sgml_header: str, exhibit_type: str) -> Optional[str]:
     return match.group(1) if match else None
 
 
-def unreported_annual_filings(annual: EdgarAnnualData, submissions: Mapping[str, Any]) -> List[Tuple[str, str, str]]:
-    """10-Ks filed for years after the latest one in companyfacts (Seneca's FY2026 10-K was never in it)."""
-    latest = annual.income_statements[0].period_end if annual.income_statements else ""
-    return [filing for filing in annual_filings(submissions) if filing[0] > latest
-            and (not latest or _days(latest, filing[0]) > MIN_DAYS_BETWEEN_YEAR_ENDS)][:MAX_UNREPORTED_FILINGS]
+def filings_missing_from_companyfacts(companyfacts: Mapping[str, Any], submissions: Mapping[str, Any]) -> List[Tuple[str, str, str, str]]:
+    """
+    (form, period end, filing date, accession) of the latest 10-Ks and 10-Qs with XBRL that left no fact in
+    companyfacts: Seneca's FY2026 10-K, Citigroup's three 2026 10-Qs. Newest first, among the latest few filings.
+    """
+    in_facts = {row.get("accn") for taxonomy in companyfacts.get("facts", {}).values() for concept in taxonomy.values()
+                for rows in concept.get("units", {}).values() for row in rows}
+    recent = submissions.get("filings", {}).get("recent", {})
+    periodic = [(form, end, filed, accession) for form, end, filed, accession, xbrl in
+                zip(recent.get("form", []), recent.get("reportDate", []), recent.get("filingDate", []),
+                    recent.get("accessionNumber", []), recent.get("isXBRL", []))
+                if form in ("10-K", "10-Q") and xbrl and end]
+    return [filing for filing in periodic[:RECENT_FILINGS_CHECKED] if filing[3] not in in_facts]
 
 
 def instance_companyfacts(instance_xml: str, form: str, filed: str, accession: str) -> Dict[str, Any]:

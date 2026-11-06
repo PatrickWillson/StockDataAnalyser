@@ -277,4 +277,4 @@ def test_a_10k_missing_from_company_facts_is_read_from_its_own_file():
                 "<us-gaap:NetIncomeLoss contextRef=\"d\" unitRef=\"U\">77</us-gaap:NetIncomeLoss>")
     f = source(edgar=LateFiling()).fetch_fundamentals("SO.US")
     assert f.annual_income_statements[0].period_end == "2026-12-31" and f.annual_income_statements[0].net_income == 77.0
-    assert any("read from the 10-K's own XBRL file" in n for n in f.notes)
+    assert any("10-K for 2026-12-31 read from the filing's own XBRL file" in n for n in f.notes)
