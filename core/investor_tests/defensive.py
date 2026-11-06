@@ -26,6 +26,8 @@ def debt_to_net_current_assets(history: dict, years: list) -> str:
     long_term_debt = or_default(row_at(history, latest_year).long_term_debt, 0.0)
     current_assets = or_default(row_at(history, latest_year).current_assets, 0.0)
     current_liabilities = or_default(row_at(history, latest_year).current_liabilities, 0.0)
+    if not current_assets and not current_liabilities:   # no working capital reported: not evidence of a pass
+        return 'FAIL'
     net_current_assets = current_assets - current_liabilities
     return 'PASS' if long_term_debt <= net_current_assets else 'FAIL'
 
