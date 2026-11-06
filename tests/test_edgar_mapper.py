@@ -634,8 +634,12 @@ def test_the_other_years_decide_which_scale_is_wrong():
 
 def test_other_intangibles_count_beside_an_indefinite_lived_total():
     """Preformed Line Products FY2025: indefinite-lived 0, other intangible assets 10,140."""
-    assert _debt_facts(IndefiniteLivedIntangibleAssetsExcludingGoodwill=0.0,
-                       OtherIntangibleAssetsNet=10_140.0).balance_sheets[0].intangible_assets == 10_140.0
+    def intangibles(indefinite, other):
+        return _debt_facts(IndefiniteLivedIntangibleAssetsExcludingGoodwill=indefinite,
+                           OtherIntangibleAssetsNet=other).balance_sheets[0].intangible_assets
+    assert intangibles(0.0, 10_140.0) == 10_140.0
+    assert intangibles(12_800.0, 4_248.0) == 17_048.0     # Graham Corp FY2016: separate lines
+    assert intangibles(600.0, 4_039.0) == 4_039.0         # JPMorgan FY2010: the line holds the 600
 
 
 def test_long_term_debt_from_senior_notes_and_bank_advances():
