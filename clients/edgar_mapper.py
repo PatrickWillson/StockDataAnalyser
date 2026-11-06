@@ -57,7 +57,7 @@ COMMON_EARNINGS_MAX_GAP = 1 / 3
 COMMON_EARNINGS_MAX_EXCESS = 0.02
 PREFERRED_GAP_TOLERANCE = 0.10
 EPS_CHECK_TOLERANCE = 0.05
-MIN_SALES_SHARE_OF_REVENUES = 0.6
+MIN_SALES_SHARE_OF_REVENUES = 0.75   # Berkshire 67-70%: revenue tag; Inogen 80-85%: sales
 # Consolidated profit incl. minority interests: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest
 PROFIT_LOSS, NCI_INCOME = ("ProfitLoss",), ("NetIncomeLossAttributableToNoncontrollingInterest",)
 # A minority balance below this share of ProfitLoss cannot move it materially (Ethan Allen FY2025: -85K of 51.6M)
