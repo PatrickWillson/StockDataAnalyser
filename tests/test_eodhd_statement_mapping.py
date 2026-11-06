@@ -45,10 +45,13 @@ def test_claims_outside_equity_from_balance_sheet_gap():
     assert row.claims_outside_common_equity == 310_613_000.0
 
 
-def test_explicit_minority_interest_preferred_over_gap():
-    row = balance_sheet_row("d", {"totalAssets": 1000, "totalLiab": 600, "totalStockholderEquity": 300,
-                                           "noncontrollingInterestInConsolidatedEntity": 80})
-    assert row.claims_outside_common_equity == 80.0
+def test_claims_are_the_larger_of_the_explicit_minority_interest_and_the_gap():
+    def claims(minority, liabilities):
+        return balance_sheet_row("d", {"totalAssets": 1000, "totalLiab": liabilities, "totalStockholderEquity": 300,
+                                       "noncontrollingInterestInConsolidatedEntity": minority}).claims_outside_common_equity
+    assert claims(80, 600) == 100.0      # the gap also holds mezzanine equity (Dream Finders)
+    assert claims(80, 650) == 80.0       # the gap is smaller: the explicit figure
+    assert balance_sheet_row("d", {"noncontrollingInterestInConsolidatedEntity": 80}).claims_outside_common_equity == 80.0
 
 
 def test_claims_never_negative_and_zero_when_unreported():

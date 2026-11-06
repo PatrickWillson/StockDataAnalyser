@@ -79,16 +79,15 @@ class BalanceSheetRow:
         """
         Claims on the consolidated assets that rank ahead of the common but sit in neither
         liabilities nor equity: minority (noncontrolling) interests, redeemable / temporary equity.
-        The explicit minority-interest figure when reported; otherwise the balance-sheet gap
-        total assets − total liabilities − equity (WLKP 2024: field null, gap 310.6M = its
-        minority interest). Never negative; 0 when any of the three is not reported.
+        The larger of the explicit minority-interest figure and the balance-sheet gap total assets −
+        total liabilities − equity: the gap holds what the field misses (WLKP 2024: field null, gap
+        310.6M = its minority interest; Dream Finders 2025: field 1.5M, gap 179.5M with its mezzanine
+        equity). Never negative; the explicit figure alone when any of the three is not reported.
         """
-        explicit = _zero_if_missing(self.noncontrolling_interest)
-        if explicit > 0:
-            return explicit
+        explicit = max(0.0, _zero_if_missing(self.noncontrolling_interest))
         if None in (self.total_assets, self.total_liabilities, self.total_equity):
-            return 0.0
-        return max(0.0, self.total_assets - self.total_liabilities - self.total_equity)
+            return explicit
+        return max(explicit, self.total_assets - self.total_liabilities - self.total_equity)
 
     def as_history_fields(self) -> Dict[str, Optional[float]]:
         """
