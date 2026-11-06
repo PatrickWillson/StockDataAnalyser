@@ -13,7 +13,7 @@ This module implements strict Graham formulas for value investing analysis:
 from core.models import FinancialData, GrahamResult, or_default
 from core.formulas import graham_number, margin_of_safety_pct, net_current_asset_value, tangible_equity
 from decimal import Decimal, ROUND_HALF_UP
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 
 from config.graham_constants import GRAHAM_MULTIPLIER, COST_OF_CAPITAL
 from core.history import fiscal_year, has_statement_data, has_statement_or_current_assets, row_at
@@ -223,6 +223,25 @@ class GrahamCalculator:
         
         return round(normalized_graham_number, 2) if round_result else normalized_graham_number
     
+    def _net_net_yearly_fall(self, history: dict, latest_year: Optional[str], net_net_value) -> Optional[float]:
+        """
+        How far NCAV per share fell from the year before (negative when it rose), or None when not comparable. Per
+        share, because a buyback at a price above NCAV is no loss to the holder (Keros 2025: current assets 589M to
+        315M after a tender offer, NCAV per share higher). Graham compares balance sheets to see whether current
+        assets are being lost (GRAHAM_METHODOLOGY §3.7).
+        """
+        if latest_year is None or not isinstance(net_net_value, float):
+            return None
+        for year in sorted((y for y in history if y < latest_year), reverse=True):
+            row = row_at(history, year)
+            current_assets, liabilities = or_default(row.current_assets, None), or_default(row.total_liabilities, None)
+            shares = or_default(row.shares_outstanding, 0.0)
+            if current_assets and liabilities is not None and shares:
+                earlier = net_current_asset_value(current_assets, liabilities, or_default(row.claims_outside_equity, 0.0),
+                                                  or_default(row.preferred_stock, 0.0)) / shares
+                return earlier - net_net_value
+        return None
+
     def compute_net_net(self, round_result: bool = True) -> Union[float, str]:
         """
         Calculate Net-Net Working Capital Value.
@@ -838,7 +857,8 @@ class GrahamCalculator:
         latest_year = self._get_latest_financial_year(history, sorted(history.keys(), reverse=True))
         verdict = determine_verdict(margin_of_safety_data, net_net_value_raw, price,
                                     defensive_tests, enterprising_tests,
-                                    or_default(row_at(history, latest_year).net_income, None) if latest_year else None)
+                                    or_default(row_at(history, latest_year).net_income, None) if latest_year else None,
+                                    self._net_net_yearly_fall(history, latest_year, net_net_value_raw))
         
         metrics = {
             'tbvps': round(tbvps, 2) if isinstance(tbvps, float) else "N/A",  # latest annual, for comparisons

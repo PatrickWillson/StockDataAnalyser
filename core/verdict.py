@@ -11,6 +11,9 @@ from typing import Dict, Optional, Union
 
 # Graham: buy at no more than two-thirds of net current asset value (GRAHAM_METHODOLOGY §3.3)
 NET_NET_MAX_PRICE_FRACTION = 2 / 3
+# The fall in NCAV per share must leave the discount intact this long: Graham held such issues until a 50% gain or
+# for two years (AAII, GRAHAM_METHODOLOGY §3.7)
+NET_NET_MIN_COVER_YEARS = 2
 
 INSUFFICIENT_DATA = "INSUFFICIENT DATA"
 NET_NET_BARGAIN = "NET-NET BARGAIN"
@@ -37,7 +40,8 @@ def _not_passed(tests: Optional[dict]) -> list:
 
 def determine_verdict(margin_of_safety_details: dict, net_net_value: Union[float, str, None], price: float,
                       defensive_tests: Optional[dict], enterprising_tests: Optional[dict],
-                      latest_net_income: Optional[float] = None) -> Dict[str, str]:
+                      latest_net_income: Optional[float] = None,
+                      net_net_yearly_fall: Optional[float] = None) -> Dict[str, str]:
     """
     Args:
         margin_of_safety_details: GrahamCalculator.compute_margin_of_safety result
@@ -45,6 +49,7 @@ def determine_verdict(margin_of_safety_details: dict, net_net_value: Union[float
         price: Current price (unified currency)
         defensive_tests, enterprising_tests: criterion name -> 'PASS' / 'FAIL' / 'N/A ...'
         latest_net_income: Net income of the latest reported year, or None
+        net_net_yearly_fall: How far NCAV per share fell in the latest year (negative when it rose), or None
 
     Returns:
         {'verdict': one of the constants above, 'reason': explanation for the dossier}
@@ -56,14 +61,25 @@ def determine_verdict(margin_of_safety_details: dict, net_net_value: Union[float
     # 1. Graham's net-current-asset test needs no earnings history, so it comes before intrinsic value. He bought
     # such issues as a group, but a bargain must be "in no danger of dissipating these assets" (GRAHAM_METHODOLOGY §3.3)
     if isinstance(net_net_value, (int, float)) and net_net_value > 0 and price <= NET_NET_MAX_PRICE_FRACTION * net_net_value:
-        if latest_net_income is not None and latest_net_income > 0:
-            return {'verdict': NET_NET_BARGAIN,
+        if latest_net_income is None or latest_net_income <= 0:
+            return {'verdict': FAILS_CRITERIA,
                     'reason': (f"Price {price:.2f} is at most two-thirds of net current asset value per share "
-                               f"({net_net_value:.2f}); Graham bought such issues as a diversified group")}
-        return {'verdict': FAILS_CRITERIA,
+                               f"({net_net_value:.2f}), but the latest year shows no profit: Graham avoids issues "
+                               "that may dissipate these assets")}
+        if net_net_yearly_fall is None:
+            return {'verdict': FAILS_CRITERIA,
+                    'reason': (f"Price {price:.2f} is at most two-thirds of net current asset value per share "
+                               f"({net_net_value:.2f}), but no earlier balance sheet shows whether these assets are holding")}
+        cushion = net_net_value - price
+        if net_net_yearly_fall > 0 and cushion / net_net_yearly_fall < NET_NET_MIN_COVER_YEARS:
+            return {'verdict': FAILS_CRITERIA,
+                    'reason': (f"Price {price:.2f} is at most two-thirds of net current asset value per share "
+                               f"({net_net_value:.2f}), but at last year's fall of {net_net_yearly_fall:.2f} per share "
+                               f"the discount lasts {cushion / net_net_yearly_fall:.1f} years: Graham avoids issues "
+                               "losing their current assets at a rapid rate")}
+        return {'verdict': NET_NET_BARGAIN,
                 'reason': (f"Price {price:.2f} is at most two-thirds of net current asset value per share "
-                           f"({net_net_value:.2f}), but the latest year shows no profit: Graham avoids issues "
-                           "that may dissipate these assets")}
+                           f"({net_net_value:.2f}); Graham bought such issues as a diversified group")}
 
     # 2. No conservative value to compare the price with
     if not isinstance(intrinsic_value, (int, float)):

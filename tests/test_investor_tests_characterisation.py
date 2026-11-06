@@ -330,9 +330,10 @@ class TestDetermineVerdict:
 
     @staticmethod
     def _verdict(mos=10.0, intrinsic=25.0, net_net="N/A", price=20.0, defensive=None, enterprising=None,
-                 note=None, latest_net_income=1.0):
+                 note=None, latest_net_income=1.0, net_net_yearly_fall=0.0):
         details = {'mos_percentage': mos, 'intrinsic_value_used': intrinsic, 'note': note}
-        return determine_verdict(details, net_net, price, defensive, enterprising, latest_net_income)['verdict']
+        return determine_verdict(details, net_net, price, defensive, enterprising, latest_net_income,
+                                 net_net_yearly_fall)['verdict']
 
     def test_no_intrinsic_value_is_insufficient_data(self):
         assert self._verdict(mos="N/A", intrinsic="N/A") == "INSUFFICIENT DATA"
@@ -344,6 +345,16 @@ class TestDetermineVerdict:
     def test_a_net_net_needs_no_earnings_history(self):
         """Fewer than 7 years give no EPV: Graham's asset test does not depend on it (GRAHAM_METHODOLOGY §3.3)."""
         assert self._verdict(net_net=30.0, price=20.0, mos="N/A", intrinsic="N/A") == "NET-NET BARGAIN"
+
+    @pytest.mark.parametrize("yearly_fall, expected", [
+        (-2.0, "NET-NET BARGAIN"),                        # NCAV per share rising
+        (5.0, "NET-NET BARGAIN"),                         # discount of 10 lasts exactly two years
+        (5.1, "UNDERVALUED – FAILS GRAHAM CRITERIA"),     # under two years
+        (None, "UNDERVALUED – FAILS GRAHAM CRITERIA"),    # no earlier balance sheet
+    ])
+    def test_a_net_net_discount_must_outlast_the_fall_in_its_assets(self, yearly_fall, expected):
+        """Security Analysis ch. 43: avoid issues "losing their current assets at a rapid rate"."""
+        assert self._verdict(net_net=30.0, price=20.0, mos="N/A", intrinsic="N/A", net_net_yearly_fall=yearly_fall) == expected
 
     @pytest.mark.parametrize("latest_net_income", [-149e6, 0.0, None])
     def test_a_net_net_without_a_profit_is_not_a_bargain(self, latest_net_income):
