@@ -522,3 +522,12 @@ def test_non_december_fiscal_year(fiscal_month, fiscal_day, num_years):
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
+
+
+def test_annual_report_age_ignores_dividend_only_years():
+    from datetime import datetime
+    history = {"2022-12-31": {"revenue": 1.0, "net_income": 1.0, "total_equity": 1.0, "eps": 1.0},
+               "2026-12-31": {"revenue": 0.0, "net_income": 0.0, "total_equity": 0.0, "eps": 0.0, "dividend": 1.0}}
+    age = FinancialDataProcessor.annual_report_age_months(history, datetime(2026, 11, 6))
+    assert 46 < age < 47
+    assert FinancialDataProcessor.annual_report_age_months({}, datetime(2026, 11, 6)) is None

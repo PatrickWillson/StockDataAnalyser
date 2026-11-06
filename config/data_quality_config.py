@@ -19,6 +19,9 @@ DIVIDEND_SOURCE_MAX_DIFF_PCT: Final[float] = 10    # cash-flow dividend vs forwa
 # Staleness
 API_DATA_MAX_AGE_DAYS: Final[int] = 7              # EODHD "UpdatedAt"
 ANNUAL_REPORT_MAX_AGE_MONTHS: Final[float] = 9     # most recent annual report
+# Past this a later annual report must exist (12 months to the next year end + filing, 10-K 2-3 months, 20-F 4 months,
+# + a margin), so these are no longer "the book value last reported": no verdict (GRAHAM_METHODOLOGY §8.8)
+ANNUAL_REPORT_MAX_AGE_FOR_VERDICT_MONTHS: Final[float] = 18
 DAYS_PER_MONTH: Final[float] = 30.44               # 365.25 / 12
 
 # Matching daily prices/FX rates to fiscal year-ends: look back up to N days

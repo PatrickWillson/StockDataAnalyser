@@ -1,6 +1,7 @@
 {
   "anomalies": [],
   "financial_data": {
+    "annual_report_age_months": 10.019710906701707,
     "api_last_update": "Unknown",
     "beta": 1.1,
     "book_value_per_share": 0.0,

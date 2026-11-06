@@ -5,6 +5,7 @@
     "Year 2017-12-31: EPS growth modified Z-Score = -4.60 (Outlier: -67.3% vs median +6.7%)"
   ],
   "financial_data": {
+    "annual_report_age_months": 10.019710906701707,
     "api_last_update": "Unknown",
     "beta": 0.45,
     "book_value_per_share": 0.0,

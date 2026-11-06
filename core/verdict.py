@@ -9,6 +9,8 @@ first match wins; the reason says which rule fired and, where relevant, which cr
 
 from typing import Dict, Optional, Union
 
+from config.data_quality_config import ANNUAL_REPORT_MAX_AGE_FOR_VERDICT_MONTHS
+
 # Graham: buy at no more than two-thirds of net current asset value (GRAHAM_METHODOLOGY §3.3)
 NET_NET_MAX_PRICE_FRACTION = 2 / 3
 # The fall in NCAV per share must leave the discount intact this long: Graham held such issues until a 50% gain or
@@ -41,7 +43,8 @@ def _not_passed(tests: Optional[dict]) -> list:
 def determine_verdict(margin_of_safety_details: dict, net_net_value: Union[float, str, None], price: float,
                       defensive_tests: Optional[dict], enterprising_tests: Optional[dict],
                       latest_net_income: Optional[float] = None,
-                      net_net_yearly_fall: Optional[float] = None) -> Dict[str, str]:
+                      net_net_yearly_fall: Optional[float] = None,
+                      annual_report_age_months: Optional[float] = None) -> Dict[str, str]:
     """
     Args:
         margin_of_safety_details: GrahamCalculator.compute_margin_of_safety result
@@ -50,6 +53,7 @@ def determine_verdict(margin_of_safety_details: dict, net_net_value: Union[float
         defensive_tests, enterprising_tests: criterion name -> 'PASS' / 'FAIL' / 'N/A ...'
         latest_net_income: Net income of the latest reported year, or None
         net_net_yearly_fall: How far NCAV per share fell in the latest year (negative when it rose), or None
+        annual_report_age_months: Months since the latest annual report's period end, or None when not known
 
     Returns:
         {'verdict': one of the constants above, 'reason': explanation for the dossier}
@@ -57,6 +61,12 @@ def determine_verdict(margin_of_safety_details: dict, net_net_value: Union[float
     intrinsic_value = margin_of_safety_details.get('intrinsic_value_used', "N/A")
     mos = margin_of_safety_details.get('mos_percentage', "N/A")
     note = margin_of_safety_details.get('note')
+
+    # A later annual report must exist, so these are not "the book value last reported" (GRAHAM_METHODOLOGY §8.8)
+    if annual_report_age_months is not None and annual_report_age_months > ANNUAL_REPORT_MAX_AGE_FOR_VERDICT_MONTHS:
+        return {'verdict': INSUFFICIENT_DATA,
+                'reason': (f"The latest annual report available is {annual_report_age_months:.0f} months old: a later one "
+                           "should exist, so these are not the figures last reported")}
 
     # 1. Graham's net-current-asset test needs no earnings history, so it comes before intrinsic value. He bought
     # such issues as a group, but a bargain must be "in no danger of dissipating these assets" (GRAHAM_METHODOLOGY §3.3)

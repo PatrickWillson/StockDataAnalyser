@@ -721,6 +721,17 @@ class FinancialDataProcessor:
         return result
 
     @staticmethod
+    def annual_report_age_months(history: Dict[str, Dict], current_date: Optional[Any] = None) -> Optional[float]:
+        """Months since the most recent annual report's period end, or None without a dated report."""
+        from datetime import datetime
+        years = [year for year in sorted(history, reverse=True) if not is_dividend_only_year(history[year])]
+        try:
+            report_date = datetime.strptime(years[0], '%Y-%m-%d')
+        except (IndexError, ValueError):
+            return None
+        return ((current_date or datetime.now()) - report_date).days / DAYS_PER_MONTH
+
+    @staticmethod
     def check_data_staleness(history: Dict[str, Dict], current_date: Optional[Any] = None) -> Optional[str]:
         """
         Check if most recent annual report is stale (>9 months old).

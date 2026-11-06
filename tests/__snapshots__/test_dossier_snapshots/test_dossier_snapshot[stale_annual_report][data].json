@@ -1,6 +1,7 @@
 {
   "anomalies": [],
   "financial_data": {
+    "annual_report_age_months": 29.17214191852825,
     "api_last_update": "2024-01-15",
     "beta": 1.29,
     "book_value_per_share": 3.951,
@@ -348,8 +349,8 @@
         "2019-09-25"
       ]
     },
-    "verdict": "OVERVALUED",
-    "verdict_reason": "Price is not below conservative intrinsic value (margin of safety -776.8%)",
+    "verdict": "INSUFFICIENT DATA",
+    "verdict_reason": "The latest annual report available is 29 months old: a later one should exist, so these are not the figures last reported",
     "warnings": []
   },
   "ttm_metrics": null

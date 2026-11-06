@@ -293,6 +293,7 @@ class FinancialData(Model):
     week_52_high: float = MISSING
     week_52_low: float = MISSING
     average_volume: float = MISSING
+    annual_report_age_months: Optional[float] = MISSING   # past 18 months: no verdict (GRAHAM_METHODOLOGY §8.8)
     api_last_update: str = MISSING
     quarterly_data: Mapping[str, Mapping[str, Mapping[str, Any]]] = MISSING
 

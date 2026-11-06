@@ -3,6 +3,7 @@
     "Year 2023-12-31: EPS growth modified Z-Score = 364.05 (Outlier: +547.1% vs median +7.4%)"
   ],
   "financial_data": {
+    "annual_report_age_months": 2.0039421813403417,
     "api_last_update": "2024-01-15",
     "beta": 0.668,
     "book_value_per_share": 4.82,

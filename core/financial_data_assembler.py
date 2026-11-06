@@ -477,6 +477,7 @@ class FinancialDataAssembler:
             'week_52_high': week_52_high,
             'week_52_low': week_52_low,
             # Data quality metadata
+            'annual_report_age_months': self.processor.annual_report_age_months(history) if history else None,
             'api_last_update': fundamentals.updated_at if fundamentals.updated_at is not None else 'Unknown',
             # TTM data
             'quarterly_data': quarterly_data

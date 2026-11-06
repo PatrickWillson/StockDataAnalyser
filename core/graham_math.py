@@ -858,7 +858,8 @@ class GrahamCalculator:
         verdict = determine_verdict(margin_of_safety_data, net_net_value_raw, price,
                                     defensive_tests, enterprising_tests,
                                     or_default(row_at(history, latest_year).net_income, None) if latest_year else None,
-                                    self._net_net_yearly_fall(history, latest_year, net_net_value_raw))
+                                    self._net_net_yearly_fall(history, latest_year, net_net_value_raw),
+                                    or_default(self.data.annual_report_age_months, None))
         
         metrics = {
             'tbvps': round(tbvps, 2) if isinstance(tbvps, float) else "N/A",  # latest annual, for comparisons

@@ -346,6 +346,12 @@ class TestDetermineVerdict:
         """Fewer than 7 years give no EPV: Graham's asset test does not depend on it (GRAHAM_METHODOLOGY §3.3)."""
         assert self._verdict(net_net=30.0, price=20.0, mos="N/A", intrinsic="N/A") == "NET-NET BARGAIN"
 
+    @pytest.mark.parametrize("age, expected", [(18.0, "NET-NET BARGAIN"), (18.1, "INSUFFICIENT DATA"), (None, "NET-NET BARGAIN")])
+    def test_no_verdict_once_a_later_annual_report_must_exist(self, age, expected):
+        """"The book value last reported" (GRAHAM_METHODOLOGY §8.8): checked first, even for a net-net."""
+        details = {'mos_percentage': "N/A", 'intrinsic_value_used': "N/A", 'note': None}
+        assert determine_verdict(details, 30.0, 20.0, None, None, 1.0, 0.0, age)['verdict'] == expected
+
     @pytest.mark.parametrize("yearly_fall, expected", [
         (-2.0, "NET-NET BARGAIN"),                        # NCAV per share rising
         (5.0, "NET-NET BARGAIN"),                         # discount of 10 lasts exactly two years
