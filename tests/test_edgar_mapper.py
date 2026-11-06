@@ -848,3 +848,14 @@ def test_inventory_with_a_larger_separate_supplies_line():
     """PG&E FY2025: gas stored 75M tagged InventoryNet, materials and supplies 745M; 820M in all."""
     assert _debt_facts(InventoryNet=75.0, InventoryRawMaterialsAndSupplies=745.0).balance_sheets[0].inventory == 820.0
     assert _debt_facts(InventoryNet=900.0, InventoryRawMaterialsAndSupplies=745.0).balance_sheets[0].inventory == 900.0
+
+
+def test_dividends_far_from_what_the_10k_declares_are_flagged():
+    """Assured Guaranty FY2025: Yahoo lists two payments of 0.34; the 10-K declares 1.36."""
+    from clients.edgar_mapper import declared_dividend_gaps
+    facts = _facts({"CommonStockDividendsPerShareDeclared": [("2025-01-01", "2025-12-31", 1.36, "2026-02-20", "10-K", "USD/shares")]})
+    ends = ["2024-12-31", "2025-12-31"]
+    assert declared_dividend_gaps(facts, [], ends, [("2025-03-05", 0.34), ("2025-05-16", 0.34)]) == ["FY2025: 0.68 paid against 1.36 declared"]
+    four = [("2025-03-05", 0.34), ("2025-05-16", 0.34), ("2025-08-20", 0.34), ("2025-11-20", 0.34)]
+    assert declared_dividend_gaps(facts, [], ends, four) == []
+    assert declared_dividend_gaps(facts, [], ends, four[1:]) == []     # one payment apart is ordinary timing

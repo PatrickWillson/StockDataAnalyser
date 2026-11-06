@@ -188,6 +188,12 @@ class FreeUSFundamentalsSource:
             notes.append("Per-share figures and share counts adjusted to today's share basis for stock splits "
                          "(Yahoo Finance split history): " + ", ".join(f"{d} {r:g}:1" for d, r in splits))
         notes.append("Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)")
+        dividend_gaps = edgar_mapper.declared_dividend_gaps(
+            facts, splits, [row.period_end for row in annual.income_statements],
+            [(p.date, p.amount) for p in yahoo_mapper.dividend_payments(yahoo, quote_currency) or () if p.date])
+        if dividend_gaps:
+            notes.append("Dividends: Yahoo Finance's payments differ from what the 10-K declares per share, so its list may "
+                         "be incomplete: " + "; ".join(dividend_gaps))
         latest_filing = _latest_filing_date(submissions)
         if latest_filing:
             notes.append(f"Statements as filed with the SEC; latest 10-K/10-Q filed {latest_filing}")

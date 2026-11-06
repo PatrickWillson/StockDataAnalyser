@@ -121,6 +121,8 @@ CLASS_AXIS = "StatementClassOfStockAxis"
 WEIGHTED_SHARES = ("WeightedAverageNumberOfSharesOutstandingBasic",)
 UTILITY_SIC = range(4900, 5000)
 DIVIDENDS_PAID = ("PaymentsOfDividendsCommonStock", "PaymentsOfDividends", "PaymentsOfOrdinaryDividends")
+DIVIDENDS_DECLARED = ("CommonStockDividendsPerShareDeclared", "CommonStockDividendsPerShareCashPaid")
+DIVIDEND_CHECK_YEARS, DIVIDEND_CHECK_GAP = 3, 0.3
 OPERATING_CASH_FLOW = ("NetCashProvidedByUsedInOperatingActivities",
                        "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations")
 YEAR_END_TAGS = ("NetIncomeLoss", "ProfitLoss", "Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax",
@@ -965,6 +967,26 @@ def instance_companyfacts(instance_xml: str, form: str, filed: str, accession: s
         if row not in rows:
             rows.append(row)
     return {"facts": facts}
+
+
+def declared_dividend_gaps(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, float]], period_ends: Sequence[str],
+                           payments: Sequence[Tuple[str, float]], years: int = DIVIDEND_CHECK_YEARS) -> List[str]:
+    """
+    Recent fiscal years whose dated payments (Yahoo's list) fall far from the dividends per share the company's 10-K
+    declares (Assured Guaranty FY2025: Yahoo omits two payments, 0.68 against 1.36 declared). A note only: a figure
+    one payment apart is ordinary timing, and declared figures leave out specials.
+    """
+    facts = _Facts(companyfacts, splits)
+    ends = sorted(period_ends)
+    gaps = []
+    for previous, end in list(zip(ends, ends[1:]))[-years:]:
+        declared = facts.get(DIVIDENDS_DECLARED, end, PER_SHARE, "year")
+        if declared is None or not declared.value:
+            continue
+        paid = sum(amount for date, amount in payments if previous < date <= end)
+        if abs(paid - declared.value) > DIVIDEND_CHECK_GAP * declared.value:
+            gaps.append(f"FY{fiscal_year(end)}: {paid:.2f} paid against {declared.value:.2f} declared")
+    return gaps
 
 
 def missing_latest_shares(annual: EdgarAnnualData, companyfacts: Mapping[str, Any]) -> bool:
