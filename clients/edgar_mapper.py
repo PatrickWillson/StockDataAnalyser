@@ -828,11 +828,14 @@ def _fiscal_q4(facts: _Facts, year_end: str, chain: Sequence[str], unit: str,
 
 
 def _year_start(facts: _Facts, year_end: str) -> Optional[str]:
-    """Start date of the fiscal year ending `year_end` (from any 1-year income fact)."""
+    """
+    Start date of the fiscal year ending `year_end` (from any 1-year income fact in a periodic report: a proxy
+    filing can date it a day off, Genesco's FY2026 2025-02-01 against 2025-02-02).
+    """
     for tag in YEAR_END_TAGS:
         for unit in (MONEY, PER_SHARE):
             for row in facts.facts.get(GAAP, {}).get(tag, {}).get("units", {}).get(unit, []):
-                if row["end"] == year_end and _lasts(row, "year"):
+                if row["end"] == year_end and row.get("form") in facts.forms and _lasts(row, "year"):
                     return row["start"]
     return None
 

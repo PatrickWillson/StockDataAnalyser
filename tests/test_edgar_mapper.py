@@ -814,3 +814,13 @@ def test_a_count_100x_below_the_average_gives_way_to_it():
 def test_a_sales_tag_far_below_total_revenues_is_a_sub_line(sales, total, expected):
     data = _income(RevenueFromContractWithCustomerExcludingAssessedTax=sales, Revenues=total, NetIncomeLoss=1.0)
     assert data.income_statements[0].revenue == expected
+
+
+def test_a_fourth_quarter_ignores_year_dates_from_proxy_filings():
+    """Genesco FY2026: a proxy dates the year from 2025-02-01, the 10-K and 10-Q from 2025-02-02."""
+    from clients.edgar_mapper import periodic_data
+    net = [("2025-02-01", "2026-01-31", 13.0, "2026-03-01", "DEFC14A", "USD"),
+           ("2025-02-02", "2026-01-31", 13.0, "2026-03-20", "10-K", "USD"),
+           ("2025-02-02", "2025-11-01", -34.0, "2025-12-01", "10-Q", "USD")]
+    data = periodic_data(_facts({"NetIncomeLoss": net, "Assets": [(None, "2026-01-31", 1.0, "2026-03-20", "10-K", "USD")]}))
+    assert {r.period_end: r.net_income for r in data.income_statements}["2026-01-31"] == 47.0
