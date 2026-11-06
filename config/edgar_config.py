@@ -23,10 +23,13 @@ SEC_MIN_REQUEST_INTERVAL: Final[float] = 0.11
 # reorganisations that exchanged shares one for one (per-share history continues unchanged).
 #   GOOGL, GOOG: Alphabet Inc. (CIK 1652044, from Oct 2015; 8-K12B 2015-10-02) succeeded Google Inc.
 #                (CIK 1288776, FY2004-FY2014 filings), one Alphabet share per Google share.
+#   DINO: HF Sinclair Corp (CIK 1915657, from Mar 2022; 8-K12B 2022-03-14) succeeded HollyFrontier Corp
+#         (CIK 48039), each share "automatically converted into one" HF Sinclair share.
 #   XOM: ExxonMobil Holdings Corp (CIK 2115436, 2026) succeeded Exxon Mobil Corp (CIK 34088, every
 #        10-K to FY2025), one for one.
 SEC_PREDECESSOR_CIKS: Final[Mapping[str, Tuple[str, ...]]] = {
     "GOOGL": ("0001288776",),
     "GOOG": ("0001288776",),
     "XOM": ("0000034088",),
+    "DINO": ("0000048039",),
 }

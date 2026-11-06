@@ -143,3 +143,8 @@ def test_exhibit_31_10_is_not_exhibit_31_1():
     from clients.edgar_mapper import exhibit_filename
     assert exhibit_filename(HEADER, "EX-31.1") == "ex311.htm"
     assert exhibit_filename("&lt;TYPE&gt;EX-31.10\n&lt;FILENAME&gt;x.htm", "EX-31.1") is None
+
+
+def test_hf_sinclair_succeeds_hollyfrontier():
+    client = EdgarClient("Test t@example.invalid")
+    assert client.predecessor_ciks("DINO.US") == ("0000048039",)
