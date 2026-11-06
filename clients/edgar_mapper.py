@@ -80,7 +80,8 @@ OTHER_INDEFINITE_INTANGIBLES = ("OtherIndefiniteLivedIntangibleAssets",)
 CURRENT_ASSETS, CURRENT_LIABILITIES = ("AssetsCurrent",), ("LiabilitiesCurrent",)
 LIABILITIES, ASSETS, LIABILITIES_AND_EQUITY = ("Liabilities",), ("Assets",), ("LiabilitiesAndStockholdersEquity",)
 LONG_TERM_DEBT = ("LongTermDebtNoncurrent", "LongTermDebtAndCapitalLeaseObligations")
-LONG_TERM_DEBT_TOTAL = ("LongTermDebt", "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities")
+LONG_TERM_DEBT_TOTAL = ("LongTermDebt", "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
+                        "NotesAndLoansPayable", "DebtAndCapitalLeaseObligations")   # homebuilders: KB Home, Century
 # ^ incl. the current portion; banks report only these (JPMorgan: the second)
 # Non-current debt tagged by kind when no non-current total is (Lifetime Brands: term loan + revolver; Village
 # Super Market: notes + other). Some filers misuse "other" (Lifetime FY2024: 4,108K of other long-term

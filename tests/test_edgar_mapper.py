@@ -758,3 +758,9 @@ def _earnings_with_eps(available, net, eps, average):
 ])
 def test_the_companys_eps_decides_a_doubtful_figure_for_the_common(available, net, eps, average, expected):
     assert _earnings_with_eps(available, net, eps, average) == expected
+
+
+def test_debt_totals_of_homebuilders():
+    """KB Home FY2025: notes and loans payable 1,693M. Century FY2025: debt incl. leases 1,443M."""
+    assert _debt_facts(NotesAndLoansPayable=1_693.0).balance_sheets[0].long_term_debt == 1_693.0
+    assert _debt_facts(DebtAndCapitalLeaseObligations=1_443.1).balance_sheets[0].long_term_debt == 1_443.1
