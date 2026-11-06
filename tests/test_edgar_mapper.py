@@ -764,3 +764,41 @@ def test_debt_totals_of_homebuilders():
     """KB Home FY2025: notes and loans payable 1,693M. Century FY2025: debt incl. leases 1,443M."""
     assert _debt_facts(NotesAndLoansPayable=1_693.0).balance_sheets[0].long_term_debt == 1_693.0
     assert _debt_facts(DebtAndCapitalLeaseObligations=1_443.1).balance_sheets[0].long_term_debt == 1_443.1
+
+
+# --- A year-end share count checked against the year's average ------------------------------------
+
+def _shares_row(**tags):
+    facts = {"NetIncomeLoss": [("2025-01-01", "2025-12-31", 1.0, "2026-02-01", "10-K", "USD")],
+             "Assets": [(None, "2025-12-31", 100.0, "2026-02-01", "10-K", "USD")]}
+    for tag, value in tags.items():
+        start = "2025-01-01" if tag.startswith("Weighted") else None
+        facts[tag] = [(start, "2025-12-31", value, "2026-02-01", "10-K", "shares")]
+    return annual_data(_facts(facts))
+
+
+def test_issued_tagged_as_outstanding_is_net_of_treasury():
+    """Eastman FY2025: 223.9M tagged as both; 109.9M in treasury; 10-K: 114.1M outstanding."""
+    data = _shares_row(CommonStockSharesOutstanding=223_938_047.0, CommonStockSharesIssued=223_938_047.0,
+                       TreasuryStockCommonShares=109_891_531.0, WeightedAverageNumberOfSharesOutstandingBasic=114_700_000.0)
+    assert data.balance_sheets[0].shares_outstanding == 114_046_516.0
+    assert any("the first-choice count is far from the year's average" in n for n in data.notes)
+
+
+def test_outstanding_tagged_as_issued_is_not_reduced_again():
+    """PBF FY2025: 116.9M outstanding tagged as issued, 32.0M in treasury."""
+    data = _shares_row(CommonStockSharesIssued=116_937_076.0, TreasuryStockCommonShares=32_042_692.0,
+                       WeightedAverageNumberOfSharesOutstandingBasic=114_052_733.0)
+    assert data.balance_sheets[0].shares_outstanding == 116_937_076.0
+
+
+def test_a_real_change_in_shares_is_left_alone():
+    """Citigroup FY2009: far above the average, with no other count near it."""
+    data = _shares_row(CommonStockSharesOutstanding=2_848_300_000.0, WeightedAverageNumberOfSharesOutstandingBasic=1_156_800_000.0)
+    assert data.balance_sheets[0].shares_outstanding == 2_848_300_000.0
+
+
+def test_a_count_100x_below_the_average_gives_way_to_it():
+    """Unitil FY2009: 43,615 shares issued during the year, tagged as the total."""
+    data = _shares_row(CommonStockSharesIssued=43_615.0, WeightedAverageNumberOfSharesOutstandingBasic=9_600_000.0)
+    assert data.balance_sheets[0].shares_outstanding == 9_600_000.0

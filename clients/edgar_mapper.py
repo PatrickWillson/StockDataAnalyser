@@ -130,6 +130,7 @@ SCALE_ERROR_TOLERANCE = 0.005
 MIN_YEARS_FOR_SHARE_SCALE = 3
 MAX_UNREPORTED_FILINGS = 3
 MAX_DERIVED_BELOW_COVER = 100
+SHARE_CHECK_MAX_GAP, SHARE_CHECK_CLOSE = 0.20, 0.05   # relative to the year's average shares
 RESTATEMENT_TOLERANCE = 0.001   # relative change below which two filed values are the same figure
 PER_SHARE_TOLERANCE = 0.005    # absolute, for per-share values (filed rounded to the cent)
 
@@ -339,6 +340,37 @@ def _first(facts: _Facts, chain: Sequence[str], end: str) -> Tuple[Optional[floa
     return (None, []) if fact is None else (fact.value, [fact.tag])
 
 
+def _checked_against_average(facts: _Facts, end: str, shares: Optional[float], kind: str, notes: _Notes) -> Optional[float]:
+    """
+    A year-end count far from the year's average shares, when another filed count sits close to it, is a filer's
+    mis-tag: Eastman tags 223.9M as both issued and outstanding (10-K: 114.1M outstanding, 109.9M in treasury); PBF
+    tags 116.9M outstanding as issued, so subtracting treasury counted it twice. No such alternative: a real change
+    (Citigroup's 2009 recapitalisation), left alone. A count 100x below the average has no meaning, whatever else
+    is filed (Unitil FY2009: 43,615 issued during the year).
+    """
+    average = facts.get(WEIGHTED_SHARES, end, SHARES, kind)
+    if not shares or average is None or not average.value or abs(shares - average.value) <= SHARE_CHECK_MAX_GAP * average.value:
+        return shares
+    if shares * MAX_DERIVED_BELOW_COVER < average.value:
+        if _in_thousands(shares, average.value):       # _repair_share_scale keeps the exact count
+            return shares
+        notes.derive("year-end shares", "weighted-average basic shares: the tagged count is not a total", end)
+        return average.value
+    outstanding, issued, treasury = (_value(facts.get(chain, end, SHARES, "instant"))
+                                     for chain in (SHARES_OUTSTANDING, SHARES_ISSUED, TREASURY_SHARES))
+    candidates = {"shares issued": issued}
+    if treasury:
+        candidates["shares issued - treasury shares"] = None if issued is None else issued - treasury
+        candidates["shares outstanding - treasury shares"] = None if outstanding is None else outstanding - treasury
+    close = {name: count for name, count in candidates.items() if count is not None
+             and abs(count - average.value) <= SHARE_CHECK_CLOSE * average.value}
+    if not close:
+        return shares
+    name = min(close, key=lambda n: abs(close[n] - average.value))
+    notes.derive("year-end shares", f"{name}: the first-choice count is far from the year's average", end)
+    return close[name]
+
+
 def _in_thousands(shares: float, typical: float) -> bool:
     return typical / 2 <= shares * 1000 <= typical * 2
 
@@ -540,6 +572,7 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
             if weighted is not None:
                 shares = weighted.value
                 notes.derive("year-end shares", "weighted-average basic shares of the period (no period-end count tagged)", end)
+    shares = _checked_against_average(facts, end, shares, period_kind, notes)
 
     # Preferred stock inside equity, at the higher of its carrying value and its liquidation preference:
     # Graham deducts it at "par (plus back dividends) or market, whichever is higher" (§3.5); market
