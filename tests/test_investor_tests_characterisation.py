@@ -330,9 +330,9 @@ class TestDetermineVerdict:
 
     @staticmethod
     def _verdict(mos=10.0, intrinsic=25.0, net_net="N/A", price=20.0, defensive=None, enterprising=None,
-                 note=None):
+                 note=None, latest_net_income=1.0):
         details = {'mos_percentage': mos, 'intrinsic_value_used': intrinsic, 'note': note}
-        return determine_verdict(details, net_net, price, defensive, enterprising)['verdict']
+        return determine_verdict(details, net_net, price, defensive, enterprising, latest_net_income)['verdict']
 
     def test_no_intrinsic_value_is_insufficient_data(self):
         assert self._verdict(mos="N/A", intrinsic="N/A") == "INSUFFICIENT DATA"
@@ -340,6 +340,16 @@ class TestDetermineVerdict:
     def test_net_net_bargain_at_two_thirds_of_ncav(self):
         assert self._verdict(net_net=30.0, price=20.0, mos=-50.0) == "NET-NET BARGAIN"
         assert self._verdict(net_net=29.9, price=20.0, mos=-50.0) == "OVERVALUED"
+
+    def test_a_net_net_needs_no_earnings_history(self):
+        """Fewer than 7 years give no EPV: Graham's asset test does not depend on it (GRAHAM_METHODOLOGY §3.3)."""
+        assert self._verdict(net_net=30.0, price=20.0, mos="N/A", intrinsic="N/A") == "NET-NET BARGAIN"
+
+    @pytest.mark.parametrize("latest_net_income", [-149e6, 0.0, None])
+    def test_a_net_net_without_a_profit_is_not_a_bargain(self, latest_net_income):
+        """Security Analysis ch. 43: a bargain is "in no danger of dissipating these assets"."""
+        assert self._verdict(net_net=30.0, price=20.0, mos="N/A", intrinsic="N/A",
+                             latest_net_income=latest_net_income) == "UNDERVALUED – FAILS GRAHAM CRITERIA"
 
     @pytest.mark.parametrize("mos", [0.0, -30.0, "N/A"])
     def test_no_margin_of_safety_is_overvalued_even_if_criteria_pass(self, mos):

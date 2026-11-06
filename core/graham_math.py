@@ -834,8 +834,11 @@ class GrahamCalculator:
         enterprising_tests = self.run_investor_tests("enterprising", tbvps=tbvps)
         
         # Determine verdict (use new MoS structure)
+        history = or_default(self.data.history, {})
+        latest_year = self._get_latest_financial_year(history, sorted(history.keys(), reverse=True))
         verdict = determine_verdict(margin_of_safety_data, net_net_value_raw, price,
-                                    defensive_tests, enterprising_tests)
+                                    defensive_tests, enterprising_tests,
+                                    or_default(row_at(history, latest_year).net_income, None) if latest_year else None)
         
         metrics = {
             'tbvps': round(tbvps, 2) if isinstance(tbvps, float) else "N/A",  # latest annual, for comparisons
