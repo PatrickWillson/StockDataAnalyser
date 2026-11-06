@@ -546,6 +546,11 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
             debt_current = sum(p or 0.0 for p in parts)
 
     inventory = field("inventory", INVENTORY)
+    supplies_line = facts.get(SUPPLIES_ONLY_INVENTORY[:1], end, MONEY, "instant")
+    if inventory is not None and supplies_line is not None and supplies_line.value > inventory:
+        # A total cannot be below its part: separate lines (PG&E FY2025: gas stored 75M + materials and supplies 745M)
+        notes.derive("inventory", f"derived as the sum of {INVENTORY[0]}, {supplies_line.tag}", end)
+        inventory += supplies_line.value
     if inventory is None:
         energy = facts.get(ENERGY_INVENTORY_TOTAL, end, MONEY, "instant")
         if energy is not None:

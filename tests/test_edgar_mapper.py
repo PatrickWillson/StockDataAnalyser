@@ -842,3 +842,9 @@ def test_finite_lived_intangibles_beside_a_smaller_other_line():
 def test_long_term_debt_from_convertible_notes():
     """BTCS FY2025: convertible long-term notes 11.84M."""
     assert _debt_facts(ConvertibleLongTermNotesPayable=11.84).balance_sheets[0].long_term_debt == 11.84
+
+
+def test_inventory_with_a_larger_separate_supplies_line():
+    """PG&E FY2025: gas stored 75M tagged InventoryNet, materials and supplies 745M; 820M in all."""
+    assert _debt_facts(InventoryNet=75.0, InventoryRawMaterialsAndSupplies=745.0).balance_sheets[0].inventory == 820.0
+    assert _debt_facts(InventoryNet=900.0, InventoryRawMaterialsAndSupplies=745.0).balance_sheets[0].inventory == 900.0
