@@ -804,3 +804,13 @@ def test_a_count_100x_below_the_average_gives_way_to_it():
     """Unitil FY2009: 43,615 shares issued during the year, tagged as the total."""
     data = _shares_row(CommonStockSharesIssued=43_615.0, WeightedAverageNumberOfSharesOutstandingBasic=9_600_000.0)
     assert data.balance_sheets[0].shares_outstanding == 9_600_000.0
+
+
+@pytest.mark.parametrize("sales, total, expected", [
+    (1_531.0, 11_009.0, 11_009.0),    # Andersons FY2025: a line of the business
+    (0.0, 1_110.0, 1_110.0),          # Assured Guaranty FY2025
+    (642_637.0, 648_125.0, 642_637.0),  # Walmart FY2024: net sales, as decided (D-F3)
+])
+def test_a_sales_tag_far_below_total_revenues_is_a_sub_line(sales, total, expected):
+    data = _income(RevenueFromContractWithCustomerExcludingAssessedTax=sales, Revenues=total, NetIncomeLoss=1.0)
+    assert data.income_statements[0].revenue == expected

@@ -57,6 +57,7 @@ COMMON_EARNINGS_MAX_GAP = 1 / 3
 COMMON_EARNINGS_MAX_EXCESS = 0.02
 PREFERRED_GAP_TOLERANCE = 0.10
 EPS_CHECK_TOLERANCE = 0.05
+MIN_SALES_SHARE_OF_REVENUES = 0.6
 # Consolidated profit incl. minority interests: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest
 PROFIT_LOSS, NCI_INCOME = ("ProfitLoss",), ("NetIncomeLossAttributableToNoncontrollingInterest",)
 # A minority balance below this share of ProfitLoss cannot move it materially (Ethan Allen FY2025: -85K of 51.6M)
@@ -689,6 +690,9 @@ def _revenue(facts: _Facts, end: str, kind: str, utility: bool) -> Tuple[Optiona
     """(revenue fact, total `Revenues` fact) for the period."""
     total = facts.get(("Revenues",), end, MONEY, kind)
     revenue = (total if utility and total is not None else None) or facts.get(REVENUE, end, MONEY, kind)
+    # A sales tag far below total revenues is one line of the business (Andersons FY2025: 1.5bn of 11.0bn)
+    if revenue is not None and total is not None and total.value > 0 and revenue.value < MIN_SALES_SHARE_OF_REVENUES * total.value:
+        revenue = total
     if revenue is None:
         interest, other = facts.get(NET_INTEREST_INCOME, end, MONEY, kind), facts.get(NONINTEREST_INCOME, end, MONEY, kind)
         if interest is not None and other is not None:
