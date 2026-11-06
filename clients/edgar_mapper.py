@@ -126,6 +126,7 @@ YEAR_END_TAGS = ("NetIncomeLoss", "ProfitLoss", "Revenues", "RevenueFromContract
                  "EarningsPerShareBasic")
 
 MIN_DAYS_BETWEEN_YEAR_ENDS = 300
+SAME_LINE_SHARE = 0.9
 SCALE_ERRORS = (1e3, 1e6)        # filers tagging figures in thousands or millions as units
 SCALE_ERROR_TOLERANCE = 0.005
 MIN_YEARS_FOR_SHARE_SCALE = 3
@@ -450,8 +451,12 @@ def _intangible_parts(facts: _Facts, end: str) -> Tuple[Optional[float], List[st
     if indefinite is None:
         indefinite, used = _sum(facts, NAMED_INDEFINITE_INTANGIBLES, end, MONEY)
         other, other_used = _first(facts, OTHER_INTANGIBLES, end)
+        finite, finite_used = _first(facts, FINITE_INTANGIBLES, end)
+        if other is not None and finite is not None and other < SAME_LINE_SHARE * finite:
+            # A clearly smaller "other" line cannot hold the finite-lived figure: separate lines (Graham Corp FY2026:
+            # 38.66M + 13.46M). Nearly equal is one line rounded twice (G-III FY2016: 10.80M, 10.87M)
+            other, other_used = other + finite, other_used + finite_used
         if other is None:
-            finite, finite_used = _first(facts, FINITE_INTANGIBLES, end)
             other_indefinite, oi_used = _first(facts, OTHER_INDEFINITE_INTANGIBLES, end)
             parts = [v for v in (finite, other_indefinite) if v is not None]
             other, other_used = (sum(parts) if parts else None), finite_used + oi_used

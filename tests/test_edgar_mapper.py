@@ -828,3 +828,12 @@ def test_a_fourth_quarter_ignores_year_dates_from_proxy_filings():
            ("2025-02-02", "2025-11-01", -34.0, "2025-12-01", "10-Q", "USD")]
     data = periodic_data(_facts({"NetIncomeLoss": net, "Assets": [(None, "2026-01-31", 1.0, "2026-03-20", "10-K", "USD")]}))
     assert {r.period_end: r.net_income for r in data.income_statements}["2026-01-31"] == 47.0
+
+
+def test_finite_lived_intangibles_beside_a_smaller_other_line():
+    """Graham Corp FY2026: finite-lived 38.66M + other 13.46M = 52.12M, as printed. A larger other line holds it."""
+    def intangibles(finite, other):
+        return _debt_facts(FiniteLivedIntangibleAssetsNet=finite, OtherIntangibleAssetsNet=other).balance_sheets[0].intangible_assets
+    assert intangibles(38.66, 13.46) == pytest.approx(52.12)
+    assert intangibles(10.0, 40.0) == 40.0
+    assert intangibles(10.87, 10.80) == 10.80                     # G-III FY2016: one line, rounded twice
