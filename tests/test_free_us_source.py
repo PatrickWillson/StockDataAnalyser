@@ -278,3 +278,12 @@ def test_a_10k_missing_from_company_facts_is_read_from_its_own_file():
     f = source(edgar=LateFiling()).fetch_fundamentals("SO.US")
     assert f.annual_income_statements[0].period_end == "2026-12-31" and f.annual_income_statements[0].net_income == 77.0
     assert any("10-K for 2026-12-31 read from the filing's own XBRL file" in n for n in f.notes)
+
+
+def test_a_latest_count_that_is_only_an_average_uses_the_classes():
+    """UHS: four classes, so only the year's average is tagged: 63.6M against 61.1M at the year end."""
+    edgar = DualClassEdgar(10e6, 51.1e6)
+    edgar.data["companyfacts"]["facts"]["us-gaap"]["WeightedAverageNumberOfSharesOutstandingBasic"] = {"units": {"shares": [
+        {"start": "2025-01-01", "end": "2025-12-31", "val": 63.6e6, "filed": "2026-02-20", "form": "10-K", "fy": 2025, "fp": "FY"}]}}
+    f = source(_yahoo_total(61.1e6), edgar).fetch_fundamentals("SO.US")
+    assert f.annual_balance_sheets[0].shares_outstanding == 61.1e6

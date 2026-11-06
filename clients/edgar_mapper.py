@@ -92,6 +92,7 @@ LONG_TERM_REVOLVER, OTHER_LONG_TERM_DEBT = ("LongTermLineOfCredit",), ("OtherLon
 # Oil-Dri: senior notes. Citizens & Northern, a bank: FHLB advances 165.45M + senior 14.9M + subordinated 24.83M
 SENIOR_NOTES, SUBORDINATED_DEBT = ("SeniorLongTermNotes", "SeniorNotesNoncurrent", "SeniorNotes"), ("SubordinatedDebt",)
 FHLB_ADVANCES = ("FederalHomeLoanBankAdvancesLongTerm",)
+CONVERTIBLE_NOTES = ("ConvertibleLongTermNotesPayable", "ConvertibleNotesPayableNoncurrent")   # BTCS FY2025: 11.84M
 # Outside LongTermDebt at some banks (Arrow Financial: 20,000K beside term advances), inside it at others
 # (JPMorgan), and the tags do not say which: noted, never added
 JUNIOR_SUBORDINATED = ("JuniorSubordinatedDebentureOwedToUnconsolidatedSubsidiaryTrust",)
@@ -410,7 +411,7 @@ def _long_term_debt(facts: _Facts, end: str, notes: _Notes) -> Tuple[Optional[fl
     if fact is not None:
         return fact.value, False
     used, parts = [], 0.0
-    for chain in (LONG_TERM_NOTES, LONG_TERM_REVOLVER, SENIOR_NOTES, SUBORDINATED_DEBT, FHLB_ADVANCES):
+    for chain in (LONG_TERM_NOTES, LONG_TERM_REVOLVER, SENIOR_NOTES, SUBORDINATED_DEBT, FHLB_ADVANCES, CONVERTIBLE_NOTES):
         part = facts.get(chain, end, MONEY, "instant")
         notes.fact("long-term debt", end, part)
         if part is not None:
@@ -961,9 +962,18 @@ def instance_companyfacts(instance_xml: str, form: str, filed: str, accession: s
     return {"facts": facts}
 
 
-def missing_latest_shares(annual: EdgarAnnualData) -> bool:
-    """No share count for the latest year: companyfacts leaves out figures reported per share class."""
-    return bool(annual.balance_sheets) and not annual.balance_sheets[0].shares_outstanding
+def missing_latest_shares(annual: EdgarAnnualData, companyfacts: Mapping[str, Any]) -> bool:
+    """
+    No year-end share count for the latest year, blank or only the year's average (UHS, four classes: 63.6M
+    against 61.1M at the year end): companyfacts leaves out figures reported per share class.
+    """
+    if not annual.balance_sheets:
+        return False
+    latest = annual.balance_sheets[0]
+    if not latest.shares_outstanding:
+        return True
+    facts = _Facts(companyfacts)
+    return all(facts.get(chain, latest.period_end, SHARES, "instant") is None for chain in (SHARES_OUTSTANDING, SHARES_ISSUED))         and _cover_shares(facts, latest.period_end) is None
 
 
 def annual_filings(submissions: Mapping[str, Any]) -> List[Tuple[str, str, str]]:

@@ -837,3 +837,8 @@ def test_finite_lived_intangibles_beside_a_smaller_other_line():
     assert intangibles(38.66, 13.46) == pytest.approx(52.12)
     assert intangibles(10.0, 40.0) == 40.0
     assert intangibles(10.87, 10.80) == 10.80                     # G-III FY2016: one line, rounded twice
+
+
+def test_long_term_debt_from_convertible_notes():
+    """BTCS FY2025: convertible long-term notes 11.84M."""
+    assert _debt_facts(ConvertibleLongTermNotesPayable=11.84).balance_sheets[0].long_term_debt == 11.84

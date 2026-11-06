@@ -172,7 +172,7 @@ class FreeUSFundamentalsSource:
             raise TickerNotCoveredError(f"{ticker}: no annual reports with XBRL financial data at the SEC")
         periodic = edgar_mapper.periodic_data(facts, splits, sic)
         current_shares = None
-        if edgar_mapper.missing_latest_shares(annual):
+        if edgar_mapper.missing_latest_shares(annual, facts):
             annual, periodic, current_shares = self._share_counts_per_class(cik, facts, submissions, splits, annual,
                                                                             periodic, yahoo, notes)
         profile = yahoo_mapper.profile(yahoo)

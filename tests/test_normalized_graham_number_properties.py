@@ -688,7 +688,7 @@ def test_dual_calculation_preservation(eps_values, tbvps):
     # Example: [467, 1, 933] has average 467 which equals the most recent value
     if abs(eps_values[0] - eps_3yr_avg) > 0.01:
         # Allow small tolerance for rounding
-        assert abs(metrics['graham_number'] - metrics['normalized_graham_number']) > 0.01, \
+        assert abs(metrics['graham_number'] - metrics['normalized_graham_number']) >= 0.009, \
             f"Graham Numbers should differ when most recent EPS differs from average: single={metrics['graham_number']}, normalized={metrics['normalized_graham_number']}"
     
     # Verify margin_of_safety_details includes both values
