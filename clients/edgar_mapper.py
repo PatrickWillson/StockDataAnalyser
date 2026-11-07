@@ -164,6 +164,7 @@ SCALE_ERROR_TOLERANCE = 0.005
 MIN_YEARS_FOR_SHARE_SCALE = 3
 RECENT_FILINGS_CHECKED = 6
 MAX_DERIVED_BELOW_COVER = 100
+IFRS_ISSUED_ABOVE_AVERAGE = 0.01   # IFRS shares issued this far above the average hold treasury shares
 SHARE_CHECK_MAX_GAP, SHARE_CHECK_CLOSE = 0.20, 0.05   # relative to the year's average shares
 RESTATEMENT_TOLERANCE = 0.001   # relative change below which two filed values are the same figure
 PER_SHARE_TOLERANCE = 0.005    # absolute, for per-share values (filed rounded to the cent)
@@ -656,12 +657,24 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
         treasury = field("treasury shares", TREASURY_SHARES, SHARES)
         cover = _cover_shares(facts, end)
         derived = None if issued is None else issued - (treasury or 0.0)
+        issued_fact = facts.get(SHARES_ISSUED, end, SHARES, "instant")
+        average = facts.get(WEIGHTED_SHARES, end, SHARES, period_kind)
+        from_average = False
+        if (derived is not None and treasury is None and issued_fact is not None and issued_fact.tag.startswith(IFRS)
+                and average is not None and 0 < average.value < derived * (1 - IFRS_ISSUED_ABOVE_AVERAGE)):
+            # IFRS filers tag shares issued but rarely a treasury-share count (SAP: 1,228.5M issued, 1,167M average):
+            # the year's average is nearer the shares outstanding than a count that includes treasury shares
+            notes.derive("year-end shares", "weighted-average shares of the year (IFRS shares issued include treasury "
+                         "shares, and no treasury-share count is tagged)", end)
+            derived, from_average = average.value, True
         # Some filers tag issued and treasury counts rounded to millions (Southern Co: "1.1 billion"):
         # the cover-page count is then the precise figure
         rounded = derived is not None and issued % 1e6 == 0 and (treasury or 0.0) % 1e6 == 0
         # Or the issued tag holds something else (Unitil FY2010: 41,455, with 10.9 million on the cover)
         implausible = derived is not None and cover is not None and derived * MAX_DERIVED_BELOW_COVER < cover
-        if derived is not None and not ((rounded or implausible) and cover is not None):
+        if from_average:
+            shares = derived
+        elif derived is not None and not ((rounded or implausible) and cover is not None):
             shares = derived
             notes.derive("year-end shares", "derived as shares issued - treasury shares", end)
         elif cover is not None:
@@ -1038,16 +1051,17 @@ def exhibit_filename(sgml_header: str, exhibit_type: str) -> Optional[str]:
 
 def filings_missing_from_companyfacts(companyfacts: Mapping[str, Any], submissions: Mapping[str, Any]) -> List[Tuple[str, str, str, str]]:
     """
-    (form, period end, filing date, accession) of the latest 10-Ks and 10-Qs with XBRL that left no fact in
-    companyfacts: Seneca's FY2026 10-K, Citigroup's three 2026 10-Qs. Newest first, among the latest few filings.
+    (form, period end, filing date, accession) of the latest 10-Ks, 10-Qs, 20-Fs and 40-Fs with XBRL that left no
+    statement fact in companyfacts (cover-page dei facts alone do not count): Seneca's FY2026 10-K, Citigroup's
+    three 2026 10-Qs, Toyota's FY2026 20-F (only its cover-page share count). Newest first, among the latest few.
     """
-    in_facts = {row.get("accn") for taxonomy in companyfacts.get("facts", {}).values() for concept in taxonomy.values()
-                for rows in concept.get("units", {}).values() for row in rows}
+    in_facts = {row.get("accn") for name, taxonomy in companyfacts.get("facts", {}).items() if name != DEI
+                for concept in taxonomy.values() for rows in concept.get("units", {}).values() for row in rows}
     recent = submissions.get("filings", {}).get("recent", {})
     periodic = [(form, end, filed, accession) for form, end, filed, accession, xbrl in
                 zip(recent.get("form", []), recent.get("reportDate", []), recent.get("filingDate", []),
                     recent.get("accessionNumber", []), recent.get("isXBRL", []))
-                if form in ("10-K", "10-Q") and xbrl and end]
+                if form in ("10-K", "10-Q", "20-F", "40-F") and xbrl and end]
     return [filing for filing in periodic[:RECENT_FILINGS_CHECKED] if filing[3] not in in_facts]
 
 
@@ -1070,9 +1084,11 @@ def instance_companyfacts(instance_xml: str, form: str, filed: str, accession: s
     for unit in (e for e in root if local(e.tag) == "unit"):
         measures = [(e.text or "").strip().split(":")[-1] for e in unit.iter() if local(e.tag) == "measure"]
         units[unit.get("id")] = "/".join(measures)
-    facts: Dict[str, Dict[str, Any]] = {GAAP: {}, DEI: {}}
+    facts: Dict[str, Dict[str, Any]] = {GAAP: {}, DEI: {}, IFRS: {}}
     for fact in root:
-        taxonomy = next((t for t in (GAAP, DEI) if f"/{t}/" in fact.tag), None)
+        # Namespaces: http://fasb.org/us-gaap/2024, http://xbrl.sec.gov/dei/2024, https://xbrl.ifrs.org/taxonomy/2024-03-27/ifrs-full
+        namespace = fact.tag.split("}")[0]
+        taxonomy = next((t for t in (GAAP, DEI, IFRS) if re.search(rf"/{t}(/|$)", namespace)), None)
         period, unit = periods.get(fact.get("contextRef")), units.get(fact.get("unitRef"))
         if taxonomy is None or period is None or unit is None or not (fact.text or "").strip():
             continue

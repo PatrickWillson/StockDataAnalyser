@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Callable, Mapping, Optional, Tuple
 from clients.edgar_client import EdgarClient
 from clients.eodhd_client import EODHDClient
+from clients.foreign_sec_source import ForeignSECFundamentalsSource
 from clients.free_us_source import FreeUSFundamentalsSource
 from clients.routing_source import RoutingFundamentalsSource
 from clients.yfinance_client import YFinanceClient
@@ -61,10 +62,16 @@ class ClientFactory:
     
     @staticmethod
     def create_free_source(sec_user_agent: str, debug: bool = False) -> FundamentalsSource:
-        """The free resolution path: `.US` -> SEC EDGAR + Yahoo Finance (other markets: not yet)."""
-        us = FreeUSFundamentalsSource(EdgarClient(sec_user_agent, debug=debug),
-                                      ClientFactory.create_yfinance_client(debug=debug), debug=debug)
-        return RoutingFundamentalsSource({"US": us}, name="free (SEC EDGAR + Yahoo Finance)")
+        """
+        The free resolution path: `.US` -> SEC EDGAR + Yahoo Finance; every other exchange Yahoo prices -> the
+        company's SEC filings (20-F / 40-F) found from its home listing (no SEC filer: no dossier).
+        """
+        edgar = EdgarClient(sec_user_agent, debug=debug)
+        yahoo = ClientFactory.create_yfinance_client(debug=debug)
+        us = FreeUSFundamentalsSource(edgar, yahoo, debug=debug)
+        foreign = ForeignSECFundamentalsSource(edgar, yahoo)
+        routes = {exchange: (us if not suffix else foreign) for exchange, suffix in YFinanceClient.EXCHANGE_MAPPING.items()}
+        return RoutingFundamentalsSource(routes, name="free (SEC EDGAR + Yahoo Finance)")
     
     @staticmethod
     def create_quote_source(debug: bool = False) -> QuoteSource:

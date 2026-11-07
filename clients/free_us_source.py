@@ -14,6 +14,7 @@ from typing import Any, List, Mapping, Optional
 
 from clients import edgar_mapper, yahoo_mapper
 from clients.edgar_client import EdgarClient, sec_symbol
+from clients.sec_filer_lookup import latest_annual_report
 from clients.yfinance_client import YahooCompanyData, YFinanceClient
 from core.errors import TickerNotCoveredError
 from core.fundamentals import CompanyFundamentals
@@ -21,7 +22,8 @@ from core.fundamentals import CompanyFundamentals
 logger = logging.getLogger(__name__)
 
 SOURCE_NAME = "SEC EDGAR + Yahoo Finance"
-STATEMENT_CURRENCY = "USD"   # edgar_mapper maps USD filers only
+STATEMENT_CURRENCY = "USD"   # this route serves US filers in USD; foreign filers go to foreign_sec_source
+FOREIGN_ANNUAL_FORMS = ("20-F", "40-F")
 
 
 def _latest_filing_date(submissions: Mapping[str, Any]) -> Optional[str]:
@@ -128,6 +130,13 @@ class FreeUSFundamentalsSource:
         submissions = self.edgar.fetch_submissions(cik)
         self._save_debug(ticker, "companyfacts", facts)
         self._save_debug(ticker, "submissions", submissions)
+        latest_report = latest_annual_report(submissions)
+        if latest_report and latest_report[0].split("/")[0] in FOREIGN_ANNUAL_FORMS:
+            # Its SEC share counts are per ordinary share, while a US line is often an ADR priced per depositary
+            # share, a ratio the SEC data does not give (decision of 2026-11-07)
+            raise TickerNotCoveredError(
+                f"{ticker}: {submissions.get('name', 'this company')} files {latest_report[0]} as a foreign company; "
+                "use its home-exchange listing (SYMBOL.EXCHANGE, e.g. BP.LSE, 7203.TSE) instead")
 
         notes: List[str] = []
         predecessors = self.edgar.predecessor_ciks(ticker)

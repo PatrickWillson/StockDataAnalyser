@@ -126,6 +126,17 @@ def test_non_usd_filer_is_not_covered_by_the_us_route():
         source(edgar=EuroEdgar()).fetch_fundamentals("SO.US")
 
 
+def test_us_ticker_of_a_foreign_filer_points_to_its_home_listing():
+    class ForeignEdgar(FakeEdgar):
+        def fetch_submissions(self, cik):
+            subs = dict(super().fetch_submissions(cik))
+            subs["name"] = "BP PLC"
+            subs["filings"] = {"recent": {"form": ["6-K", "20-F"], "filingDate": ["2026-05-01", "2026-03-06"]}}
+            return subs
+    with pytest.raises(TickerNotCoveredError, match="BP PLC files 20-F as a foreign company; use its home-exchange listing"):
+        source(edgar=ForeignEdgar()).fetch_fundamentals("SO.US")
+
+
 def test_router_sends_us_tickers_and_rejects_other_markets():
     src = source()
     router = RoutingFundamentalsSource({"us": src}, name="free")
@@ -141,7 +152,9 @@ def test_free_provider_is_registered():
     provider = ClientFactory.fundamentals_provider("free")
     assert provider.required_env == ("SEC_USER_AGENT",) and provider.secret_env == ()
     router = ClientFactory.create_fundamentals_source({"SEC_USER_AGENT": "Test t@example.invalid"}, "free")
-    assert isinstance(router, RoutingFundamentalsSource) and set(router.routes) == {"US"}
+    assert isinstance(router, RoutingFundamentalsSource)
+    assert {e for e, src in router.routes.items() if isinstance(src, FreeUSFundamentalsSource)} == {"US", "NYSE", "NASDAQ", "AMEX"}
+    assert type(router.routes["LSE"]).__name__ == "ForeignSECFundamentalsSource" and "TSE" in router.routes
     with pytest.raises(ValueError, match="contact email"):
         ClientFactory.create_fundamentals_source({"SEC_USER_AGENT": "no contact"}, "free")
 

@@ -452,3 +452,33 @@ class YFinanceClient:
         us = self.US_MAIN_EXCHANGES | self.US_OTC_EXCHANGES
         return [(str(q["symbol"]), str(q.get("exchange")), str(q.get("longname") or q.get("shortname") or ""))
                 for q in quotes if q.get("symbol") and q.get("exchange") in us]
+
+    def fetch_annual_net_income(self, ticker: str) -> Dict[str, List[float]]:
+        """
+        Yahoo's annual net income per fiscal year end ('YYYY-MM-DD' -> [net income to common, net income], the
+        figures present), in the company's financial currency; about four years. Empty when unavailable. Used
+        only to confirm that an SEC filer found by name is the same company (clients/sec_filer_lookup.py).
+        """
+        symbol, exchange = self._parse_ticker(ticker)
+        yf_ticker = self._translate_ticker(symbol, exchange) if symbol and exchange else None
+        if not yf_ticker:
+            return {}
+        try:
+            import yfinance as yf
+            table = yf.Ticker(yf_ticker).income_stmt
+        except Exception as e:
+            self.logger.warning(f"Yahoo income statement unavailable for {yf_ticker}: {type(e).__name__}: {e}")
+            return {}
+        result: Dict[str, List[float]] = {}
+        if table is None or getattr(table, "empty", True):
+            return result
+        for column in table.columns:
+            values = []
+            for row in ("Net Income Common Stockholders", "Net Income"):
+                if row in table.index:
+                    value = table.loc[row, column]
+                    if value == value and value is not None:
+                        values.append(float(value))
+            if values:
+                result[column.strftime('%Y-%m-%d')] = values
+        return result

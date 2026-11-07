@@ -989,3 +989,38 @@ def test_other_eps_gaps_are_noted_and_the_filed_figure_kept():
 def test_coarsely_rounded_eps_is_not_checked():
     data = annual_data(_eps_case(0.01, 6_000.0, 1_000_000.0))           # Ericsson FY2024: 0.01 SEK
     assert not any("EPS" in n for n in data.notes)
+
+
+def test_a_20f_that_left_only_its_cover_page_in_companyfacts_is_missing():
+    # Toyota's FY2026 20-F: companyfacts holds only its cover-page share count
+    from clients.edgar_mapper import filings_missing_from_companyfacts
+    facts = {"facts": {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [{"accn": "f26", "end": "2026-03-31", "val": 1}]}}},
+                       "ifrs-full": {"Assets": {"units": {"JPY": [{"accn": "f25", "end": "2025-03-31", "val": 1}]}}}}}
+    recent = {"form": ["6-K", "20-F", "20-F"], "reportDate": ["2026-08-01", "2026-03-31", "2025-03-31"],
+              "filingDate": ["2026-08-05", "2026-06-10", "2025-06-18"], "accessionNumber": ["6k", "f26", "f25"],
+              "isXBRL": [0, 1, 1]}
+    assert filings_missing_from_companyfacts(facts, {"filings": {"recent": recent}}) == [("20-F", "2026-03-31", "2026-06-10", "f26")]
+
+
+def test_instance_companyfacts_reads_ifrs_facts():
+    from clients.edgar_mapper import instance_companyfacts
+    xml = ('<xbrl xmlns="http://www.xbrl.org/2003/instance" xmlns:iso4217="http://www.xbrl.org/2003/iso4217" '
+           'xmlns:ifrs-full="https://xbrl.ifrs.org/taxonomy/2024-03-27/ifrs-full">'
+           '<context id="y"><entity/><period><startDate>2025-04-01</startDate><endDate>2026-03-31</endDate></period></context>'
+           '<unit id="jpy"><measure>iso4217:JPY</measure></unit>'
+           '<ifrs-full:ProfitLossAttributableToOwnersOfParent contextRef="y" unitRef="jpy">3800000</ifrs-full:ProfitLossAttributableToOwnersOfParent>'
+           '</xbrl>')
+    facts = instance_companyfacts(xml, "20-F", "2026-06-10", "f26")["facts"]
+    rows = facts["ifrs-full"]["ProfitLossAttributableToOwnersOfParent"]["units"]["JPY"]
+    assert rows == [{"end": "2026-03-31", "val": 3800000.0, "filed": "2026-06-10", "form": "20-F", "accn": "f26",
+                     "start": "2025-04-01"}]
+
+
+def test_ifrs_shares_issued_without_a_treasury_count_give_way_to_the_average():
+    facts = _ifrs({"Assets": [(None, "2025-12-31", 5000.0, FILED, "EUR")],
+                   "ProfitLossAttributableToOwnersOfParent": [("2025-01-01", "2025-12-31", 700.0, FILED, "EUR")],
+                   "NumberOfSharesIssued": [(None, "2025-12-31", 1_228.5e6, FILED, "shares")],
+                   "WeightedAverageShares": [("2025-01-01", "2025-12-31", 1_167.0e6, FILED, "shares")]})
+    data = annual_data(facts)
+    assert data.balance_sheets[0].shares_outstanding == 1_167.0e6                  # SAP FY2025-like
+    assert any("IFRS shares issued include treasury shares" in n for n in data.notes)
