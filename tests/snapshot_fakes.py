@@ -10,6 +10,7 @@ Only the outermost I/O is replaced, so all real client code still runs:
 """
 
 from datetime import date
+from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
@@ -63,13 +64,17 @@ class FakeTicker:
 
     def __init__(self, last_price: Optional[float], closes: Dict[str, float], currency: Optional[str] = None,
                  info: Optional[Dict[str, Any]] = None, dividends: Optional[Dict[str, float]] = None,
-                 splits: Optional[Dict[str, float]] = None):
+                 splits: Optional[Dict[str, float]] = None, net_income: Optional[Dict[str, float]] = None):
         self.fast_info = {} if last_price is None else {"lastPrice": last_price, "currency": currency}
         self.info = {} if last_price is None else {"regularMarketPrice": last_price}
         self.info.update(info or {})
         self.dividends = _series(dividends)
         self.splits = _series(splits)
         self._closes = closes
+        # Annual income statement: one "Net Income" row, a column per fiscal year end (as yfinance)
+        items = sorted((net_income or {}).items(), reverse=True)
+        self.income_stmt = pd.DataFrame([[v for _, v in items]], index=["Net Income"],
+                                        columns=pd.DatetimeIndex([pd.Timestamp(d) for d, _ in items]))
 
     def history(self, start=None, end=None, auto_adjust=False, **kwargs) -> pd.DataFrame:
         # Like yfinance, `end` is exclusive
@@ -86,25 +91,35 @@ class FakeYFinanceModule:
     symbols maps a Yahoo symbol (e.g. "AAPL", "YU.L", "EURUSD=X") to
     {"last": float, "currency": str, "closes": {"YYYY-MM-DD": float}} and optionally "info" (extra
     Ticker.info keys), "dividends" and "splits" ({"YYYY-MM-DD": value}); currency is the quote
-    currency as Yahoo reports it (e.g. "USD", "GBp" for pence). Unknown symbols behave like
-    yfinance for a missing ticker: no price and an empty history.
+    currency as Yahoo reports it (e.g. "USD", "GBp" for pence), "net_income" ({"YYYY-MM-DD": value},
+    the annual income statement). Unknown symbols behave like yfinance for a missing ticker: no price
+    and an empty history. search maps a query to yfinance.Search quotes ({"symbol", "exchange",
+    "longname"}).
     """
 
     __version__ = "fake"
 
-    def __init__(self, symbols: Dict[str, Dict[str, Any]]):
+    def __init__(self, symbols: Dict[str, Dict[str, Any]], search: Optional[Dict[str, List[Dict[str, Any]]]] = None):
         self._symbols = symbols
+        self._search = search or {}
         self.requested: List[str] = []
+
+    def Search(self, query: str, max_results: int = 10, news_count: int = 0):  # noqa: N802 (mirrors yfinance API)
+        found = SimpleNamespace(quotes=list(self._search.get(query, []))[:max_results])
+        return found
 
     def Ticker(self, symbol: str) -> FakeTicker:  # noqa: N802 (mirrors yfinance API)
         self.requested.append(symbol)
         entry = self._symbols.get(symbol, {})
         return FakeTicker(entry.get("last"), entry.get("closes", {}), entry.get("currency"),
-                          entry.get("info"), entry.get("dividends"), entry.get("splits"))
+                          entry.get("info"), entry.get("dividends"), entry.get("splits"), entry.get("net_income"))
 
 
 class FakeSecSession:
-    """Serves the SEC ticker index, companyfacts and submissions for {ticker: (cik, companyfacts, submissions)}."""
+    """
+    Serves the SEC ticker index, companyfacts and submissions for {ticker: (cik, companyfacts, submissions)};
+    the ticker is the company's US trading symbol (a foreign filer's US listing, e.g. "SAP").
+    """
 
     def __init__(self, companies: Dict[str, Any]):
         self._index = {str(i): {"cik_str": int(cik), "ticker": ticker, "title": ticker}
