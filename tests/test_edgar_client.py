@@ -73,6 +73,12 @@ def test_resolves_cik_with_declared_user_agent_and_fetches_the_index_once():
     assert client.session.calls[0][1]["User-Agent"] == UA
 
 
+def test_filer_for_symbol_gives_cik_and_sec_name_or_none():
+    client = _client({INDEX_URL: FakeResponse(200, INDEX)})
+    assert client.filer_for_symbol("brk.b") == ("0001067983", "BERKSHIRE HATHAWAY INC")
+    assert client.filer_for_symbol("ZZZZ") is None
+
+
 def test_reorganised_company_resolves_to_its_current_cik_and_lists_predecessors():
     client = _client({INDEX_URL: FakeResponse(200, INDEX)}, predecessors={"XOM": ("0000034088",)})
     assert client.resolve_cik("XOM.US") == "0002115436"

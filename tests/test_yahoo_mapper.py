@@ -92,3 +92,30 @@ def test_client_returns_none_on_failure(monkeypatch):
     monkeypatch.setitem(sys.modules, "yfinance", _FakeYF)
     assert YFinanceClient().fetch_company_data("BOOM.US") is None
     assert YFinanceClient().fetch_company_data("NOSUFFIX") is None
+
+
+def test_search_us_listings_keeps_us_exchanges_only(monkeypatch):
+    from clients.yfinance_client import YFinanceClient
+
+    class _Search:
+        def __init__(self, query, max_results=10, news_count=0):
+            self.quotes = [{"symbol": "BP", "exchange": "NYQ", "longname": "BP p.l.c."},
+                           {"symbol": "BPAQF", "exchange": "PNK", "shortname": "BP p.l.c."},
+                           {"symbol": "BP.L", "exchange": "LSE", "longname": "BP p.l.c."}]
+
+    class _YF:
+        Search = _Search
+
+    monkeypatch.setitem(sys.modules, "yfinance", _YF)
+    assert YFinanceClient().search_us_listings("BP p.l.c.") == [("BP", "NYQ", "BP p.l.c."), ("BPAQF", "PNK", "BP p.l.c.")]
+
+
+def test_search_us_listings_is_empty_when_yahoo_fails(monkeypatch):
+    from clients.yfinance_client import YFinanceClient
+
+    class _YF:
+        def Search(*args, **kwargs):
+            raise RuntimeError("rate limited")
+
+    monkeypatch.setitem(sys.modules, "yfinance", _YF)
+    assert YFinanceClient().search_us_listings("BP p.l.c.") == []

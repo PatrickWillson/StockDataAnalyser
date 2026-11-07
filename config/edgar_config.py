@@ -33,3 +33,12 @@ SEC_PREDECESSOR_CIKS: Final[Mapping[str, Tuple[str, ...]]] = {
     "XOM": ("0000034088",),
     "DINO": ("0000048039",),
 }
+
+# Non-US companies with more than one SEC filer, settled by hand (SEC route for non-US companies, decision of
+# 2026-11-07: an ambiguous lookup gives no dossier unless listed here). Keys are EODHD tickers.
+#   Rio Tinto: a dual-listed company with two SEC filers, Rio Tinto plc (CIK 863064, London) and Rio Tinto Ltd
+#              (CIK 887028, Sydney); each home listing takes its own company's 20-F facts.
+SEC_FOREIGN_FILER_CIKS: Final[Mapping[str, str]] = {
+    "RIO.LSE": "0000863064",
+    "RIO.AU": "0000887028",
+}

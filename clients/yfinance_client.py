@@ -433,3 +433,22 @@ class YFinanceClient:
             self.logger.warning(f"Yahoo company data unavailable for {yf_ticker}: {type(e).__name__}: {e}")
             return None
         return YahooCompanyData(yahoo_symbol=yf_ticker, info=info, dividends=dividends, splits=splits)
+
+    # Yahoo exchange codes of US listings: NYSE, Nasdaq tiers, NYSE American and Arca, Cboe BZX, OTC markets
+    US_MAIN_EXCHANGES = frozenset({"NYQ", "NMS", "NGM", "NCM", "ASE", "PCX", "BTS"})
+    US_OTC_EXCHANGES = frozenset({"PNK", "OQX", "OQB", "OEM", "OTC"})
+
+    def search_us_listings(self, name: str) -> List[Tuple[str, str, str]]:
+        """
+        US listings Yahoo's search finds for a company name: (symbol, Yahoo exchange code, listed name), on a
+        US exchange or OTC market. An empty list when the search fails.
+        """
+        try:
+            import yfinance as yf
+            quotes = yf.Search(name, max_results=10, news_count=0).quotes
+        except Exception as e:
+            self.logger.warning(f"Yahoo search unavailable for {name!r}: {type(e).__name__}: {e}")
+            return []
+        us = self.US_MAIN_EXCHANGES | self.US_OTC_EXCHANGES
+        return [(str(q["symbol"]), str(q.get("exchange")), str(q.get("longname") or q.get("shortname") or ""))
+                for q in quotes if q.get("symbol") and q.get("exchange") in us]

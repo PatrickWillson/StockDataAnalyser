@@ -61,7 +61,7 @@ class EdgarClient(BaseAPIClient):
         self.user_agent = user_agent
         self.debug = debug
         self.predecessors = dict(SEC_PREDECESSOR_CIKS if predecessors is None else predecessors)
-        self._ticker_index: Optional[Dict[str, str]] = None
+        self._ticker_index: Optional[Dict[str, Tuple[str, str]]] = None
         self._last_request = 0.0
 
     def _get_json(self, url: str) -> Any:
@@ -103,14 +103,18 @@ class EdgarClient(BaseAPIClient):
         Raises:
             TickerNotCoveredError: the ticker is not in the SEC index (not an SEC filer)
         """
-        symbol = sec_symbol(ticker)
+        found = self.filer_for_symbol(sec_symbol(ticker))
+        if found is None:
+            raise TickerNotCoveredError(f"{ticker}: not in the SEC ticker index (not an SEC filer?)")
+        return found[0]
+
+    def filer_for_symbol(self, symbol: str) -> Optional[Tuple[str, str]]:
+        """(10-digit CIK, SEC company name) of a US trading symbol (e.g. 'RIO'), or None if not in the index."""
         if self._ticker_index is None:
             index = self._get_json(SEC_TICKER_INDEX_URL)
-            self._ticker_index = {str(entry["ticker"]).upper(): str(entry["cik_str"]).zfill(10)
+            self._ticker_index = {str(entry["ticker"]).upper(): (str(entry["cik_str"]).zfill(10), str(entry.get("title", "")))
                                   for entry in index.values()}
-        if symbol not in self._ticker_index:
-            raise TickerNotCoveredError(f"{ticker}: not in the SEC ticker index (not an SEC filer?)")
-        return self._ticker_index[symbol]
+        return self._ticker_index.get(symbol.upper().replace('.', '-'))
 
     def predecessor_ciks(self, ticker: str) -> Tuple[str, ...]:
         """CIKs of the filers this company succeeded (config SEC_PREDECESSOR_CIKS), oldest last."""
