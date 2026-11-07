@@ -1056,11 +1056,13 @@ def exhibit_filename(sgml_header: str, exhibit_type: str) -> Optional[str]:
 def filings_missing_from_companyfacts(companyfacts: Mapping[str, Any], submissions: Mapping[str, Any]) -> List[Tuple[str, str, str, str]]:
     """
     (form, period end, filing date, accession) of the latest 10-Ks, 10-Qs, 20-Fs and 40-Fs with XBRL that left no
-    statement fact in companyfacts (cover-page dei facts alone do not count): Seneca's FY2026 10-K, Citigroup's
-    three 2026 10-Qs, Toyota's FY2026 20-F (only its cover-page share count). Newest first, among the latest few.
+    statement figure in companyfacts (net income, revenue, EPS or total assets; a cover page or a stray fact does
+    not count): Seneca's FY2026 10-K, Citigroup's three 2026 10-Qs, Toyota's FY2026 20-F (only its cover-page share
+    count), TSMC's FY2025 20-F (its cover count and a buyback authorisation). Newest first, among the latest few.
     """
-    in_facts = {row.get("accn") for name, taxonomy in companyfacts.get("facts", {}).items() if name != DEI
-                for concept in taxonomy.values() for rows in concept.get("units", {}).values() for row in rows}
+    facts = companyfacts.get("facts", {})
+    in_facts = {row.get("accn") for tag in YEAR_END_TAGS + ASSETS + NET_INCOME
+                for rows in _units(facts, tag).values() for row in rows}
     recent = submissions.get("filings", {}).get("recent", {})
     periodic = [(form, end, filed, accession) for form, end, filed, accession, xbrl in
                 zip(recent.get("form", []), recent.get("reportDate", []), recent.get("filingDate", []),

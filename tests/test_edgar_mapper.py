@@ -1034,3 +1034,14 @@ def test_merging_a_filings_own_xbrl_does_not_repeat_its_companyfacts_rows():
     instance = {"facts": {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [dict(cover)]}}}}}
     merged = merge_companyfacts(facts, [instance])
     assert merged["facts"]["dei"]["EntityCommonStockSharesOutstanding"]["units"]["shares"] == [cover]
+
+
+def test_a_filing_with_only_stray_facts_in_companyfacts_is_missing():
+    # TSMC's FY2025 20-F: companyfacts holds its cover count and a buyback authorisation, no statement figure
+    from clients.edgar_mapper import filings_missing_from_companyfacts
+    facts = {"facts": {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [{"accn": "f25", "end": "2025-12-31", "val": 1}]}}},
+                       "us-gaap": {"StockRepurchaseProgramNumberOfSharesAuthorizedToBeRepurchased": {"units": {"shares": [{"accn": "f25", "end": "2024-06-05", "val": 1}]}}},
+                       "ifrs-full": {"Assets": {"units": {"TWD": [{"accn": "f24", "end": "2024-12-31", "val": 1}]}}}}}
+    recent = {"form": ["20-F", "20-F"], "reportDate": ["2025-12-31", "2024-12-31"], "filingDate": ["2026-04-16", "2025-04-17"],
+              "accessionNumber": ["f25", "f24"], "isXBRL": [1, 1]}
+    assert filings_missing_from_companyfacts(facts, {"filings": {"recent": recent}}) == [("20-F", "2025-12-31", "2026-04-16", "f25")]
