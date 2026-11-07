@@ -155,10 +155,9 @@ class FreeUSFundamentalsSource:
             yahoo = YahooCompanyData(yahoo_symbol=ticker)
         splits = yahoo_mapper.splits(yahoo)
         sic = submissions.get("sic")
-        try:
-            annual = edgar_mapper.annual_data(facts, splits, sic)
-        except ValueError as e:
-            raise TickerNotCoveredError(f"{ticker}: {e}") from e
+        annual = edgar_mapper.annual_data(facts, splits, sic)
+        if annual.currency != STATEMENT_CURRENCY:
+            raise TickerNotCoveredError(f"{ticker}: statements are reported in {annual.currency}; only USD is supported")
         missing = edgar_mapper.filings_missing_from_companyfacts(facts, submissions)
         instances = [(filing, self.edgar.fetch_filing_instance(cik, filing[3])) for filing in missing]
         instances = [(filing, instance) for filing, instance in instances if instance]

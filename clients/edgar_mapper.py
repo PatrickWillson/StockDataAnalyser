@@ -18,7 +18,8 @@ decisions (claude-output scope, CODEBASE_GUIDE §12):
   weighted-average basic shares.
 - Per-share values and share counts are put on today's share basis (GRAHAM_METHODOLOGY §2.4): a value
   filed before a stock split is adjusted by every split after its filing date (splits from yfinance).
-Only USD statements are mapped (foreign SEC filers are a later step).
+- Money is in the filer's reporting currency (reporting_currency): the currency of the latest annual filing's
+  own statements, not a "convenience" translation of the latest year (Toyota's 20-F adds USD beside JPY).
 """
 
 import datetime as dt
@@ -38,7 +39,8 @@ PERIODIC_FORMS = ANNUAL_FORMS | {"10-Q", "10-Q/A"}
 # Duration windows in days: a fiscal year, a quarter, nine months year-to-date
 DURATIONS = {"year": (350, 380), "quarter": (80, 100), "nine_months": (260, 285)}
 GAAP, DEI = "us-gaap", "dei"
-MONEY, PER_SHARE, SHARES = "USD", "USD/shares", "shares"
+# Unit tokens: _Facts resolves MONEY and PER_SHARE to the filer's reporting currency ("USD", "USD/shares")
+MONEY, PER_SHARE, SHARES = "money", "money/shares", "shares"
 
 # Field -> tag chain (first tag with a value for the year wins)
 REVENUE = ("RevenueFromContractWithCustomerExcludingAssessedTax", "RevenueFromContractWithCustomerIncludingAssessedTax",
@@ -158,6 +160,7 @@ class EdgarAnnualData:
     shares_by_year: Mapping[str, float]          # 'YYYY' of the period end -> year-end shares
     latest_cover_shares: float                   # cover-page count of the latest 10-K (0.0 if none)
     notes: Tuple[str, ...]                       # data-quality notes for the dossier
+    currency: str = "USD"                        # reporting currency of every money figure (reporting_currency)
 
 
 def _days(start: str, end: str) -> int:
@@ -177,8 +180,9 @@ class _Facts:
     """Index of annual facts: (taxonomy, tag) -> {period end: [(filed, value)]}."""
 
     def __init__(self, companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, float]] = (),
-                 forms: frozenset = ANNUAL_FORMS):
+                 forms: frozenset = ANNUAL_FORMS, currency: Optional[str] = None):
         self.facts = companyfacts.get("facts", {})
+        self.currency = currency or reporting_currency(companyfacts)
         self.forms = forms
         self.splits = sorted((date, ratio) for date, ratio in splits if ratio and ratio > 0)
         self._cache: Dict[Tuple[str, str, str, str], Dict[str, List[Tuple[str, float]]]] = {}
@@ -199,11 +203,23 @@ class _Facts:
             return value / self.split_factor(filed)
         return value
 
+    def unit_key(self, unit: str) -> str:
+        """The companyfacts unit of a token: MONEY -> e.g. 'USD', PER_SHARE -> 'USD/shares'."""
+        if unit == MONEY:
+            return self.currency
+        if unit == PER_SHARE:
+            return f"{self.currency}/shares"
+        return unit
+
+    def rows(self, tag: str, unit: str, taxonomy: str = GAAP) -> List[Mapping[str, Any]]:
+        """Every filed row of `tag` in `unit` (a token), all forms."""
+        return self.facts.get(taxonomy, {}).get(tag, {}).get("units", {}).get(self.unit_key(unit), [])
+
     def series(self, tag: str, unit: str, kind: str, taxonomy: str = GAAP) -> Dict[str, List[Tuple[str, float]]]:
         key = (taxonomy, tag, unit, kind)
         if key not in self._cache:
             by_end: Dict[str, List[Tuple[str, float]]] = {}
-            for row in self.facts.get(taxonomy, {}).get(tag, {}).get("units", {}).get(unit, []):
+            for row in self.rows(tag, unit, taxonomy):
                 if row.get("form") not in self.forms:
                     continue
                 if kind == "instant":
@@ -257,8 +273,37 @@ class _Facts:
         changed = any(abs(v - first) > tolerance for v in adjusted)
         return Fact(value=float(latest), first_value=float(first), tag=tag, restated=changed)
 
-    def currencies(self, tag: str) -> List[str]:
-        return list(self.facts.get(GAAP, {}).get(tag, {}).get("units", {}).keys())
+
+def _is_currency(unit: str) -> bool:
+    return "/" not in unit and unit not in (SHARES, "pure")
+
+
+def reporting_currency(companyfacts: Mapping[str, Any]) -> str:
+    """
+    The currency a filer reports its statements in: of the units its latest annual filing uses for income and
+    total assets, the one carrying the most period ends. A convenience translation covers only the latest year
+    (Toyota's 20-F for FY2013 adds USD beside JPY), the statements themselves carry comparatives. 'USD' when the
+    facts hold no annual figures.
+    """
+    ends: Dict[Tuple[str, str], set] = {}
+    filed: Dict[str, str] = {}
+    for tag in YEAR_END_TAGS + ASSETS:
+        for unit, rows in companyfacts.get("facts", {}).get(GAAP, {}).get(tag, {}).get("units", {}).items():
+            if not _is_currency(unit):
+                continue
+            for row in rows:
+                filing = row.get("accn") or row.get("filed")      # one annual filing
+                if row.get("form") in ANNUAL_FORMS and filing:
+                    ends.setdefault((filing, unit), set()).add(row["end"])
+                    filed[filing] = max(filed.get(filing, ""), row.get("filed", ""))
+    if not filed:
+        return "USD"
+    latest = max(filed, key=lambda filing: (filed[filing], filing))
+    totals: Dict[str, int] = {}
+    for (_, unit), periods in ends.items():
+        totals[unit] = totals.get(unit, 0) + len(periods)
+    candidates = [(len(periods), totals[unit], unit) for (filing, unit), periods in ends.items() if filing == latest]
+    return max(candidates)[2]
 
 
 def _shown(value: float, unit: str) -> str:
@@ -316,7 +361,7 @@ def filer_fiscal_years(facts: _Facts) -> Dict[str, int]:
     newest: Dict[str, Tuple[str, int]] = {}
     for tag in YEAR_END_TAGS:
         for unit in (MONEY, PER_SHARE):
-            for row in facts.facts.get(GAAP, {}).get(tag, {}).get("units", {}).get(unit, []):
+            for row in facts.rows(tag, unit):
                 if _annual(row) and _lasts(row, "year") and row.get("fy") and row.get("accn"):
                     current = newest.get(row["accn"])
                     if current is None or row["end"] > current[0]:
@@ -750,17 +795,20 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         splits: (date 'YYYY-MM-DD', shares after / shares before) for every stock split, e.g. yfinance's
         sic: the company's SIC code (submissions); utilities take `Revenues` as revenue
 
-    Raises:
-        ValueError: the company does not report in USD (not supported yet)
+    Money figures are in the filer's reporting currency (EdgarAnnualData.currency); years filed only in another
+    currency (a filer that changed its reporting currency) are left out and listed in the notes.
     """
     facts = _Facts(companyfacts, splits)
     utility = bool(sic) and str(sic).isdigit() and int(sic) in UTILITY_SIC
     ends = fiscal_year_ends(facts)
-    if not ends:
-        currencies = sorted({c for tag in YEAR_END_TAGS for c in facts.currencies(tag)} - {PER_SHARE})
-        if currencies and MONEY not in currencies:
-            raise ValueError(f"statements are reported in {', '.join(currencies)}; only USD is supported")
     notes = _Notes()
+    other_years = sorted({fiscal_year(row["end"]) for tag in YEAR_END_TAGS
+                          for unit, rows in facts.facts.get(GAAP, {}).get(tag, {}).get("units", {}).items()
+                          if _is_currency(unit) and unit != facts.currency
+                          for row in rows if _annual(row) and _lasts(row, "year") and row["end"] not in ends})
+    if other_years:
+        notes.other.append(f"SEC EDGAR: statements are in {facts.currency}; years filed only in another currency "
+                           f"are not used: FY{', FY'.join(other_years)}")
     balance, income, dividends, operating = [], [], {}, {}
     for end in ends:
         income.append(_income_row(facts, end, notes, utility))
@@ -807,6 +855,7 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         shares_by_year=shares_by_year,
         latest_cover_shares=latest_cover or 0.0,
         notes=notes.render(),
+        currency=facts.currency,
     )
 
 
@@ -835,7 +884,7 @@ def _fiscal_q4(facts: _Facts, year_end: str, chain: Sequence[str], unit: str,
         return None
     for tag in ([year.tag] + [t for t in chain if t != year.tag]):
         for nine_end, values in facts.series(tag, unit, "nine_months").items():
-            rows = [r for r in facts.facts.get(GAAP, {}).get(tag, {}).get("units", {}).get(unit, [])
+            rows = [r for r in facts.rows(tag, unit)
                     if r["end"] == nine_end and r.get("start") == start and r.get("form") in facts.forms]
             if rows and nine_end < year_end:
                 latest = max(rows, key=lambda r: r["filed"])
@@ -850,7 +899,7 @@ def _year_start(facts: _Facts, year_end: str) -> Optional[str]:
     """
     for tag in YEAR_END_TAGS:
         for unit in (MONEY, PER_SHARE):
-            for row in facts.facts.get(GAAP, {}).get(tag, {}).get("units", {}).get(unit, []):
+            for row in facts.rows(tag, unit):
                 if row["end"] == year_end and row.get("form") in facts.forms and _lasts(row, "year"):
                     return row["start"]
     return None

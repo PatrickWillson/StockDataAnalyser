@@ -117,6 +117,15 @@ def test_filer_without_xbrl_statements_is_not_covered():
         source(edgar=EmptyEdgar()).fetch_fundamentals("SO.US")
 
 
+def test_non_usd_filer_is_not_covered_by_the_us_route():
+    class EuroEdgar(FakeEdgar):
+        def fetch_company_facts(self, cik):
+            return {"facts": {"us-gaap": {"NetIncomeLoss": {"units": {"EUR": [
+                {"start": "2024-01-01", "end": "2024-12-31", "val": 10.0, "filed": "2025-03-01", "form": "10-K"}]}}}}}
+    with pytest.raises(TickerNotCoveredError, match="reported in EUR; only USD"):
+        source(edgar=EuroEdgar()).fetch_fundamentals("SO.US")
+
+
 def test_router_sends_us_tickers_and_rejects_other_markets():
     src = source()
     router = RoutingFundamentalsSource({"us": src}, name="free")

@@ -173,10 +173,31 @@ def test_latest_filed_tag_wins_and_ties_go_to_chain_order():
     assert revenue["2021-12-31"] == 110.0        # same filing: sales tag first (D-F3)
 
 
-def test_non_usd_filer_is_rejected():
+def test_non_usd_filer_is_mapped_in_its_reporting_currency():
     facts = _facts({"NetIncomeLoss": [("2020-01-01", "2020-12-31", 10.0, "2021-02-01", "10-K", "EUR")]})
-    with pytest.raises(ValueError, match="only USD"):
-        annual_data(facts)
+    data = annual_data(facts)
+    assert data.currency == "EUR"
+    assert [r.net_income for r in data.income_statements] == [10.0]
+
+
+def test_convenience_translation_of_the_latest_year_is_not_the_reporting_currency():
+    # Toyota-style 20-F: JPY statements with comparatives, plus a USD translation of the latest year only
+    facts = _facts({"NetIncomeLoss": [("2011-04-01", "2012-03-31", 283.0, "2013-06-25", "10-K", "JPY"),
+                                      ("2012-04-01", "2013-03-31", 962.0, "2013-06-25", "10-K", "JPY"),
+                                      ("2012-04-01", "2013-03-31", 10.2, "2013-06-25", "10-K", "USD")]})
+    data = annual_data(facts)
+    assert data.currency == "JPY"
+    assert {r.period_end: r.net_income for r in data.income_statements} == {"2013-03-31": 962.0, "2012-03-31": 283.0}
+
+
+def test_years_filed_only_in_an_earlier_currency_are_noted():
+    facts = _facts({"NetIncomeLoss": [("2019-01-01", "2019-12-31", 8.0, "2020-02-01", "10-K", "GBP"),
+                                      ("2020-01-01", "2020-12-31", 10.0, "2021-02-01", "10-K", "USD"),
+                                      ("2021-01-01", "2021-12-31", 11.0, "2022-02-01", "10-K", "USD")]})
+    data = annual_data(facts)
+    assert data.currency == "USD"
+    assert [r.period_end for r in data.income_statements] == ["2021-12-31", "2020-12-31"]
+    assert any("years filed only in another currency are not used: FY2019" in n for n in data.notes)
 
 
 def test_quarterly_and_partial_year_facts_are_not_annual():
