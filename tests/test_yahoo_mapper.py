@@ -95,8 +95,6 @@ def test_client_returns_none_on_failure(monkeypatch):
 
 
 def test_search_us_listings_keeps_us_exchanges_only(monkeypatch):
-    from clients.yfinance_client import YFinanceClient
-
     class _Search:
         def __init__(self, query, max_results=10, news_count=0):
             self.quotes = [{"symbol": "BP", "exchange": "NYQ", "longname": "BP p.l.c."},
@@ -110,12 +108,27 @@ def test_search_us_listings_keeps_us_exchanges_only(monkeypatch):
     assert YFinanceClient().search_us_listings("BP p.l.c.") == [("BP", "NYQ", "BP p.l.c."), ("BPAQF", "PNK", "BP p.l.c.")]
 
 
-def test_search_us_listings_is_empty_when_yahoo_fails(monkeypatch):
-    from clients.yfinance_client import YFinanceClient
+def test_search_us_listings_retries_then_reports_a_failed_search_as_none(monkeypatch):
+    calls = []
 
     class _YF:
         def Search(*args, **kwargs):
+            calls.append(1)
             raise RuntimeError("rate limited")
 
     monkeypatch.setitem(sys.modules, "yfinance", _YF)
-    assert YFinanceClient().search_us_listings("BP p.l.c.") == []
+    monkeypatch.setattr(YFinanceClient, "SEARCH_RETRY_SECONDS", 0.0)
+    assert YFinanceClient().search_us_listings("BP p.l.c.") is None
+    assert len(calls) == 2
+
+
+def test_search_us_listings_is_empty_when_nothing_is_listed_in_the_us(monkeypatch):
+    class _Search:
+        def __init__(self, query, max_results=10, news_count=0):
+            self.quotes = [{"symbol": "YU.L", "exchange": "LSE", "longname": "Yü Group PLC"}]
+
+    class _YF:
+        Search = _Search
+
+    monkeypatch.setitem(sys.modules, "yfinance", _YF)
+    assert YFinanceClient().search_us_listings("Yü Group PLC") == []

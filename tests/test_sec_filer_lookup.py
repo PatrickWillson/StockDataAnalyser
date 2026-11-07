@@ -90,3 +90,12 @@ def test_latest_annual_report_takes_the_newest_annual_form():
     subs = submissions(("6-K", "2026-08-01"), ("40-F", "2026-03-01"), ("20-F", "2024-03-01"))
     assert latest_annual_report(subs) == ("40-F", "2026-03-01")
     assert latest_annual_report(submissions(("6-K", "2026-08-01"))) is None
+
+
+def test_a_failed_yahoo_search_is_not_reported_as_no_filer():
+    class FailingYahoo:
+        def search_us_listings(self, name):
+            return None
+    lookup = SecFilerLookup(FakeEdgar({}, {}), FailingYahoo(), overrides={}, today=TODAY)
+    with pytest.raises(TickerNotCoveredError, match="search failed.*try again"):
+        lookup.resolve("2330.TW", "Taiwan Semiconductor Manufacturing Company Limited")

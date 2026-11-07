@@ -68,7 +68,7 @@ class SecFilerLookup:
         """
         Args:
             edgar: has filer_for_symbol(symbol) -> (cik, name) | None and fetch_submissions(cik)
-            yahoo: has search_us_listings(name) -> [(symbol, exchange, name)]
+            yahoo: has search_us_listings(name) -> [(symbol, exchange, name)], or None when the search failed
             overrides: EODHD ticker -> CIK (default: config SEC_FOREIGN_FILER_CIKS)
         """
         self.edgar = edgar
@@ -104,7 +104,11 @@ class SecFilerLookup:
             raise TickerNotCoveredError(f"{ticker}: no company name from Yahoo Finance to look up an SEC filer")
         candidates: Dict[str, List[str]] = {}
         names: Dict[str, str] = {}
-        for symbol, _, listed_name in self.yahoo.search_us_listings(home_name):
+        listings = self.yahoo.search_us_listings(home_name)
+        if listings is None:
+            raise TickerNotCoveredError(f"{ticker}: Yahoo Finance search failed, so the SEC filer could not be looked "
+                                        "up; try again later")
+        for symbol, _, listed_name in listings:
             if not names_match(home_name, listed_name):
                 continue
             found = self.edgar.filer_for_symbol(symbol)
