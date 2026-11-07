@@ -1038,7 +1038,11 @@ def merge_companyfacts(successor: Mapping[str, Any], predecessors: Sequence[Mapp
             for tag, concept in concepts.items():
                 units = target.setdefault(tag, {"units": {}})["units"]
                 for unit, rows in concept.get("units", {}).items():
-                    units.setdefault(unit, []).extend(rows)
+                    pooled = units.setdefault(unit, [])
+                    # A filing read from its own XBRL repeats what companyfacts already has of it (Mesoblast's FY2026
+                    # 20-F: the cover-page count, which would otherwise be added twice as if two share classes)
+                    seen = {(r.get("accn"), r.get("start"), r.get("end"), r.get("val")) for r in pooled}
+                    pooled.extend(r for r in rows if (r.get("accn"), r.get("start"), r.get("end"), r.get("val")) not in seen)
     return merged
 
 

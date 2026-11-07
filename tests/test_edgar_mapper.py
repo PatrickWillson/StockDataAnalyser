@@ -1024,3 +1024,13 @@ def test_ifrs_shares_issued_without_a_treasury_count_give_way_to_the_average():
     data = annual_data(facts)
     assert data.balance_sheets[0].shares_outstanding == 1_167.0e6                  # SAP FY2025-like
     assert any("IFRS shares issued include treasury shares" in n for n in data.notes)
+
+
+def test_merging_a_filings_own_xbrl_does_not_repeat_its_companyfacts_rows():
+    # Mesoblast FY2026: companyfacts holds the 20-F's cover-page count, and the filing's XBRL holds it again
+    from clients.edgar_mapper import merge_companyfacts
+    cover = {"accn": "f26", "end": "2026-08-20", "val": 1_296.9e6, "filed": "2026-08-27", "form": "20-F"}
+    facts = {"facts": {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [dict(cover)]}}}}}
+    instance = {"facts": {"dei": {"EntityCommonStockSharesOutstanding": {"units": {"shares": [dict(cover)]}}}}}
+    merged = merge_companyfacts(facts, [instance])
+    assert merged["facts"]["dei"]["EntityCommonStockSharesOutstanding"]["units"]["shares"] == [cover]
