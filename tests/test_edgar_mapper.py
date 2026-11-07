@@ -959,3 +959,33 @@ def test_current_portion_above_the_borrowings_total_leaves_the_total_whole():
     assert balance.long_term_debt == 30.0
     assert any("used whole (ifrs-full:CurrentPortionOfLongtermBorrowings exceeds it)" in n
                for n in annual_data(facts).notes)
+
+
+def _eps_case(eps, net_income, average):
+    return _ifrs({"ProfitLossAttributableToOwnersOfParent": [(*Y24, net_income, FILED, "ZAR")],
+                  "BasicEarningsLossPerShare": [(*Y24, eps, FILED, "ZAR/shares")],
+                  "WeightedAverageShares": [(*Y24, average, FILED, "shares")],
+                  "Assets": [(None, "2024-12-31", 5000.0, FILED, "ZAR")]})
+
+
+def test_eps_filed_in_cents_is_divided_back():
+    data = annual_data(_eps_case(11.8, 1_000_000.0, 8_474_576.0))      # DRDGOLD FY2019: 11.8 cents tagged as rand
+    assert data.income_statements[0].eps == pytest.approx(0.118)
+    assert any("filed at 100x net income / average shares" in n for n in data.notes)
+
+
+def test_average_shares_in_thousands_leave_the_eps_alone():
+    data = annual_data(_eps_case(1.20, 1_200_000.0, 1_000.0))           # shares tagged in thousands
+    assert data.income_statements[0].eps == 1.20
+    assert not any("EPS" in n for n in data.notes)
+
+
+def test_other_eps_gaps_are_noted_and_the_filed_figure_kept():
+    data = annual_data(_eps_case(2.15, 4_814_000.0, 1_000_000.0))
+    assert data.income_statements[0].eps == 2.15
+    assert any("filed EPS differs by more than 10%" in n and "FY2024 2.15 vs 4.81" in n for n in data.notes)
+
+
+def test_coarsely_rounded_eps_is_not_checked():
+    data = annual_data(_eps_case(0.01, 6_000.0, 1_000_000.0))           # Ericsson FY2024: 0.01 SEK
+    assert not any("EPS" in n for n in data.notes)

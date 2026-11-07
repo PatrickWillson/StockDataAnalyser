@@ -66,6 +66,10 @@ COMMON_EARNINGS_MAX_GAP = 1 / 3
 COMMON_EARNINGS_MAX_EXCESS = 0.02
 PREFERRED_GAP_TOLERANCE = 0.10
 EPS_CHECK_TOLERANCE = 0.05
+# Filed EPS against net income / weighted-average shares (_checked_eps): an exact 100x or 1,000x is a filer's
+# scale error (DRDGOLD FY2018-19: 11.8 cents tagged as rand); any other gap over EPS_GAP is noted. EPS below
+# EPS_MIN_CHECKED is too coarsely rounded to compare (Ericsson FY2024: 0.01 SEK)
+EPS_SCALE_ERRORS, EPS_SCALE_TOLERANCE, EPS_GAP, EPS_MIN_CHECKED = (100, 1000), 0.05, 0.10, 0.10
 MIN_SALES_SHARE_OF_REVENUES = 0.75   # Berkshire 67-70%: revenue tag; Inogen 80-85%: sales
 # Consolidated profit incl. minority interests: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest
 PROFIT_LOSS = ("ProfitLoss", "ifrs-full:ProfitLoss")
@@ -821,6 +825,37 @@ def _income_row(facts: _Facts, end: str, notes: _Notes, utility: bool = False) -
     )
 
 
+def _checked_eps(facts: _Facts, income: List[IncomeStatementRow], notes: _Notes) -> List[IncomeStatementRow]:
+    """
+    Each year's filed EPS against net income / the year's weighted-average shares. EPS exactly 100x or 1,000x
+    the implied figure was tagged at the wrong scale and is divided back (noted); 1/100 or 1/1,000 of it means the
+    average shares are in thousands, and the EPS stands; another gap over EPS_GAP is noted and the filed figure
+    kept (a share class, a two-class allocation or a share-count tag problem).
+    """
+    checked, gaps = [], []
+    for row in income:
+        average = facts.get(WEIGHTED_SHARES, row.period_end, SHARES, "year")
+        if not (row.eps and row.net_income and average and average.value) or abs(row.eps) < EPS_MIN_CHECKED:
+            checked.append(row)
+            continue
+        implied = row.net_income / average.value
+        ratio = row.eps / implied
+        scale = next((s for s in EPS_SCALE_ERRORS if abs(ratio / s - 1) <= EPS_SCALE_TOLERANCE), None)
+        if scale:
+            notes.derive("EPS", f"filed at {scale:,}x net income / average shares (a scale error); divided by {scale:,}",
+                         row.period_end)
+            row = replace(row, eps=row.eps / scale)
+        elif any(abs(ratio * s - 1) <= EPS_SCALE_TOLERANCE for s in EPS_SCALE_ERRORS):
+            pass   # the average shares are tagged in thousands (Seneca FY2018), not the EPS: the EPS stands
+        elif abs(ratio - 1) > EPS_GAP:
+            gaps.append(f"FY{row.period_end[:4]} {row.eps:,.2f} vs {implied:,.2f}")
+        checked.append(row)
+    if gaps:
+        notes.other.append("SEC EDGAR: filed EPS differs by more than 10% from net income / weighted-average shares "
+                           "(filed figure used): " + "; ".join(gaps))
+    return checked
+
+
 def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, float]] = (),
                 sic: Optional[str] = None) -> EdgarAnnualData:
     """
@@ -872,6 +907,7 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
             in_thousands = typical is not None and _in_thousands(average.value, typical)
             shares_by_year[fiscal_year(end)] = average.value * 1000 if in_thousands else average.value
             notes.derive("share count", "weighted-average shares of the year (no balance sheet in the SEC data)", end)
+    income = _checked_eps(facts, income, notes)
     if facts.scale_errors:
         notes.other.append("SEC EDGAR: figures a later filing tagged in thousands or millions as units were ignored: "
                            + ", ".join(sorted(facts.scale_errors)))
