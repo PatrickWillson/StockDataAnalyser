@@ -1,7 +1,9 @@
 """
 SEC EDGAR XBRL companyfacts -> annual statement rows for CompanyFundamentals (free resolution path).
 
-The only code that knows US-GAAP tag names. Choices follow docs/GRAHAM_METHODOLOGY.md and the free-path
+The only code that knows US-GAAP and IFRS tag names. IFRS tags (foreign filers' 20-F / 40-F) are written
+"ifrs-full:Tag" and sit at the end of each field's chain, so a US filer's mapping is unchanged; a filer that
+moved from US GAAP to IFRS (Toyota, Sony) has each year from its latest filing, as for any tag change. Choices follow docs/GRAHAM_METHODOLOGY.md and the free-path
 decisions (claude-output scope, CODEBASE_GUIDE §12):
 - Annual figures come from annual filings (10-K, 10-K/A, 10-KT): durations of 350-380 days, instants at
   the fiscal-year end; each fiscal year is keyed by its actual period-end date (52/53-week years).
@@ -34,21 +36,26 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 from core.fundamentals import BalanceSheetRow, IncomeStatementRow
 from core.history import fiscal_year
 
-ANNUAL_FORMS = frozenset({"10-K", "10-K/A", "10-KT", "10-KT/A"})
+ANNUAL_FORMS = frozenset({"10-K", "10-K/A", "10-KT", "10-KT/A", "20-F", "20-F/A", "40-F", "40-F/A"})
 PERIODIC_FORMS = ANNUAL_FORMS | {"10-Q", "10-Q/A"}
 # Duration windows in days: a fiscal year, a quarter, nine months year-to-date
 DURATIONS = {"year": (350, 380), "quarter": (80, 100), "nine_months": (260, 285)}
-GAAP, DEI = "us-gaap", "dei"
+GAAP, DEI, IFRS = "us-gaap", "dei", "ifrs-full"
 # Unit tokens: _Facts resolves MONEY and PER_SHARE to the filer's reporting currency ("USD", "USD/shares")
 MONEY, PER_SHARE, SHARES = "money", "money/shares", "shares"
 
 # Field -> tag chain (first tag with a value for the year wins)
 REVENUE = ("RevenueFromContractWithCustomerExcludingAssessedTax", "RevenueFromContractWithCustomerIncludingAssessedTax",
            "SalesRevenueNet", "SalesRevenueGoodsNet", "Revenues", "RevenuesNetOfInterestExpense",
-           "RegulatedAndUnregulatedOperatingRevenue", "RegulatedOperatingRevenue")   # water and electric utilities
+           "RegulatedAndUnregulatedOperatingRevenue", "RegulatedOperatingRevenue",   # water and electric utilities
+           "ifrs-full:Revenue", "ifrs-full:RevenueFromContractsWithCustomers", "ifrs-full:RevenueFromSaleOfGoods")
 # Banks with no revenue tag: net revenue, as JPMorgan's RevenuesNetOfInterestExpense
 NET_INTEREST_INCOME, NONINTEREST_INCOME = ("InterestIncomeExpenseNet", "InterestRevenueExpenseNet"), ("NoninterestIncome",)
-NET_INCOME = ("NetIncomeLossAvailableToCommonStockholdersBasic", "NetIncomeLoss")
+# IFRS: profit for the ordinary shareholders (after preference and other equity holders: HSBC) before the
+# owners of the parent as a whole
+NET_INCOME = ("NetIncomeLossAvailableToCommonStockholdersBasic", "NetIncomeLoss",
+              "ifrs-full:ProfitLossAttributableToOrdinaryEquityHoldersOfParentEntity",
+              "ifrs-full:ProfitLossAttributableToOwnersOfParent")
 AVAILABLE_TO_COMMON = NET_INCOME[0]
 PREFERRED_DIVIDENDS = ("PreferredStockDividendsAndOtherAdjustments", "PreferredStockDividendsIncomeStatementImpact",
                        "DividendsPreferredStock")
@@ -61,18 +68,19 @@ PREFERRED_GAP_TOLERANCE = 0.10
 EPS_CHECK_TOLERANCE = 0.05
 MIN_SALES_SHARE_OF_REVENUES = 0.75   # Berkshire 67-70%: revenue tag; Inogen 80-85%: sales
 # Consolidated profit incl. minority interests: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest
-PROFIT_LOSS, NCI_INCOME = ("ProfitLoss",), ("NetIncomeLossAttributableToNoncontrollingInterest",)
+PROFIT_LOSS = ("ProfitLoss", "ifrs-full:ProfitLoss")
+NCI_INCOME = ("NetIncomeLossAttributableToNoncontrollingInterest", "ifrs-full:ProfitLossAttributableToNoncontrollingInterests")
 # A minority balance below this share of ProfitLoss cannot move it materially (Ethan Allen FY2025: -85K of 51.6M)
 MINORITY_IMMATERIAL = 0.01
-EPS = ("EarningsPerShareBasic", "EarningsPerShareBasicAndDiluted")
-EQUITY = ("StockholdersEquity",)
-EQUITY_INCL_NCI = ("StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest",)
+EPS = ("EarningsPerShareBasic", "EarningsPerShareBasicAndDiluted", "ifrs-full:BasicEarningsLossPerShare")
+EQUITY = ("StockholdersEquity", "ifrs-full:EquityAttributableToOwnersOfParent")
+EQUITY_INCL_NCI = ("StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest", "ifrs-full:Equity")
 # Water utilities' balance sheets: total capitalization = equity (with preferred) + long-term debt
 CAPITALIZATION = ("CapitalizationLongtermDebtAndEquity",)
-MINORITY = ("MinorityInterest",)
+MINORITY = ("MinorityInterest", "ifrs-full:NoncontrollingInterests")
 TEMPORARY_EQUITY = ("TemporaryEquityCarryingAmountAttributableToParent", "RedeemableNoncontrollingInterestEquityCarryingAmount")
-GOODWILL = ("Goodwill",)
-INTANGIBLES = ("IntangibleAssetsNetExcludingGoodwill",)
+GOODWILL = ("Goodwill", "ifrs-full:Goodwill")
+INTANGIBLES = ("IntangibleAssetsNetExcludingGoodwill", "ifrs-full:IntangibleAssetsOtherThanGoodwill")
 FINITE_INTANGIBLES, INDEFINITE_INTANGIBLES = ("FiniteLivedIntangibleAssetsNet",), ("IndefiniteLivedIntangibleAssetsExcludingGoodwill",)
 # Indefinite-lived intangibles tagged by kind (Coca-Cola: trademarks, bottlers' franchise rights)
 NAMED_INDEFINITE_INTANGIBLES = ("IndefiniteLivedTrademarks", "IndefiniteLivedFranchiseRights",
@@ -80,11 +88,17 @@ NAMED_INDEFINITE_INTANGIBLES = ("IndefiniteLivedTrademarks", "IndefiniteLivedFra
                                 "IndefiniteLivedContractualRights")
 OTHER_INTANGIBLES = ("OtherIntangibleAssetsNet",)                 # finite + other indefinite, as one line
 OTHER_INDEFINITE_INTANGIBLES = ("OtherIndefiniteLivedIntangibleAssets",)
-CURRENT_ASSETS, CURRENT_LIABILITIES = ("AssetsCurrent",), ("LiabilitiesCurrent",)
-LIABILITIES, ASSETS, LIABILITIES_AND_EQUITY = ("Liabilities",), ("Assets",), ("LiabilitiesAndStockholdersEquity",)
-LONG_TERM_DEBT = ("LongTermDebtNoncurrent", "LongTermDebtAndCapitalLeaseObligations")
+CURRENT_ASSETS = ("AssetsCurrent", "ifrs-full:CurrentAssets")
+CURRENT_LIABILITIES = ("LiabilitiesCurrent", "ifrs-full:CurrentLiabilities")
+LIABILITIES, ASSETS = ("Liabilities", "ifrs-full:Liabilities"), ("Assets", "ifrs-full:Assets")
+LIABILITIES_AND_EQUITY = ("LiabilitiesAndStockholdersEquity", "ifrs-full:EquityAndLiabilities")
+# IFRS non-current borrowings: the non-current portion, else the total less its current portion (lease
+# liabilities are a separate line under IFRS 16 and, as on the US path, not included)
+LONG_TERM_DEBT = ("LongTermDebtNoncurrent", "LongTermDebtAndCapitalLeaseObligations",
+                  "ifrs-full:NoncurrentPortionOfNoncurrentBorrowings")
 LONG_TERM_DEBT_TOTAL = ("LongTermDebt", "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
-                        "NotesAndLoansPayable", "DebtAndCapitalLeaseObligations")   # homebuilders: KB Home, Century
+                        "NotesAndLoansPayable", "DebtAndCapitalLeaseObligations",   # homebuilders: KB Home, Century
+                        "ifrs-full:LongtermBorrowings")
 # ^ incl. the current portion; banks report only these (JPMorgan: the second)
 # Non-current debt tagged by kind when no non-current total is (Lifetime Brands: term loan + revolver; Village
 # Super Market: notes + other). Some filers misuse "other" (Lifetime FY2024: 4,108K of other long-term
@@ -98,10 +112,12 @@ CONVERTIBLE_NOTES = ("ConvertibleLongTermNotesPayable", "ConvertibleNotesPayable
 # Outside LongTermDebt at some banks (Arrow Financial: 20,000K beside term advances), inside it at others
 # (JPMorgan), and the tags do not say which: noted, never added
 JUNIOR_SUBORDINATED = ("JuniorSubordinatedDebentureOwedToUnconsolidatedSubsidiaryTrust",)
-DEBT_CURRENT = ("DebtCurrent",)
-SHORT_BORROWINGS, COMMERCIAL_PAPER = ("ShortTermBorrowings",), ("CommercialPaper",)
-LTD_CURRENT = ("LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCurrent", "SeniorNotesCurrent")
-INVENTORY = ("InventoryNet",)
+DEBT_CURRENT = ("DebtCurrent", "ifrs-full:CurrentBorrowingsAndCurrentPortionOfNoncurrentBorrowings")
+SHORT_BORROWINGS = ("ShortTermBorrowings", "ifrs-full:ShorttermBorrowings")
+COMMERCIAL_PAPER = ("CommercialPaper",)
+LTD_CURRENT = ("LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCurrent", "SeniorNotesCurrent",
+               "ifrs-full:CurrentPortionOfLongtermBorrowings")
+INVENTORY = ("InventoryNet", "ifrs-full:Inventories")
 UTILITY_INVENTORY = ("EnergyRelatedInventoryNaturalGasInStorage", "EnergyRelatedInventoryOtherFossilFuel",
                      "EnergyRelatedInventoryCoal", "EnergyRelatedInventoryPropaneGas", "OtherInventorySupplies")
 # Energy companies tagging a total (ExxonMobil: crude oil, products and merchandise + materials and supplies).
@@ -116,19 +132,26 @@ SUPPLIES_ONLY_INVENTORY = ("InventoryRawMaterialsAndSupplies", "PublicUtilitiesI
 PREFERRED = ("PreferredStockIncludingAdditionalPaidInCapitalNetOfDiscount", "PreferredStockIncludingAdditionalPaidInCapital",
              "PreferredStockValue", "PreferredStockValueOutstanding")
 PREFERRED_LIQUIDATION = ("PreferredStockLiquidationPreferenceValue",)
-SHARES_OUTSTANDING = ("CommonStockSharesOutstanding",)
-SHARES_ISSUED, TREASURY_SHARES = ("CommonStockSharesIssued",), ("TreasuryStockCommonShares", "TreasuryStockShares")
+SHARES_OUTSTANDING = ("CommonStockSharesOutstanding", "ifrs-full:NumberOfSharesOutstanding")
+SHARES_ISSUED = ("CommonStockSharesIssued", "ifrs-full:NumberOfSharesIssued")
+TREASURY_SHARES = ("TreasuryStockCommonShares", "TreasuryStockShares")
 COVER_SHARES = ("EntityCommonStockSharesOutstanding",)
 CLASS_AXIS = "StatementClassOfStockAxis"
-WEIGHTED_SHARES = ("WeightedAverageNumberOfSharesOutstandingBasic",)
+WEIGHTED_SHARES = ("WeightedAverageNumberOfSharesOutstandingBasic", "ifrs-full:WeightedAverageShares")
 UTILITY_SIC = range(4900, 5000)
-DIVIDENDS_PAID = ("PaymentsOfDividendsCommonStock", "PaymentsOfDividends", "PaymentsOfOrdinaryDividends")
+# IFRS: dividends to the parent's shareholders before totals that include minority shareholders
+DIVIDENDS_PAID = ("PaymentsOfDividendsCommonStock", "PaymentsOfDividends", "PaymentsOfOrdinaryDividends",
+                  "ifrs-full:DividendsPaidToEquityHoldersOfParentClassifiedAsFinancingActivities",
+                  "ifrs-full:DividendsPaidOrdinaryShares", "ifrs-full:DividendsPaidClassifiedAsFinancingActivities",
+                  "ifrs-full:DividendsPaidClassifiedAsOperatingActivities", "ifrs-full:DividendsPaid")
 DIVIDENDS_DECLARED = ("CommonStockDividendsPerShareDeclared", "CommonStockDividendsPerShareCashPaid")
 DIVIDEND_CHECK_YEARS, DIVIDEND_CHECK_GAP = 3, 0.3
 OPERATING_CASH_FLOW = ("NetCashProvidedByUsedInOperatingActivities",
-                       "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations")
+                       "NetCashProvidedByUsedInOperatingActivitiesContinuingOperations",
+                       "ifrs-full:CashFlowsFromUsedInOperatingActivities")
 YEAR_END_TAGS = ("NetIncomeLoss", "ProfitLoss", "Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax",
-                 "EarningsPerShareBasic")
+                 "EarningsPerShareBasic", "ifrs-full:ProfitLoss", "ifrs-full:ProfitLossAttributableToOwnersOfParent",
+                 "ifrs-full:Revenue", "ifrs-full:BasicEarningsLossPerShare")
 
 MIN_DAYS_BETWEEN_YEAR_ENDS = 300
 SAME_LINE_SHARE = 0.9
@@ -212,8 +235,8 @@ class _Facts:
         return unit
 
     def rows(self, tag: str, unit: str, taxonomy: str = GAAP) -> List[Mapping[str, Any]]:
-        """Every filed row of `tag` in `unit` (a token), all forms."""
-        return self.facts.get(taxonomy, {}).get(tag, {}).get("units", {}).get(self.unit_key(unit), [])
+        """Every filed row of `tag` ("Tag" in `taxonomy`, or "taxonomy:Tag") in `unit` (a token), all forms."""
+        return _units(self.facts, tag, taxonomy).get(self.unit_key(unit), [])
 
     def series(self, tag: str, unit: str, kind: str, taxonomy: str = GAAP) -> Dict[str, List[Tuple[str, float]]]:
         key = (taxonomy, tag, unit, kind)
@@ -274,6 +297,13 @@ class _Facts:
         return Fact(value=float(latest), first_value=float(first), tag=tag, restated=changed)
 
 
+def _units(facts: Mapping[str, Any], tag: str, taxonomy: str = GAAP) -> Mapping[str, List[Mapping[str, Any]]]:
+    """unit -> rows of a tag in companyfacts' "facts"; "ifrs-full:Revenue" names its taxonomy."""
+    if ":" in tag:
+        taxonomy, tag = tag.split(":", 1)
+    return facts.get(taxonomy, {}).get(tag, {}).get("units", {})
+
+
 def _is_currency(unit: str) -> bool:
     return "/" not in unit and unit not in (SHARES, "pure")
 
@@ -288,7 +318,7 @@ def reporting_currency(companyfacts: Mapping[str, Any]) -> str:
     ends: Dict[Tuple[str, str], set] = {}
     filed: Dict[str, str] = {}
     for tag in YEAR_END_TAGS + ASSETS:
-        for unit, rows in companyfacts.get("facts", {}).get(GAAP, {}).get(tag, {}).get("units", {}).items():
+        for unit, rows in _units(companyfacts.get("facts", {}), tag).items():
             if not _is_currency(unit):
                 continue
             for row in rows:
@@ -346,7 +376,7 @@ def fiscal_year_ends(facts: _Facts) -> List[str]:
     for tag in YEAR_END_TAGS:
         for unit in (MONEY, PER_SHARE):
             ends.update(facts.series(tag, unit, "year"))
-    balance_sheets = facts.series(ASSETS[0], MONEY, "instant")
+    balance_sheets = {end for tag in ASSETS for end in facts.series(tag, MONEY, "instant")}
     return sorted((end for end in ends if end in balance_sheets
                    or not any(other in balance_sheets and 0 < abs(_days(end, other)) < MIN_DAYS_BETWEEN_YEAR_ENDS
                               for other in ends)), reverse=True)
@@ -482,9 +512,14 @@ def _long_term_debt(facts: _Facts, end: str, notes: _Notes) -> Tuple[Optional[fl
         return None, False
     if facts.get(JUNIOR_SUBORDINATED, end, MONEY, "instant") is not None:
         notes.derive("long-term debt", "junior subordinated debt is tagged separately and may not be included", end)
-    if current_used:
+    if current_used and net >= 0:
         notes.derive("long-term debt", f"derived as {total.tag} - {current_used[0]}", end)
         return net, False
+    if current_used:
+        # A current portion above the total belongs to wider debt than the total (TSMC FY2024: bonds outside
+        # LongtermBorrowings): the total stands, whole
+        notes.derive("long-term debt", f"{total.tag} used whole ({current_used[0]} exceeds it)", end)
+        return total.value, True
     notes.derive("long-term debt", f"{total.tag} used (includes the current portion)", end)
     return total.value, True
 
@@ -803,7 +838,7 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
     ends = fiscal_year_ends(facts)
     notes = _Notes()
     other_years = sorted({fiscal_year(row["end"]) for tag in YEAR_END_TAGS
-                          for unit, rows in facts.facts.get(GAAP, {}).get(tag, {}).get("units", {}).items()
+                          for unit, rows in _units(facts.facts, tag).items()
                           if _is_currency(unit) and unit != facts.currency
                           for row in rows if _annual(row) and _lasts(row, "year") and row["end"] not in ends})
     if other_years:

@@ -880,3 +880,82 @@ def test_dividends_far_from_what_the_10k_declares_are_flagged():
     four = [("2025-03-05", 0.34), ("2025-05-16", 0.34), ("2025-08-20", 0.34), ("2025-11-20", 0.34)]
     assert declared_dividend_gaps(facts, [], ends, four) == []
     assert declared_dividend_gaps(facts, [], ends, four[1:]) == []     # one payment apart is ordinary timing
+
+
+def _ifrs(concepts, form="20-F"):
+    """Synthetic IFRS companyfacts: {tag: [(start, end, value, filed, unit)]}, all from one form."""
+    out = {}
+    for tag, rows in concepts.items():
+        units = {}
+        for start, end, value, filed, unit in rows:
+            entry = {"end": end, "val": value, "filed": filed, "form": form, "accn": f"a-{filed}"}
+            if start:
+                entry["start"] = start
+            units.setdefault(unit, []).append(entry)
+        out[tag] = {"units": units}
+    return {"facts": {"ifrs-full": out}}
+
+
+Y24, Y23 = ("2024-01-01", "2024-12-31"), ("2023-01-01", "2023-12-31")
+FILED = "2025-03-10"
+
+
+def test_ifrs_20f_filer_maps_its_statements():
+    facts = _ifrs({
+        "Revenue": [(*Y24, 1000.0, FILED, "EUR"), (*Y23, 900.0, FILED, "EUR")],
+        "ProfitLoss": [(*Y24, 120.0, FILED, "EUR"), (*Y23, 100.0, FILED, "EUR")],
+        "ProfitLossAttributableToOwnersOfParent": [(*Y24, 110.0, FILED, "EUR"), (*Y23, 95.0, FILED, "EUR")],
+        "ProfitLossAttributableToOrdinaryEquityHoldersOfParentEntity": [(*Y24, 105.0, FILED, "EUR")],
+        "BasicEarningsLossPerShare": [(*Y24, 1.05, FILED, "EUR/shares"), (*Y23, 0.95, FILED, "EUR/shares")],
+        "WeightedAverageShares": [(*Y24, 100.0, FILED, "shares"), (*Y23, 100.0, FILED, "shares")],
+        "Assets": [(None, "2024-12-31", 2000.0, FILED, "EUR"), (None, "2023-12-31", 1900.0, FILED, "EUR")],
+        "Liabilities": [(None, "2024-12-31", 1200.0, FILED, "EUR")],
+        "Equity": [(None, "2024-12-31", 800.0, FILED, "EUR")],
+        "NoncontrollingInterests": [(None, "2024-12-31", 50.0, FILED, "EUR")],
+        "CurrentAssets": [(None, "2024-12-31", 700.0, FILED, "EUR")],
+        "CurrentLiabilities": [(None, "2024-12-31", 300.0, FILED, "EUR")],
+        "Inventories": [(None, "2024-12-31", 150.0, FILED, "EUR")],
+        "Goodwill": [(None, "2024-12-31", 90.0, FILED, "EUR")],
+        "IntangibleAssetsOtherThanGoodwill": [(None, "2024-12-31", 40.0, FILED, "EUR")],
+        "LongtermBorrowings": [(None, "2024-12-31", 400.0, FILED, "EUR")],
+        "CurrentPortionOfLongtermBorrowings": [(None, "2024-12-31", 60.0, FILED, "EUR")],
+        "DividendsPaidToEquityHoldersOfParentClassifiedAsFinancingActivities": [(*Y24, 45.0, FILED, "EUR")],
+        "DividendsPaidClassifiedAsFinancingActivities": [(*Y24, 52.0, FILED, "EUR")],
+        "CashFlowsFromUsedInOperatingActivities": [(*Y24, 210.0, FILED, "EUR")],
+    })
+    data = annual_data(facts)
+    assert data.currency == "EUR"
+    income = row(data.income_statements, "2024-12-31")
+    assert (income.revenue, income.net_income, income.eps) == (1000.0, 105.0, 1.05)   # ordinary holders first
+    assert row(data.income_statements, "2023-12-31").net_income == 95.0                # owners of the parent
+    balance = row(data.balance_sheets, "2024-12-31")
+    assert balance.total_equity == 750.0                                # equity less minority interests
+    assert (balance.total_assets, balance.total_liabilities) == (2000.0, 1200.0)
+    assert (balance.current_assets, balance.current_liabilities, balance.inventory) == (700.0, 300.0, 150.0)
+    assert (balance.goodwill, balance.intangible_assets) == (90.0, 40.0)
+    assert balance.long_term_debt == 340.0                              # non-current borrowings less current portion
+    assert data.dividends_paid["2024-12-31"] == 45.0                    # to the parent's shareholders
+    assert data.operating_cash_flow["2024-12-31"] == 210.0
+
+
+def test_filer_that_moved_from_us_gaap_to_ifrs_keeps_both_eras():
+    facts = _facts({"NetIncomeLoss": [("2019-04-01", "2020-03-31", 50.0, "2020-06-20", "20-F", "JPY")],
+                    "Assets": [(None, "2020-03-31", 500.0, "2020-06-20", "20-F", "JPY")]})
+    facts["facts"].update(_ifrs({
+        "ProfitLossAttributableToOwnersOfParent": [("2020-04-01", "2021-03-31", 60.0, "2021-06-20", "JPY")],
+        "Assets": [(None, "2021-03-31", 600.0, "2021-06-20", "JPY")]})["facts"])
+    data = annual_data(facts)
+    assert data.currency == "JPY"
+    assert {r.period_end: r.net_income for r in data.income_statements} == {"2021-03-31": 60.0, "2020-03-31": 50.0}
+    assert [r.total_assets for r in data.balance_sheets] == [600.0, 500.0]
+
+
+def test_current_portion_above_the_borrowings_total_leaves_the_total_whole():
+    facts = _ifrs({"Assets": [(None, "2024-12-31", 2000.0, FILED, "TWD")],
+                   "ProfitLoss": [(*Y24, 10.0, FILED, "TWD")],
+                   "LongtermBorrowings": [(None, "2024-12-31", 30.0, FILED, "TWD")],
+                   "CurrentPortionOfLongtermBorrowings": [(None, "2024-12-31", 80.0, FILED, "TWD")]})
+    balance = annual_data(facts).balance_sheets[0]
+    assert balance.long_term_debt == 30.0
+    assert any("used whole (ifrs-full:CurrentPortionOfLongtermBorrowings exceeds it)" in n
+               for n in annual_data(facts).notes)
