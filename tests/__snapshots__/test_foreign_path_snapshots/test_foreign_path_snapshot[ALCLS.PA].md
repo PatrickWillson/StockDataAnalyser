@@ -50,10 +50,10 @@
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
 - SEC EDGAR: long-term debt: not identified (ifrs-full:NoncurrentFinancialLiabilities is reported, no long-term debt figure): the debt tests count as not met, no debt is assumed (FY2016, FY2017, FY2018, FY2019, FY2020, FY2021, FY2022, FY2023, FY2024, FY2025)
 - SEC EDGAR: total liabilities: derived as liabilities and equity - total equity (FY2014, FY2015, FY2016, FY2017, FY2018, FY2019, FY2020, FY2021, FY2022)
+- SEC EDGAR: net income: profit attributable to owners of the parent used: the figure tagged for ordinary shareholders exceeds it (FY2015, FY2016)
 - SEC EDGAR: revenue: not in the SEC data (the company uses its own tags) (FY2014)
 - SEC EDGAR: net income: not available: only ProfitLoss is tagged and the minority interests' share of it is not (FY2014)
 - SEC EDGAR: EPS: not in the SEC data (the company uses its own tags); derived from net income / shares where possible (FY2014)
-- SEC EDGAR: EPS: filed at 1,000x net income / average shares (a scale error); divided by 1,000 (FY2015, FY2016)
 - SEC EDGAR: restated in later filings, latest figure used (first reported -> latest): FY2021 revenue 57M -> 30M; FY2020 revenue 74M -> 51M; FY2020 minority interest 33M -> 25M; FY2020 stockholders' equity 276M -> 284M; FY2020 inventory 2M -> 2M; FY2017 equity incl. minority interest 286M -> 284M; FY2017 stockholders' equity 267M -> 265M; FY2017 current liabilities 44M -> 45M; FY2016 equity incl. minority interest 275M -> 273M; FY2015 equity incl. minority interest 287M -> 285M
 - SEC EDGAR: figures a later filing tagged in thousands or millions as units were ignored: ifrs-full:ProfitLossAttributableToOrdinaryEquityHoldersOfParentEntity 2017, ifrs-full:ProfitLossAttributableToOrdinaryEquityHoldersOfParentEntity 2018
 - Price Source: yfinance (primary source)
@@ -84,7 +84,7 @@
   - Short-term debt and leases identified: 7,701,000 USD
 
 ### Operational Stability Risk:
-- **Profit Margin Stability: -1634.0% average, 4135.8% std dev** over 10 years
+- **Profit Margin Stability: -1649.0% average, 4129.5% std dev** over 10 years
   - ⚠️ High volatility indicates cyclical or unstable business
 - **Loss Years: 10 of 10** - ⚠️ Earnings not consistently positive
 
@@ -149,8 +149,8 @@
 | 2019 | 15.19M | -102.09M | -2.41 | N/A | 7.42 | 7.75 | N/A | 1.07M | 42.47M | 13.56 | Negative | 1.8 |
 | 2018 | 12.73M | -78.69M | -1.93 | N/A | 9.65 | 10.39 | N/A | 0.33M | 42.43M | 15.33 | Negative | 1.6 |
 | 2017 | 25.19M | -99.37M | -2.78 | N/A | 7.37 | 7.72 | N/A | N/A | 35.96M | 17.09 | Negative | 2.3 |
-| 2016 | 44.81M | -67,255 | -0.0019 | N/A | 7.72 | 7.25 | N/A | N/A | 35.34M | 18.86 | Negative | 2.4 |
-| 2015 | 55.86M | -22,796 | -0.0007 | N/A | 8.14 | 7.96 | N/A | N/A | 35.18M | 20.63 | Negative | 2.5 |
+| 2016 | 44.81M | -67.25M | -1.91 | N/A | 7.72 | 7.25 | N/A | N/A | 35.34M | 18.86 | Negative | 2.4 |
+| 2015 | 55.86M | -22.80M | -0.67 | N/A | 8.14 | 7.96 | N/A | N/A | 35.18M | 20.63 | Negative | 2.5 |
 | 2014 | N/A | N/A | N/A | N/A | 2.51 | 2.36 | N/A | N/A | 29.45M | 22.40 | N/A | 8.9 |
 
 **Note on Data Completeness:**

@@ -1175,3 +1175,13 @@ def test_a_foreign_year_without_a_share_count_takes_net_income_over_eps():
     data = annual_data(facts, eps_implied_shares=True)
     assert data.shares_by_year["2016"] == pytest.approx(83.1e6, rel=1e-3)
     assert any("net income / filed EPS" in n for n in data.notes)
+
+
+def test_ordinary_holders_profit_above_the_owners_profit_gives_way_to_it():
+    # BP FY2024: 390M tagged for ordinary shareholders, 381M for the owners of the parent
+    facts = _ifrs({"Assets": [(None, "2024-12-31", 280_000.0e6, FILED, "USD")],
+                   "ProfitLossAttributableToOrdinaryEquityHoldersOfParentEntity": [(*Y24, 390.0e6, FILED, "USD")],
+                   "ProfitLossAttributableToOwnersOfParent": [(*Y24, 381.0e6, FILED, "USD")]})
+    data = annual_data(facts)
+    assert data.income_statements[0].net_income == 381.0e6
+    assert any("profit attributable to owners of the parent used" in n for n in data.notes)

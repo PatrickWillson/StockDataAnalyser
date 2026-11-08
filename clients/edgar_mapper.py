@@ -57,6 +57,7 @@ NET_INCOME = ("NetIncomeLossAvailableToCommonStockholdersBasic", "NetIncomeLoss"
               "ifrs-full:ProfitLossAttributableToOrdinaryEquityHoldersOfParentEntity",
               "ifrs-full:ProfitLossAttributableToOwnersOfParent")
 AVAILABLE_TO_COMMON = NET_INCOME[0]
+IFRS_ORDINARY_HOLDERS, IFRS_OWNERS = NET_INCOME[2], NET_INCOME[3:]
 PREFERRED_DIVIDENDS = ("PreferredStockDividendsAndOtherAdjustments", "PreferredStockDividendsIncomeStatementImpact",
                        "DividendsPreferredStock")
 # How far below net income earnings for the common may sit without preferred dividends explaining the gap
@@ -832,6 +833,15 @@ def _net_income(facts: _Facts, end: str, kind: str, notes: Optional["_Notes"] = 
     """
     fact = facts.get(NET_INCOME, end, MONEY, kind)
     if fact is not None:
+        if fact.tag == IFRS_ORDINARY_HOLDERS:
+            owners = facts.get(IFRS_OWNERS, end, MONEY, kind)
+            if owners is not None and fact.value > owners.value + COMMON_EARNINGS_MAX_EXCESS * abs(owners.value):
+                # The ordinary shareholders cannot earn more than the parent's owners as a whole (BP FY2024: 390M
+                # tagged for the ordinary holders, 381M for the owners): the lower, conservative figure
+                if notes is not None:
+                    notes.derive("net income", "profit attributable to owners of the parent used: the figure tagged "
+                                 "for ordinary shareholders exceeds it", end)
+                fact = owners
         if fact.tag == AVAILABLE_TO_COMMON:
             net = facts.get(NET_INCOME[1:], end, MONEY, kind)
             if net is not None and not (_sound_common_earnings(fact, net, facts.get(PREFERRED_DIVIDENDS, end, MONEY, kind))
