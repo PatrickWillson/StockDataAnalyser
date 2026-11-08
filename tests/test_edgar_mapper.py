@@ -1103,3 +1103,17 @@ def test_ifrs_noncurrent_debt_instruments_issued_are_long_term_debt():
     # Denison Mines FY2025: convertible notes tagged as non-current debt instruments issued, 474M
     data = _debt({"NoncurrentDebtInstrumentsIssued": 474.0e6, "CurrentDebtInstrumentsIssued": 0.0})
     assert data.balance_sheets[0].long_term_debt == 474.0e6
+
+
+def test_borrowings_without_a_long_term_debt_figure_make_the_debt_unknown():
+    # Cellectis FY2025-like: only non-current financial liabilities (loans and other items), no borrowings tag
+    data = _debt({"NoncurrentFinancialLiabilities": 74.0e6})
+    balance = data.balance_sheets[0]
+    assert balance.long_term_debt is None and balance.long_term_debt_unknown
+    assert any("long-term debt: not identified (ifrs-full:NoncurrentFinancialLiabilities is reported" in n for n in data.notes)
+
+
+def test_no_borrowings_reported_is_no_debt():
+    # DRDGOLD-like: no debt-like item at all
+    balance = _debt({}).balance_sheets[0]
+    assert balance.long_term_debt is None and not balance.long_term_debt_unknown

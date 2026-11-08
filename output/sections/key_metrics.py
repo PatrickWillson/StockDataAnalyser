@@ -163,6 +163,8 @@ class KeyMetricsSection(DossierSection):
             if long_term_debt is not None and long_term_debt != 'N/A':
                 ltd_display = format_price_display(long_term_debt, unified_currency, unified_currency)
                 lines.append(f"- **Long-term Debt**: {ltd_display}")
+            elif long_term_debt == 'N/A' and nca is not None and nca != 'N/A':
+                lines.append("- **Long-term Debt**: not identified (the source reports borrowings but no long-term debt figure)")
             
             if debt_coverage_ratio is not None and debt_coverage_ratio != 'N/A':
                 lines.append(f"- **Debt Coverage Ratio**: {debt_coverage_ratio:.2f} ({debt_coverage_pct}) - Long-term Debt / NCA")

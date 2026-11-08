@@ -32,6 +32,10 @@ _UNSET = object()
 NEGATIVE_EARNINGS_REASON = "N/A - Negative normalized earnings (company unprofitable over cycle)"
 
 
+
+LONG_TERM_DEBT_NOT_IDENTIFIED = ("Long-term debt not identified: the source reports borrowings but no long-term debt "
+                                 "figure; Graham's debt tests count as not met (GRAHAM_METHODOLOGY §8.9)")
+
 class GrahamCalculator:
     """
     Performs all Graham methodology calculations with strict formulas.
@@ -319,11 +323,17 @@ class GrahamCalculator:
         year_data = history[latest_year]
         current_assets = or_default(year_data.current_assets, None)
         current_liabilities = or_default(year_data.current_liabilities, None)
-        long_term_debt = or_default(year_data.long_term_debt, 0.0)
         if current_assets is None or current_liabilities is None:
             return unavailable("Balance sheet data unavailable")
         
         warnings = []
+        if year_data.long_term_debt is None:
+            # Borrowings reported, long-term debt not identified (GRAHAM_METHODOLOGY §8.9): no coverage figure
+            nca = current_assets - current_liabilities
+            return {'current_assets': current_assets, 'current_liabilities': current_liabilities, 'nca': round(nca, 2),
+                    'long_term_debt': "N/A", 'debt_coverage_ratio': "N/A", 'debt_coverage_pct': "N/A",
+                    'warnings': [LONG_TERM_DEBT_NOT_IDENTIFIED]}
+        long_term_debt = or_default(year_data.long_term_debt, 0.0)
         sector = (or_default(self.data.sector, None) or '').lower()
         if 'financial' in sector or 'bank' in sector:
             warnings.append("NCA analysis may not be applicable for Financial companies due to balance sheet structure")

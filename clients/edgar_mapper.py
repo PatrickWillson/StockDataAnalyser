@@ -127,6 +127,14 @@ IFRS_NONCURRENT_BONDS = ("ifrs-full:NoncurrentPortionOfNoncurrentBondsIssued",
                          "ifrs-full:NoncurrentDebtInstrumentsIssued")   # Denison FY2025: convertible notes 474M
 IFRS_NONCURRENT_LOANS = ("ifrs-full:NoncurrentPortionOfNoncurrentLoansReceived",)
 IFRS_OTHER_NONCURRENT_BORROWINGS = ("ifrs-full:NoncurrentPortionOfOtherNoncurrentBorrowings",)
+# Balance-sheet borrowings the long-term debt mapping does not read: when one has a value and no long-term debt
+# was found, the debt is unknown, not zero (GRAHAM_METHODOLOGY §8.9: Cellectis' non-current financial
+# liabilities; Novartis' Borrowings before it was mapped). Current-only items are not evidence (all due in a year)
+BORROWINGS_EVIDENCE = ("DebtInstrumentCarryingAmount", "NotesPayable", "SecuredDebt", "UnsecuredDebt",
+                       "DebtLongtermAndShorttermCombinedAmount", "LongTermDebtNoncurrent", "LongTermDebt",
+                       "ifrs-full:Borrowings", "ifrs-full:BondsIssued", "ifrs-full:DebtInstrumentsIssued",
+                       "ifrs-full:LoansReceived", "ifrs-full:NoncurrentFinancialLiabilities",
+                       "ifrs-full:NoncurrentFinancialLiabilitiesAtAmortisedCost")
 INVENTORY = ("InventoryNet", "ifrs-full:Inventories")
 UTILITY_INVENTORY = ("EnergyRelatedInventoryNaturalGasInStorage", "EnergyRelatedInventoryOtherFossilFuel",
                      "EnergyRelatedInventoryCoal", "EnergyRelatedInventoryPropaneGas", "OtherInventorySupplies")
@@ -635,6 +643,11 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
     _note_unmapped_intangibles(facts, end, notes)
 
     long_term_debt, includes_current = _long_term_debt(facts, end, notes)
+    evidence = None if long_term_debt is not None else next(
+        (tag for tag in BORROWINGS_EVIDENCE if _value(facts.get((tag,), end, MONEY, "instant"))), None)
+    if evidence:
+        notes.derive("long-term debt", f"not identified ({evidence} is reported, no long-term debt figure): the "
+                     "debt tests count as not met, no debt is assumed", end)
 
     debt_current = field("short-term debt", DEBT_CURRENT)
     if debt_current is None:
@@ -734,6 +747,7 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
         noncontrolling_interest=minority,
         shares_outstanding=shares,
         preferred_stock=preferred,
+        long_term_debt_unknown=bool(evidence),
     )
 
 

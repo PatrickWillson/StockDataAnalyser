@@ -61,6 +61,9 @@ class BalanceSheetRow:
     noncontrolling_interest: Optional[float]
     shares_outstanding: Optional[float]          # common shares at the period end
     preferred_stock: Optional[float] = None      # preferred inside equity, at Graham's valuation (§3.5)
+    # The source shows borrowings but no long-term debt figure could be identified: unknown, not zero
+    # (GRAHAM_METHODOLOGY §8.9; the debt tests are then not met)
+    long_term_debt_unknown: bool = False
 
     @property
     def total_debt(self) -> float:
@@ -92,7 +95,8 @@ class BalanceSheetRow:
     def as_history_fields(self) -> Dict[str, Optional[float]]:
         """
         Balance-sheet fields of a history row (missing values as 0.0, except inventory: None when
-        not reported, so the quick ratio can tell "not reported" from "no inventory").
+        not reported, so the quick ratio can tell "not reported" from "no inventory"; and long-term
+        debt: None when the source shows borrowings it could not identify as long-term debt).
         """
         return {
             'total_equity': _zero_if_missing(self.total_equity),
@@ -101,7 +105,7 @@ class BalanceSheetRow:
             'current_assets': _zero_if_missing(self.current_assets),
             'current_liabilities': _zero_if_missing(self.current_liabilities),
             'total_liabilities': _zero_if_missing(self.total_liabilities),
-            'long_term_debt': _zero_if_missing(self.long_term_debt),
+            'long_term_debt': None if self.long_term_debt_unknown else _zero_if_missing(self.long_term_debt),
             'total_assets': _zero_if_missing(self.total_assets),
             'total_debt': self.total_debt,
             'inventory': self.inventory,

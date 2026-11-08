@@ -357,3 +357,14 @@ def test_payout_not_computed_from_payment_counts():
     financial_data['is_dividend_amounts'] = False
     lines = RiskFactorsSection(financial_data, create_test_metrics()).generate()
     assert not any('Payout Ratio' in line or 'Dividend Coverage' in line for line in lines)
+
+
+def test_unidentified_long_term_debt_is_shown_as_unknown_not_debt_free():
+    # The source reports borrowings but no long-term debt figure (GRAHAM_METHODOLOGY §8.9): history holds None
+    financial_data = create_test_financial_data()
+    financial_data['history']['2023-12-31'] = {**financial_data['history']['2023-12-31'], 'long_term_debt': None,
+                                               'total_debt': 2000000}
+    lines = RiskFactorsSection(financial_data, create_test_metrics()).generate()
+    assert any("Long-Term Debt: not identified" in line for line in lines)
+    assert not any("Debt-free" in line for line in lines)
+    assert not any("Debt Coverage" in line for line in lines)

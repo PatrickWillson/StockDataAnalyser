@@ -193,6 +193,13 @@ class RiskFactorsSection(DossierSection):
         long_term_debt, total_debt, other_debt = risk.long_term_debt, risk.total_debt, risk.other_debt
         total_assets, net_current_assets = risk.total_assets, risk.net_current_assets
         
+        if risk.long_term_debt_unknown:
+            lines.append("- **Long-Term Debt: not identified** - the source reports borrowings but no long-term debt "
+                         "figure, so Graham's debt tests count as not met (no debt is assumed)")
+            if total_debt > 0 and total_assets > 0:
+                lines.append(f"  - Short-term debt and leases identified: {total_debt:,.0f} {unified_currency}")
+            lines.append("")
+            return
         if total_assets > 0 and long_term_debt > 0:
             lt_debt_to_assets = risk.lt_debt_to_assets_pct
             total_debt_to_assets = risk.total_debt_to_assets_pct

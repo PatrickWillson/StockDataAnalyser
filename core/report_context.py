@@ -32,6 +32,7 @@ class RiskFigures:
     liquidity_pct: Optional[float] = None              # average daily volume / shares x 100
     current_ratio: Optional[float] = None
     long_term_debt: float = 0.0
+    long_term_debt_unknown: bool = False               # borrowings reported, long-term debt not identified (§8.9)
     total_debt: float = 0.0
     other_debt: float = 0.0                            # total debt - long-term debt (short-term and leases)
     total_assets: float = 0.0
@@ -59,7 +60,8 @@ def _risk_figures(financial_data: FinancialData, history: Mapping[str, HistoryRo
     shares = or_default(row.shares_outstanding, 0)
     current_assets = or_default(row.current_assets, 0.0)
     current_liabilities = or_default(row.current_liabilities, 0.0)
-    long_term_debt = or_default(row.long_term_debt, 0.0)
+    long_term_debt_unknown = row.long_term_debt is None       # unknown, shown as such (not as zero debt)
+    long_term_debt = 0.0 if long_term_debt_unknown else or_default(row.long_term_debt, 0.0)
     total_debt = or_default(row.total_debt, 0.0)
     total_assets = or_default(row.total_assets, 0.0)
     net_current_assets = current_assets - current_liabilities
@@ -90,6 +92,7 @@ def _risk_figures(financial_data: FinancialData, history: Mapping[str, HistoryRo
         liquidity_pct=(avg_volume / shares) * 100 if avg_volume > 0 and shares > 0 else None,
         current_ratio=current_assets / current_liabilities if current_liabilities > 0 else None,
         long_term_debt=long_term_debt,
+        long_term_debt_unknown=long_term_debt_unknown,
         total_debt=total_debt,
         other_debt=total_debt - long_term_debt if total_debt > long_term_debt else 0.0,
         total_assets=total_assets,
