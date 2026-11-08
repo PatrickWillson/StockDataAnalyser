@@ -1,8 +1,9 @@
 """
 End-to-end snapshots of the SEC route for non-US companies (FUNDAMENTALS_PROVIDER=free, home listings).
 
-Runs the real stock_data_analyser.main() offline for SAP.XETRA (IFRS 20-F, EUR) and RY.TO (40-F, CAD, a
-bank):
+Runs the real stock_data_analyser.main() offline for SAP.XETRA (IFRS 20-F, EUR), RY.TO (40-F, CAD, a bank),
+7203.TSE (US GAAP to IFRS 20-F, JPY, a 5:1 split; its FY2026 20-F merged in from the filing's own XBRL, as the
+adapter does live) and ALCLS.PA (EUR listing, USD statements, long-term debt not identified, §8.9):
   - SEC EDGAR is served by FakeSecSession from real, trimmed companyfacts / submissions in
     tests/fixtures_sec/ (US-government public data)
   - yfinance is served by FakeYFinanceModule with SYNTHETIC values (Yahoo data cannot be
@@ -35,6 +36,17 @@ COMPANIES = {
                    "info": {"longName": "SAP SE", "sector": "Technology", "industry": "Software - Application",
                             "fullTimeEmployees": 110000, "financialCurrency": "EUR", "dividendRate": 2.5,
                             "companyOfficers": [{"name": "Test CEO Four", "title": "CEO & Member of Executive Board"}]}}),
+    "7203.TSE": ("TM", "0001094517", "7203.T",
+                 {"last": 3300.0, "base": 600.0, "dividend": 90.0, "currency": "JPY", "exchange": "NYQ",
+                  "splits": {"2021-09-29": 5.0},
+                  "info": {"longName": "Toyota Motor Corporation", "sector": "Consumer Cyclical", "industry": "Auto Manufacturers",
+                           "fullTimeEmployees": 380000, "financialCurrency": "JPY", "dividendRate": 95.0,
+                           "companyOfficers": [{"name": "Test CEO Six", "title": "President, CEO & Director"}]}}),
+    "ALCLS.PA": ("CLLS", "0001627281", "ALCLS.PA",
+                 {"last": 1.05, "base": 20.0, "dividend": 0.0, "currency": "EUR", "exchange": "NMS", "fx": ("EURUSD=X", 1.12),
+                  "info": {"longName": "Cellectis S.A.", "sector": "Healthcare", "industry": "Biotechnology",
+                           "fullTimeEmployees": 230, "financialCurrency": "USD",
+                           "companyOfficers": [{"name": "Test CEO Seven", "title": "CEO & Director"}]}}),
     "RY.TO": ("RY", "0001000275", "RY.TO",
               {"last": 190.0, "base": 70.0, "dividend": 4.5, "currency": "CAD", "exchange": "NYQ",
                "info": {"longName": "Royal Bank of Canada", "sector": "Financial Services", "industry": "Banks - Diversified",
@@ -48,11 +60,16 @@ def yahoo(home: str):
     annual = annual_data(fixture(us_symbol)["companyfacts"])
     ordered = sorted(r.period_end for r in annual.income_statements)
     closes = closes_around(ordered, lambda d: spec["base"] + (spec["last"] - spec["base"]) * ordered.index(d) / len(ordered))
-    dividends = {f"{year}-05-15": round(spec["dividend"] * 1.04 ** (year - 2026), 4) for year in range(2008, 2027)}
+    dividends = ({f"{year}-05-15": round(spec["dividend"] * 1.04 ** (year - 2026), 4) for year in range(2008, 2027)}
+                 if spec["dividend"] else {})
     latest = annual.income_statements[0]
     symbols = {yahoo_symbol: {"last": spec["last"], "currency": spec["currency"], "closes": closes,
                               "info": {"currency": spec["currency"], **spec["info"]}, "dividends": dividends,
-                              "net_income": {latest.period_end: latest.net_income}}}
+                              "splits": spec.get("splits", {}), "net_income": {latest.period_end: latest.net_income}}}
+    if "fx" in spec:
+        pair, rate = spec["fx"]
+        anchors = ordered + ["2026-10-30"]
+        symbols[pair] = {"last": rate, "currency": "USD", "closes": closes_around(anchors, lambda d: rate)}
     search = {spec["info"]["longName"]: [{"symbol": us_symbol, "exchange": spec["exchange"],
                                           "longname": spec["info"]["longName"]}]}
     return FakeYFinanceModule(symbols, search=search)
@@ -96,6 +113,10 @@ def test_foreign_path_snapshot(home, run_foreign_cli, snapshot):
     dossier = run_foreign_cli(home)
     assert "SEC EDGAR (20-F/40-F) + Yahoo Finance" in dossier
     assert "per-share figures are per ordinary share" in dossier
+    if home == "ALCLS.PA":
+        assert "Long-Term Debt: not identified" in dossier and "Debt-free" not in dossier
+    if home == "7203.TSE":
+        assert "2021-09-29 5:1" in dossier
     assert dossier == snapshot(extension_class=MarkdownSnapshotExtension)
 
 
