@@ -207,7 +207,10 @@ def test_free_provider_is_registered():
     router = ClientFactory.create_fundamentals_source({"SEC_USER_AGENT": "Test t@example.invalid"}, "free")
     assert isinstance(router, RoutingFundamentalsSource)
     assert {e for e, src in router.routes.items() if isinstance(src, FreeUSFundamentalsSource)} == {"US", "NYSE", "NASDAQ", "AMEX"}
-    assert type(router.routes["LSE"]).__name__ == "ForeignSECFundamentalsSource" and "TSE" in router.routes
+    assert type(router.routes["TSE"]).__name__ == "ForeignSECFundamentalsSource"
+    european = router.routes["LSE"]                     # SEC route first, then the ESEF reports
+    assert [type(s).__name__ for s in european.sources] == ["ForeignSECFundamentalsSource", "EuropeanFilingsSource"]
+    assert type(router.routes["SW"]).__name__ == "ForeignSECFundamentalsSource"     # Switzerland: no ESEF
     with pytest.raises(ValueError, match="contact email"):
         ClientFactory.create_fundamentals_source({"SEC_USER_AGENT": "no contact"}, "free")
 

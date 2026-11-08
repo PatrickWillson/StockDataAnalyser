@@ -11,11 +11,14 @@ from dataclasses import dataclass
 from typing import Callable, Mapping, Optional, Tuple
 from clients.edgar_client import EdgarClient
 from clients.eodhd_client import EODHDClient
+from clients.esef_client import EsefClient
+from clients.european_filings_source import EuropeanFilingsSource
 from clients.foreign_sec_source import ForeignSECFundamentalsSource
 from clients.free_us_source import FreeUSFundamentalsSource
-from clients.routing_source import RoutingFundamentalsSource
+from clients.routing_source import FallbackFundamentalsSource, RoutingFundamentalsSource
 from clients.yfinance_client import YFinanceClient
 from clients.fx_client import FXClient
+from config.esef_config import ESEF_EXCHANGES
 from core.currency_converter import CurrencyConverter
 from core.ports import FundamentalsSource, QuoteSource, RateSource
 
@@ -64,14 +67,18 @@ class ClientFactory:
     def create_free_source(sec_user_agent: str, debug: bool = False) -> FundamentalsSource:
         """
         The free resolution path: `.US` -> SEC EDGAR + Yahoo Finance; every other exchange Yahoo prices -> the
-        company's SEC filings (20-F / 40-F) found from its home listing (no SEC filer: no dossier).
+        company's SEC filings (20-F / 40-F) found from its home listing; for European exchanges (ESEF_EXCHANGES),
+        a company with no SEC filer -> its ESEF annual reports (filings.xbrl.org); neither: no dossier.
         """
         edgar = EdgarClient(sec_user_agent, debug=debug)
         yahoo = ClientFactory.create_yfinance_client(debug=debug)
         foreign = ForeignSECFundamentalsSource(edgar, yahoo)
         us = FreeUSFundamentalsSource(edgar, yahoo, debug=debug, foreign=foreign)
-        routes = {exchange: (us if not suffix else foreign) for exchange, suffix in YFinanceClient.EXCHANGE_MAPPING.items()}
-        return RoutingFundamentalsSource(routes, name="free (SEC EDGAR + Yahoo Finance)")
+        european = FallbackFundamentalsSource(
+            (foreign, EuropeanFilingsSource(EsefClient(debug=debug), yahoo)), name="SEC EDGAR, then ESEF")
+        routes = {exchange: (us if not suffix else european if exchange in ESEF_EXCHANGES else foreign)
+                  for exchange, suffix in YFinanceClient.EXCHANGE_MAPPING.items()}
+        return RoutingFundamentalsSource(routes, name="free (SEC EDGAR / ESEF + Yahoo Finance)")
     
     @staticmethod
     def create_quote_source(debug: bool = False) -> QuoteSource:

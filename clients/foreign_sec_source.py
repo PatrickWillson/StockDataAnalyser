@@ -135,63 +135,79 @@ class ForeignSECFundamentalsSource:
                          "(Yahoo Finance split history of this listing): "
                          + ", ".join(f"{d} {r:g}:1" for d, r in splits))
         notes.append("No quarterly figures: foreign filers' interim reports (6-K) carry no XBRL, so TTM is N/A")
-        notes.append("Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)")
+        return home_listing_fundamentals(ticker, SOURCE_NAME, yahoo, profile, annual, notes,
+                                         fallback_name=filer.sec_name, data_name="the SEC data")
 
-        quote_currency = profile.quote_currency or annual.currency
-        # Yahoo gives a London listing's dividends in pence (GBp), like its price: expressed here in pounds, the
-        # currency the FX conversion understands (the price's London Fix happens in core)
-        dividend_currency = major_currency(quote_currency) or quote_currency
-        payments = yahoo_mapper.dividend_payments(yahoo, quote_currency)
-        if payments and is_minor_unit(quote_currency):
-            payments = tuple(replace(p, amount=to_major_unit(p.amount, quote_currency)[0], currency=dividend_currency)
-                             for p in payments)
-            notes.append(f"Dividends: Yahoo Finance quotes them in {quote_currency}; converted to {dividend_currency} (÷100)")
-        # Yahoo's forward dividend rate (a display-only estimate, F21) is in the listing's currency only when that is
-        # also the reporting currency; otherwise its unit is not dependable (BP.L and AZN.L: dollars, as declared,
-        # beside a pence price), so it is left out rather than shown in a wrong unit
-        forward_rate = yahoo_mapper.forward_dividend_rate(yahoo) if quote_currency == annual.currency else None
-        market = yahoo_mapper.market_data(yahoo)
-        if quote_currency != annual.currency:
-            # Same for Yahoo's per-share figures (book value, trailing dividend and yield, P/E): HSBA.L's bookValue
-            # 7.57 is in pounds, labelled as the dollar statements' currency. They feed only the [VALIDATION]
-            # comparisons, which would otherwise report false discrepancies
-            market = replace(market, book_value_per_share=0.0, dividend_per_share=0.0, dividend_yield=0.0, pe_ratio=0.0)
-        latest_balance = annual.balance_sheets[0] if annual.balance_sheets else None
-        latest_shares = (latest_balance.shares_outstanding if latest_balance else None) or 0.0
-        current_shares = annual.latest_cover_shares or latest_shares
-        if not current_shares:
-            # EPS and shares only under the company's own tags (BP): today's count of this home listing's shares
-            # (ordinary shares) stands for every year without a count, as on the US path for dual-class companies
-            current_shares = yahoo_mapper.total_shares(yahoo) or 0.0
-            if current_shares:
-                notes.append("Share count: not in the SEC data (the company uses its own tags); today's total from "
-                             "Yahoo Finance for this listing stands for every year without a count, so per-share "
-                             "history (EPS, book value per share) is approximate")
-        symbol, _, exchange = ticker.rpartition(".")
-        return CompanyFundamentals(
-            source=SOURCE_NAME,
-            symbol=symbol.upper(),
-            exchange=exchange.upper(),
-            trading_currency=quote_currency,
-            statement_currency=annual.currency,
-            name=profile.name or filer.sec_name,
-            sector=profile.sector,
-            industry=profile.industry,
-            employees=profile.employees,
-            ceo_name=profile.ceo_name,
-            is_delisted=False,
-            updated_at=None,
-            annual_balance_sheets=annual.balance_sheets,
-            annual_income_statements=annual.income_statements,
-            shares_outstanding=current_shares,
-            shares_by_year=dict(annual.shares_by_year),
-            latest_statement_shares=latest_shares,
-            dividend_payments=payments,
-            annual_dividends_paid=dict(annual.dividends_paid),
-            annual_operating_cash_flow=dict(annual.operating_cash_flow),
-            cash_flow_currency=annual.currency,
-            forward_dividend_rate=forward_rate,
-            forward_dividend_currency=dividend_currency,
-            market=market,
-            notes=tuple(notes) + annual.notes,
-        )
+
+def home_listing_fundamentals(ticker: str, source_name: str, yahoo, profile, annual: edgar_mapper.EdgarAnnualData,
+                              notes: List[str], fallback_name: str, data_name: str) -> CompanyFundamentals:
+    """
+    A non-US company's CompanyFundamentals from its filed annual statements (`annual`) and its home listing on
+    Yahoo (price currency, dividends, profile, market figures); shared by the SEC and ESEF routes.
+    data_name names the statements' source in notes ("the SEC data").
+    """
+    notes.append("Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)")
+
+    quote_currency = profile.quote_currency or annual.currency
+    # Yahoo gives a London listing's dividends in pence (GBp), like its price: expressed here in pounds, the
+    # currency the FX conversion understands (the price's London Fix happens in core)
+    dividend_currency = major_currency(quote_currency) or quote_currency
+    payments = yahoo_mapper.dividend_payments(yahoo, quote_currency)
+    if payments and is_minor_unit(quote_currency):
+        payments = tuple(replace(p, amount=to_major_unit(p.amount, quote_currency)[0], currency=dividend_currency)
+                         for p in payments)
+        notes.append(f"Dividends: Yahoo Finance quotes them in {quote_currency}; converted to {dividend_currency} (÷100)")
+    # Yahoo's forward dividend rate (a display-only estimate, F21) is in the listing's currency only when that is
+    # also the reporting currency; otherwise its unit is not dependable (BP.L and AZN.L: dollars, as declared,
+    # beside a pence price), so it is left out rather than shown in a wrong unit
+    forward_rate = yahoo_mapper.forward_dividend_rate(yahoo) if quote_currency == annual.currency else None
+    market = yahoo_mapper.market_data(yahoo)
+    if quote_currency != annual.currency:
+        # Same for Yahoo's per-share figures (book value, trailing dividend and yield, P/E): HSBA.L's bookValue
+        # 7.57 is in pounds, labelled as the dollar statements' currency. They feed only the [VALIDATION]
+        # comparisons, which would otherwise report false discrepancies
+        market = replace(market, book_value_per_share=0.0, dividend_per_share=0.0, dividend_yield=0.0, pe_ratio=0.0)
+    latest_balance = annual.balance_sheets[0] if annual.balance_sheets else None
+    latest_shares = (latest_balance.shares_outstanding if latest_balance else None) or 0.0
+    current_shares = annual.latest_cover_shares or latest_shares
+    if not current_shares:
+        # EPS and shares only under the company's own tags (BP): today's count of this home listing's shares
+        # (ordinary shares) stands for every year without a count, as on the US path for dual-class companies
+        current_shares = yahoo_mapper.total_shares(yahoo) or 0.0
+        if current_shares:
+            notes.append(f"Share count: not in {data_name} (the company uses its own tags); today's total from "
+                         "Yahoo Finance for this listing stands for every year without a count, so per-share "
+                         "history (EPS, book value per share) is approximate")
+    annual_notes = annual.notes
+    if current_shares and not (annual.latest_cover_shares or latest_shares):
+        # The years the mapper left without a count now take today's total
+        annual_notes = tuple(note.replace("per-share figures N/A", "today's Yahoo Finance total used (approximate)")
+                             for note in annual_notes)
+    symbol, _, exchange = ticker.rpartition(".")
+    return CompanyFundamentals(
+        source=source_name,
+        symbol=symbol.upper(),
+        exchange=exchange.upper(),
+        trading_currency=quote_currency,
+        statement_currency=annual.currency,
+        name=profile.name or fallback_name,
+        sector=profile.sector,
+        industry=profile.industry,
+        employees=profile.employees,
+        ceo_name=profile.ceo_name,
+        is_delisted=False,
+        updated_at=None,
+        annual_balance_sheets=annual.balance_sheets,
+        annual_income_statements=annual.income_statements,
+        shares_outstanding=current_shares,
+        shares_by_year=dict(annual.shares_by_year),
+        latest_statement_shares=latest_shares,
+        dividend_payments=payments,
+        annual_dividends_paid=dict(annual.dividends_paid),
+        annual_operating_cash_flow=dict(annual.operating_cash_flow),
+        cash_flow_currency=annual.currency,
+        forward_dividend_rate=forward_rate,
+        forward_dividend_currency=dividend_currency,
+        market=market,
+        notes=tuple(notes) + annual_notes,
+    )

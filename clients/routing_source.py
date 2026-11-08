@@ -5,7 +5,7 @@ The free resolution path routes `.US` to SEC EDGAR + Yahoo; adapters for other m
 routes. A ticker whose exchange has no route is not covered (no dossier rather than a guess).
 """
 
-from typing import Mapping
+from typing import Mapping, Sequence
 
 from core.errors import TickerNotCoveredError
 from core.fundamentals import CompanyFundamentals
@@ -30,3 +30,23 @@ class RoutingFundamentalsSource:
 
     def fetch_fundamentals(self, ticker: str) -> CompanyFundamentals:
         return self.source_for(ticker).fetch_fundamentals(ticker)
+
+
+class FallbackFundamentalsSource:
+    """
+    core.ports.FundamentalsSource trying sources in order: the first that covers the ticker is used (the SEC route,
+    then the European route). A source's other failures (rate limits, network) are raised, not passed over.
+    """
+
+    def __init__(self, sources: Sequence[FundamentalsSource], name: str):
+        self.sources = tuple(sources)
+        self.name = name
+
+    def fetch_fundamentals(self, ticker: str) -> CompanyFundamentals:
+        reasons = []
+        for source in self.sources:
+            try:
+                return source.fetch_fundamentals(ticker)
+            except TickerNotCoveredError as e:
+                reasons.append(f"{getattr(source, 'name', type(source).__name__)}: {e}")
+        raise TickerNotCoveredError(f"{ticker}: not covered by any source. " + " | ".join(reasons))

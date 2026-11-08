@@ -968,6 +968,29 @@ def _checked_eps(facts: _Facts, income: List[IncomeStatementRow], notes: _Notes)
     return checked
 
 
+def _eps_against_reference(income: List[IncomeStatementRow], reference: float, notes: _Notes) -> List[IncomeStatementRow]:
+    """
+    Each year's filed EPS against a current share count from another source (Yahoo Finance, for the listing): net
+    income / EPS within EPS_YEARS_SCALE_BAND of exactly 1/100 or 1/1,000 of it, or 100x or 1,000x it, is a scale
+    error, corrected. Catches what the other years cannot, when every year is wrong the same way (Games Workshop
+    FY2022-24: pence tagged as pounds, implying 0.33M shares against about 33M).
+    """
+    checked = []
+    for row in income:
+        if row.eps and row.net_income and abs(row.eps) >= EPS_IMPLIED_MIN:
+            ratio = abs(row.net_income / row.eps) / reference
+            scale = next((s for s in EPS_SCALE_ERRORS for r in (1 / s, s)
+                          if abs(math.log(ratio / r)) <= math.log(EPS_YEARS_SCALE_BAND)), None)
+            if scale:
+                factor = 1 / scale if ratio < 1 else scale
+                notes.derive("EPS", f"implies {'1/' if ratio < 1 else ''}{scale:,}{'' if ratio < 1 else 'x'} of the "
+                             f"listing's current share count (Yahoo Finance): a scale error; "
+                             f"{'divided' if ratio < 1 else 'multiplied'} by {scale:,}", row.period_end)
+                row = replace(row, eps=row.eps * factor)
+        checked.append(row)
+    return checked
+
+
 def _eps_against_other_years(income: List[IncomeStatementRow], notes: _Notes) -> List[IncomeStatementRow]:
     """
     Each year's filed EPS against the company's other years (foreign filers; their average shares are often
@@ -1067,7 +1090,7 @@ def _relabelled(notes: Tuple[str, ...], source: str) -> Tuple[str, ...]:
 
 def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, float]] = (),
                 sic: Optional[str] = None, eps_implied_shares: bool = False,
-                source: str = SEC_SOURCE_LABEL) -> EdgarAnnualData:
+                source: str = SEC_SOURCE_LABEL, reference_shares: Optional[float] = None) -> EdgarAnnualData:
     """
     Map a company's XBRL companyfacts to annual statement rows.
 
@@ -1081,6 +1104,8 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
     and share counts made consistent with the filed EPS (_eps_consistent_shares). Not for US filers, whose EPS can
     be per share of one class (Berkshire: Class A).
     source: the data source named in the notes (ESEF reports converted to companyfacts: clients/esef_mapper.py)
+    reference_shares (with eps_implied_shares): the listing's current share count from another source; each year's
+    EPS is first checked against it for a scale error (_eps_against_reference)
     """
     facts = _Facts(companyfacts, splits)
     utility = bool(sic) and str(sic).isdigit() and int(sic) in UTILITY_SIC
@@ -1121,6 +1146,8 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
             notes.derive("share count", "weighted-average shares of the year (no balance sheet in the SEC data)", end)
     income = _checked_eps(facts, income, notes)
     if eps_implied_shares:
+        if reference_shares:
+            income = _eps_against_reference(income, reference_shares, notes)
         income = _eps_against_other_years(income, notes)
         balance, shares_by_year = _eps_consistent_shares(facts, balance, income, shares_by_year, notes)
     for end in ends:

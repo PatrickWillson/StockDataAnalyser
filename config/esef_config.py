@@ -8,7 +8,7 @@ an official regulator service, and it is incomplete: Germany and Ireland are abs
 market). Its rate limit is undocumented; it answers HTTP 429 when exceeded.
 """
 
-from typing import Final, Mapping
+from typing import Final, FrozenSet, Mapping
 
 ESEF_BASE_URL: Final[str] = "https://filings.xbrl.org"
 ESEF_FILINGS_URL: Final[str] = ESEF_BASE_URL + "/api/filings"
@@ -30,3 +30,10 @@ ESEF_PAGE_SIZE: Final[int] = 100
 # (European route decision of 2026-11-08, as SEC_FOREIGN_FILER_CIKS: an ambiguous lookup gives no dossier unless
 # listed here)
 ESEF_ENTITY_LEIS: Final[Mapping[str, str]] = {}
+
+# EODHD exchange codes routed to the European route after the SEC route: EU / EEA regulated markets and London
+# (ESEF applies to issuers on EU/EEA regulated markets, and the FCA requires it for the UK's). Germany (XETRA, F, SG)
+# and Ireland (IR) are listed although filings.xbrl.org has almost none of their reports: the lookup says so.
+ESEF_EXCHANGES: Final[FrozenSet[str]] = frozenset({
+    "LSE", "XETRA", "F", "SG", "PA", "AS", "BR", "LS", "MC", "MI", "VI", "IR", "ST", "OL", "CO", "HE", "AT",
+    "WAR", "BUD", "PR"})

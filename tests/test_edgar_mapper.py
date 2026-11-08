@@ -1300,3 +1300,28 @@ def test_notes_can_name_another_source():
                               "Assets": [(None, "2024-12-31", 80.0, FILED, "GBP")]}), source="ESEF")
     assert data.notes and all(n.startswith("ESEF:") for n in data.notes)
     assert any("not in the ESEF data" in n for n in data.notes)
+
+
+def test_eps_wrong_the_same_way_every_year_is_corrected_against_the_listings_share_count():
+    """Games Workshop FY2022-24: pence tagged as pounds in every year, net income / EPS about 1/100 of 33M shares."""
+    facts = {"ProfitLossAttributableToOwnersOfParent": [(f"{y}-01-01", f"{y}-12-31", 150.0e6, f"{y + 1}-03-01", "GBP")
+                                                       for y in (2022, 2023, 2024)],
+             "Assets": [(None, f"{y}-12-31", 400.0e6, f"{y + 1}-03-01", "GBP") for y in (2022, 2023, 2024)],
+             "BasicEarningsLossPerShare": [(f"{y}-01-01", f"{y}-12-31", 458.8, f"{y + 1}-03-01", "GBP/shares")
+                                           for y in (2022, 2023, 2024)]}
+    data = annual_data(_ifrs(facts), eps_implied_shares=True, reference_shares=32.7e6)
+    assert [row.eps for row in data.income_statements] == pytest.approx([4.588] * 3)
+    assert data.shares_by_year["2024"] == pytest.approx(150.0e6 / 4.588)
+    assert any("1/100 of the listing's current share count" in n for n in data.notes)
+    unchecked = annual_data(_ifrs(facts), eps_implied_shares=True)
+    assert [row.eps for row in unchecked.income_statements] == [458.8] * 3
+
+
+def test_eps_near_the_listings_share_count_is_left_alone():
+    """Net income / EPS 100M against 95M today (buybacks, issues): no scale error."""
+    facts = {"ProfitLossAttributableToOwnersOfParent": [("2024-01-01", "2024-12-31", 100.0e6, FILED, "EUR")],
+             "Assets": [(None, "2024-12-31", 400.0e6, FILED, "EUR")],
+             "BasicEarningsLossPerShare": [("2024-01-01", "2024-12-31", 1.0, FILED, "EUR/shares")]}
+    data = annual_data(_ifrs(facts), eps_implied_shares=True, reference_shares=95.0e6)
+    assert data.income_statements[0].eps == 1.0
+    assert not any("current share count" in n for n in data.notes)
