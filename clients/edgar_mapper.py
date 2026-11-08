@@ -123,8 +123,10 @@ LTD_CURRENT = ("LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCur
                "ifrs-full:CurrentPortionOfLongtermBorrowings",
                "ifrs-full:CurrentBondsIssuedAndCurrentPortionOfNoncurrentBondsIssued")
 # IFRS non-current debt tagged by kind when no non-current total is (Unilever FY2025: bonds 24,087M + loans 4M)
-IFRS_NONCURRENT_BONDS = ("ifrs-full:NoncurrentPortionOfNoncurrentBondsIssued",)
+IFRS_NONCURRENT_BONDS = ("ifrs-full:NoncurrentPortionOfNoncurrentBondsIssued",
+                         "ifrs-full:NoncurrentDebtInstrumentsIssued")   # Denison FY2025: convertible notes 474M
 IFRS_NONCURRENT_LOANS = ("ifrs-full:NoncurrentPortionOfNoncurrentLoansReceived",)
+IFRS_OTHER_NONCURRENT_BORROWINGS = ("ifrs-full:NoncurrentPortionOfOtherNoncurrentBorrowings",)
 INVENTORY = ("InventoryNet", "ifrs-full:Inventories")
 UTILITY_INVENTORY = ("EnergyRelatedInventoryNaturalGasInStorage", "EnergyRelatedInventoryOtherFossilFuel",
                      "EnergyRelatedInventoryCoal", "EnergyRelatedInventoryPropaneGas", "OtherInventorySupplies")
@@ -503,7 +505,7 @@ def _long_term_debt(facts: _Facts, end: str, notes: _Notes) -> Tuple[Optional[fl
         return fact.value, False
     used, parts = [], 0.0
     for chain in (LONG_TERM_NOTES, LONG_TERM_REVOLVER, SENIOR_NOTES, SUBORDINATED_DEBT, FHLB_ADVANCES, CONVERTIBLE_NOTES,
-                  IFRS_NONCURRENT_BONDS, IFRS_NONCURRENT_LOANS):
+                  IFRS_NONCURRENT_BONDS, IFRS_NONCURRENT_LOANS, IFRS_OTHER_NONCURRENT_BORROWINGS):
         part = facts.get(chain, end, MONEY, "instant")
         notes.fact("long-term debt", end, part)
         if part is not None:

@@ -1097,3 +1097,9 @@ def test_a_share_count_repeated_unchanged_after_a_split_keeps_its_original_basis
                                                  (None, "2024-03-31", 1_261.2e6, "2025-06-20", "shares")]})
     data = annual_data(facts, [("2024-09-27", 5.0)])
     assert data.balance_sheets[0].shares_outstanding == pytest.approx(6_306.0e6)
+
+
+def test_ifrs_noncurrent_debt_instruments_issued_are_long_term_debt():
+    # Denison Mines FY2025: convertible notes tagged as non-current debt instruments issued, 474M
+    data = _debt({"NoncurrentDebtInstrumentsIssued": 474.0e6, "CurrentDebtInstrumentsIssued": 0.0})
+    assert data.balance_sheets[0].long_term_debt == 474.0e6
