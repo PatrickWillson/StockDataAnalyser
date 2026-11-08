@@ -74,6 +74,16 @@ class ForeignSECFundamentalsSource:
         submissions = self.edgar.fetch_submissions(filer.cik)
         splits = yahoo_mapper.splits(yahoo)
         notes: List[str] = []
+        if not splits and filer.annual_form.startswith("40-F") and filer.us_symbols:
+            # A 40-F filer's US line trades the same shares (Canada's MJDS), and Yahoo sometimes records a split or
+            # consolidation only there (Eldorado's 2018 1-for-5: EGO, not ELD.TO). Not for 20-F filers, whose US line
+            # is usually an ADR, where a "split" can be an ADS ratio change
+            us_line = self.yahoo.fetch_company_data(f"{filer.us_symbols[0]}.US")
+            us_splits = yahoo_mapper.splits(us_line) if us_line else ()
+            if us_splits:
+                splits = us_splits
+                notes.append(f"Stock splits from the US listing {filer.us_symbols[0]} (Yahoo Finance lists none for "
+                             "this home listing; a 40-F filer's US line trades the same shares)")
         missing = edgar_mapper.filings_missing_from_companyfacts(facts, submissions)
         instances = [(filing, self.edgar.fetch_filing_instance(filer.cik, filing[3])) for filing in missing]
         instances = [(filing, instance) for filing, instance in instances if instance]

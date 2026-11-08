@@ -103,3 +103,26 @@ def test_no_yahoo_data_for_the_listing_gives_no_dossier():
             return None
     with pytest.raises(TickerNotCoveredError, match="no Yahoo Finance data"):
         source(yahoo=NoYahoo()).fetch_fundamentals("X.LSE")
+
+
+def test_a_40f_filers_splits_come_from_its_us_line_when_the_home_listing_has_none():
+    class TwoLines(FakeYahoo):
+        def fetch_company_data(self, ticker):
+            if ticker == "EXPL.US":
+                return YahooCompanyData(yahoo_symbol="EXPL", splits=(("2018-12-31", 0.2),))
+            return self.data
+    lookup = FakeLookup()
+    lookup.resolve = lambda ticker, name: SecFiler("0000000099", "EXAMPLE CORP", ("EXPL",), "40-F", "2026-03-27")
+    f = ForeignSECFundamentalsSource(FakeEdgar(), TwoLines(), lookup).fetch_fundamentals("X.TO")
+    assert any("Stock splits from the US listing EXPL" in n for n in f.notes)
+    assert any("2018-12-31 0.2:1" in n for n in f.notes)
+
+
+def test_a_20f_filers_us_line_splits_are_not_used():
+    class TwoLines(FakeYahoo):
+        def fetch_company_data(self, ticker):
+            if ticker == "EXPL.US":
+                return YahooCompanyData(yahoo_symbol="EXPL", splits=(("2018-12-31", 0.2),))
+            return self.data
+    f = source(yahoo=TwoLines()).fetch_fundamentals("X.LSE")
+    assert not any("Stock splits from the US listing" in n for n in f.notes)
