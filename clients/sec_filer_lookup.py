@@ -11,6 +11,7 @@ ANNUAL_REPORT_MAX_AGE_FOR_VERDICT_MONTHS. Known companies with two SEC filers ar
 
 import datetime as dt
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
@@ -27,9 +28,14 @@ _NAME_NOISE = re.compile(
     r"adr|ads|sponsored|telefonaktiebolaget)\b")
 
 
+def without_accents(name: Optional[str]) -> str:
+    """'Companhia Siderúrgica Nacional' -> 'Companhia Siderurgica Nacional' (Yahoo's search finds nothing for the first)."""
+    return unicodedata.normalize("NFKD", name or "").encode("ascii", "ignore").decode("ascii")
+
+
 def normalised_name(name: str) -> str:
     """A company name without punctuation, legal forms and listing words: 'Rio Tinto Group' -> 'rio tinto'."""
-    plain = re.sub(r"[^a-z0-9 ]", " ", (name or "").lower())
+    plain = re.sub(r"[^a-z0-9 ]", " ", without_accents(name).lower())
     return re.sub(r"\s+", " ", _NAME_NOISE.sub(" ", plain)).strip()
 
 
@@ -104,7 +110,9 @@ class SecFilerLookup:
             raise TickerNotCoveredError(f"{ticker}: no company name from Yahoo Finance to look up an SEC filer")
         candidates: Dict[str, List[str]] = {}
         names: Dict[str, str] = {}
-        listings = self.yahoo.search_us_listings(home_name)
+        queries = [home_name] + ([without_accents(home_name)] if without_accents(home_name) != home_name else [])
+        results = [self.yahoo.search_us_listings(query) for query in queries]
+        listings = None if all(r is None for r in results) else [x for r in results if r for x in r]
         if listings is None:
             raise TickerNotCoveredError(f"{ticker}: Yahoo Finance search failed, so the SEC filer could not be looked "
                                         "up; try again later")

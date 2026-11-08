@@ -82,6 +82,7 @@ def test_names_match_ignores_legal_forms_and_listing_words():
     assert names_match("Vodafone Group Public Limited Company", "Vodafone Group Public Ltd")
     assert names_match("Telefonaktiebolaget LM Ericsson (publ)", "Telefonaktiebolaget LM Ericsson")
     assert names_match("Toyota Motor Corporation", "Toyota Motor Corp ADR")
+    assert names_match("Companhia Siderúrgica Nacional", "Companhia Siderurgica Nacional")
     assert not names_match("Capital Limited", "Burford Capital Limited")
     assert not names_match("Hilton Food Group plc", "Hilton Worldwide Holdings Inc")
 
@@ -99,3 +100,11 @@ def test_a_failed_yahoo_search_is_not_reported_as_no_filer():
     lookup = SecFilerLookup(FakeEdgar({}, {}), FailingYahoo(), overrides={}, today=TODAY)
     with pytest.raises(TickerNotCoveredError, match="search failed.*try again"):
         lookup.resolve("2330.TW", "Taiwan Semiconductor Manufacturing Company Limited")
+
+
+def test_an_accented_home_name_is_also_searched_without_accents():
+    # Yahoo's search finds nothing for "Siderúrgica"; the accent-free query finds the NYSE line
+    csn = {"Companhia Siderurgica Nacional": [("SID", "NYQ", "Companhia Siderúrgica Nacional")]}
+    subs = {"0001049659": submissions(("20-F", "2026-04-30"))}
+    filer = lookup(csn, {"SID": ("0001049659", "NATIONAL STEEL CO")}, subs).resolve("CSNA3.SA", "Companhia Siderúrgica Nacional")
+    assert filer.cik == "0001049659"
