@@ -137,6 +137,12 @@ class ForeignSECFundamentalsSource:
         # also the reporting currency; otherwise its unit is not dependable (BP.L and AZN.L: dollars, as declared,
         # beside a pence price), so it is left out rather than shown in a wrong unit
         forward_rate = yahoo_mapper.forward_dividend_rate(yahoo) if quote_currency == annual.currency else None
+        market = yahoo_mapper.market_data(yahoo)
+        if quote_currency != annual.currency:
+            # Same for Yahoo's per-share figures (book value, trailing dividend and yield, P/E): HSBA.L's bookValue
+            # 7.57 is in pounds, labelled as the dollar statements' currency. They feed only the [VALIDATION]
+            # comparisons, which would otherwise report false discrepancies
+            market = replace(market, book_value_per_share=0.0, dividend_per_share=0.0, dividend_yield=0.0, pe_ratio=0.0)
         latest_balance = annual.balance_sheets[0] if annual.balance_sheets else None
         latest_shares = (latest_balance.shares_outstanding if latest_balance else None) or 0.0
         symbol, _, exchange = ticker.rpartition(".")
@@ -164,6 +170,6 @@ class ForeignSECFundamentalsSource:
             cash_flow_currency=annual.currency,
             forward_dividend_rate=forward_rate,
             forward_dividend_currency=dividend_currency,
-            market=yahoo_mapper.market_data(yahoo),
+            market=market,
             notes=tuple(notes) + annual.notes,
         )

@@ -22,6 +22,7 @@ FACTS = _ifrs({
 YAHOO = YahooCompanyData(
     yahoo_symbol="ULVR.L",
     info={"longName": "Example plc", "currency": "GBp", "financialCurrency": "EUR", "sector": "Consumer Defensive",
+          "bookValue": 7.12, "trailingAnnualDividendRate": 1.5, "trailingPE": 13.4, "beta": 0.4,
           "companyOfficers": [{"name": "Jane Roe", "title": "CEO"}]},
     dividends=(("2024-05-01", 40.0), ("2024-11-01", 42.0)),
     splits=(),
@@ -77,6 +78,7 @@ def test_home_listing_gets_the_filers_statements_with_the_listings_market_data()
     assert any("quotes them in GBp; converted to GBP" in n for n in f.notes)
     assert f.ceo_name == "Jane Roe"
     assert f.forward_dividend_rate is None            # pence listing, euro statements: Yahoo's rate has no dependable unit
+    assert (f.market.book_value_per_share, f.market.dividend_per_share, f.market.pe_ratio) == (0.0, 0.0, 0.0)
     assert any("EXAMPLE PLC (CIK 0000000099) (US listing EXPL)" in n for n in f.notes)
     assert any("covers 2 fiscal years (from FY2023)" in n and "data limit" in n for n in f.notes)
 
