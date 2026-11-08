@@ -92,7 +92,7 @@ class ForeignSECFundamentalsSource:
                 edgar_mapper.instance_companyfacts(instance, filing[0], filing[2], filing[3]) for filing, instance in instances])
             notes.append("SEC EDGAR: " + ", ".join(f"{filing[0]} for {filing[1]}" for filing, _ in instances)
                          + " read from the filing's own XBRL file: the SEC's company facts do not include it")
-        annual = edgar_mapper.annual_data(facts, splits, submissions.get("sic"))
+        annual = edgar_mapper.annual_data(facts, splits, submissions.get("sic"), eps_implied_shares=True)
         if not annual.income_statements:
             raise TickerNotCoveredError(f"{ticker}: {filer.sec_name} (CIK {filer.cik}) has no annual reports with "
                                         "XBRL financial data at the SEC")

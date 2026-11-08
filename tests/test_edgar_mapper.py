@@ -1151,3 +1151,27 @@ def test_finance_leases_already_in_the_debt_tag_are_not_added_again():
 def test_leases_alone_are_debt_for_a_company_without_borrowings():
     # Ballard Power FY2025-like: no borrowings, non-current lease liabilities 19M
     assert _debt({"NoncurrentLeaseLiabilities": 19.0e6}).balance_sheets[0].long_term_debt == 19.0e6
+
+
+def test_foreign_share_counts_before_a_split_are_put_on_the_eps_basis():
+    # Frontline FY2014-like: 635M shares filed after the 2016 1-for-5 consolidation without restating, EPS restated
+    facts = _ifrs({"Assets": [(None, "2014-12-31", 2_000.0e6, "2016-03-20", "USD")],
+                   "ProfitLossAttributableToOwnersOfParent": [("2014-01-01", "2014-12-31", 149.0e6, "2016-03-20", "USD")],
+                   "BasicEarningsLossPerShare": [("2014-01-01", "2014-12-31", 1.19, "2016-03-20", "USD/shares")],
+                   "NumberOfSharesOutstanding": [(None, "2014-12-31", 635.2e6, "2016-03-20", "shares")]})
+    splits = [("2016-02-02", 0.2)]
+    foreign = annual_data(facts, splits, eps_implied_shares=True)
+    assert foreign.balance_sheets[0].shares_outstanding == pytest.approx(127.04e6)
+    assert foreign.shares_by_year["2014"] == pytest.approx(127.04e6)
+    assert any("put on today's share basis" in n for n in foreign.notes)
+    assert annual_data(facts, splits).balance_sheets[0].shares_outstanding == 635.2e6     # US path: unchanged
+
+
+def test_a_foreign_year_without_a_share_count_takes_net_income_over_eps():
+    # Shopify FY2016-like: dual-class, no total share count tagged
+    facts = _ifrs({"Assets": [(None, "2016-12-31", 1_000.0e6, FILED, "USD")],
+                   "ProfitLossAttributableToOwnersOfParent": [("2016-01-01", "2016-12-31", -34.9e6, FILED, "USD")],
+                   "BasicEarningsLossPerShare": [("2016-01-01", "2016-12-31", -0.42, FILED, "USD/shares")]})
+    data = annual_data(facts, eps_implied_shares=True)
+    assert data.shares_by_year["2016"] == pytest.approx(83.1e6, rel=1e-3)
+    assert any("net income / filed EPS" in n for n in data.notes)

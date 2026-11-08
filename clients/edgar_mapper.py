@@ -70,6 +70,9 @@ EPS_CHECK_TOLERANCE = 0.05
 # scale error (DRDGOLD FY2018-19: 11.8 cents tagged as rand); any other gap over EPS_GAP is noted. EPS below
 # EPS_MIN_CHECKED is too coarsely rounded to compare (Ericsson FY2024: 0.01 SEK)
 EPS_SCALE_ERRORS, EPS_SCALE_TOLERANCE, EPS_GAP, EPS_MIN_CHECKED = (100, 1000), 0.05, 0.10, 0.10
+# _eps_consistent_shares: a count more than EPS_SHARES_OFF from net income / EPS that a later split's factor brings
+# within EPS_SHARES_MATCH of it (a year-end count beside a weighted-average EPS: Frontline FY2015, a merger year, 1.3x)
+EPS_SHARES_OFF, EPS_SHARES_MATCH, EPS_IMPLIED_MIN = 0.5, 0.4, 0.01
 MIN_SALES_SHARE_OF_REVENUES = 0.75   # Berkshire 67-70%: revenue tag; Inogen 80-85%: sales
 # Consolidated profit incl. minority interests: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest
 PROFIT_LOSS = ("ProfitLoss", "ifrs-full:ProfitLoss")
@@ -931,8 +934,39 @@ def _checked_eps(facts: _Facts, income: List[IncomeStatementRow], notes: _Notes)
     return checked
 
 
+def _eps_consistent_shares(facts: _Facts, balance: List[BalanceSheetRow], income: List[IncomeStatementRow],
+                           shares_by_year: Dict[str, float], notes: _Notes) -> Tuple[List[BalanceSheetRow], Dict[str, float]]:
+    """
+    Share counts made consistent with the filed EPS, whose per-share basis filers restate after a split (foreign
+    filers, which restate share counts less reliably): a year-end count off from net income / EPS by the factor of
+    the splits since its period end is put on today's basis (Frontline FY2013-15: pre-consolidation counts beside
+    post-consolidation EPS); a year with no count at all takes net income / EPS (Shopify FY2015-18, a dual-class
+    company with no total tagged), approximate, rather than today's count.
+    """
+    implied = {row.period_end: abs(row.net_income / row.eps) for row in income
+               if row.eps and row.net_income and abs(row.eps) >= EPS_IMPLIED_MIN}
+    repaired = []
+    for row in balance:
+        shares, base = row.shares_outstanding, implied.get(row.period_end)
+        factor = facts.split_factor(row.period_end)
+        if shares and base and factor != 1 and abs(shares / base - 1) > EPS_SHARES_OFF \
+                and abs(shares * factor / base - 1) <= EPS_SHARES_MATCH:
+            notes.derive("year-end shares", "put on today's share basis: the filed count predates a later split while "
+                         "the filed EPS is restated for it", row.period_end)
+            row = replace(row, shares_outstanding=shares * factor)
+        repaired.append(row)
+    by_year = {fiscal_year(row.period_end): row.shares_outstanding for row in reversed(repaired) if row.shares_outstanding}
+    for end, base in implied.items():
+        year = fiscal_year(end)
+        if year not in by_year:
+            by_year[year] = shares_by_year.get(year) or base
+            if year not in shares_by_year:
+                notes.derive("share count", "net income / filed EPS (no share count tagged; approximate)", end)
+    return repaired, by_year
+
+
 def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, float]] = (),
-                sic: Optional[str] = None) -> EdgarAnnualData:
+                sic: Optional[str] = None, eps_implied_shares: bool = False) -> EdgarAnnualData:
     """
     Map a company's XBRL companyfacts to annual statement rows.
 
@@ -942,6 +976,8 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
 
     Money figures are in the filer's reporting currency (EdgarAnnualData.currency); years filed only in another
     currency (a filer that changed its reporting currency) are left out and listed in the notes.
+    eps_implied_shares (foreign filers): share counts made consistent with the filed EPS (_eps_consistent_shares).
+    Not for US filers, whose EPS can be per share of one class (Berkshire: Class A).
     """
     facts = _Facts(companyfacts, splits)
     utility = bool(sic) and str(sic).isdigit() and int(sic) in UTILITY_SIC
@@ -983,6 +1019,8 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
             shares_by_year[fiscal_year(end)] = average.value * 1000 if in_thousands else average.value
             notes.derive("share count", "weighted-average shares of the year (no balance sheet in the SEC data)", end)
     income = _checked_eps(facts, income, notes)
+    if eps_implied_shares:
+        balance, shares_by_year = _eps_consistent_shares(facts, balance, income, shares_by_year, notes)
     if facts.scale_errors:
         notes.other.append("SEC EDGAR: figures a later filing tagged in thousands or millions as units were ignored: "
                            + ", ".join(sorted(facts.scale_errors)))

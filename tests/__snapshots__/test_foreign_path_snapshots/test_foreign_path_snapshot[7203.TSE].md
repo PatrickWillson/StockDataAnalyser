@@ -63,6 +63,7 @@
 - SEC EDGAR: long-term debt: includes non-current lease liabilities (leases count as debt) (FY2020, FY2021, FY2022, FY2023, FY2024, FY2025, FY2026)
 - SEC EDGAR: total liabilities: derived as liabilities and equity - total equity (FY2009)
 - SEC EDGAR: year-end shares: derived as shares issued - treasury shares (FY2009)
+- SEC EDGAR: share count: net income / filed EPS (no share count tagged; approximate) (FY2008)
 - SEC EDGAR: restated in later filings, latest figure used (first reported -> latest): FY2018 operating cash flow 4,210,009M -> 4,223,128M; FY2017 operating cash flow 3,414,237M -> 3,568,488M
 - SEC EDGAR: FY2016 revenue uses SalesRevenueNet (26,549,111,000,000); total Revenues incl. other income is 28,403,118,000,000
 - SEC EDGAR: FY2015 revenue uses SalesRevenueNet (25,612,836,000,000); total Revenues incl. other income is 27,234,521,000,000
@@ -192,7 +193,7 @@
 | 2011 | 17820.52B | 408.18B | 26.03 | 48.05 | 659.02 | 66.25 | 184.6% | 12401.06B | 15.678B | 1026.32 | 39.4 | 1.6 |
 | 2010 | 17724.73B | 209.46B | 13.36 | 46.20 | 660.70 | 152.26 | 345.9% | 12513.41B | 15.680B | 884.21 | 66.2 | 1.3 |
 | 2009 | 19173.72B | -436.94B | -27.83 | 44.43 | 641.68 | 45.26 | N/A | 12618.65B | 15.679B | 742.11 | Negative | 1.2 |
-| 2008 | 24820.51B | 1717.88B | 108.13 | N/A | N/A | 0.00 | 0.0% | N/A | 13.034B | 600.00 | 5.5 | N/A |
+| 2008 | 24820.51B | 1717.88B | 108.13 | N/A | N/A | 0.00 | 0.0% | N/A | 15.887B | 600.00 | 5.5 | N/A |
 
 **Note on Data Completeness:**
 - Years marked '[Data Unavailable]' (2027) show declared dividends but lack complete audited annual financial statements
