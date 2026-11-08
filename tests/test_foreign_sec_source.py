@@ -128,3 +128,17 @@ def test_a_20f_filers_us_line_splits_are_not_used():
             return self.data
     f = source(yahoo=TwoLines()).fetch_fundamentals("X.LSE")
     assert not any("Stock splits from the US listing" in n for n in f.notes)
+
+
+def test_without_any_share_count_yahoos_current_total_stands_in():
+    # BP: EPS and shares only under its own tags
+    no_shares = _ifrs({"ProfitLossAttributableToOwnersOfParent": [(*Y24, 110.0e6, FILED, "EUR")],
+                       "Assets": [(None, "2024-12-31", 2000.0e6, FILED, "EUR")]})
+
+    class NoShareEdgar(FakeEdgar):
+        def fetch_company_facts(self, cik):
+            return no_shares
+    yahoo = YahooCompanyData(yahoo_symbol="X.L", info={**YAHOO.info, "sharesOutstanding": 15_600_000_000})
+    f = ForeignSECFundamentalsSource(NoShareEdgar(), FakeYahoo(yahoo), FakeLookup()).fetch_fundamentals("X.LSE")
+    assert f.shares_outstanding == 15_600_000_000
+    assert any("today's total from Yahoo Finance for this listing stands for every year" in n for n in f.notes)

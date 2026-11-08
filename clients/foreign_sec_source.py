@@ -145,6 +145,15 @@ class ForeignSECFundamentalsSource:
             market = replace(market, book_value_per_share=0.0, dividend_per_share=0.0, dividend_yield=0.0, pe_ratio=0.0)
         latest_balance = annual.balance_sheets[0] if annual.balance_sheets else None
         latest_shares = (latest_balance.shares_outstanding if latest_balance else None) or 0.0
+        current_shares = annual.latest_cover_shares or latest_shares
+        if not current_shares:
+            # EPS and shares only under the company's own tags (BP): today's count of this home listing's shares
+            # (ordinary shares) stands for every year without a count, as on the US path for dual-class companies
+            current_shares = yahoo_mapper.total_shares(yahoo) or 0.0
+            if current_shares:
+                notes.append("Share count: not in the SEC data (the company uses its own tags); today's total from "
+                             "Yahoo Finance for this listing stands for every year without a count, so per-share "
+                             "history (EPS, book value per share) is approximate")
         symbol, _, exchange = ticker.rpartition(".")
         return CompanyFundamentals(
             source=SOURCE_NAME,
@@ -161,7 +170,7 @@ class ForeignSECFundamentalsSource:
             updated_at=None,
             annual_balance_sheets=annual.balance_sheets,
             annual_income_statements=annual.income_statements,
-            shares_outstanding=annual.latest_cover_shares or latest_shares,
+            shares_outstanding=current_shares,
             shares_by_year=dict(annual.shares_by_year),
             latest_statement_shares=latest_shares,
             dividend_payments=payments,
