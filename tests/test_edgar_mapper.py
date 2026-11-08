@@ -1068,3 +1068,22 @@ def test_cover_count_stands_when_the_eps_does_not_confirm_the_average():
     facts["facts"]["dei"] = {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
         {"end": "2026-02-10", "val": 13.0e6, "filed": FILED, "form": "20-F", "accn": f"a-{FILED}"}]}}}
     assert annual_data(facts).balance_sheets[0].shares_outstanding == 13.0e6
+
+
+def _debt(concepts):
+    base = {"Assets": [(None, "2025-12-31", 80_000.0e6, FILED, "EUR")],
+            "ProfitLoss": [("2025-01-01", "2025-12-31", 6_000.0e6, FILED, "EUR")]}
+    return annual_data(_ifrs({**base, **{k: [(None, "2025-12-31", v, FILED, "EUR")] for k, v in concepts.items()}}))
+
+
+def test_ifrs_bonds_and_loans_tagged_by_kind_are_long_term_debt():
+    # Unilever FY2025: no borrowings total by maturity; non-current bonds 24,087M and loans 4M
+    data = _debt({"NoncurrentPortionOfNoncurrentBondsIssued": 24_087.0e6, "NoncurrentPortionOfNoncurrentLoansReceived": 4.0e6,
+                  "Borrowings": 26_038.0e6, "CurrentBondsIssuedAndCurrentPortionOfNoncurrentBondsIssued": 1_951.0e6})
+    assert data.balance_sheets[0].long_term_debt == 24_091.0e6
+
+
+def test_ifrs_borrowings_total_less_its_current_portion_is_long_term_debt():
+    # Novartis FY2025: Borrowings 28,729M, current portion of long-term borrowings 794M
+    data = _debt({"Borrowings": 28_729.0e6, "CurrentPortionOfLongtermBorrowings": 794.0e6})
+    assert data.balance_sheets[0].long_term_debt == 27_935.0e6

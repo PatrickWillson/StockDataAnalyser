@@ -102,7 +102,7 @@ LONG_TERM_DEBT = ("LongTermDebtNoncurrent", "LongTermDebtAndCapitalLeaseObligati
                   "ifrs-full:NoncurrentPortionOfNoncurrentBorrowings")
 LONG_TERM_DEBT_TOTAL = ("LongTermDebt", "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
                         "NotesAndLoansPayable", "DebtAndCapitalLeaseObligations",   # homebuilders: KB Home, Century
-                        "ifrs-full:LongtermBorrowings")
+                        "ifrs-full:LongtermBorrowings", "ifrs-full:Borrowings")   # Novartis: Borrowings only
 # ^ incl. the current portion; banks report only these (JPMorgan: the second)
 # Non-current debt tagged by kind when no non-current total is (Lifetime Brands: term loan + revolver; Village
 # Super Market: notes + other). Some filers misuse "other" (Lifetime FY2024: 4,108K of other long-term
@@ -120,7 +120,11 @@ DEBT_CURRENT = ("DebtCurrent", "ifrs-full:CurrentBorrowingsAndCurrentPortionOfNo
 SHORT_BORROWINGS = ("ShortTermBorrowings", "ifrs-full:ShorttermBorrowings")
 COMMERCIAL_PAPER = ("CommercialPaper",)
 LTD_CURRENT = ("LongTermDebtCurrent", "LongTermDebtAndCapitalLeaseObligationsCurrent", "SeniorNotesCurrent",
-               "ifrs-full:CurrentPortionOfLongtermBorrowings")
+               "ifrs-full:CurrentPortionOfLongtermBorrowings",
+               "ifrs-full:CurrentBondsIssuedAndCurrentPortionOfNoncurrentBondsIssued")
+# IFRS non-current debt tagged by kind when no non-current total is (Unilever FY2025: bonds 24,087M + loans 4M)
+IFRS_NONCURRENT_BONDS = ("ifrs-full:NoncurrentPortionOfNoncurrentBondsIssued",)
+IFRS_NONCURRENT_LOANS = ("ifrs-full:NoncurrentPortionOfNoncurrentLoansReceived",)
 INVENTORY = ("InventoryNet", "ifrs-full:Inventories")
 UTILITY_INVENTORY = ("EnergyRelatedInventoryNaturalGasInStorage", "EnergyRelatedInventoryOtherFossilFuel",
                      "EnergyRelatedInventoryCoal", "EnergyRelatedInventoryPropaneGas", "OtherInventorySupplies")
@@ -493,7 +497,8 @@ def _long_term_debt(facts: _Facts, end: str, notes: _Notes) -> Tuple[Optional[fl
     if fact is not None:
         return fact.value, False
     used, parts = [], 0.0
-    for chain in (LONG_TERM_NOTES, LONG_TERM_REVOLVER, SENIOR_NOTES, SUBORDINATED_DEBT, FHLB_ADVANCES, CONVERTIBLE_NOTES):
+    for chain in (LONG_TERM_NOTES, LONG_TERM_REVOLVER, SENIOR_NOTES, SUBORDINATED_DEBT, FHLB_ADVANCES, CONVERTIBLE_NOTES,
+                  IFRS_NONCURRENT_BONDS, IFRS_NONCURRENT_LOANS):
         part = facts.get(chain, end, MONEY, "instant")
         notes.fact("long-term debt", end, part)
         if part is not None:
