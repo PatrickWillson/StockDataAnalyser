@@ -1045,3 +1045,26 @@ def test_a_filing_with_only_stray_facts_in_companyfacts_is_missing():
     recent = {"form": ["20-F", "20-F"], "reportDate": ["2025-12-31", "2024-12-31"], "filingDate": ["2026-04-16", "2025-04-17"],
               "accessionNumber": ["f25", "f24"], "isXBRL": [1, 1]}
     assert filings_missing_from_companyfacts(facts, {"filings": {"recent": recent}}) == [("20-F", "2025-12-31", "2026-04-16", "f25")]
+
+
+def test_cover_count_of_one_company_of_a_dual_listed_group_gives_way_to_the_average():
+    # Rio Tinto FY2025-like: cover 1,256M plc shares; EPS 6.137 is on 1,624M plc + Ltd shares
+    facts = _ifrs({"Assets": [(None, "2025-12-31", 100_000.0e6, FILED, "USD")],
+                   "ProfitLossAttributableToOwnersOfParent": [("2025-01-01", "2025-12-31", 9_966.0e6, FILED, "USD")],
+                   "BasicEarningsLossPerShare": [("2025-01-01", "2025-12-31", 6.137, FILED, "USD/shares")],
+                   "WeightedAverageShares": [("2025-01-01", "2025-12-31", 1_624.0e6, FILED, "shares")]})
+    facts["facts"]["dei"] = {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
+        {"end": "2026-02-10", "val": 1_256.0e6, "filed": FILED, "form": "20-F", "accn": f"a-{FILED}"}]}}}
+    data = annual_data(facts)
+    assert data.balance_sheets[0].shares_outstanding == 1_624.0e6
+    assert any("the filed EPS is on the average" in n for n in data.notes)
+
+
+def test_cover_count_stands_when_the_eps_does_not_confirm_the_average():
+    facts = _ifrs({"Assets": [(None, "2025-12-31", 100.0e6, FILED, "USD")],
+                   "ProfitLossAttributableToOwnersOfParent": [("2025-01-01", "2025-12-31", 10.0e6, FILED, "USD")],
+                   "BasicEarningsLossPerShare": [("2025-01-01", "2025-12-31", 0.80, FILED, "USD/shares")],
+                   "WeightedAverageShares": [("2025-01-01", "2025-12-31", 10.0e6, FILED, "shares")]})
+    facts["facts"]["dei"] = {"EntityCommonStockSharesOutstanding": {"units": {"shares": [
+        {"end": "2026-02-10", "val": 13.0e6, "filed": FILED, "form": "20-F", "accn": f"a-{FILED}"}]}}}
+    assert annual_data(facts).balance_sheets[0].shares_outstanding == 13.0e6

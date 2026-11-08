@@ -57,11 +57,10 @@
 - History: the SEC's XBRL data for this filer covers 9 fiscal years (from FY2017); tests needing more years fail or show N/A because of this data limit, not because of the company's record
 - No quarterly figures: foreign filers' interim reports (6-K) carry no XBRL, so TTM is N/A
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
-- SEC EDGAR: year-end shares: cover-page count of the filing (dated after the period end) (FY2018, FY2019, FY2020, FY2021, FY2022, FY2023, FY2024, FY2025)
-- SEC EDGAR: share count: not in the SEC data (the company uses its own tags); per-share figures N/A (FY2020)
+- SEC EDGAR: year-end shares: cover-page count of the filing (dated after the period end) (FY2018, FY2019, FY2021, FY2022, FY2023, FY2024, FY2025)
+- SEC EDGAR: year-end shares: weighted-average shares of the year (the cover-page count is over 20% from it and the filed EPS is on the average: e.g. a dual-listed group) (FY2020)
 - SEC EDGAR: year-end shares: weighted-average basic shares of the period (no period-end count tagged) (FY2017)
 - SEC EDGAR: share count: tagged in thousands by the filer; multiplied by 1,000 (FY2017)
-- SEC EDGAR: share count: weighted-average shares of the year (no balance sheet in the SEC data) (FY2020)
 - SEC EDGAR: restated in later filings, latest figure used (first reported -> latest): FY2023 revenue 56,129M -> 51,464M; FY2023 net income 14,623M -> 14,369M; FY2023 EPS 10.51 -> 10.33; FY2023 equity incl. minority interest 117,760M -> 115,147M; FY2023 stockholders' equity 117,661M -> 115,048M; FY2023 total liabilities 1,887,232M -> 1,891,384M; FY2019 equity incl. minority interest 83,625M -> 83,518M; FY2018 equity incl. minority interest 79,955M -> 79,861M; FY2017 equity incl. minority interest 74,428M -> 73,791M
 - SEC EDGAR: figures a later filing tagged in thousands or millions as units were ignored: ifrs-full:WeightedAverageShares 2019
 - Price Source: yfinance (primary source)

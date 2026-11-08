@@ -679,8 +679,17 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
             notes.derive("year-end shares", "derived as shares issued - treasury shares", end)
         elif cover is not None:
             shares = cover
-            notes.derive("year-end shares", "cover-page count of the filing (dated after the period end)"
-                         + ("; issued and treasury counts are tagged rounded to millions" if rounded else ""), end)
+            if average is not None and average.value and abs(cover / average.value - 1) > SHARE_CHECK_MAX_GAP \
+                    and _eps_confirms(facts, end, period_kind, average.value):
+                # The cover counts the registrant's shares only, while the group's EPS and equity belong to more
+                # (Rio Tinto, a dual-listed company: 1,256M plc shares on the cover, 1,624M plc + Ltd shares behind
+                # its EPS)
+                shares = average.value
+                notes.derive("year-end shares", "weighted-average shares of the year (the cover-page count is over 20% "
+                             "from it and the filed EPS is on the average: e.g. a dual-listed group)", end)
+            else:
+                notes.derive("year-end shares", "cover-page count of the filing (dated after the period end)"
+                             + ("; issued and treasury counts are tagged rounded to millions" if rounded else ""), end)
         else:
             weighted = facts.get(WEIGHTED_SHARES, end, SHARES, period_kind)
             if weighted is not None:
@@ -714,6 +723,16 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
         shares_outstanding=shares,
         preferred_stock=preferred,
     )
+
+
+def _eps_confirms(facts: _Facts, end: str, period_kind: str, average: float) -> bool:
+    """Filed EPS x the period's average shares is net income (within EPS_CHECK_TOLERANCE)."""
+    if period_kind != "year":
+        return False
+    eps, net = facts.get(EPS, end, PER_SHARE, "year"), _net_income(facts, end, "year")
+    if eps is None or net is None or not eps.value or not net.value:
+        return False
+    return abs(net.value / average / eps.value - 1) <= EPS_CHECK_TOLERANCE
 
 
 def _cover_shares(facts: _Facts, end: str) -> Optional[float]:
