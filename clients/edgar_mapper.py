@@ -298,7 +298,12 @@ class _Facts:
             return None
         _, tag, ordered = best
         ordered = self._without_scale_errors(ordered, tag, end, unit, kind)
-        adjusted = [self.adjusted(unit, filed, value) for filed, value in ordered]
+        # A figure repeated unchanged by a filing after a stock split is still on the basis of the filing that first
+        # reported it (Sony's June 2025 20-F, after the 5:1 split, repeats FY2022-24 shares outstanding of 1,261M)
+        first_filed: Dict[float, str] = {}
+        for filed, value in ordered:
+            first_filed.setdefault(value, filed)
+        adjusted = [self.adjusted(unit, first_filed[value], value) for _, value in ordered]
         first, latest = adjusted[0], adjusted[-1]
         # Per-share figures are filed rounded to the cent: within half a cent they are the same figure
         tolerance = PER_SHARE_TOLERANCE if unit == PER_SHARE else RESTATEMENT_TOLERANCE * max(abs(first), 1e-9)

@@ -1087,3 +1087,13 @@ def test_ifrs_borrowings_total_less_its_current_portion_is_long_term_debt():
     # Novartis FY2025: Borrowings 28,729M, current portion of long-term borrowings 794M
     data = _debt({"Borrowings": 28_729.0e6, "CurrentPortionOfLongtermBorrowings": 794.0e6})
     assert data.balance_sheets[0].long_term_debt == 27_935.0e6
+
+
+def test_a_share_count_repeated_unchanged_after_a_split_keeps_its_original_basis():
+    # Sony: 1,261M outstanding at FY2024, filed 2024-06 and repeated as-is in the 2025-06 20-F after the 2024-09 5:1 split
+    facts = _ifrs({"Assets": [(None, "2024-03-31", 100.0e9, "2024-06-25", "JPY")],
+                   "ProfitLossAttributableToOwnersOfParent": [("2023-04-01", "2024-03-31", 970.0e9, "2024-06-25", "JPY")],
+                   "NumberOfSharesOutstanding": [(None, "2024-03-31", 1_261.2e6, "2024-06-25", "shares"),
+                                                 (None, "2024-03-31", 1_261.2e6, "2025-06-20", "shares")]})
+    data = annual_data(facts, [("2024-09-27", 5.0)])
+    assert data.balance_sheets[0].shares_outstanding == pytest.approx(6_306.0e6)
