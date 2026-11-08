@@ -106,3 +106,11 @@ def test_429_that_persists_raises_a_rate_limit_error(sleeps):
 def test_failures_raise_request_errors(response, message):
     with pytest.raises(EsefRequestError, match=message):
         _client(response).fetch_report(EsefFiling("id", "2024-12-31", "FR", BASE + "/r.json", "", 0))
+
+
+def test_entities_are_searched_by_name():
+    client = _client(FakeResponse(200, {"data": [{"attributes": {"identifier": LEI, "name": "TESCO PLC"}},
+                                                 {"attributes": {"name": "no identifier"}}]}))
+    assert client.search_entities("%tesco%") == [(LEI, "TESCO PLC")]
+    url, params, _ = client.session.calls[0]
+    assert url == BASE + "/api/entities" and '"op": "ilike"' in params["filter"] and "%tesco%" in params["filter"]

@@ -23,9 +23,9 @@ ANNUAL_REPORT_FORMS = ("20-F", "20-F/A", "40-F", "40-F/A", "10-K", "10-K/A")
 DAYS_PER_MONTH = 365.25 / 12
 # Words that differ between listings of one company: legal forms, "holdings", "group", ADR wording
 _NAME_NOISE = re.compile(
-    r"\b(public limited company|public limited|plc|p l c|ag|se|sa|s a|nv|n v|ltd|limited|inc|corp|corporation|co|"
+    r"\b(public limited company|public limited|societe europeenne|societe anonyme|plc|p l c|ag|se|sa|s a|nv|n v|ltd|limited|inc|corp|corporation|co|"
     r"company|holdings?|group|ab|asa|oyj|spa|kgaa|the|aktiengesellschaft|aktiebolag|as|a s|bv|ordinary|shares?|"
-    r"adr|ads|sponsored|telefonaktiebolaget)\b")
+    r"adr|ads|sponsored|telefonaktiebolaget|aktiebolaget|publ)\b")
 
 
 def without_accents(name: Optional[str]) -> str:

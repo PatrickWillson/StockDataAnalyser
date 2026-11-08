@@ -8,15 +8,16 @@ client only picks one listing per report (select_reports); which reports are ann
 the facts themselves (clients/esef_mapper.py).
 """
 
+import json
 import logging
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Mapping, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import requests
 
 from clients.base_client import BaseAPIClient
-from config.esef_config import (ESEF_BASE_URL, ESEF_FILINGS_URL, ESEF_MAX_RETRY_WAIT, ESEF_MIN_REQUEST_INTERVAL,
+from config.esef_config import (ESEF_BASE_URL, ESEF_ENTITIES_URL, ESEF_FILINGS_URL, ESEF_MAX_RETRY_WAIT, ESEF_MIN_REQUEST_INTERVAL,
                                 ESEF_PAGE_SIZE, ESEF_RATE_LIMIT_RETRIES, ESEF_USER_AGENT)
 from core.errors import SourceRateLimitError, SourceRequestError
 
@@ -127,6 +128,13 @@ class EsefClient(BaseAPIClient):
             url = (ESEF_BASE_URL + following if following and following.startswith("/") else following) or None
             params = None                    # the next link carries the query
         return filings
+
+    def search_entities(self, pattern: str) -> List[Tuple[str, str]]:
+        """(LEI, name) of the entities whose name matches `pattern` (SQL ILIKE: '%' any text), at most a page."""
+        query = json.dumps([{"name": "name", "op": "ilike", "val": pattern}])
+        page = self._get_json(ESEF_ENTITIES_URL, {"filter": query, "page[size]": ESEF_PAGE_SIZE})
+        return [(str((item.get("attributes") or {}).get("identifier") or ""), str((item.get("attributes") or {}).get("name") or ""))
+                for item in page.get("data") or [] if (item.get("attributes") or {}).get("identifier")]
 
     def fetch_report(self, filing: EsefFiling) -> Dict[str, Any]:
         """The report's xBRL-JSON (facts keyed by id, each with value and dimensions)."""
