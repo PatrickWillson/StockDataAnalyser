@@ -68,8 +68,8 @@ class ClientFactory:
         """
         edgar = EdgarClient(sec_user_agent, debug=debug)
         yahoo = ClientFactory.create_yfinance_client(debug=debug)
-        us = FreeUSFundamentalsSource(edgar, yahoo, debug=debug)
         foreign = ForeignSECFundamentalsSource(edgar, yahoo)
+        us = FreeUSFundamentalsSource(edgar, yahoo, debug=debug, foreign=foreign)
         routes = {exchange: (us if not suffix else foreign) for exchange, suffix in YFinanceClient.EXCHANGE_MAPPING.items()}
         return RoutingFundamentalsSource(routes, name="free (SEC EDGAR + Yahoo Finance)")
     

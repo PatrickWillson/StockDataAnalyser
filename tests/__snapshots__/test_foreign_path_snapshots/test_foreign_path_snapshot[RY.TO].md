@@ -53,7 +53,7 @@
 ## SECTION 3: CRITICAL ALERTS
 
 ### Data Quality & Limitations:
-- Statements: SEC EDGAR XBRL of RY (CIK 0001000275) (US listing RY), latest annual report 40-F filed 2025-12-03; price, dividends and profile from this home listing, so per-share figures are per ordinary share
+- Statements: SEC EDGAR XBRL of RY (CIK 0001000275) (US listing RY), latest annual report 40-F filed 2025-12-03; price, dividends and profile from this listing, so per-share figures are per ordinary share
 - History: the SEC's XBRL data for this filer covers 9 fiscal years (from FY2017); tests needing more years fail or show N/A because of this data limit, not because of the company's record
 - No quarterly figures: foreign filers' interim reports (6-K) carry no XBRL, so TTM is N/A
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)

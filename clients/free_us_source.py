@@ -14,7 +14,7 @@ from typing import Any, List, Mapping, Optional
 
 from clients import edgar_mapper, yahoo_mapper
 from clients.edgar_client import EdgarClient, sec_symbol
-from clients.sec_filer_lookup import latest_annual_report
+from clients.sec_filer_lookup import SecFiler, latest_annual_report
 from clients.yfinance_client import YahooCompanyData, YFinanceClient
 from core.errors import TickerNotCoveredError
 from core.fundamentals import CompanyFundamentals
@@ -56,10 +56,12 @@ class FreeUSFundamentalsSource:
 
     name = SOURCE_NAME
 
-    def __init__(self, edgar: EdgarClient, yahoo: YFinanceClient, debug: bool = False):
+    def __init__(self, edgar: EdgarClient, yahoo: YFinanceClient, debug: bool = False, foreign=None):
+        """foreign: the ForeignSECFundamentalsSource serving foreign filers' one-for-one US lines (None: refused)."""
         self.edgar = edgar
         self.yahoo = yahoo
         self.debug = debug
+        self.foreign = foreign
 
     def _save_debug(self, ticker: str, label: str, payload: Any) -> None:
         if not self.debug:
@@ -118,6 +120,29 @@ class FreeUSFundamentalsSource:
                          "every year without a count, so per-share history is approximate")
         return annual, periodic, yahoo_total
 
+    def _foreign_filer(self, ticker, cik, submissions, latest_report) -> CompanyFundamentals:
+        """
+        A foreign (20-F / 40-F) filer's US line. Its SEC share counts are per ordinary share: a line trading those
+        shares, or depositary shares each representing one, goes through the foreign route (decision of 2026-11-08);
+        another ADR, priced per depositary share at a ratio the SEC data does not give, gets no dossier.
+        """
+        name = submissions.get("name", "this company")
+        recent = submissions.get("filings", {}).get("recent", {})
+        accession = next((a for f, d, a in zip(recent.get("form", []), recent.get("filingDate", []),
+                                                 recent.get("accessionNumber", []))
+                          if (f, d) == latest_report), None)
+        instance = self.edgar.fetch_filing_instance(cik, accession) if accession else None
+        basis = edgar_mapper.registered_line_basis(instance, sec_symbol(ticker)) if instance else None
+        if basis in ("shares", "one_to_one_ads") and self.foreign is not None:
+            what = "its ordinary shares" if basis == "shares" else "depositary shares each representing one share"
+            filer = SecFiler(cik, name, (sec_symbol(ticker),), latest_report[0], latest_report[1])
+            return self.foreign.fetch_for_filer(ticker, filer, f"US line of a foreign filer ({latest_report[0]}): it "
+                                                f"trades {what}, so per-share figures match the SEC share counts")
+        raise TickerNotCoveredError(
+            f"{ticker}: {name} files {latest_report[0]} as a foreign company and this US line is "
+            + ("an ADR (depositary shares at a ratio other than one)" if basis == "ads" else "not confirmed to trade its shares")
+            + "; use its home-exchange listing (SYMBOL.EXCHANGE, e.g. BP.LSE, 7203.TSE) instead")
+
     def fetch_fundamentals(self, ticker: str) -> CompanyFundamentals:
         """
         Raises:
@@ -132,11 +157,7 @@ class FreeUSFundamentalsSource:
         self._save_debug(ticker, "submissions", submissions)
         latest_report = latest_annual_report(submissions)
         if latest_report and latest_report[0].split("/")[0] in FOREIGN_ANNUAL_FORMS:
-            # Its SEC share counts are per ordinary share, while a US line is often an ADR priced per depositary
-            # share, a ratio the SEC data does not give (decision of 2026-11-07)
-            raise TickerNotCoveredError(
-                f"{ticker}: {submissions.get('name', 'this company')} files {latest_report[0]} as a foreign company; "
-                "use its home-exchange listing (SYMBOL.EXCHANGE, e.g. BP.LSE, 7203.TSE) instead")
+            return self._foreign_filer(ticker, cik, submissions, latest_report)
 
         notes: List[str] = []
         predecessors = self.edgar.predecessor_ciks(ticker)

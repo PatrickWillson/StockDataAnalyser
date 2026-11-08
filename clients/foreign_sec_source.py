@@ -16,7 +16,7 @@ from typing import Dict, List, Optional
 
 from clients import edgar_mapper, yahoo_mapper
 from clients.edgar_client import EdgarClient
-from clients.sec_filer_lookup import SecFilerLookup
+from clients.sec_filer_lookup import SecFiler, SecFilerLookup
 from clients.yfinance_client import YFinanceClient
 from core.errors import TickerNotCoveredError
 from core.fundamentals import CompanyFundamentals
@@ -68,7 +68,20 @@ class ForeignSECFundamentalsSource:
         if yahoo is None:
             raise TickerNotCoveredError(f"{ticker}: no Yahoo Finance data for this listing")
         profile = yahoo_mapper.profile(yahoo)
-        filer = self.lookup.resolve(ticker, profile.name)
+        return self._fundamentals(ticker, yahoo, profile, self.lookup.resolve(ticker, profile.name))
+
+    def fetch_for_filer(self, ticker: str, filer: SecFiler, us_line_note: str) -> CompanyFundamentals:
+        """
+        A foreign filer's US line that trades its shares one for one (ordinary shares, or ADSs each representing one
+        share): the filer is known from the SEC ticker index; same checks and mapping as a home listing.
+        """
+        yahoo = self.yahoo.fetch_company_data(ticker)
+        if yahoo is None:
+            raise TickerNotCoveredError(f"{ticker}: no Yahoo Finance data for this listing")
+        fundamentals = self._fundamentals(ticker, yahoo, yahoo_mapper.profile(yahoo), filer)
+        return replace(fundamentals, notes=(us_line_note,) + fundamentals.notes)
+
+    def _fundamentals(self, ticker: str, yahoo, profile, filer: SecFiler) -> CompanyFundamentals:
         logger.info(f"SEC EDGAR: {ticker} is {filer.sec_name} (CIK {filer.cik})")
         facts = self.edgar.fetch_company_facts(filer.cik)
         submissions = self.edgar.fetch_submissions(filer.cik)
@@ -107,7 +120,7 @@ class ForeignSECFundamentalsSource:
 
         listings = f" (US listing {', '.join(filer.us_symbols)})" if filer.us_symbols else ""
         notes.insert(0, f"Statements: SEC EDGAR XBRL of {filer.sec_name} (CIK {filer.cik}){listings}, latest annual report "
-                 f"{filer.annual_form} filed {filer.annual_filed}; price, dividends and profile from this home "
+                 f"{filer.annual_form} filed {filer.annual_filed}; price, dividends and profile from this "
                  "listing, so per-share figures are per ordinary share")
         if agrees is None:
             notes.append("SEC filer matched by company name; Yahoo Finance has no overlapping year of net income to "
@@ -119,7 +132,7 @@ class ForeignSECFundamentalsSource:
                          "N/A because of this data limit, not because of the company's record")
         if splits:
             notes.append("Per-share figures and share counts adjusted to today's share basis for stock splits "
-                         "(Yahoo Finance split history of the home listing): "
+                         "(Yahoo Finance split history of this listing): "
                          + ", ".join(f"{d} {r:g}:1" for d, r in splits))
         notes.append("No quarterly figures: foreign filers' interim reports (6-K) carry no XBRL, so TTM is N/A")
         notes.append("Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)")

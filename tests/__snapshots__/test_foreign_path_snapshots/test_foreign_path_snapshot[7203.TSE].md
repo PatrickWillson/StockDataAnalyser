@@ -55,8 +55,8 @@
 ## SECTION 3: CRITICAL ALERTS
 
 ### Data Quality & Limitations:
-- Statements: SEC EDGAR XBRL of TM (CIK 0001094517) (US listing TM), latest annual report 20-F filed 2026-06-10; price, dividends and profile from this home listing, so per-share figures are per ordinary share
-- Per-share figures and share counts adjusted to today's share basis for stock splits (Yahoo Finance split history of the home listing): 2021-09-29 5:1
+- Statements: SEC EDGAR XBRL of TM (CIK 0001094517) (US listing TM), latest annual report 20-F filed 2026-06-10; price, dividends and profile from this listing, so per-share figures are per ordinary share
+- Per-share figures and share counts adjusted to today's share basis for stock splits (Yahoo Finance split history of this listing): 2021-09-29 5:1
 - No quarterly figures: foreign filers' interim reports (6-K) carry no XBRL, so TTM is N/A
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
 - SEC EDGAR: long-term debt: ifrs-full:LongtermBorrowings used (includes the current portion) (FY2021, FY2022, FY2023, FY2024, FY2025, FY2026)

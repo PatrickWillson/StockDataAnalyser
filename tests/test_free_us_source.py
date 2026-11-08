@@ -133,8 +133,61 @@ def test_us_ticker_of_a_foreign_filer_points_to_its_home_listing():
             subs["name"] = "BP PLC"
             subs["filings"] = {"recent": {"form": ["6-K", "20-F"], "filingDate": ["2026-05-01", "2026-03-06"]}}
             return subs
-    with pytest.raises(TickerNotCoveredError, match="BP PLC files 20-F as a foreign company; use its home-exchange listing"):
+    with pytest.raises(TickerNotCoveredError, match="BP PLC files 20-F as a foreign company and this US line is not "
+                                                     "confirmed to trade its shares; use its home-exchange listing"):
         source(edgar=ForeignEdgar()).fetch_fundamentals("SO.US")
+
+
+def _cover(*rows):
+    """An XBRL instance cover: (Security12bTitle, TradingSymbol or None) per context."""
+    body = "".join(f'<dei:Security12bTitle contextRef="c{i}">{title}</dei:Security12bTitle>'
+                   + (f'<dei:TradingSymbol contextRef="c{i}">{symbol}</dei:TradingSymbol>' if symbol else "")
+                   for i, (title, symbol) in enumerate(rows))
+    return f'<xbrl xmlns:dei="http://xbrl.sec.gov/dei/2024">{body}</xbrl>'
+
+
+def test_registered_line_basis_from_the_annual_report_cover():
+    from clients.edgar_mapper import registered_line_basis
+    assert registered_line_basis(_cover(("Ordinary Shares, Nominal Value $1.00 Per Share", "FRO")), "FRO") == "shares"
+    assert registered_line_basis(_cover(("Common stock, par value Won 500 per share*", "GRVY"),
+                                        ("American depositary shares, each representing one share of common stock", None)),
+                                 "GRVY") == "one_to_one_ads"
+    assert registered_line_basis(_cover(("American Depositary Shares", "BP"), ("Ordinary Shares of 25c each", None)), "BP") == "ads"
+    assert registered_line_basis("<xbrl/>", "X") is None
+
+
+class _ForeignEdgar(FakeEdgar):
+    def __init__(self, cover):
+        super().__init__()
+        self.cover = cover
+
+    def fetch_submissions(self, cik):
+        return {**super().fetch_submissions(cik), "name": "FRONTLINE PLC",
+                "filings": {"recent": {"form": ["20-F"], "filingDate": ["2026-03-27"], "accessionNumber": ["a1"]}}}
+
+    def fetch_filing_instance(self, cik, accession):
+        return self.cover
+
+
+def test_us_line_trading_a_foreign_filers_ordinary_shares_goes_through_the_foreign_route():
+    calls = []
+
+    class Foreign:
+        def fetch_for_filer(self, ticker, filer, note):
+            calls.append((ticker, filer.cik, filer.annual_form, note))
+            return "foreign dossier"
+    src = FreeUSFundamentalsSource(_ForeignEdgar(_cover(("Ordinary Shares", "SO"))), FakeYahoo(), foreign=Foreign())
+    assert src.fetch_fundamentals("SO.US") == "foreign dossier"
+    assert calls[0][:3] == ("SO.US", "0000092122", "20-F") and "trades its ordinary shares" in calls[0][3]
+
+
+def test_us_line_that_is_an_adr_is_refused():
+    class Foreign:
+        def fetch_for_filer(self, *args):
+            raise AssertionError("an ADR must not reach the foreign route")
+    src = FreeUSFundamentalsSource(_ForeignEdgar(_cover(("American Depositary Shares", "SO"))), FakeYahoo(), foreign=Foreign())
+    with pytest.raises(TickerNotCoveredError, match="is an ADR"):
+        src.fetch_fundamentals("SO.US")
 
 
 def test_router_sends_us_tickers_and_rejects_other_markets():

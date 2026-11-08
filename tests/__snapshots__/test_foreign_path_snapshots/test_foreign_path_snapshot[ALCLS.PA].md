@@ -45,7 +45,7 @@
 ## SECTION 3: CRITICAL ALERTS
 
 ### Data Quality & Limitations:
-- Statements: SEC EDGAR XBRL of CLLS (CIK 0001627281) (US listing CLLS), latest annual report 20-F filed 2026-03-20; price, dividends and profile from this home listing, so per-share figures are per ordinary share
+- Statements: SEC EDGAR XBRL of CLLS (CIK 0001627281) (US listing CLLS), latest annual report 20-F filed 2026-03-20; price, dividends and profile from this listing, so per-share figures are per ordinary share
 - No quarterly figures: foreign filers' interim reports (6-K) carry no XBRL, so TTM is N/A
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
 - SEC EDGAR: long-term debt: not identified (ifrs-full:NoncurrentFinancialLiabilities is reported, no long-term debt figure): the debt tests count as not met, no debt is assumed (FY2016, FY2017, FY2018, FY2019, FY2020, FY2021, FY2022, FY2023, FY2024, FY2025)

@@ -1354,3 +1354,28 @@ def certifying_officer(exhibit_html: str) -> Optional[str]:
     text = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", exhibit_html)))
     match = re.search(r"\bI,\s+([A-Z][^,]{2,80}?),\s+certify", text)
     return match.group(1).strip() if match else None
+
+
+_DEPOSITARY = re.compile(r"depositary", re.I)
+_ONE_FOR_ONE = re.compile(r"each\s+represent\w*\s+(?:one|1)\b", re.I)
+
+
+def registered_line_basis(instance_xml: str, symbol: str) -> Optional[str]:
+    """
+    What a foreign filer's US trading line is, from its annual report's cover (dei:Security12bTitle beside
+    dei:TradingSymbol): 'shares' (ordinary or common shares: Frontline, Kenon), 'one_to_one_ads' (depositary shares
+    each representing one share: Gravity, NICE), 'ads' (another ratio: BP, Toyota), or None when the cover does not
+    say. Only the first two have per-share figures on the same basis as the SEC share counts.
+    """
+    titles: Dict[str, Dict[str, str]] = {}
+    for tag, context, value in re.findall(r'<dei:(Security12bTitle|TradingSymbol)\b[^>]*contextRef="([^"]+)"[^>]*>([^<]*)<',
+                                          instance_xml or ""):
+        titles.setdefault(context, {})[tag] = html.unescape(value).strip()
+    rows = [t for t in titles.values() if t.get("Security12bTitle")]
+    if not rows:
+        return None
+    depositary = [t["Security12bTitle"] for t in rows if _DEPOSITARY.search(t["Security12bTitle"])]
+    if depositary:
+        return "one_to_one_ads" if all(_ONE_FOR_ONE.search(title) for title in depositary) else "ads"
+    own = [t for t in rows if t.get("TradingSymbol", "").upper() == symbol.upper()]
+    return "shares" if own else None

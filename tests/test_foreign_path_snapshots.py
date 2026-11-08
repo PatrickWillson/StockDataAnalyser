@@ -138,4 +138,5 @@ def test_us_listing_of_a_foreign_filer_is_refused(monkeypatch, tmp_path, caplog)
     with caplog.at_level(logging.ERROR), pytest.raises(SystemExit) as exc:
         stock_data_analyser.main()
     assert exc.value.code == 1
-    assert "files 20-F as a foreign company; use its home-exchange listing" in caplog.text
+    assert "files 20-F as a foreign company and this US line is not confirmed to trade its shares" in caplog.text
+    assert "use its home-exchange listing" in caplog.text
