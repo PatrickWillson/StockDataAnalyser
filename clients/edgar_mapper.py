@@ -36,11 +36,14 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 from core.fundamentals import BalanceSheetRow, IncomeStatementRow
 from core.history import fiscal_year
 
-ANNUAL_FORMS = frozenset({"10-K", "10-K/A", "10-KT", "10-KT/A", "20-F", "20-F/A", "40-F", "40-F/A"})
+# ESEF_FORM: an ESEF annual financial report read from filings.xbrl.org (clients/esef_mapper.py)
+ESEF_FORM = "ESEF"
+ANNUAL_FORMS = frozenset({"10-K", "10-K/A", "10-KT", "10-KT/A", "20-F", "20-F/A", "40-F", "40-F/A", ESEF_FORM})
 PERIODIC_FORMS = ANNUAL_FORMS | {"10-Q", "10-Q/A"}
 # Duration windows in days: a fiscal year, a quarter, nine months year-to-date
 DURATIONS = {"year": (350, 380), "quarter": (80, 100), "nine_months": (260, 285)}
 GAAP, DEI, IFRS = "us-gaap", "dei", "ifrs-full"
+SEC_SOURCE_LABEL = "SEC EDGAR"   # how notes name the source (annual_data `source`)
 # Unit tokens: _Facts resolves MONEY and PER_SHARE to the filer's reporting currency ("USD", "USD/shares")
 MONEY, PER_SHARE, SHARES = "money", "money/shares", "shares"
 
@@ -74,6 +77,15 @@ EPS_SCALE_ERRORS, EPS_SCALE_TOLERANCE, EPS_GAP, EPS_MIN_CHECKED = (100, 1000), 0
 # _eps_consistent_shares: a count more than EPS_SHARES_OFF from net income / EPS that a later split's factor brings
 # within EPS_SHARES_MATCH of it (a year-end count beside a weighted-average EPS: Frontline FY2015, a merger year, 1.3x)
 EPS_SHARES_OFF, EPS_SHARES_MATCH, EPS_IMPLIED_MIN = 0.5, 0.4, 0.01
+# A count over EPS_SHARES_IMPLAUSIBLE times from net income / EPS, no split explaining it, is some other count
+# (Vodafone FY2021-22 ESEF: 1,427M and 1,519M "shares issued" beside EPS on about 27,000M shares); a merger year's
+# year-end count beside its average stays well inside it (Frontline FY2015: 1.3x)
+EPS_SHARES_IMPLAUSIBLE = 3.0
+# _eps_against_other_years (foreign filers, whose average shares are often untagged): a year's net income / EPS
+# against the median of the other years' (at least EPS_OTHER_YEARS_MIN): within EPS_YEARS_SCALE_BAND of an exact
+# 100x or 1,000x is a scale error (Games Workshop FY2024: 458.8 pence tagged as pounds; TotalEnergies 2022: 0.0791
+# for 7.91); more than EPS_YEARS_IMPLAUSIBLE off any other way is not used (Vodafone FY2025: -15,940,000 for -0.1594)
+EPS_OTHER_YEARS_MIN, EPS_YEARS_SCALE_BAND, EPS_YEARS_IMPLAUSIBLE, EPS_YEARS_SIGN_MATCH = 2, 1.5, 10.0, 0.5
 MIN_SALES_SHARE_OF_REVENUES = 0.75   # Berkshire 67-70%: revenue tag; Inogen 80-85%: sales
 # Consolidated profit incl. minority interests: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest
 PROFIT_LOSS = ("ProfitLoss", "ifrs-full:ProfitLoss")
@@ -97,6 +109,9 @@ NAMED_INDEFINITE_INTANGIBLES = ("IndefiniteLivedTrademarks", "IndefiniteLivedFra
 OTHER_INTANGIBLES = ("OtherIntangibleAssetsNet",)                 # finite + other indefinite, as one line
 OTHER_INDEFINITE_INTANGIBLES = ("OtherIndefiniteLivedIntangibleAssets",)
 CURRENT_ASSETS = ("AssetsCurrent", "ifrs-full:CurrentAssets")
+# The UK net-assets layout tags no total assets and no equity-and-liabilities total (Tesco FY2025): non-current
+# + current assets (30,991M + 8,483M = 39,474M = liabilities 28,017M + equity 11,457M)
+IFRS_NONCURRENT_ASSETS = "ifrs-full:NoncurrentAssets"
 CURRENT_LIABILITIES = ("LiabilitiesCurrent", "ifrs-full:CurrentLiabilities")
 LIABILITIES, ASSETS = ("Liabilities", "ifrs-full:Liabilities"), ("Assets", "ifrs-full:Assets")
 LIABILITIES_AND_EQUITY = ("LiabilitiesAndStockholdersEquity", "ifrs-full:EquityAndLiabilities")
@@ -615,8 +630,12 @@ def _note_unmapped_intangibles(facts: _Facts, end: str, notes: _Notes) -> None:
 def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "year") -> Optional[BalanceSheetRow]:
     assets = facts.get(ASSETS, end, MONEY, "instant")
     liabilities_and_equity = facts.get(LIABILITIES_AND_EQUITY, end, MONEY, "instant")
+    total_assets = _value(assets)
     if assets is None and liabilities_and_equity is None:
-        return None   # no balance sheet for this year (e.g. only comparatives of income items)
+        total_assets, used = _sum(facts, (IFRS_NONCURRENT_ASSETS, CURRENT_ASSETS[1]), end, MONEY)
+        if len(used) < 2:
+            return None   # no balance sheet for this year (e.g. only comparatives of income items)
+        notes.derive("total assets", "derived as non-current assets + current assets (net-assets layout)", end)
     for name, fact in (("total assets", assets), ("liabilities and equity", liabilities_and_equity)):
         notes.fact(name, end, fact)
 
@@ -646,6 +665,11 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
         liabilities = liabilities_and_equity.value - base - (temporary or 0.0)
         notes.derive("total liabilities", "derived as liabilities and equity - total equity"
                      + (" - temporary equity" if temporary else ""), end)
+    ifrs_equity = facts.get(EQUITY_INCL_NCI[1:], end, MONEY, "instant")
+    if liabilities is None and liabilities_and_equity is None and total_assets is not None and ifrs_equity is not None:
+        # IFRS has no temporary equity: assets = liabilities + total equity (minority interests included)
+        liabilities = total_assets - ifrs_equity.value
+        notes.derive("total liabilities", "derived as total assets - total equity (incl. minority interests)", end)
 
     intangibles = field("intangibles", INTANGIBLES)
     if intangibles is None:
@@ -763,7 +787,7 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
         long_term_debt=long_term_debt,
         short_term_debt=debt_current,
         total_debt_reported=None,
-        total_assets=_value(assets),
+        total_assets=total_assets,
         inventory=inventory,
         noncontrolling_interest=minority,
         shares_outstanding=shares,
@@ -944,6 +968,46 @@ def _checked_eps(facts: _Facts, income: List[IncomeStatementRow], notes: _Notes)
     return checked
 
 
+def _eps_against_other_years(income: List[IncomeStatementRow], notes: _Notes) -> List[IncomeStatementRow]:
+    """
+    Each year's filed EPS against the company's other years (foreign filers; their average shares are often
+    untagged, so _checked_eps cannot run): net income / EPS, an implied share count, against the median of the
+    other years'. An exact 100x or 1,000x off is a scale error, corrected; an EPS whose sign differs from net
+    income but whose size matches is a sign error, corrected; anything over EPS_YEARS_IMPLAUSIBLE off otherwise is
+    not used (EPS then N/A, or derived from net income / shares). Graham: allow for a defect, don't impute a figure.
+    """
+    implied = {row.period_end: abs(row.net_income / row.eps) for row in income
+               if row.eps and row.net_income and abs(row.eps) >= EPS_IMPLIED_MIN}
+    if len(implied) <= EPS_OTHER_YEARS_MIN:
+        return income
+    checked = []
+    for row in income:
+        others = [shares for end, shares in implied.items() if end != row.period_end]
+        if row.period_end not in implied or len(others) < EPS_OTHER_YEARS_MIN:
+            checked.append(row)
+            continue
+        ratio = implied[row.period_end] / statistics.median(others)   # < 1: EPS too large
+        scale = next((s for s in EPS_SCALE_ERRORS for r in (1 / s, s)
+                      if abs(math.log(ratio / r)) <= math.log(EPS_YEARS_SCALE_BAND)), None)
+        if scale and ratio < 1:
+            notes.derive("EPS", f"filed at {scale:,}x the scale of the other years (net income / EPS); divided by "
+                         f"{scale:,}", row.period_end)
+            row = replace(row, eps=row.eps / scale)
+        elif scale:
+            notes.derive("EPS", f"filed at 1/{scale:,} the scale of the other years (net income / EPS); multiplied "
+                         f"by {scale:,}", row.period_end)
+            row = replace(row, eps=row.eps * scale)
+        elif abs(math.log(ratio)) > math.log(EPS_YEARS_IMPLAUSIBLE):
+            notes.derive("EPS", f"filed figure {row.eps:,.2f} is not plausible against net income and the other years' "
+                         "share counts; not used", row.period_end)
+            row = replace(row, eps=None)
+        if row.eps and (row.eps > 0) != (row.net_income > 0) and abs(math.log(ratio)) <= EPS_YEARS_SIGN_MATCH:
+            notes.derive("EPS", "filed with the opposite sign to net income (same size); sign corrected", row.period_end)
+            row = replace(row, eps=-row.eps)
+        checked.append(row)
+    return checked
+
+
 def _eps_consistent_shares(facts: _Facts, balance: List[BalanceSheetRow], income: List[IncomeStatementRow],
                            shares_by_year: Dict[str, float], notes: _Notes) -> Tuple[List[BalanceSheetRow], Dict[str, float]]:
     """
@@ -951,7 +1015,8 @@ def _eps_consistent_shares(facts: _Facts, balance: List[BalanceSheetRow], income
     filers, which restate share counts less reliably): a year-end count off from net income / EPS by the factor of
     the splits since its period end is put on today's basis (Frontline FY2013-15: pre-consolidation counts beside
     post-consolidation EPS); a year with no count at all takes net income / EPS (Shopify FY2015-18, a dual-class
-    company with no total tagged), approximate, rather than today's count.
+    company with no total tagged), approximate, rather than today's count; a count over EPS_SHARES_IMPLAUSIBLE
+    times from it is another count, and net income / EPS replaces it.
     """
     implied = {row.period_end: abs(row.net_income / row.eps) for row in income
                if row.eps and row.net_income and abs(row.eps) >= EPS_IMPLIED_MIN}
@@ -964,6 +1029,11 @@ def _eps_consistent_shares(facts: _Facts, balance: List[BalanceSheetRow], income
             notes.derive("year-end shares", "put on today's share basis: the filed count predates a later split while "
                          "the filed EPS is restated for it", row.period_end)
             row = replace(row, shares_outstanding=shares * factor)
+        elif shares and base and abs(math.log(shares / base)) > math.log(EPS_SHARES_IMPLAUSIBLE) \
+                and abs(math.log(shares * factor / base)) > math.log(EPS_SHARES_IMPLAUSIBLE):
+            notes.derive("year-end shares", f"filed count {shares / 1e6:,.0f}M is over {EPS_SHARES_IMPLAUSIBLE:g}x from "
+                         "net income / filed EPS (another count); net income / EPS used (approximate)", row.period_end)
+            row = replace(row, shares_outstanding=base)
         repaired.append(row)
     by_year = {fiscal_year(row.period_end): row.shares_outstanding for row in reversed(repaired) if row.shares_outstanding}
     for end, base in implied.items():
@@ -972,11 +1042,32 @@ def _eps_consistent_shares(facts: _Facts, balance: List[BalanceSheetRow], income
             by_year[year] = shares_by_year.get(year) or base
             if year not in shares_by_year:
                 notes.derive("share count", "net income / filed EPS (no share count tagged; approximate)", end)
-    return repaired, by_year
+    supported = {fiscal_year(end) for end in implied}
+    for row in repaired:
+        year = fiscal_year(row.period_end)
+        others = [count for other, count in by_year.items() if other != year]
+        if year in by_year and year not in supported and len(others) >= EPS_OTHER_YEARS_MIN \
+                and abs(math.log(by_year[year] / statistics.median(others))) > math.log(EPS_SHARES_IMPLAUSIBLE):
+            # No EPS to confirm it, and over 3x from every other year's count (Vodafone FY2021: 1,427M beside
+            # about 27,000M): not used, rather than guessed
+            notes.derive("year-end shares", f"filed count {by_year[year] / 1e6:,.0f}M is over {EPS_SHARES_IMPLAUSIBLE:g}x "
+                         "from the other years' and no EPS confirms it; not used (per-share figures N/A)", row.period_end)
+            del by_year[year]
+    return [replace(row, shares_outstanding=None) if fiscal_year(row.period_end) not in by_year and row.shares_outstanding
+            else row for row in repaired], by_year
+
+
+def _relabelled(notes: Tuple[str, ...], source: str) -> Tuple[str, ...]:
+    """Notes naming `source` rather than SEC EDGAR (the same rules read ESEF reports: clients/esef_mapper.py)."""
+    if source == SEC_SOURCE_LABEL:
+        return notes
+    return tuple(note.replace(f"{SEC_SOURCE_LABEL}:", f"{source}:").replace("the SEC data", f"the {source} data")
+                 for note in notes)
 
 
 def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, float]] = (),
-                sic: Optional[str] = None, eps_implied_shares: bool = False) -> EdgarAnnualData:
+                sic: Optional[str] = None, eps_implied_shares: bool = False,
+                source: str = SEC_SOURCE_LABEL) -> EdgarAnnualData:
     """
     Map a company's XBRL companyfacts to annual statement rows.
 
@@ -986,8 +1077,10 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
 
     Money figures are in the filer's reporting currency (EdgarAnnualData.currency); years filed only in another
     currency (a filer that changed its reporting currency) are left out and listed in the notes.
-    eps_implied_shares (foreign filers): share counts made consistent with the filed EPS (_eps_consistent_shares).
-    Not for US filers, whose EPS can be per share of one class (Berkshire: Class A).
+    eps_implied_shares (foreign filers): each year's EPS checked against the other years (_eps_against_other_years)
+    and share counts made consistent with the filed EPS (_eps_consistent_shares). Not for US filers, whose EPS can
+    be per share of one class (Berkshire: Class A).
+    source: the data source named in the notes (ESEF reports converted to companyfacts: clients/esef_mapper.py)
     """
     facts = _Facts(companyfacts, splits)
     utility = bool(sic) and str(sic).isdigit() and int(sic) in UTILITY_SIC
@@ -1006,8 +1099,6 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         row = _balance_row(facts, end, notes)
         if row is not None:
             balance.append(row)
-        if row is not None and not row.shares_outstanding:
-            notes.derive("share count", "not in the SEC data (the company uses its own tags); per-share figures N/A", end)
         if income[-1].eps is None:
             notes.derive("EPS", "not in the SEC data (the company uses its own tags); derived from net income / shares where possible", end)
         paid = facts.get(DIVIDENDS_PAID, end, MONEY, "year")
@@ -1030,7 +1121,11 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
             notes.derive("share count", "weighted-average shares of the year (no balance sheet in the SEC data)", end)
     income = _checked_eps(facts, income, notes)
     if eps_implied_shares:
+        income = _eps_against_other_years(income, notes)
         balance, shares_by_year = _eps_consistent_shares(facts, balance, income, shares_by_year, notes)
+    for end in ends:
+        if fiscal_year(end) not in shares_by_year and any(row.period_end == end for row in balance):
+            notes.derive("share count", "not in the SEC data (the company uses its own tags); per-share figures N/A", end)
     if facts.scale_errors:
         notes.other.append("SEC EDGAR: figures a later filing tagged in thousands or millions as units were ignored: "
                            + ", ".join(sorted(facts.scale_errors)))
@@ -1048,7 +1143,7 @@ def annual_data(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, flo
         operating_cash_flow=operating,
         shares_by_year=shares_by_year,
         latest_cover_shares=latest_cover or 0.0,
-        notes=notes.render(),
+        notes=_relabelled(notes.render(), source),
         currency=facts.currency,
     )
 

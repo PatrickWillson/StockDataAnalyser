@@ -1185,3 +1185,118 @@ def test_ordinary_holders_profit_above_the_owners_profit_gives_way_to_it():
     data = annual_data(facts)
     assert data.income_statements[0].net_income == 381.0e6
     assert any("profit attributable to owners of the parent used" in n for n in data.notes)
+
+
+# --- Foreign filers' EPS against the other years, and implausible share counts (ESEF and SEC IFRS filers) ---
+
+def _years(eps, net_income=None, counts=None, extra=None):
+    """FY2021-25 IFRS facts: net income 100M a year (or `net_income`), the given EPS (None: untagged), no average."""
+    years = range(2021, 2021 + len(eps))
+    net_income = net_income or [100.0e6] * len(eps)
+    facts = {"ProfitLossAttributableToOwnersOfParent": [(f"{y}-01-01", f"{y}-12-31", ni, f"{y + 1}-03-01", "EUR")
+                                                       for y, ni in zip(years, net_income)],
+             "Assets": [(None, f"{y}-12-31", 1000.0e6, f"{y + 1}-03-01", "EUR") for y in years],
+             "BasicEarningsLossPerShare": [(f"{y}-01-01", f"{y}-12-31", e, f"{y + 1}-03-01", "EUR/shares")
+                                           for y, e in zip(years, eps) if e is not None]}
+    if counts:
+        facts["NumberOfSharesOutstanding"] = [(None, f"{y}-12-31", c, f"{y + 1}-03-01", "shares")
+                                              for y, c in zip(years, counts) if c is not None]
+    facts.update(extra or {})
+    return annual_data(_ifrs(facts), eps_implied_shares=True)
+
+
+def _eps_by_year(data):
+    return {row.period_end[:4]: row.eps for row in data.income_statements}
+
+
+def test_eps_in_pence_tagged_as_pounds_is_divided_back_against_the_other_years():
+    """Dunelm FY2021: 63.7 (pence) tagged in GBP beside 0.75-0.85 in the other years."""
+    data = _years([100.0, 1.0, 1.02, 0.98, 1.01])
+    assert _eps_by_year(data)["2021"] == pytest.approx(1.0)
+    assert any("filed at 100x the scale of the other years" in n and "FY2021" in n for n in data.notes)
+    assert data.shares_by_year["2021"] == pytest.approx(100.0e6)
+
+
+def test_eps_a_hundredth_of_the_other_years_is_multiplied_back():
+    """TotalEnergies 2020-22: 0.0791 tagged for 7.91."""
+    data = _years([1.0, 1.0, 0.01, 1.0, 1.0])
+    assert _eps_by_year(data)["2023"] == pytest.approx(1.0)
+    assert any("1/100 the scale" in n for n in data.notes)
+
+
+def test_an_implausible_eps_is_not_used():
+    """Vodafone FY2023: 42,770,000 tagged as EPS."""
+    data = _years([1.0, 1.0, 42_770_000.0, 1.0, 1.0])
+    assert _eps_by_year(data)["2023"] is None
+    assert any("not plausible" in n and "FY2023" in n for n in data.notes)
+
+
+def test_eps_with_the_wrong_sign_and_the_right_size_is_corrected():
+    """Bonduelle FY2025: +0.36 tagged for a loss of (0.36)."""
+    data = _years([1.0, 1.0, 1.0, 1.0, 0.36], net_income=[100.0e6] * 4 + [-36.0e6])
+    assert _eps_by_year(data)["2025"] == pytest.approx(-0.36)
+    assert any("opposite sign" in n for n in data.notes)
+
+
+def test_eps_consistent_across_years_is_left_alone():
+    data = _years([1.0, 1.1, 0.9, 1.2, 1.05])
+    assert _eps_by_year(data) == {"2025": 1.05, "2024": 1.2, "2023": 0.9, "2022": 1.1, "2021": 1.0}
+    assert not any("EPS:" in n for n in data.notes)
+
+
+def test_with_two_years_of_eps_there_is_nothing_to_compare_against():
+    data = _years([100.0, 1.0])
+    assert _eps_by_year(data)["2021"] == 100.0
+
+
+def test_a_share_count_far_from_net_income_over_eps_gives_way_to_it():
+    """Vodafone FY2022: 1,519M "shares" beside EPS implying about 29,000M."""
+    data = _years([1.0] * 5, counts=[100.0e6, 5.0e6, 100.0e6, 100.0e6, 100.0e6])
+    assert data.shares_by_year["2022"] == pytest.approx(100.0e6)
+    assert any("over 3x from net income / filed EPS" in n and "FY2022" in n for n in data.notes)
+
+
+def test_an_unconfirmed_count_far_from_the_other_years_is_not_used():
+    """Vodafone FY2021: 1,427M, its EPS of 0.0038 too coarse to imply a count."""
+    data = _years([0.001, 1.0, 1.0, 1.0, 1.0], counts=[5.0e6, None, None, None, None])
+    assert "2021" not in data.shares_by_year
+    assert next(r for r in data.balance_sheets if r.period_end == "2021-12-31").shares_outstanding is None
+    assert any("no EPS confirms it" in n for n in data.notes)
+    assert any("per-share figures N/A" in n and "FY2021" in n for n in data.notes)
+
+
+def test_a_year_given_net_income_over_eps_is_not_also_called_n_a():
+    data = _years([1.0] * 3)
+    assert not any("per-share figures N/A" in n for n in data.notes)
+    assert any("net income / filed EPS (no share count tagged" in n for n in data.notes)
+
+
+def test_net_assets_layout_takes_total_assets_from_its_parts():
+    """Tesco FY2025: no Assets tag; non-current 30,991M + current 8,483M = 39,474M."""
+    end = "2025-02-22"
+    data = annual_data(_ifrs({
+        "ProfitLossAttributableToOwnersOfParent": [("2024-02-25", end, 1626.0e6, FILED, "GBP")],
+        "NoncurrentAssets": [(None, end, 30_991.0e6, FILED, "GBP")],
+        "CurrentAssets": [(None, end, 8_483.0e6, FILED, "GBP")],
+        "Equity": [(None, end, 11_457.0e6, FILED, "GBP")],
+        "EquityAttributableToOwnersOfParent": [(None, end, 11_451.0e6, FILED, "GBP")],
+    }))
+    row = data.balance_sheets[0]
+    assert row.total_assets == pytest.approx(39_474.0e6)
+    assert row.total_liabilities == pytest.approx(28_017.0e6)
+    assert row.total_equity == pytest.approx(11_451.0e6)
+    assert any("non-current assets + current assets" in n for n in data.notes)
+
+
+def test_without_both_asset_parts_there_is_no_balance_sheet():
+    data = annual_data(_ifrs({
+        "ProfitLossAttributableToOwnersOfParent": [(*Y24, 10.0, FILED, "GBP")],
+        "CurrentAssets": [(None, "2024-12-31", 8.0, FILED, "GBP")]}))
+    assert data.balance_sheets == ()
+
+
+def test_notes_can_name_another_source():
+    data = annual_data(_ifrs({"ProfitLossAttributableToOwnersOfParent": [(*Y24, 10.0, FILED, "GBP")],
+                              "Assets": [(None, "2024-12-31", 80.0, FILED, "GBP")]}), source="ESEF")
+    assert data.notes and all(n.startswith("ESEF:") for n in data.notes)
+    assert any("not in the ESEF data" in n for n in data.notes)
