@@ -1117,3 +1117,37 @@ def test_no_borrowings_reported_is_no_debt():
     # DRDGOLD-like: no debt-like item at all
     balance = _debt({}).balance_sheets[0]
     assert balance.long_term_debt is None and not balance.long_term_debt_unknown
+
+
+def test_ifrs_lease_liabilities_count_as_debt():
+    data = _debt({"LongtermBorrowings": 400.0e6, "CurrentPortionOfLongtermBorrowings": 60.0e6,
+                  "NoncurrentLeaseLiabilities": 90.0e6, "CurrentLeaseLiabilities": 20.0e6})
+    balance = data.balance_sheets[0]
+    assert balance.long_term_debt == 430.0e6                     # 400 - 60 + 90 non-current leases
+    assert balance.short_term_debt == 80.0e6                     # 60 current portion + 20 current leases
+    assert any("includes non-current lease liabilities" in n for n in data.notes)
+
+
+def _us_balance(**tags):
+    facts = _facts({"NetIncomeLoss": [("2024-01-01", "2024-12-31", 10.0, "2025-02-01", "10-K", "USD")],
+                    "Assets": [(None, "2024-12-31", 1000.0, "2025-02-01", "10-K", "USD")],
+                    **{tag: [(None, "2024-12-31", value, "2025-02-01", "10-K", "USD")] for tag, value in tags.items()}})
+    return annual_data(facts).balance_sheets[0]
+
+
+def test_us_operating_and_finance_leases_count_as_debt():
+    balance = _us_balance(LongTermDebtNoncurrent=100.0, OperatingLeaseLiabilityNoncurrent=30.0,
+                          FinanceLeaseLiabilityNoncurrent=5.0, OperatingLeaseLiabilityCurrent=4.0)
+    assert balance.long_term_debt == 135.0
+    assert balance.short_term_debt == 4.0
+
+
+def test_finance_leases_already_in_the_debt_tag_are_not_added_again():
+    balance = _us_balance(LongTermDebtAndCapitalLeaseObligations=105.0, OperatingLeaseLiabilityNoncurrent=30.0,
+                          FinanceLeaseLiabilityNoncurrent=5.0)
+    assert balance.long_term_debt == 135.0                       # 105 incl. finance leases + 30 operating
+
+
+def test_leases_alone_are_debt_for_a_company_without_borrowings():
+    # Ballard Power FY2025-like: no borrowings, non-current lease liabilities 19M
+    assert _debt({"NoncurrentLeaseLiabilities": 19.0e6}).balance_sheets[0].long_term_debt == 19.0e6

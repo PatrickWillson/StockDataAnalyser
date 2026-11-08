@@ -45,8 +45,8 @@
 - **Current Assets**: 20,256,000,000.00 EUR
 - **Current Liabilities**: 17,416,000,000.00 EUR
 - **Net Current Assets**: 2,840,000,000.00 EUR
-- **Long-term Debt**: 4,550,000,000.00 EUR
-- **Debt Coverage Ratio**: 1.60 (160.21%) - Long-term Debt / NCA
+- **Long-term Debt**: 5,980,000,000.00 EUR
+- **Debt Coverage Ratio**: 2.11 (210.56%) - Long-term Debt / NCA
 
 *Graham's defensive test: long-term debt should not exceed net current assets (working capital), i.e. a ratio of at most 1.0.*
 
@@ -59,6 +59,7 @@
 - No quarterly figures: foreign filers' interim reports (6-K) carry no XBRL, so TTM is N/A
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
 - SEC EDGAR: long-term debt: ifrs-full:LongtermBorrowings used (includes the current portion) (FY2016, FY2017, FY2018, FY2019, FY2020, FY2021, FY2022, FY2023, FY2024, FY2025)
+- SEC EDGAR: long-term debt: includes non-current lease liabilities (leases count as debt) (FY2019, FY2020, FY2021, FY2022, FY2023, FY2024, FY2025)
 - SEC EDGAR: year-end shares: weighted-average shares of the year (IFRS shares issued include treasury shares, and no treasury-share count is tagged) (FY2016, FY2017, FY2018, FY2019, FY2020, FY2021, FY2022, FY2023, FY2024, FY2025)
 - SEC EDGAR: share count: weighted-average shares of the year (no balance sheet in the SEC data) (FY2015)
 - SEC EDGAR: restated in later filings, latest figure used (first reported -> latest): FY2024 total assets 74,122M -> 74,237M; FY2024 liabilities and equity 74,122M -> 74,237M; FY2024 total liabilities 28,314M -> 28,431M; FY2024 goodwill 31,147M -> 31,264M; FY2024 operating cash flow 5,220M -> 5,207M; FY2023 operating cash flow 6,332M -> 6,246M; FY2022 revenue 30,871M -> 29,520M; FY2021 revenue 27,842M -> 26,953M; FY2018 equity incl. minority interest 28,877M -> 28,807M; FY2017 net income 4,018M -> 4,008M; FY2017 EPS 3.36 -> 3.35; FY2017 equity incl. minority interest 25,540M -> 25,573M; FY2016 net income 3,646M -> 3,642M
@@ -93,10 +94,10 @@
 
 ### Financial Strength Risk:
 - **Current Ratio: 1.16x** - ⚠️ Below Graham's standards (defensive requires 2.0x)
-- **Long-Term Debt: 4,550,000,000 EUR** (6.5% of assets) - Conservative
-  - Short-term debt and leases: 1,600,000,000 EUR
-  - Total debt: 6,150,000,000 EUR (8.7% of assets)
-- **Debt Coverage: ⚠️** Long-term debt is 160% of Net Current Assets (fails Graham's defensive test)
+- **Long-Term Debt: 5,980,000,000 EUR** (8.5% of assets) - Conservative
+  - Short-term debt and leases: 1,854,000,000 EUR
+  - Total debt: 7,834,000,000 EUR (11.1% of assets)
+- **Debt Coverage: ⚠️** Long-term debt is 211% of Net Current Assets (fails Graham's defensive test)
 
 ### Operational Stability Risk:
 - **Profit Margin Stability: 15.6% average, 4.4% std dev** over 10 years
@@ -168,13 +169,13 @@
 | Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
 | 2026 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 2.00 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2025 | 36.80B | 7.16B | 6.14 | 1.92 | 38.24 | 2.44 | 31.3% | 6.15B | 1.166B | 196.36 | 32.0 | 5.1 |
-| 2024 | 34.18B | 3.12B | 2.68 | 1.85 | 38.97 | 1.99 | 69.0% | 9.38B | 1.166B | 182.73 | 68.2 | 4.7 |
-| 2023 | 31.21B | 6.14B | 5.26 | 1.78 | 36.98 | 5.08 | 33.8% | 7.75B | 1.167B | 169.09 | 32.1 | 4.6 |
-| 2022 | 29.52B | 2.28B | 1.95 | 1.71 | 34.35 | 0.91 | 87.7% | 11.76B | 1.170B | 155.45 | 79.7 | 4.5 |
-| 2021 | 26.95B | 5.26B | 4.46 | 1.64 | 32.93 | 3.31 | 36.9% | 13.09B | 1.180B | 141.82 | 31.8 | 4.3 |
-| 2020 | 27.34B | 5.14B | 4.35 | 1.58 | 25.14 | 1.88 | 36.3% | 13.28B | 1.182B | 128.18 | 29.5 | 5.1 |
-| 2019 | 27.55B | 3.32B | 2.78 | 1.52 | 25.75 | 0.63 | 54.7% | 13.67B | 1.194B | 114.55 | 41.2 | 4.4 |
+| 2025 | 36.80B | 7.16B | 6.14 | 1.92 | 38.24 | 2.44 | 31.3% | 7.83B | 1.166B | 196.36 | 32.0 | 5.1 |
+| 2024 | 34.18B | 3.12B | 2.68 | 1.85 | 38.97 | 1.99 | 69.0% | 11.10B | 1.166B | 182.73 | 68.2 | 4.7 |
+| 2023 | 31.21B | 6.14B | 5.26 | 1.78 | 36.98 | 5.08 | 33.8% | 9.38B | 1.167B | 169.09 | 32.1 | 4.6 |
+| 2022 | 29.52B | 2.28B | 1.95 | 1.71 | 34.35 | 0.91 | 87.7% | 13.90B | 1.170B | 155.45 | 79.7 | 4.5 |
+| 2021 | 26.95B | 5.26B | 4.46 | 1.64 | 32.93 | 3.31 | 36.9% | 15.24B | 1.180B | 141.82 | 31.8 | 4.3 |
+| 2020 | 27.34B | 5.14B | 4.35 | 1.58 | 25.14 | 1.88 | 36.3% | 15.40B | 1.182B | 128.18 | 29.5 | 5.1 |
+| 2019 | 27.55B | 3.32B | 2.78 | 1.52 | 25.75 | 0.63 | 54.7% | 15.87B | 1.194B | 114.55 | 41.2 | 4.4 |
 | 2018 | 24.71B | 4.08B | 3.42 | 1.46 | 24.15 | 5.14 | 42.7% | 11.33B | 1.194B | 100.91 | 29.5 | 4.2 |
 | 2017 | 23.46B | 4.01B | 3.35 | 1.41 | 21.29 | 1.44 | 41.9% | 6.26B | 1.197B | 87.27 | 26.1 | 4.1 |
 | 2016 | 22.06B | 3.64B | 3.04 | 1.35 | 22.02 | 1.58 | 44.4% | 7.83B | 1.198B | 73.64 | 24.2 | 3.3 |

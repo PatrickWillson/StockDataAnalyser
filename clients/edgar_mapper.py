@@ -127,6 +127,14 @@ IFRS_NONCURRENT_BONDS = ("ifrs-full:NoncurrentPortionOfNoncurrentBondsIssued",
                          "ifrs-full:NoncurrentDebtInstrumentsIssued")   # Denison FY2025: convertible notes 474M
 IFRS_NONCURRENT_LOANS = ("ifrs-full:NoncurrentPortionOfNoncurrentLoansReceived",)
 IFRS_OTHER_NONCURRENT_BORROWINGS = ("ifrs-full:NoncurrentPortionOfOtherNoncurrentBorrowings",)
+# Lease liabilities count as debt (GRAHAM_METHODOLOGY §8.10): non-current in long-term debt, current in short-term
+# debt. US-GAAP operating and finance leases are separate tags (added); a debt tag "...AndCapitalLeaseObligations"
+# already holds the finance leases, which are then not added again
+LEASES_NONCURRENT = ("ifrs-full:NoncurrentLeaseLiabilities", "OperatingLeaseLiabilityNoncurrent", "FinanceLeaseLiabilityNoncurrent")
+LEASES_CURRENT = ("ifrs-full:CurrentLeaseLiabilities", "OperatingLeaseLiabilityCurrent", "FinanceLeaseLiabilityCurrent")
+FINANCE_LEASE_TAGS = ("FinanceLeaseLiabilityNoncurrent", "FinanceLeaseLiabilityCurrent")
+DEBT_WITH_CAPITAL_LEASES = ("LongTermDebtAndCapitalLeaseObligations", "LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
+                            "DebtAndCapitalLeaseObligations", "LongTermDebtAndCapitalLeaseObligationsCurrent")
 # Balance-sheet borrowings the long-term debt mapping does not read: when one has a value and no long-term debt
 # was found, the debt is unknown, not zero (GRAHAM_METHODOLOGY §8.9: Cellectis' non-current financial
 # liabilities; Novartis' Borrowings before it was mapped). Current-only items are not evidence (all due in a year)
@@ -648,6 +656,13 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
     if evidence:
         notes.derive("long-term debt", f"not identified ({evidence} is reported, no long-term debt figure): the "
                      "debt tests count as not met, no debt is assumed", end)
+    finance_leases_in_debt = facts.get(DEBT_WITH_CAPITAL_LEASES, end, MONEY, "instant") is not None
+    lease_tags = lambda chain: tuple(t for t in chain if not (finance_leases_in_debt and t in FINANCE_LEASE_TAGS))  # noqa: E731
+    leases_noncurrent, _ = _sum(facts, lease_tags(LEASES_NONCURRENT), end, MONEY)
+    leases_current, _ = _sum(facts, lease_tags(LEASES_CURRENT), end, MONEY)
+    if leases_noncurrent and not evidence:
+        long_term_debt = (long_term_debt or 0.0) + leases_noncurrent
+        notes.derive("long-term debt", "includes non-current lease liabilities (leases count as debt)", end)
 
     debt_current = field("short-term debt", DEBT_CURRENT)
     if debt_current is None:
@@ -656,6 +671,8 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
             parts.append(field("short-term debt", LTD_CURRENT))
         if any(p is not None for p in parts):
             debt_current = sum(p or 0.0 for p in parts)
+    if leases_current:
+        debt_current = (debt_current or 0.0) + leases_current
 
     inventory = field("inventory", INVENTORY)
     supplies_line = facts.get(SUPPLIES_ONLY_INVENTORY[:1], end, MONEY, "instant")
