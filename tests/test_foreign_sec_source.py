@@ -76,6 +76,7 @@ def test_home_listing_gets_the_filers_statements_with_the_listings_market_data()
     assert [(p.amount, p.currency) for p in f.dividend_payments] == [(0.40, "GBP"), (0.42, "GBP")]   # pence -> pounds
     assert any("quotes them in GBp; converted to GBP" in n for n in f.notes)
     assert f.ceo_name == "Jane Roe"
+    assert f.forward_dividend_rate is None            # pence listing, euro statements: Yahoo's rate has no dependable unit
     assert any("EXAMPLE PLC (CIK 0000000099) (US listing EXPL)" in n for n in f.notes)
     assert any("covers 2 fiscal years (from FY2023)" in n and "data limit" in n for n in f.notes)
 

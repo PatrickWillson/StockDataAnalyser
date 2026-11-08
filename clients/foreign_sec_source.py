@@ -123,9 +123,10 @@ class ForeignSECFundamentalsSource:
             payments = tuple(replace(p, amount=to_major_unit(p.amount, quote_currency)[0], currency=dividend_currency)
                              for p in payments)
             notes.append(f"Dividends: Yahoo Finance quotes them in {quote_currency}; converted to {dividend_currency} (÷100)")
-        forward_rate = yahoo_mapper.forward_dividend_rate(yahoo)
-        if forward_rate is not None:
-            forward_rate = to_major_unit(forward_rate, quote_currency)[0]
+        # Yahoo's forward dividend rate (a display-only estimate, F21) is in the listing's currency only when that is
+        # also the reporting currency; otherwise its unit is not dependable (BP.L and AZN.L: dollars, as declared,
+        # beside a pence price), so it is left out rather than shown in a wrong unit
+        forward_rate = yahoo_mapper.forward_dividend_rate(yahoo) if quote_currency == annual.currency else None
         latest_balance = annual.balance_sheets[0] if annual.balance_sheets else None
         latest_shares = (latest_balance.shares_outstanding if latest_balance else None) or 0.0
         symbol, _, exchange = ticker.rpartition(".")
