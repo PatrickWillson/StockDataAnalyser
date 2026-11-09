@@ -29,6 +29,7 @@ SOURCE_NAME = "SEC EDGAR (20-F/40-F) + Yahoo Finance"
 MAX_NET_INCOME_GAP = 0.02
 FULL_HISTORY_YEARS = 10      # Graham's defensive earnings record; fewer years get the history note
 MATCH_DAYS = 10
+CLASS_EPS_FILINGS = 4        # 20-F instances read for per-class EPS (each has three years): about twelve years
 
 
 def _agreement(annual: edgar_mapper.EdgarAnnualData, yahoo_income: Dict[str, List[float]]) -> Optional[bool]:
@@ -106,6 +107,18 @@ class ForeignSECFundamentalsSource:
             notes.append("SEC EDGAR: " + ", ".join(f"{filing[0]} for {filing[1]}" for filing, _ in instances)
                          + " read from the filing's own XBRL file: the SEC's company facts do not include it")
         annual = edgar_mapper.annual_data(facts, splits, submissions.get("sic"), eps_implied_shares=True)
+        if annual.income_statements and not any(row.eps for row in annual.income_statements):
+            # EPS tagged only per share class (BP): the ordinary shares' figure, from the 20-Fs' own XBRL files, each
+            # holding three years, so every third annual report
+            filings = edgar_mapper.foreign_annual_filings(submissions)[:CLASS_EPS_FILINGS * 3:3]
+            per_class = [edgar_mapper.ordinary_share_eps(instance, form, filed, accession)
+                         for form, _, filed, accession in filings
+                         if (instance := self.edgar.fetch_filing_instance(filer.cik, accession))]
+            if any(tags for found in per_class for tags in found["facts"].values()):
+                facts = edgar_mapper.merge_companyfacts(facts, per_class)
+                annual = edgar_mapper.annual_data(facts, splits, submissions.get("sic"), eps_implied_shares=True)
+                notes.append("SEC EDGAR: EPS from the figure the company tags for its ordinary shares as a class (its "
+                             "20-F XBRL files; the SEC's company facts keep only company-wide figures)")
         if not annual.income_statements:
             raise TickerNotCoveredError(f"{ticker}: {filer.sec_name} (CIK {filer.cik}) has no annual reports with "
                                         "XBRL financial data at the SEC")

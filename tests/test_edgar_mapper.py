@@ -1346,3 +1346,27 @@ def test_a_large_minority_interest_explains_a_small_owners_share():
                               "Equity": [(None, end, 400.0e6, FILED, "EUR")],
                               "EquityAttributableToOwnersOfParent": [(None, end, 100.0e6, FILED, "EUR")]}))
     assert data.balance_sheets[0].total_equity == 100.0e6
+
+
+BP_LIKE_INSTANCE = """<xbrl xmlns="http://www.xbrl.org/2003/instance" xmlns:xbrldi="http://xbrl.org/2006/xbrldi"
+ xmlns:ifrs-full="https://xbrl.ifrs.org/taxonomy/2024-03-27/ifrs-full" xmlns:iso4217="http://www.xbrl.org/2003/iso4217">
+ <context id="ord"><entity><identifier scheme="http://www.sec.gov/CIK">1</identifier><segment>
+  <xbrldi:explicitMember dimension="ifrs-full:ClassesOfShareCapitalAxis">ifrs-full:OrdinarySharesMember</xbrldi:explicitMember>
+ </segment></entity><period><startDate>2020-01-01</startDate><endDate>2020-12-31</endDate></period></context>
+ <context id="ads"><entity><identifier scheme="http://www.sec.gov/CIK">1</identifier><segment>
+  <xbrldi:explicitMember dimension="ifrs-full:ClassesOfShareCapitalAxis">bp:AmericanDepositaryShareMember</xbrldi:explicitMember>
+ </segment></entity><period><startDate>2020-01-01</startDate><endDate>2020-12-31</endDate></period></context>
+ <unit id="usdPerShare"><divide><unitNumerator><measure>iso4217:USD</measure></unitNumerator>
+  <unitDenominator><measure>shares</measure></unitDenominator></divide></unit>
+ <ifrs-full:BasicEarningsLossPerShare contextRef="ord" unitRef="usdPerShare" decimals="4">-1.0042</ifrs-full:BasicEarningsLossPerShare>
+ <ifrs-full:BasicEarningsLossPerShare contextRef="ads" unitRef="usdPerShare" decimals="2">-6.03</ifrs-full:BasicEarningsLossPerShare>
+</xbrl>"""
+
+
+def test_eps_tagged_for_the_ordinary_shares_as_a_class_is_the_companys():
+    """BP FY2020: -1.0042 per ordinary share, -6.03 per ADS (six shares); companyfacts has neither."""
+    from clients.edgar_mapper import ordinary_share_eps
+    facts = ordinary_share_eps(BP_LIKE_INSTANCE, "20-F", "2021-03-19", "acc-1")
+    rows = facts["facts"]["ifrs-full"]["BasicEarningsLossPerShare"]["units"]["USD/shares"]
+    assert rows == [{"start": "2020-01-01", "end": "2020-12-31", "val": -1.0042, "filed": "2021-03-19", "form": "20-F",
+                     "accn": "acc-1"}]

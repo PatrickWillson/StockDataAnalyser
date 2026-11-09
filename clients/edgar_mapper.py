@@ -184,6 +184,10 @@ SHARES_ISSUED = ("CommonStockSharesIssued", "ifrs-full:NumberOfSharesIssued")
 TREASURY_SHARES = ("TreasuryStockCommonShares", "TreasuryStockShares")
 COVER_SHARES = ("EntityCommonStockSharesOutstanding",)
 CLASS_AXIS = "StatementClassOfStockAxis"
+# Basic EPS tagged per share class: the ordinary (common) shares' figure is the company's (ordinary_share_eps)
+ORDINARY_SHARE_AXES = frozenset({CLASS_AXIS, "ClassesOfShareCapitalAxis"})
+ORDINARY_SHARE_MEMBERS = frozenset({"OrdinarySharesMember", "CommonStockMember"})
+ORDINARY_EPS_TAGS = {GAAP: frozenset({"EarningsPerShareBasic"}), IFRS: frozenset({"BasicEarningsLossPerShare"})}
 WEIGHTED_SHARES = ("WeightedAverageNumberOfSharesOutstandingBasic", "ifrs-full:WeightedAverageShares")
 UTILITY_SIC = range(4900, 5000)
 # IFRS: dividends to the parent's shareholders before totals that include minority shareholders
@@ -1435,6 +1439,56 @@ def class_share_counts(instance_xml: str) -> Tuple[Dict[str, float], Optional[fl
     latest_cover = by_date(cover)
     return ({date: sum(counts) for date, counts in by_date(outstanding).items()},
             sum(latest_cover[max(latest_cover)]) if latest_cover else None)
+
+
+def ordinary_share_eps(instance_xml: str, form: str, filed: str, accession: str) -> Dict[str, Any]:
+    """
+    A filing's basic EPS tagged for its ordinary (or common) shares as a class, as companyfacts rows of company-wide
+    EPS. Some foreign filers tag EPS only per class, beside the per-ADS figure (BP: OrdinarySharesMember 0.0035 and
+    AmericanDepositaryShareMember 0.02 for FY2025), so companyfacts, which keeps company-wide figures, has none.
+    """
+    def local(name: str) -> str:
+        return name.split("}")[-1]
+
+    root = ET.fromstring(instance_xml)
+    periods: Dict[Optional[str], Tuple[str, str]] = {}
+    for context in (e for e in root if local(e.tag) == "context"):
+        members = [m for m in context.iter() if local(m.tag) == "explicitMember"]
+        dates = {local(e.tag): (e.text or "").strip() for e in context.iter()}
+        if (len(members) == 1 and local(members[0].get("dimension", "")).split(":")[-1] in ORDINARY_SHARE_AXES
+                and (members[0].text or "").strip().split(":")[-1] in ORDINARY_SHARE_MEMBERS
+                and dates.get("startDate") and dates.get("endDate")):
+            periods[context.get("id")] = (dates["startDate"], dates["endDate"])
+    units: Dict[Optional[str], str] = {}
+    for unit in (e for e in root if local(e.tag) == "unit"):
+        measures = [(e.text or "").strip().split(":")[-1] for e in unit.iter() if local(e.tag) == "measure"]
+        units[unit.get("id")] = "/".join(measures)
+    facts: Dict[str, Dict[str, Any]] = {GAAP: {}, IFRS: {}}
+    for fact in root:
+        namespace, tag = fact.tag.split("}")[0], local(fact.tag)
+        taxonomy = next((t for t in (GAAP, IFRS) if re.search(rf"/{t}(/|$)", namespace)), None)
+        if taxonomy is None or tag not in ORDINARY_EPS_TAGS[taxonomy] or fact.get("contextRef") not in periods:
+            continue
+        unit = units.get(fact.get("unitRef"))
+        try:
+            value = float((fact.text or "").strip())
+        except ValueError:
+            continue
+        start, end = periods[fact.get("contextRef")]
+        row = {"start": start, "end": end, "val": value, "filed": filed, "form": form, "accn": accession}
+        rows = facts[taxonomy].setdefault(tag, {"units": {}})["units"].setdefault(unit, [])
+        if unit and row not in rows:
+            rows.append(row)
+    return {"facts": facts}
+
+
+def foreign_annual_filings(submissions: Mapping[str, Any]) -> List[Tuple[str, str, str, str]]:
+    """(form, period end, filing date, accession) of each 20-F / 40-F with XBRL, newest first."""
+    recent = submissions.get("filings", {}).get("recent", {})
+    return [(form, end, filed, accession) for form, end, filed, accession, xbrl in
+            zip(recent.get("form", []), recent.get("reportDate", []), recent.get("filingDate", []),
+                recent.get("accessionNumber", []), recent.get("isXBRL", []))
+            if form in ("20-F", "40-F") and xbrl and end]
 
 
 def split_adjusted_shares(companyfacts: Mapping[str, Any], splits: Sequence[Tuple[str, float]], filed: str, count: float) -> float:

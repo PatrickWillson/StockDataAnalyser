@@ -142,3 +142,30 @@ def test_without_any_share_count_yahoos_current_total_stands_in():
     f = ForeignSECFundamentalsSource(NoShareEdgar(), FakeYahoo(yahoo), FakeLookup()).fetch_fundamentals("X.LSE")
     assert f.shares_outstanding == 15_600_000_000
     assert any("today's total from Yahoo Finance for this listing stands for every year" in n for n in f.notes)
+
+
+def test_eps_tagged_only_per_share_class_is_read_from_the_20f_files():
+    """BP: no company-wide EPS in companyfacts; the ordinary shares' EPS from the 20-F XBRL instance."""
+    from tests.test_edgar_mapper import BP_LIKE_INSTANCE
+    no_eps = _ifrs({"ProfitLossAttributableToOwnersOfParent": [("2020-01-01", "2020-12-31", -20_305.0e6, FILED, "USD")],
+                    "Assets": [(None, "2020-12-31", 267_654.0e6, FILED, "USD")]})
+
+    class PerClassEdgar(FakeEdgar):
+        def fetch_company_facts(self, cik):
+            return no_eps
+
+        def fetch_submissions(self, cik):
+            return {"name": "BP PLC", "filings": {"recent": {"form": ["6-K", "20-F"], "reportDate": ["2021-02-01", "2020-12-31"],
+                                                             "filingDate": ["2021-02-02", "2021-03-19"],
+                                                             "accessionNumber": ["a-6k", "a-20f"], "isXBRL": [1, 1]}}}
+
+        def fetch_filing_instance(self, cik, accession):
+            assert accession == "a-20f"
+            return BP_LIKE_INSTANCE
+
+    yahoo = YahooCompanyData(yahoo_symbol="BP.L", info={**YAHOO.info, "financialCurrency": "USD",
+                                                        "sharesOutstanding": 15_454_000_000})
+    f = ForeignSECFundamentalsSource(PerClassEdgar(), FakeYahoo(yahoo, net_income={}), FakeLookup()).fetch_fundamentals("BP.LSE")
+    assert f.annual_income_statements[0].eps == pytest.approx(-1.0042)
+    assert f.shares_by_year["2020"] == pytest.approx(20_305.0e6 / 1.0042)
+    assert any("ordinary shares as a class" in n for n in f.notes)
