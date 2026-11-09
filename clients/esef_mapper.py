@@ -98,7 +98,7 @@ def report_facts(filing: EsefFiling, report: Mapping[str, Any]) -> EsefReport:
     annual = any(end == latest and low <= edgar_mapper._days(start, end) <= high for start, end in durations)
     notes = []
     year_start = next((start for start, end in durations if end == latest and low <= edgar_mapper._days(start, end) <= high), None)
-    for tag in EPS_TAGS:
+    for tag in sorted(EPS_TAGS):          # sorted: a frozenset's order changes between runs (string hashing)
         for rows in tags.get(tag, {}).get("units", {}).values():
             own_year = [r for r in rows if r["end"] == latest and "start" in r]
             if year_start and own_year and not any(r["start"] == year_start for r in own_year):

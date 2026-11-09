@@ -55,8 +55,8 @@
 
 ### Data Quality & Limitations:
 - Statements: ESEF annual reports of GAMES WORKSHOP GROUP PLC (LEI 213800RP9QJQYGWHNT41) from filings.xbrl.org (XBRL International's unofficial repository of the reports filed with national regulators), latest added 2025-09-24; company-wide IFRS figures only (a company's own XBRL tags are not read); price, dividends and profile from this listing
-- ESEF: FY2025 DilutedEarningsLossPerShare tagged for a period longer than the year (a dating error); read as the year's figure
 - ESEF: FY2025 BasicEarningsLossPerShare tagged for a period longer than the year (a dating error); read as the year's figure
+- ESEF: FY2025 DilutedEarningsLossPerShare tagged for a period longer than the year (a dating error); read as the year's figure
 - History before FY2022: Eulerpool (vendor data, not filings) for FY2015-FY2021 (7 years), unverified against the company's reports. Used field by field, only where it agreed against the ESEF reports in FY2022-FY2025 (within 1.0%, or 1.1M for whole millions) in every overlapping year: revenue, net income, total assets, equity, year-end shares. Never rescaled to fit; EPS for those years is net income / Eulerpool's year-end share count (its own EPS is not used); no intangibles (tangible book overstated); whole millions
 - Eulerpool (vendor data, not filings): not used for the earlier years (disagreed with the filings in an overlapping year, or too few years to check): current assets, current liabilities, total liabilities, inventory, goodwill, long-term debt, short-term debt, operating cash flow, dividends paid; long-term debt is then unknown in those years, not zero
 - No quarterly figures: only annual ESEF reports are read, so TTM is N/A

@@ -138,3 +138,32 @@ def test_vendor_only_long_term_debt_is_non_current_liabilities_an_upper_bound():
     assert latest.long_term_debt == 450 * M and not latest.long_term_debt_unknown
     assert older.long_term_debt is None and older.long_term_debt_unknown
     assert annual.income_statements[0].eps is None
+
+
+def test_a_share_count_that_jumps_and_returns_is_a_vendor_error():
+    """Games Workshop: Eulerpool 62M for FY2007-09 and FY2012 between years of about 31M (31M printed throughout)."""
+    from clients.eulerpool_mapper import spiked_share_years
+    counts = {"2006-05-31": 31.1, "2007-05-31": 62.2, "2008-05-31": 62.3, "2009-05-31": 62.3, "2010-05-31": 31.1,
+              "2011-05-31": 31.2, "2012-05-31": 63.2, "2013-05-31": 31.9, "2014-05-31": 32.0}
+    assert spiked_share_years(counts) == ["2007-05-31", "2008-05-31", "2009-05-31", "2012-05-31"]
+
+
+def test_a_lasting_step_in_the_share_count_is_kept():
+    from clients.eulerpool_mapper import spiked_share_years
+    assert spiked_share_years({"2018-12-31": 30.0, "2019-12-31": 30.0, "2020-12-31": 60.0, "2021-12-31": 61.0}) == []
+    assert spiked_share_years({"2018-12-31": 60.0, "2019-12-31": 30.0, "2020-12-31": 30.0}) == []   # oldest year: no side
+
+
+def test_spiked_years_are_left_out_of_the_older_history_and_noted():
+    older = {"2022-12-31": _year(50.0, 52.0), "2021-12-31": _year(45.0, 104.0), "2020-12-31": _year(40.0, 53.0)}
+    result = older_years(ANNUAL, _data({**OVERLAP, **older}), strict=False, filed_source="the ESEF reports")
+    assert [r.period_end for r in result.income_statements] == ["2022-12-31", "2020-12-31"]
+    assert any("FY2021 not used: the year-end share count jumps" in n for n in result.notes)
+
+
+def test_vendor_only_history_leaves_out_spiked_years():
+    from clients.eulerpool_mapper import vendor_annual
+    years = {"2022-12-31": _year(50.0, 52.0), "2021-12-31": _year(45.0, 104.0), "2020-12-31": _year(40.0, 53.0)}
+    annual = vendor_annual(_data(years))
+    assert [r.period_end for r in annual.income_statements] == ["2022-12-31", "2020-12-31"]
+    assert any("FY2021 not used" in n for n in annual.notes)

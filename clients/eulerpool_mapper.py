@@ -15,6 +15,7 @@ Eulerpool is vendor data, checked here against the company's own filings whereve
 """
 
 import datetime as dt
+import statistics
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
@@ -38,6 +39,8 @@ LABELS = {"revenue": "revenue", "net_income": "net income", "total_assets": "tot
           "long_term_debt": "long-term debt", "short_term_debt": "short-term debt", "shares": "year-end shares",
           "operating_cash_flow": "operating cash flow", "dividends_paid": "dividends paid"}
 REQUIRED = ("net_income", "shares")
+# spiked_share_years: a temporary jump in the vendor's share count
+SPIKE_MAX_YEARS, RUN_TOLERANCE, SPIKE_RATIO, SIDES_AGREE = 3, 0.10, 1.5, 0.20
 # A balance sheet for a year needs these (a missing one would show as zero: working capital of 0.00)
 BALANCE_REQUIRED = ("total_assets", "total_equity", "current_assets", "current_liabilities")
 SOURCE = "Eulerpool (vendor data, not filings)"
@@ -108,6 +111,34 @@ def parse(profile: Mapping[str, Any], statements: Mapping[str, Sequence[Mapping[
                 values[ours] = _number(quarter.get(theirs)) * MILLION
     return EulerpoolData(str(profile.get("isin") or ""), str(profile.get("name") or ""),
                          str(profile.get("currency") or ""), years)
+
+
+def spiked_share_years(counts: Mapping[str, float]) -> List[str]:
+    """
+    Fiscal year ends whose share count is a temporary jump: a run of up to SPIKE_MAX_YEARS years (counts within
+    RUN_TOLERANCE of each other) over SPIKE_RATIO from the company's median count across all years, with the years on
+    both sides within SIDES_AGREE of that median. Eulerpool's Games Workshop counts are 62M for FY2007-09 and FY2012 between years of about 31M, against
+    about 31M printed in every report; Eulerpool's counts are already restated for splits, so a jump that reverts is
+    not a share change. A lasting step (a share issue) is not flagged.
+    """
+    ends = sorted(end for end, count in counts.items() if count)
+    runs: List[List[str]] = []
+    for end in ends:
+        if runs and abs(counts[end] / counts[runs[-1][0]] - 1) <= RUN_TOLERANCE:
+            runs[-1].append(end)
+        else:
+            runs.append([end])
+    if len(ends) < 3:
+        return []
+    typical = statistics.median(counts[end] for end in ends)    # the company's usual level across all years
+    near = lambda level: abs(level / typical - 1) <= SIDES_AGREE   # noqa: E731
+    spiked = []
+    for i in range(1, len(runs) - 1):
+        level = counts[runs[i][0]]
+        if len(runs[i]) <= SPIKE_MAX_YEARS and max(level / typical, typical / level) > SPIKE_RATIO \
+                and near(counts[runs[i - 1][-1]]) and near(counts[runs[i + 1][0]]):
+            spiked.extend(runs[i])
+    return spiked
 
 
 def filed_values(annual: EdgarAnnualData) -> Dict[str, Dict[str, float]]:
@@ -205,8 +236,11 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
     used = {theirs for _, theirs in pairs}
     older = sorted((end for end in data.years if end < first_filed and end not in used
                     and _days(end, first_filed) > EULERPOOL_DATE_TOLERANCE_DAYS), reverse=True)
+    spiked = set(spiked_share_years({end: data.years[end].get("shares") for end in data.years}))
     income, balance, shares, dividends, cash = [], [], {}, {}, {}
     for end in older:
+        if end in spiked:
+            continue
         values = {name: value for name, value in data.years[end].items() if name in accepted}
         if values.get("net_income") is None or not values.get("shares"):
             continue
@@ -233,6 +267,11 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
              f"in every overlapping year: {', '.join(LABELS[n] for n in accepted)}. Never rescaled to fit; EPS for "
              "those years is net income / Eulerpool's year-end share count (its own EPS is not used); no intangibles "
              "(tangible book overstated); whole millions"]
+    dropped = sorted(fiscal_year(end) for end in spiked if end in older)
+    if dropped:
+        notes.append(f"{SOURCE}: FY{', FY'.join(dropped)} not used: the year-end share count jumps over {SPIKE_RATIO:g}x "
+                     "from the years on both sides and back (a vendor error, not a share change), so per-share figures "
+                     "for those years cannot be put on the same basis")
     if rejected:
         notes.append(f"{SOURCE}: not used for the earlier years (disagreed with the filings in an overlapping year, or "
                      f"too few years to check): {', '.join(LABELS[n] for n in rejected)}"
@@ -250,9 +289,10 @@ def vendor_annual(data: EulerpoolData) -> EdgarAnnualData:
     cannot show the debt Graham counts (§8.10); without both totals it is unknown, not zero (§8.9).
     """
     balance, income, shares, dividends, cash = [], [], {}, {}, {}
+    spiked = set(spiked_share_years({end: data.years[end].get("shares") for end in data.years}))
     for end in sorted(data.years, reverse=True):
         values = data.years[end]
-        if values.get("net_income") is None:
+        if values.get("net_income") is None or end in spiked:
             continue
         income.append(IncomeStatementRow(end, values.get("revenue"), values["net_income"], None))
         if values.get("shares"):
@@ -271,4 +311,7 @@ def vendor_annual(data: EulerpoolData) -> EdgarAnnualData:
                 short_term_debt=values.get("short_term_debt"), total_debt_reported=None,
                 total_assets=values["total_assets"], inventory=values.get("inventory"), noncontrolling_interest=None,
                 shares_outstanding=values.get("shares"), long_term_debt_unknown=noncurrent is None))
-    return EdgarAnnualData(tuple(balance), tuple(income), dividends, cash, shares, 0.0, (), data.currency)
+    notes = ((f"{SOURCE}: FY{', FY'.join(sorted(fiscal_year(e) for e in spiked))} not used: the year-end share count jumps "
+              f"over {SPIKE_RATIO:g}x from the years on both sides and back (a vendor error, not a share change)",)
+             if spiked else ())
+    return EdgarAnnualData(tuple(balance), tuple(income), dividends, cash, shares, 0.0, notes, data.currency)
