@@ -179,7 +179,7 @@
 | 2018 | 24.71B | 4.08B | 3.42 | 1.46 | 24.15 | 5.14 | 42.7% | 11.33B | 1.194B | 100.91 | 29.5 | 4.2 |
 | 2017 | 23.46B | 4.01B | 3.35 | 1.41 | 21.29 | 1.44 | 41.9% | 6.26B | 1.197B | 87.27 | 26.1 | 4.1 |
 | 2016 | 22.06B | 3.64B | 3.04 | 1.35 | 22.02 | 1.58 | 44.4% | 7.83B | 1.198B | 73.64 | 24.2 | 3.3 |
-| 2015 | 20.79B | 3.06B | 2.56 | 1.30 | N/A | 0.00 | 50.8% | N/A | 1.197B | 60.00 | 23.4 | N/A |
+| 2015 | 20.79B | 3.06B | 2.56 | 1.30 | N/A | N/A | 50.8% | N/A | 1.197B | 60.00 | 23.4 | N/A |
 | 2014 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 1.25 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2013 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 1.20 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2012 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 1.16 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |

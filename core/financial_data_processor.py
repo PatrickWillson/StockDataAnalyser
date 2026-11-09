@@ -419,7 +419,7 @@ class FinancialDataProcessor:
             # Use Decimal for precise calculation
             from decimal import Decimal, ROUND_HALF_UP
             
-            if final_shares > 0:
+            if final_shares > 0 and bs_data:
                 # Convert to Decimal via string to avoid float artifacts
                 ca_dec = Decimal(str(current_assets))
                 cl_dec = Decimal(str(current_liabilities))
@@ -435,7 +435,8 @@ class FinancialDataProcessor:
                 wcps_rounded = wcps_dec.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 wcps = float(wcps_rounded)
             else:
-                # Cannot calculate WCPS without shares outstanding
+                # Cannot calculate WCPS without shares outstanding, or without a balance sheet for the year
+                # (an income-only year: working capital unknown, not zero)
                 wcps = "N/A"
             
             # Calculate Payout Ratio

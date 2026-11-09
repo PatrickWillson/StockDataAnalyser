@@ -320,7 +320,7 @@
         "total_debt": 0.0,
         "total_equity": 0.0,
         "total_liabilities": 0.0,
-        "wcps": 0.0,
+        "wcps": "N/A",
         "year_end_price": null
       }
     },

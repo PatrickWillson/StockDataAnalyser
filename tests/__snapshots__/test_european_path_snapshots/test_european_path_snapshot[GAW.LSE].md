@@ -184,13 +184,13 @@
 | 2024 | 525.70M | 151.10M | 4.59 | 1.45 | 7.63 | 4.05 | 31.6% | 47.20M | 32.93M | 133.64 | 29.1 | 17.5 |
 | 2023 | 470.80M | 134.70M | 4.10 | 1.38 | 7.15 | 3.83 | 33.7% | 49.90M | 32.88M | 120.45 | 29.4 | 16.8 |
 | 2022 | 414.80M | 128.40M | 3.91 | 1.32 | 7.15 | 3.33 | 33.6% | 48.90M | 32.81M | 107.27 | 27.4 | 15.0 |
-| 2021 | 350.00M | 98.00M | 3.00 | 1.25 | N/A | 0.00 | 41.8% | N/A | 32.70M | 94.09 | 31.4 | N/A |
-| 2020 | 320.00M | 86.00M | 2.63 | 1.19 | N/A | 0.00 | 45.4% | N/A | 32.70M | 80.91 | 30.8 | N/A |
-| 2019 | 290.00M | 74.00M | 2.26 | 1.14 | N/A | 0.00 | 50.2% | N/A | 32.70M | 67.73 | 29.9 | N/A |
-| 2018 | 260.00M | 62.00M | 1.90 | 1.08 | N/A | 0.00 | 57.1% | N/A | 32.70M | 54.55 | 28.8 | N/A |
-| 2017 | 230.00M | 50.00M | 1.53 | 1.03 | N/A | 0.00 | 67.5% | N/A | 32.70M | 41.36 | 27.1 | N/A |
-| 2016 | 200.00M | 38.00M | 1.16 | 0.98 | N/A | 0.00 | 84.5% | N/A | 32.70M | 28.18 | 24.3 | N/A |
-| 2015 | 170.00M | 26.00M | 0.80 | 0.94 | N/A | 0.00 | 117.7% | N/A | 32.70M | 15.00 | 18.9 | N/A |
+| 2021 | 350.00M | 98.00M | 3.00 | 1.25 | N/A | N/A | 41.8% | N/A | 32.70M | 94.09 | 31.4 | N/A |
+| 2020 | 320.00M | 86.00M | 2.63 | 1.19 | N/A | N/A | 45.4% | N/A | 32.70M | 80.91 | 30.8 | N/A |
+| 2019 | 290.00M | 74.00M | 2.26 | 1.14 | N/A | N/A | 50.2% | N/A | 32.70M | 67.73 | 29.9 | N/A |
+| 2018 | 260.00M | 62.00M | 1.90 | 1.08 | N/A | N/A | 57.1% | N/A | 32.70M | 54.55 | 28.8 | N/A |
+| 2017 | 230.00M | 50.00M | 1.53 | 1.03 | N/A | N/A | 67.5% | N/A | 32.70M | 41.36 | 27.1 | N/A |
+| 2016 | 200.00M | 38.00M | 1.16 | 0.98 | N/A | N/A | 84.5% | N/A | 32.70M | 28.18 | 24.3 | N/A |
+| 2015 | 170.00M | 26.00M | 0.80 | 0.94 | N/A | N/A | 117.7% | N/A | 32.70M | 15.00 | 18.9 | N/A |
 | 2014 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.89 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2013 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.85 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2012 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.81 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |

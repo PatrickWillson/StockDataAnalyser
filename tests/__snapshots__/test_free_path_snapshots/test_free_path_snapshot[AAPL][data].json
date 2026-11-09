@@ -65,7 +65,7 @@
         "total_debt": 0.0,
         "total_equity": 0.0,
         "total_liabilities": 0.0,
-        "wcps": 0.0,
+        "wcps": "N/A",
         "year_end_price": null
       },
       "2004-09-27": {
@@ -87,7 +87,7 @@
         "total_debt": 0.0,
         "total_equity": 0.0,
         "total_liabilities": 0.0,
-        "wcps": 0.0,
+        "wcps": "N/A",
         "year_end_price": null
       },
       "2005-09-27": {
@@ -109,7 +109,7 @@
         "total_debt": 0.0,
         "total_equity": 0.0,
         "total_liabilities": 0.0,
-        "wcps": 0.0,
+        "wcps": "N/A",
         "year_end_price": null
       },
       "2006-09-27": {
@@ -131,7 +131,7 @@
         "total_debt": 0.0,
         "total_equity": 0.0,
         "total_liabilities": 0.0,
-        "wcps": 0.0,
+        "wcps": "N/A",
         "year_end_price": null
       },
       "2007-09-29": {
@@ -154,7 +154,7 @@
         "total_debt": 0.0,
         "total_equity": 0.0,
         "total_liabilities": 0.0,
-        "wcps": 0.0,
+        "wcps": "N/A",
         "year_end_price": 20.0
       },
       "2008-09-27": {
@@ -590,7 +590,7 @@
         "total_debt": 0.0,
         "total_equity": 0.0,
         "total_liabilities": 0.0,
-        "wcps": 0.0,
+        "wcps": "N/A",
         "year_end_price": null
       }
     },
