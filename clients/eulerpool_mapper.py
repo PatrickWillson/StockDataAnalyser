@@ -9,7 +9,8 @@ Eulerpool is vendor data, checked here against the company's own filings whereve
 - each field is used for the older years only if it agreed with the filed figure in every overlapping year (at least
   EULERPOOL_MIN_OVERLAP_YEARS), never rescaled to fit (a ratio inferred from the overlap is an estimate, not the
   reported figure);
-- net income and the year-end share count must both pass, or no older year is added: per-share figures for those
+- net income and the year-end share count must both pass, or no older year is added (a year's balance sheet
+  needs total assets, equity, current assets and current liabilities to have passed): per-share figures for those
   years are net income / that share count, never Eulerpool's EPS (on a non-standard count).
 """
 
@@ -37,6 +38,8 @@ LABELS = {"revenue": "revenue", "net_income": "net income", "total_assets": "tot
           "long_term_debt": "long-term debt", "short_term_debt": "short-term debt", "shares": "year-end shares",
           "operating_cash_flow": "operating cash flow", "dividends_paid": "dividends paid"}
 REQUIRED = ("net_income", "shares")
+# A balance sheet for a year needs these (a missing one would show as zero: working capital of 0.00)
+BALANCE_REQUIRED = ("total_assets", "total_equity", "current_assets", "current_liabilities")
 SOURCE = "Eulerpool (vendor data, not filings)"
 
 
@@ -213,7 +216,7 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
             dividends[end] = values["dividends_paid"]
         if "operating_cash_flow" in values:
             cash[end] = values["operating_cash_flow"]
-        if values.get("total_assets") is not None and values.get("total_equity") is not None:
+        if all(values.get(name) is not None for name in BALANCE_REQUIRED):
             balance.append(BalanceSheetRow(
                 period_end=end, total_equity=values["total_equity"], intangible_assets=None,
                 goodwill=values.get("goodwill"), current_assets=values.get("current_assets"),
