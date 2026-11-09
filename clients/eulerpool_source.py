@@ -72,8 +72,10 @@ class EulerpoolOnlySource:
             f"Yahoo Finance: same reporting currency, net income within {MAX_NET_INCOME_GAP:.0%} (or 1.1M) in {checked}, latest "
             f"share count within {MAX_SHARE_GAP:.0%}; price, dividends and profile from this listing",
             "Eulerpool figures: whole millions; EPS is net income / Eulerpool's year-end share count (its own EPS is not "
-            "used); no intangibles (tangible book overstated); long-term debt as Eulerpool defines it (whether it "
-            "includes lease liabilities is not known)",
+            "used); no intangibles (tangible book overstated); long-term debt is taken as all non-current liabilities "
+            "(an upper bound: it includes provisions and pensions as well as borrowings and leases), because "
+            "Eulerpool's own long-term debt includes lease liabilities for some companies and not others, so the "
+            "debt tests may fail a company whose debt alone would pass",
             "No quarterly figures: TTM is N/A",
         ]
         if len(years) < FULL_HISTORY_YEARS:

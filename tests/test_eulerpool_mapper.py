@@ -127,3 +127,14 @@ def test_parse_reads_annual_rows_and_the_year_end_quarter_in_millions():
     assert year["net_income"] == pytest.approx(124.5e6) and year["total_assets"] == pytest.approx(304.6e6)
     assert year["shares"] == pytest.approx(32.76e6) and year["dividends_paid"] == pytest.approx(88.4e6)
     assert "long_term_debt" not in year and "eps" not in year
+
+
+def test_vendor_only_long_term_debt_is_non_current_liabilities_an_upper_bound():
+    """Eulerpool's own long-term debt includes leases for some companies and not others: not used."""
+    from clients.eulerpool_mapper import vendor_annual
+    year = _year()            # total liabilities 600M, current 150M, Eulerpool long-term debt 140M
+    annual = vendor_annual(_data({"2025-12-31": year, "2024-12-31": {k: v for k, v in year.items() if k != "total_liabilities"}}))
+    latest, older = annual.balance_sheets
+    assert latest.long_term_debt == 450 * M and not latest.long_term_debt_unknown
+    assert older.long_term_debt is None and older.long_term_debt_unknown
+    assert annual.income_statements[0].eps is None

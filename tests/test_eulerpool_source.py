@@ -52,7 +52,9 @@ def test_a_company_with_no_filings_gets_eulerpools_figures_labelled_unverified()
     assert f.source == SOURCE_NAME and f.statement_currency == "EUR"
     assert [r.period_end for r in f.annual_income_statements][:2] == ["2025-02-28", "2024-02-29"]
     assert all(r.eps is None for r in f.annual_income_statements)
-    assert f.annual_balance_sheets[0].long_term_debt == pytest.approx(900e6)
+    # Eulerpool's long-term debt (900M) is not used: non-current liabilities, an upper bound (2,500M - 0 current)
+    assert f.annual_balance_sheets[0].long_term_debt is None and f.annual_balance_sheets[0].long_term_debt_unknown
+    assert any("all non-current liabilities" in n for n in f.notes)
     assert f.shares_by_year["2022"] == pytest.approx(15.98e6)
     assert "UNVERIFIED against the company's reports" in f.notes[0] and "net income within 2% (or 1.1M) in FY2023-FY2025" in f.notes[0]
     assert any("History: Eulerpool has 4 fiscal years" in n for n in f.notes)

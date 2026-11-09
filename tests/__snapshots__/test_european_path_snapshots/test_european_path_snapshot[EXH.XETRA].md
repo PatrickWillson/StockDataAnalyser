@@ -44,8 +44,8 @@
 - **Current Assets**: 600,000,000.00 EUR
 - **Current Liabilities**: 210,000,000.00 EUR
 - **Net Current Assets**: 390,000,000.00 EUR
-- **Long-term Debt**: 120,000,000.00 EUR
-- **Debt Coverage Ratio**: 0.31 (30.77%) - Long-term Debt / NCA
+- **Long-term Debt**: 270,000,000.00 EUR
+- **Debt Coverage Ratio**: 0.69 (69.23%) - Long-term Debt / NCA
 
 *Graham's defensive test: long-term debt should not exceed net current assets (working capital), i.e. a ratio of at most 1.0.*
 
@@ -55,7 +55,7 @@
 
 ### Data Quality & Limitations:
 - Statements: Eulerpool (commercial vendor data) for Example Holding AG (ISIN DE0000000001), FY2014-FY2025: UNVERIFIED against the company's reports (no SEC or ESEF filings on the free routes). Checked only against Yahoo Finance: same reporting currency, net income within 2% (or 1.1M) in FY2023-FY2025, latest share count within 10%; price, dividends and profile from this listing
-- Eulerpool figures: whole millions; EPS is net income / Eulerpool's year-end share count (its own EPS is not used); no intangibles (tangible book overstated); long-term debt as Eulerpool defines it (whether it includes lease liabilities is not known)
+- Eulerpool figures: whole millions; EPS is net income / Eulerpool's year-end share count (its own EPS is not used); no intangibles (tangible book overstated); long-term debt is taken as all non-current liabilities (an upper bound: it includes provisions and pensions as well as borrowings and leases), because Eulerpool's own long-term debt includes lease liabilities for some companies and not others, so the debt tests may fail a company whose debt alone would pass
 - No quarterly figures: TTM is N/A
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
 - Price Source: yfinance (primary source)
@@ -85,7 +85,7 @@
 
 ### Financial Strength Risk:
 - **Current Ratio: 2.86x** - Strong liquidity (meets Graham's 2.0x defensive standard)
-- **Long-Term Debt: 120,000,000 EUR** (12.0% of assets) - Moderate
+- **Long-Term Debt: 270,000,000 EUR** (27.0% of assets) - Moderate
 - **Debt Coverage: ✓** Long-term debt ≤ net current assets (passes Graham's defensive test)
 
 ### Operational Stability Risk:
@@ -158,18 +158,18 @@
 | Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
 | 2026 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.90 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2025 | 900.00M | 60.00M | 3.00 | 0.86 | 26.00 | 19.50 | 28.6% | 120.00M | 20.00M | 42.92 | 14.3 | 1.7 |
-| 2024 | 880.00M | 58.00M | 2.90 | 0.82 | 25.25 | 19.50 | 28.1% | 120.00M | 20.00M | 40.83 | 14.1 | 1.6 |
-| 2023 | 860.00M | 56.00M | 2.80 | 0.78 | 24.50 | 19.50 | 27.8% | 120.00M | 20.00M | 38.75 | 13.8 | 1.6 |
-| 2022 | 840.00M | 54.00M | 2.70 | 0.74 | 23.75 | 19.50 | 27.4% | 120.00M | 20.00M | 36.67 | 13.6 | 1.5 |
-| 2021 | 820.00M | 52.00M | 2.60 | 0.71 | 23.00 | 19.50 | 27.1% | 120.00M | 20.00M | 34.58 | 13.3 | 1.5 |
-| 2020 | 800.00M | 50.00M | 2.50 | 0.67 | 22.25 | 19.50 | 26.9% | 120.00M | 20.00M | 32.50 | 13.0 | 1.5 |
-| 2019 | 780.00M | 48.00M | 2.40 | 0.64 | 21.50 | 19.50 | 26.7% | 120.00M | 20.00M | 30.42 | 12.7 | 1.4 |
-| 2018 | 760.00M | 46.00M | 2.30 | 0.61 | 20.75 | 19.50 | 26.5% | 120.00M | 20.00M | 28.33 | 12.3 | 1.4 |
-| 2017 | 740.00M | 44.00M | 2.20 | 0.58 | 20.00 | 19.50 | 26.4% | 120.00M | 20.00M | 26.25 | 11.9 | 1.3 |
-| 2016 | 720.00M | 42.00M | 2.10 | 0.55 | 19.25 | 19.50 | 26.3% | 120.00M | 20.00M | 24.17 | 11.5 | 1.3 |
-| 2015 | 700.00M | 40.00M | 2.00 | 0.53 | 18.50 | 19.50 | 26.3% | 120.00M | 20.00M | 22.08 | 11.0 | 1.2 |
-| 2014 | 680.00M | 38.00M | 1.90 | 0.50 | 17.75 | 19.50 | 26.4% | 120.00M | 20.00M | 20.00 | 10.5 | 1.1 |
+| 2025 | 900.00M | 60.00M | 3.00 | 0.86 | 26.00 | 19.50 | 28.6% | 270.00M | 20.00M | 42.92 | 14.3 | 1.7 |
+| 2024 | 880.00M | 58.00M | 2.90 | 0.82 | 25.25 | 19.50 | 28.1% | 260.00M | 20.00M | 40.83 | 14.1 | 1.6 |
+| 2023 | 860.00M | 56.00M | 2.80 | 0.78 | 24.50 | 19.50 | 27.8% | 250.00M | 20.00M | 38.75 | 13.8 | 1.6 |
+| 2022 | 840.00M | 54.00M | 2.70 | 0.74 | 23.75 | 19.50 | 27.4% | 240.00M | 20.00M | 36.67 | 13.6 | 1.5 |
+| 2021 | 820.00M | 52.00M | 2.60 | 0.71 | 23.00 | 19.50 | 27.1% | 230.00M | 20.00M | 34.58 | 13.3 | 1.5 |
+| 2020 | 800.00M | 50.00M | 2.50 | 0.67 | 22.25 | 19.50 | 26.9% | 220.00M | 20.00M | 32.50 | 13.0 | 1.5 |
+| 2019 | 780.00M | 48.00M | 2.40 | 0.64 | 21.50 | 19.50 | 26.7% | 210.00M | 20.00M | 30.42 | 12.7 | 1.4 |
+| 2018 | 760.00M | 46.00M | 2.30 | 0.61 | 20.75 | 19.50 | 26.5% | 200.00M | 20.00M | 28.33 | 12.3 | 1.4 |
+| 2017 | 740.00M | 44.00M | 2.20 | 0.58 | 20.00 | 19.50 | 26.4% | 190.00M | 20.00M | 26.25 | 11.9 | 1.3 |
+| 2016 | 720.00M | 42.00M | 2.10 | 0.55 | 19.25 | 19.50 | 26.3% | 180.00M | 20.00M | 24.17 | 11.5 | 1.3 |
+| 2015 | 700.00M | 40.00M | 2.00 | 0.53 | 18.50 | 19.50 | 26.3% | 170.00M | 20.00M | 22.08 | 11.0 | 1.2 |
+| 2014 | 680.00M | 38.00M | 1.90 | 0.50 | 17.75 | 19.50 | 26.4% | 160.00M | 20.00M | 20.00 | 10.5 | 1.1 |
 | 2013 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.48 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2012 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.45 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2011 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.43 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
