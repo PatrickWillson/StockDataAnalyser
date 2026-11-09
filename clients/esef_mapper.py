@@ -23,6 +23,7 @@ SOURCE_LABEL = "ESEF"            # how dossier notes name the source
 CORE_DIMENSIONS = frozenset({"concept", "entity", "period", "unit", "language"})
 # A report's own period comes from its income-statement figures only: other durations can run past the year end
 # (Unilever's annual reports date two facts as zero-day periods on the report's own date, 2023-02-09)
+EPS_TAGS = frozenset({"BasicEarningsLossPerShare", "DilutedEarningsLossPerShare"})
 DATING_TAGS = frozenset(tag.split(":", 1)[1] for tag in YEAR_END_TAGS if tag.startswith(f"{IFRS}:"))
 
 
@@ -61,6 +62,7 @@ class EsefReport:
     period_end: Optional[str]          # the report's own latest period end (None: no figures)
     annual: bool
     facts: Mapping[str, Any]           # {"facts": {"ifrs-full": {tag: {"units": {unit: [row]}}}}}
+    notes: Tuple[str, ...] = ()        # tagging errors allowed for
 
 
 def report_facts(filing: EsefFiling, report: Mapping[str, Any]) -> EsefReport:
@@ -74,6 +76,8 @@ def report_facts(filing: EsefFiling, report: Mapping[str, Any]) -> EsefReport:
         prefix, _, tag = concept.partition(":")
         if prefix != IFRS or not period or unit is None or set(dimensions) - CORE_DIMENSIONS:
             continue
+        if tag in EPS_TAGS and "/" not in unit and unit != "shares":
+            unit = f"{unit}/shares"    # EPS tagged in a plain currency (Bonduelle FY2025-26: 0.51 "EUR"): per share
         try:
             value = float(fact.get("value"))
             start, end = _period(period)
@@ -92,7 +96,20 @@ def report_facts(filing: EsefFiling, report: Mapping[str, Any]) -> EsefReport:
     latest = max(end for _, end in durations)
     low, high = DURATIONS["year"]
     annual = any(end == latest and low <= edgar_mapper._days(start, end) <= high for start, end in durations)
-    return EsefReport(filing, latest, annual, {"facts": {IFRS: tags}})
+    notes = []
+    year_start = next((start for start, end in durations if end == latest and low <= edgar_mapper._days(start, end) <= high), None)
+    for tag in EPS_TAGS:
+        for rows in tags.get(tag, {}).get("units", {}).values():
+            own_year = [r for r in rows if r["end"] == latest and "start" in r]
+            if year_start and own_year and not any(r["start"] == year_start for r in own_year):
+                # The year's EPS in a context running back over more than the year (Games Workshop FY2025: 594.9 for
+                # 2023-05-29 to 2025-06-01): its own year's figure, mis-dated
+                for row in own_year:
+                    if edgar_mapper._days(row["start"], latest) > high:
+                        row["start"] = year_start
+                        notes.append(f"{SOURCE_LABEL}: FY{latest[:4]} {tag} tagged for a period longer than the year "
+                                     "(a dating error); read as the year's figure")
+    return EsefReport(filing, latest, annual, {"facts": {IFRS: tags}}, tuple(dict.fromkeys(notes)))
 
 
 def companyfacts(reports: Sequence[EsefReport]) -> Tuple[Dict[str, Any], List[str]]:
@@ -115,7 +132,7 @@ def companyfacts(reports: Sequence[EsefReport]) -> Tuple[Dict[str, Any], List[st
             units = pooled.setdefault(tag, {"units": {}})["units"]
             for unit, rows in data["units"].items():
                 units.setdefault(unit, []).extend(rows)
-    notes = []
+    notes = [note for end in sorted(annual) for note in annual[end].notes]
     if skipped:
         notes.append(f"{SOURCE_LABEL}: interim or undated reports not used (indexed period ends "
                      f"{', '.join(sorted(skipped))}); annual reports only")

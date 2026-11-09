@@ -121,3 +121,22 @@ def test_a_report_without_figures_is_not_annual():
     report = report_facts(_filing("2024-12-31", ""), _report(_fact("ifrs-full:Assets", END24, 10.0),
                                                              _fact("ifrs-full:CashFlowsFromUsedInOperatingActivities", FY24, 3.0)))
     assert not report.annual and report.period_end is None
+
+
+def test_eps_tagged_in_a_plain_currency_is_per_share():
+    """Bonduelle FY2025-26: basic EPS 0.51 tagged with unit EUR."""
+    report = report_facts(_filing("2024-12-31", "2025-04-10 00:00:00"), _report(
+        *ANNUAL_2024["facts"].values(), _fact("ifrs-full:DilutedEarningsLossPerShare", FY24, 1.09)))
+    assert "EUR/shares" in report.facts["facts"]["ifrs-full"]["DilutedEarningsLossPerShare"]["units"]
+
+
+def test_the_years_eps_dated_over_two_years_is_read_as_the_years():
+    """Games Workshop FY2025: 594.9 tagged for 2023-05-29 to 2025-06-01."""
+    facts = [f for f in ANNUAL_2024["facts"].values() if f["dimensions"]["concept"] != "ifrs-full:BasicEarningsLossPerShare"]
+    report = report_facts(_filing("2024-12-31", "2025-04-10 00:00:00"), _report(
+        *facts, _fact("ifrs-full:BasicEarningsLossPerShare", "2023-01-01T00:00:00/2025-01-01T00:00:00", 1.10,
+                      "iso4217:EUR/xbrli:shares")))
+    row = report.facts["facts"]["ifrs-full"]["BasicEarningsLossPerShare"]["units"]["EUR/shares"][0]
+    assert (row["start"], row["end"], row["val"]) == ("2024-01-01", "2024-12-31", 1.10)
+    _, notes = companyfacts([report])
+    assert any("period longer than the year" in n for n in notes)

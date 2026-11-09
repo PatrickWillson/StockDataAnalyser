@@ -13,18 +13,18 @@
 *Current metrics (P/E, Price) reflect most recent available data*
 
 - Verdict: **OVERVALUED**
-  - Price is not below conservative intrinsic value (margin of safety -424.9%)
-- Graham Number (Single-Year EPS): 33.65 GBP
-- Graham Number (3-Year Avg EPS): 30.48 GBP
+  - Price is not below conservative intrinsic value (margin of safety -424.6%)
+- Graham Number (Single-Year EPS): 33.68 GBP
+- Graham Number (3-Year Avg EPS): 30.50 GBP
 - Intrinsic Value (EPV per share): 31.02 GBP (10-year average EPS)
 - Net-Net Value: 3.80 GBP
-- Margin of Safety: -424.9% (Capped by Normalized Graham Number)
-  - Conservative Intrinsic Value: 30.48 GBP
+- Margin of Safety: -424.6% (Capped by Normalized Graham Number)
+  - Conservative Intrinsic Value: 30.50 GBP
 - Current Price: 160.00 GBP (16,000 pence)
 - Trailing Dividend: 1.52 GBP (Yield: 0.95%) - Declared (Dividend API) [2025]
-- P/E Ratio (Current Year): 26.93
-- P/E Ratio (3-Year Avg): 32.82 (based on avg EPS of 4.88 from 2023-2025)
-- Price/Book: 18.80
+- P/E Ratio (Current Year): 26.90
+- P/E Ratio (3-Year Avg): 32.80 (based on avg EPS of 4.88 from 2023-2025)
+- Price/Book: 18.78
 
 ---
 
@@ -32,7 +32,7 @@
 - Return on Equity (ROE): 69.84%
 - Return on Assets (ROA): 51.20%
 - Profit Margin: 31.76%
-- Book Value Per Share: 8.51 GBP
+- Book Value Per Share: 8.52 GBP
 
 ### Liquidity Analysis
 
@@ -55,6 +55,8 @@
 
 ### Data Quality & Limitations:
 - Statements: ESEF annual reports of GAMES WORKSHOP GROUP PLC (LEI 213800RP9QJQYGWHNT41) from filings.xbrl.org (XBRL International's unofficial repository of the reports filed with national regulators), latest added 2025-09-24; company-wide IFRS figures only (a company's own XBRL tags are not read); price, dividends and profile from this listing
+- ESEF: FY2025 DilutedEarningsLossPerShare tagged for a period longer than the year (a dating error); read as the year's figure
+- ESEF: FY2025 BasicEarningsLossPerShare tagged for a period longer than the year (a dating error); read as the year's figure
 - History before FY2022: Eulerpool (vendor data, not filings) for FY2015-FY2021 (7 years), unverified against the company's reports. Used field by field, only where it agreed against the ESEF reports in FY2022-FY2025 (within 1.0%, or 1.1M for whole millions) in every overlapping year: revenue, net income, total assets, equity, year-end shares. Never rescaled to fit; EPS for those years is net income / Eulerpool's year-end share count (its own EPS is not used); no intangibles (tangible book overstated); whole millions
 - Eulerpool (vendor data, not filings): not used for the earlier years (disagreed with the filings in an overlapping year, or too few years to check): current assets, current liabilities, total liabilities, inventory, goodwill, long-term debt, short-term debt, operating cash flow, dividends paid; long-term debt is then unknown in those years, not zero
 - No quarterly figures: only annual ESEF reports are read, so TTM is N/A
@@ -64,10 +66,8 @@
 - ESEF: stockholders' equity: derived as equity incl. minority interest - minority interest (FY2022, FY2023, FY2024, FY2025)
 - ESEF: total liabilities: derived as total assets - total equity (incl. minority interests) (FY2022, FY2023, FY2024, FY2025)
 - ESEF: long-term debt: includes non-current lease liabilities (leases count as debt) (FY2022, FY2023, FY2024, FY2025)
-- ESEF: EPS: not in the ESEF data (the company uses its own tags); derived from net income / shares where possible (FY2025)
-- ESEF: EPS: implies 1/100 of the listing's current share count (Yahoo Finance): a scale error; divided by 100 (FY2022, FY2023, FY2024)
-- ESEF: share count: net income / filed EPS (no share count tagged; approximate) (FY2022, FY2023, FY2024)
-- ESEF: share count: not in the ESEF data (the company uses its own tags); today's Yahoo Finance total used (approximate) (FY2025)
+- ESEF: EPS: implies 1/100 of the listing's current share count (Yahoo Finance): a scale error; divided by 100 (FY2022, FY2023, FY2024, FY2025)
+- ESEF: share count: net income / filed EPS (no share count tagged; approximate) (FY2022, FY2023, FY2024, FY2025)
 - Price Source: yfinance (primary source)
 - Currency Conversions: London Fix applied (GBp → GBP)
 - Year 2026-06-01: Incomplete data (missing: revenue, net_income, eps, total_equity)
@@ -122,9 +122,9 @@
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -424.9%** - Trading above conservative intrinsic value
+- **Margin of Safety: -424.6%** - Trading above conservative intrinsic value
   - Assessment: **High valuation risk** - no margin of safety
-  - Conservative Intrinsic Value: 30.48 GBP
+  - Conservative Intrinsic Value: 30.50 GBP
   - Current Price: 160.00 GBP
 
 ### Data Quality Risk:
@@ -150,9 +150,9 @@
 7. **P/B Ratio**: FAIL
    - Criterion: Price ≤ 1.5 × tangible book value per share, or P/E (3-year average EPS) × P/B ≤ 22.5
 8. **Combined P/E × P/B Test** (criterion 7 alternative): FAIL
-   - P/E Ratio (3-year average EPS): 32.82
-   - P/B Ratio (tangible book): 18.90
-   - Product: 620.13 (must be ≤ 22.5)
+   - P/E Ratio (3-year average EPS): 32.80
+   - P/B Ratio (tangible book): 18.88
+   - Product: 619.16 (must be ≤ 22.5)
    - *Graham: "a multiplier of earnings below 15 could justify a correspondingly higher multiplier of assets"; the product should not exceed 22.5. It relaxes the P/B limit only; the P/E limit (criterion 6) still applies.*
 
 ---
@@ -180,7 +180,7 @@
 | Year | Revenue | Net Income | EPS | Div/Share | BVPS | WCPS | Payout Ratio | Total Debt | Shares | Price | P/E | P/B |
 |------|---------|------------|-----|-------------|------|------|--------------|------------|------------|-------|-----|-----|
 | 2026 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 1.60 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
-| 2025 | 617.50M | 196.10M | 5.94 | 1.52 | 8.51 | 4.97 | 25.6% | 45.20M | 33.00M | 146.82 | 24.7 | 17.3 |
+| 2025 | 617.50M | 196.10M | 5.95 | 1.52 | 8.52 | 4.97 | 25.6% | 45.20M | 32.96M | 146.82 | 24.7 | 17.2 |
 | 2024 | 525.70M | 151.10M | 4.59 | 1.45 | 7.63 | 4.05 | 31.6% | 47.20M | 32.93M | 133.64 | 29.1 | 17.5 |
 | 2023 | 470.80M | 134.70M | 4.10 | 1.38 | 7.15 | 3.83 | 33.7% | 49.90M | 32.88M | 120.45 | 29.4 | 16.8 |
 | 2022 | 414.80M | 128.40M | 3.91 | 1.32 | 7.15 | 3.33 | 33.6% | 48.90M | 32.81M | 107.27 | 27.4 | 15.0 |
@@ -227,9 +227,9 @@
 *How key metrics are calculated*
 
 ### Valuation Metrics:
-- **P/E Ratio (26.93)**: Current Price / Most Recent Annual EPS
+- **P/E Ratio (26.90)**: Current Price / Most Recent Annual EPS
   - Calculated from audited financials, not API pre-calculated ratios
-  - EPS: 5.94 GBP (Net Income / Shares Outstanding)
+  - EPS: 5.95 GBP (Net Income / Shares Outstanding)
 - **Profitability Metrics (ROE, ROA, Profit Margin)**:
   - **ROE (Return on Equity)**: Net Income / Total Stockholder Equity
     - Calculated from most recent annual audited data
@@ -245,13 +245,13 @@
     - TTM data may include estimates and unaudited quarters
     - Consistency: All Graham metrics (P/E, P/B, BVPS, ROE, ROA, Margin) use same fiscal year
     - Comparability: Annual data allows year-over-year comparison of audited results
-- **Graham Number - Single-Year EPS (33.65 GBP)**: √(22.5 × EPS × TBVPS)
+- **Graham Number - Single-Year EPS (33.68 GBP)**: √(22.5 × EPS × TBVPS)
   - Conservative intrinsic value estimate
   - Not a formula Graham published: the highest price passing his defensive criteria 6 (P/E ≤ 15) and 7 (P/B ≤ 1.5), as 15 × 1.5 = 22.5
   - Uses most recent annual EPS
 
 - **Graham Number - 3-Year Average EPS (Normalized)**:
-  - **Value**: 30.48 GBP
+  - **Value**: 30.50 GBP
   - **Formula**: √(22.5 × EPS_3yr_avg × TBVPS)
 
   **Rationale**: Smooths cyclical volatility and prevents 'bull traps' where one peak year
@@ -259,7 +259,7 @@
   full business cycle. This follows Graham's sixth defensive criterion: price not more than
   15 times average earnings of the past three years.
 
-  **3-Year EPS**: [2025: 5.94 GBP, 2024: 4.59 GBP, 2023: 4.10 GBP] → Avg: 4.88 GBP
+  **3-Year EPS**: [2025: 5.95 GBP, 2024: 4.59 GBP, 2023: 4.10 GBP] → Avg: 4.88 GBP
 - **EPV - Simplified Earnings Power Estimate**
 
   **Methodology:**
@@ -278,7 +278,7 @@
   - Net Incomes: 196,100,000 GBP, 151,100,000 GBP, 134,700,000 GBP, 128,400,000 GBP, 98,000,000 GBP, 86,000,000 GBP, 74,000,000 GBP, 62,000,000 GBP, 50,000,000 GBP, 38,000,000 GBP
   - Normalized Earnings: 101,830,000 GBP (average including losses)
   - EPV: 1,018,300,000 GBP (101,830,000 GBP / 10%)
-  - EPS: 5.94, 4.59, 4.10, 3.91, 3.00, 2.63, 2.26, 1.90, 1.53, 1.16 GBP
+  - EPS: 5.95, 4.59, 4.10, 3.91, 3.00, 2.63, 2.26, 1.90, 1.53, 1.16 GBP
   - EPV Per Share: 31.02 GBP (average EPS 3.10 GBP / 10%)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
@@ -289,7 +289,7 @@
   - Graham bought at no more than two-thirds of it, as a diversified group
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
-  - **Value**: -424.9%
+  - **Value**: -424.6%
   - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
 
   **Conservative Dual-Anchor Methodology**:
@@ -307,9 +307,9 @@
     (Graham Number), we use the more conservative asset-based valuation
 
   **For This Stock**:
-  - Normalized Graham Number: 30.48 GBP
+  - Normalized Graham Number: 30.50 GBP
   - EPV per share: 31.02 GBP
-  - **Intrinsic Value Used**: 30.48 GBP (Capped by Normalized Graham Number)
+  - **Intrinsic Value Used**: 30.50 GBP (Capped by Normalized Graham Number)
 
   **Interpretation**: Normalized Graham Number is lower than EPV, indicating
   the stock trades at a premium to its asset value despite strong earnings power.
@@ -419,7 +419,7 @@ TTM calculations provide more current financial metrics by using the most recent
 *Detailed breakdown of key calculations for transparency and verification*
 
 ### Share Count Used:
-- **Shares Outstanding**: 33,000,000 shares
+- **Shares Outstanding**: 32,963,523 shares
 - **Source**: Financial statements (outstandingShares.annual for 2025)
 - **Note**: This is the year-specific share count from audited financials, used for accurate per-share calculations
 - **Why This Matters**: Market data sources may show different share counts (e.g., public float vs. total issued shares)
@@ -431,23 +431,23 @@ TTM calculations provide more current financial metrics by using the most recent
 - **Less: Intangible Assets**: 0 GBP
 - **Less: Goodwill**: 1,400,000 GBP
 - **Tangible Book Value**: 279,400,000 GBP
-- **Divided by Shares**: 33,000,000
-- **Tangible Book Value Per Share (TBVPS)**: 8.47 GBP
-- **Book Value Per Share (BVPS)**: 8.51 GBP (without subtracting intangibles)
+- **Divided by Shares**: 32,963,523
+- **Tangible Book Value Per Share (TBVPS)**: 8.48 GBP
+- **Book Value Per Share (BVPS)**: 8.52 GBP (without subtracting intangibles)
 
 ### Graham Number Calculation:
 - **Formula**: √(22.5 × EPS × TBVPS)
-- **EPS**: 5.94 GBP
-- **TBVPS**: 8.47 GBP
-- **Calculation**: √(22.5 × 5.94 × 8.47) = √(1132.03)
-- **Graham Number**: 33.65 GBP
+- **EPS**: 5.95 GBP
+- **TBVPS**: 8.48 GBP
+- **Calculation**: √(22.5 × 5.95 × 8.48) = √(1134.54)
+- **Graham Number**: 33.68 GBP
 - **Note**: Uses unrounded intermediate values for precision
 
 ### Net-Net Value Calculation:
 - **Current Assets**: 227,500,000 GBP
 - **Total Liabilities**: 102,200,000 GBP
 - **Net Current Assets**: 125,300,000 GBP
-- **Divided by Shares**: 33,000,000
+- **Divided by Shares**: 32,963,523
 - **Net-Net Value Per Share**: 3.80 GBP
 - **Formula Used**: NCAV (Net Current Asset Value) = (Current Assets - Total Liabilities - claims ahead of the common) / Shares
   - **Note**: Graham's own measure: "current assets alone, minus all liabilities and claims ahead of the issue"
