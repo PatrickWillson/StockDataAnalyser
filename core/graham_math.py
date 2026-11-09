@@ -16,7 +16,8 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Dict, Optional, Union
 
 from config.graham_constants import GRAHAM_MULTIPLIER, COST_OF_CAPITAL
-from core.history import fiscal_year, has_statement_data, has_statement_or_current_assets, row_at
+from core.history import (fiscal_year, has_balance_sheet_data, has_statement_data, has_statement_or_current_assets,
+                          row_at)
 from core.investor_tests import defensive, enterprising
 from core.investor_tests.criteria import latest_current_ratio
 from core.verdict import determine_verdict
@@ -320,6 +321,9 @@ class GrahamCalculator:
         if not latest_year:
             return unavailable("No financial data available")
         
+        if not has_balance_sheet_data(history[latest_year]):
+            # an income-only latest year (no balance sheet in the source for it): unknown, not 0.00
+            return unavailable(f"Balance sheet data unavailable for FY{fiscal_year(latest_year)}, the latest financial year")
         year_data = history[latest_year]
         current_assets = or_default(year_data.current_assets, None)
         current_liabilities = or_default(year_data.current_liabilities, None)
