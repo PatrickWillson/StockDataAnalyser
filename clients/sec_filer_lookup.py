@@ -39,10 +39,19 @@ def normalised_name(name: str) -> str:
     return re.sub(r"\s+", " ", _NAME_NOISE.sub(" ", plain)).strip()
 
 
+_GERMAN_SPELLING = str.maketrans({"ä": "ae", "ö": "oe", "ü": "ue", "Ä": "Ae", "Ö": "Oe", "Ü": "Ue", "ß": "ss"})
+
+
 def names_match(home: str, listing: str) -> bool:
-    """One company's two listings: equal normalised names, or one the other plus trailing words."""
-    a, b = normalised_name(home), normalised_name(listing)
-    return bool(a and b) and (a == b or a.startswith(b + " ") or b.startswith(a + " "))
+    """
+    One company's two listings: equal normalised names, or one the other plus trailing words. An umlaut may be written
+    either way ('Dürr AG' at Yahoo, 'Duerr AG' at Eulerpool).
+    """
+    def forms(name: str):
+        return {normalised_name(name), normalised_name((name or "").translate(_GERMAN_SPELLING))}
+
+    return any(a and b and (a == b or a.startswith(b + " ") or b.startswith(a + " "))
+               for a in forms(home) for b in forms(listing))
 
 
 def latest_annual_report(submissions: Mapping[str, Any]) -> Optional[Tuple[str, str]]:

@@ -171,3 +171,24 @@ def test_empty_yahoo_cells_stay_missing():
     sparse = YahooStatements("X.L", income={"Net Income": {E26: 10e6}}, balance={})
     annual = annual_statements(sparse, "GBP")
     assert annual.income_statements[0] == IncomeStatementRow(E26, None, 10e6, None) and annual.balance_sheets == ()
+
+
+def _two_classes(common, eps):
+    """Synthetic Sixt-like year: net income 285.8M, 46.9M shares of both classes."""
+    return YahooStatements("SIX2.DE", income={"Net Income Common Stockholders": {E26: common}, "Net Income": {E26: 285.8e6},
+                                              "Basic EPS": {E26: eps}},
+                           balance={"Total Assets": {E26: 9e9}, "Stockholders Equity": {E26: 2e9},
+                                    "Ordinary Shares Number": {E26: 46.94e6}})
+
+
+def test_net_income_of_all_classes_when_yahoos_eps_counts_every_share():
+    annual = annual_statements(_two_classes(184.7e6, 6.08), "EUR")
+    assert annual.income_statements[0].net_income == 285.8e6
+    assert any("net income to all shareholders" in n for n in annual.notes)
+
+
+def test_common_net_income_kept_when_eps_is_on_it():
+    # a true preferred stock ahead of the common: EPS x shares is the common figure
+    annual = annual_statements(_two_classes(184.7e6, 184.7e6 / 46.94e6), "EUR")
+    assert annual.income_statements[0].net_income == 184.7e6
+    assert not any("all shareholders" in n for n in annual.notes)

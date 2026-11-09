@@ -57,12 +57,12 @@ class UnfiledCompanySource:
         if statements is not None:
             annual = yahoo_mapper.annual_statements(statements, profile.financial_currency)
             if annual.income_statements:
-                return self._from_yahoo(ticker, yahoo, profile, annual)
+                return self._from_yahoo(ticker, yahoo, profile, annual, yahoo_mapper.basic_eps(statements))
         if self.eulerpool is None:
             raise TickerNotCoveredError(f"{ticker}: no SEC or ESEF filings and no Yahoo Finance statements for this listing")
         return self._vendor_only(ticker, yahoo, profile)
 
-    def _from_yahoo(self, ticker: str, yahoo, profile, annual) -> CompanyFundamentals:
+    def _from_yahoo(self, ticker: str, yahoo, profile, annual, yahoo_eps) -> CompanyFundamentals:
         notes: List[str] = [
             f"Statements: Yahoo Finance annual statements for FY{annual.income_statements[-1].period_end[:4]}-"
             f"FY{annual.income_statements[0].period_end[:4]} (a statistical service, not the company's filings: no SEC or "
@@ -70,7 +70,7 @@ class UnfiledCompanySource:
         notes.extend(annual.notes)
         yahoo_years = len(annual.income_statements)
         if self.eulerpool is not None:
-            annual = self._with_eulerpool(yahoo, profile, annual, notes)
+            annual = self._with_eulerpool(yahoo, profile, annual, notes, yahoo_eps)
         years = len(annual.income_statements)
         if years < FULL_HISTORY_YEARS:
             older = f"; {years - yahoo_years} from Eulerpool" if years > yahoo_years else ""
@@ -80,8 +80,11 @@ class UnfiledCompanySource:
         return home_listing_fundamentals(ticker, SOURCE_NAME, yahoo, profile, replace(annual, notes=()), notes,
                                          fallback_name=profile.name or ticker, data_name="Yahoo Finance's statements")
 
-    def _with_eulerpool(self, yahoo, profile, annual, notes: List[str]):
-        """Eulerpool's years before Yahoo's, gated against them; it also fills Yahoo years without net income."""
+    def _with_eulerpool(self, yahoo, profile, annual, notes: List[str], yahoo_eps=None):
+        """
+        Eulerpool's years before Yahoo's, gated against them; it also fills Yahoo years without net income, keeping
+        Yahoo's own basic EPS for such a year where Yahoo reports one (yahoo_eps: period end -> EPS).
+        """
         try:
             found = self.eulerpool.find_profile(yahoo.yahoo_symbol, profile.name or "")
             if found is None:
@@ -109,12 +112,21 @@ class UnfiledCompanySource:
                 if values.get("net_income") is None or (day - first).days <= MATCH_DAYS \
                         or any(abs((day - c).days) <= MATCH_DAYS for c in covered):
                     continue
+                eps = next((v for e, v in (yahoo_eps or {}).items()
+                            if abs((dt.date.fromisoformat(e) - day).days) <= MATCH_DAYS), None)
                 filled.append(IncomeStatementRow(end, values.get("revenue") if "revenue" in older.accepted else None,
-                                                 values["net_income"], None))
+                                                 values["net_income"], eps))
             if filled:
-                notes.append(f"Eulerpool: net income for FY{', FY'.join(sorted(r.period_end[:4] for r in filled))} (Yahoo "
-                             "Finance's statement has none; Eulerpool's net income passed the overlap gate); "
-                             + eulerpool_mapper.NO_PER_SHARE.replace("those years", "that year" if len(filled) == 1 else "those years"))
+                with_eps = sorted(r.period_end[:4] for r in filled if r.eps is not None)
+                without = sorted(r.period_end[:4] for r in filled if r.eps is None)
+                note = (f"Eulerpool: net income for FY{', FY'.join(sorted(r.period_end[:4] for r in filled))} (Yahoo "
+                        "Finance's statement has none; Eulerpool's net income passed the overlap gate)")
+                if with_eps:
+                    note += f"; EPS for FY{', FY'.join(with_eps)} is Yahoo Finance's own basic EPS"
+                if without:
+                    note += (f"; FY{', FY'.join(without)}: "
+                             + eulerpool_mapper.NO_PER_SHARE.replace("for those years ", ""))
+                notes.append(note)
         income = tuple(sorted(annual.income_statements + tuple(filled) + older.income_statements,
                               key=lambda r: r.period_end, reverse=True))
         return replace(annual, income_statements=income,

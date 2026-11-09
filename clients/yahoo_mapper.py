@@ -12,7 +12,7 @@ annual_statements maps Yahoo's annual statement line items (raw lines, not ratio
 """
 
 from dataclasses import dataclass
-from typing import Any, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, Mapping, Optional, Sequence, Tuple
 
 from clients.edgar_mapper import EdgarAnnualData
 from clients.yfinance_client import YahooCompanyData, YahooStatements
@@ -106,6 +106,7 @@ def forward_dividend_rate(data: YahooCompanyData) -> Optional[float]:
 
 
 # Yahoo statement rows -> fields (first row with a value wins)
+COMMON_GAP = 0.02   # common-stockholder net income this far from net income: checked against EPS x shares
 INCOME_ROWS = {"revenue": ("Total Revenue", "Operating Revenue"),
                "net_income": ("Net Income Common Stockholders", "Net Income"),
                "eps": ("Basic EPS",)}
@@ -132,6 +133,13 @@ def _value(table: Mapping[str, Mapping[str, float]], rows: Sequence[str], end: s
     return None
 
 
+def basic_eps(statements: YahooStatements) -> Dict[str, float]:
+    """Yahoo's basic EPS by period end, including years whose net income cell is empty (James Halstead FY2025)."""
+    ends = {end for row in statements.income.values() for end in row}
+    found = {end: _value(statements.income, INCOME_ROWS["eps"], end) for end in ends}
+    return {end: eps for end, eps in found.items() if eps is not None}
+
+
 def annual_statements(statements: YahooStatements, currency: str) -> EdgarAnnualData:
     """
     Yahoo's annual statements as statement rows (newest first), in `currency` (Yahoo's financialCurrency). Empty cells
@@ -140,10 +148,19 @@ def annual_statements(statements: YahooStatements, currency: str) -> EdgarAnnual
     """
     ends = sorted({end for row in statements.income.values() for end in row}
                   | {end for row in statements.balance.values() for end in row}, reverse=True)
-    income, balance, shares, dividends, cash, upper_bound = [], [], {}, {}, {}, []
+    income, balance, shares, dividends, cash, upper_bound, whole = [], [], {}, {}, {}, [], []
     for end in ends:
         get = lambda rows, table=statements.income: _value(table, rows, end)   # noqa: E731
         net_income = get(INCOME_ROWS["net_income"])
+        total = get(("Net Income",))
+        year_shares = _value(statements.balance, BALANCE_ROWS["shares"], end)
+        eps = get(INCOME_ROWS["eps"])
+        if (net_income is not None and total and abs(net_income - total) > COMMON_GAP * abs(total)
+                and eps and year_shares and abs(eps * year_shares - total) < abs(eps * year_shares - net_income)):
+            # Yahoo's "common" figure leaves out a class its own EPS and share count include (Sixt's participating
+            # preference shares: 184.7M against 285.8M = 6.08 x 46.9M shares): earnings on the whole capitalization
+            net_income = total
+            whole.append(fiscal_year(end))
         if net_income is not None:
             income.append(IncomeStatementRow(end, get(INCOME_ROWS["revenue"]), net_income, get(INCOME_ROWS["eps"])))
         b = {k: _value(statements.balance, rows, end) for k, rows in BALANCE_ROWS.items()}
@@ -169,6 +186,11 @@ def annual_statements(statements: YahooStatements, currency: str) -> EdgarAnnual
         if paid is not None:
             dividends[end] = abs(paid)
     notes = []
+    if whole:
+        notes.append(f"{SOURCE_LABEL}: net income for FY{', FY'.join(sorted(whole))} is net income to all shareholders: "
+                     "Yahoo's figure for common stockholders leaves out a share class its own EPS and share count include "
+                     "(participating preference shares; GRAHAM_METHODOLOGY §9, dual-class: earnings on the whole "
+                     "capitalization)")
     if upper_bound:
         notes.append(f"{SOURCE_LABEL}: long-term debt for FY{', FY'.join(sorted(set(upper_bound)))} is all non-current "
                      "liabilities (an upper bound: no lease line reported, so lease liabilities cannot be counted otherwise)")

@@ -134,6 +134,22 @@ def test_eulerpool_fills_a_yahoo_year_without_net_income_when_its_net_income_pas
     assert "2022-02-28" in by_end                      # an older Eulerpool year, through the gate
 
 
+def test_a_filled_year_keeps_yahoos_own_basic_eps():
+    """James Halstead FY2025: Yahoo has basic EPS (9.7p) but no net income; the EPS is Yahoo's, never Eulerpool's."""
+    ends = ("2025-02-28", "2023-02-28")
+    income = {"Total Revenue": {e: 6000e6 for e in ends},
+              "Net Income Common Stockholders": {"2025-02-28": 140e6, "2023-02-28": 160e6},
+              "Basic EPS": {"2025-02-28": 140e6 / 16e6, "2024-02-29": 6.25, "2023-02-28": 160e6 / 16e6}}
+    balance = {"Total Assets": {e: 4500e6 for e in ends}, "Stockholders Equity": {e: 2000e6 for e in ends},
+               "Ordinary Shares Number": {e: 15.98e6 for e in ends}}
+    f = UnfiledCompanySource(StatementsYahoo(YahooStatements("HBH.DE", income, balance, {})),
+                             FakeEulerpool()).fetch_fundamentals("HBH.XETRA")
+    by_end = {r.period_end: r for r in f.annual_income_statements}
+    assert by_end["2024-02-29"].net_income == 100e6 and by_end["2024-02-29"].eps == 6.25
+    assert f.shares_by_year["2024"] == 0.0                        # no Eulerpool share count
+    assert any("EPS for FY2024 is Yahoo Finance's own basic EPS" in n for n in f.notes)
+
+
 def test_without_yahoo_statements_or_eulerpool_there_is_no_dossier():
     with pytest.raises(TickerNotCoveredError, match="no Yahoo Finance statements"):
         UnfiledCompanySource(StatementsYahoo(None)).fetch_fundamentals("HBH.XETRA")

@@ -82,6 +82,8 @@ def test_names_match_ignores_legal_forms_and_listing_words():
     assert names_match("Vodafone Group Public Limited Company", "Vodafone Group Public Ltd")
     assert names_match("Telefonaktiebolaget LM Ericsson (publ)", "Telefonaktiebolaget LM Ericsson")
     assert names_match("Toyota Motor Corporation", "Toyota Motor Corp ADR")
+    assert names_match("Dürr Aktiengesellschaft", "Duerr AG") and names_match("Dürr AG", "Durr AG")
+    assert not names_match("Dürr AG", "Dorr AG")
     assert names_match("Companhia Siderúrgica Nacional", "Companhia Siderurgica Nacional")
     assert not names_match("Capital Limited", "Burford Capital Limited")
     assert not names_match("Hilton Food Group plc", "Hilton Worldwide Holdings Inc")
