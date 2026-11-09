@@ -63,11 +63,12 @@ def test_net_income_that_disagreed_once_rules_out_every_older_year():
     assert "not used: its net income did not agree" in older.notes[0]
 
 
-def test_a_share_count_that_disagreed_rules_out_every_older_year():
-    """Bonduelle FY2023: Eulerpool 63.5M shares against 32.6M."""
+def test_a_share_count_that_disagreed_rules_out_no_year():
+    """Bonduelle FY2023: Eulerpool 63.5M shares against 32.6M. The count is never used (§8.12), so net income decides."""
     overlap = {**OVERLAP, "2024-12-31": _year(shares=97.0)}
     older = older_years(ANNUAL, _data({**overlap, **OLDER}), strict=False, filed_source="the ESEF reports")
-    assert older.income_statements == () and "year-end shares did not agree" in older.notes[0]
+    assert [r.period_end for r in older.income_statements] == ["2022-12-31", "2021-12-31"]
+    assert "shares" not in older.accepted and any("year-end shares" in n for n in older.notes)
 
 
 def test_another_currency_is_never_converted():

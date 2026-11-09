@@ -9,9 +9,9 @@ Eulerpool is vendor data, checked here against the company's own filings whereve
 - each field is used for the older years only if it agreed with the filed figure in every overlapping year (at least
   EULERPOOL_MIN_OVERLAP_YEARS), never rescaled to fit (a ratio inferred from the overlap is an estimate, not the
   reported figure);
-- net income and the year-end share count must both pass, or no older year is added (a year's balance sheet
-  needs total assets, equity, current assets and current liabilities to have passed). The share count is a check
-  only: Eulerpool years carry no per-share figures (NO_SHARE_COUNT; GRAHAM_METHODOLOGY §8.12).
+- net income must pass, or no older year is added (a year's balance sheet needs total assets, equity, current
+  assets and current liabilities to have passed). The share count is checked like any field but never used:
+  Eulerpool years carry no per-share figures (NO_SHARE_COUNT; GRAHAM_METHODOLOGY §8.12).
 """
 
 import datetime as dt
@@ -38,7 +38,10 @@ LABELS = {"revenue": "revenue", "net_income": "net income", "total_assets": "tot
           "total_liabilities": "total liabilities", "inventory": "inventory", "goodwill": "goodwill",
           "long_term_debt": "long-term debt", "short_term_debt": "short-term debt", "shares": "year-end shares",
           "operating_cash_flow": "operating cash flow", "dividends_paid": "dividends paid"}
-REQUIRED = ("net_income", "shares")
+# Only net income must pass for any older year to be used (user decision 2026-11-09, GRAHAM_METHODOLOGY §8.11): the
+# vendor years carry no per-share figures (§8.12), so a wrong share count (Duerr 70-73M against a constant 69.2M)
+# discredits no figure that is used; net income agreeing in every overlapping year checks identity and alignment
+REQUIRED = ("net_income",)
 # spiked_share_years: a temporary jump in the vendor's share count
 SPIKE_MAX_YEARS, RUN_TOLERANCE, SPIKE_RATIO, SIDES_AGREE = 3, 0.10, 1.5, 0.20
 # A balance sheet for a year needs these (a missing one would show as zero: working capital of 0.00)
@@ -250,7 +253,7 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
         if end in spiked:
             continue
         values = {name: value for name, value in data.years[end].items() if name in accepted}
-        if values.get("net_income") is None or not values.get("shares"):
+        if values.get("net_income") is None:
             continue
         income.append(IncomeStatementRow(end, values.get("revenue"), values["net_income"], None))
         shares[fiscal_year(end)] = NO_SHARE_COUNT
