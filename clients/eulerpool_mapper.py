@@ -64,6 +64,7 @@ class OlderYears:
     dividends_paid: Mapping[str, float] = field(default_factory=dict)
     operating_cash_flow: Mapping[str, float] = field(default_factory=dict)
     notes: Tuple[str, ...] = ()
+    accepted: Tuple[str, ...] = ()            # fields that passed the overlap gate
 
 
 def _date(text: Any) -> Optional[str]:
@@ -273,10 +274,10 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
                      "from the years on both sides and back (a vendor error, not a share change), so per-share figures "
                      "for those years cannot be put on the same basis")
     if rejected:
-        notes.append(f"{SOURCE}: not used for the earlier years (disagreed with the filings in an overlapping year, or "
-                     f"too few years to check): {', '.join(LABELS[n] for n in rejected)}"
+        notes.append(f"{SOURCE}: not used for the earlier years (disagreed with {filed_source} in an overlapping year, "
+                     f"or too few years to check): {', '.join(LABELS[n] for n in rejected)}"
                      + ("; long-term debt is then unknown in those years, not zero" if "long_term_debt" in rejected else ""))
-    return OlderYears(tuple(balance), tuple(income), shares, dividends, cash, tuple(notes))
+    return OlderYears(tuple(balance), tuple(income), shares, dividends, cash, tuple(notes), tuple(accepted))
 
 
 def vendor_annual(data: EulerpoolData) -> EdgarAnnualData:

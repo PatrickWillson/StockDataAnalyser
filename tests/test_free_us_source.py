@@ -210,14 +210,16 @@ def test_free_provider_is_registered():
     assert {e for e, src in router.routes.items() if isinstance(src, FreeUSFundamentalsSource)} == {"US", "NYSE", "NASDAQ", "AMEX"}
     assert type(router.routes["TSE"]).__name__ == "ForeignSECFundamentalsSource"
     european = router.routes["LSE"]                     # SEC route first, then the ESEF reports
-    assert [type(s).__name__ for s in european.sources] == ["ForeignSECFundamentalsSource", "EuropeanFilingsSource"]
+    assert [type(s).__name__ for s in european.sources] == ["ForeignSECFundamentalsSource", "EuropeanFilingsSource",
+                                                            "UnfiledCompanySource"]
     assert type(router.routes["SW"]).__name__ == "ForeignSECFundamentalsSource"     # Switzerland: no ESEF
     assert european.sources[1].history is None                                      # no Eulerpool key
     with_key = ClientFactory.create_fundamentals_source(
         {"SEC_USER_AGENT": "Test t@example.invalid", "EULERPOOL_API_KEY": "k"}, "free")
     assert type(with_key.routes["LSE"].sources[1].history).__name__ == "EulerpoolClient"
-    assert type(with_key.routes["LSE"].sources[2]).__name__ == "EulerpoolOnlySource"    # no filings at all
-    assert len(european.sources) == 2
+    assert type(with_key.routes["LSE"].sources[2]).__name__ == "UnfiledCompanySource"   # no filings at all
+    assert with_key.routes["LSE"].sources[2].eulerpool is not None
+    assert type(european.sources[2]).__name__ == "UnfiledCompanySource" and european.sources[2].eulerpool is None
     with pytest.raises(ValueError, match="contact email"):
         ClientFactory.create_fundamentals_source({"SEC_USER_AGENT": "no contact"}, "free")
 

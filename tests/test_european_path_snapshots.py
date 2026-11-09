@@ -6,7 +6,7 @@ Runs the real stock_data_analyser.main() offline:
     trimmed to company-wide ifrs-full figures; net-assets layout, EPS tagged in pence as pounds), with Eulerpool
     history before them: SYNTHETIC Eulerpool figures (vendor data is never committed), equal to the filed figures
     in the overlapping years so the gate passes, invented for the older years
-  - EXH.XETRA: a company with no SEC or ESEF filings, from SYNTHETIC Eulerpool figures alone
+  - EXH.XETRA: a company with no SEC or ESEF filings: SYNTHETIC Yahoo statements (2022-25) + SYNTHETIC Eulerpool history
   - yfinance is served by FakeYFinanceModule with SYNTHETIC values; no US listing, so the SEC route finds no filer
   - the date is pinned to 2026-11-01
 Snapshots live in tests/__snapshots__/test_european_path_snapshots/; refresh intended changes with --snapshot-update.
@@ -54,6 +54,29 @@ def _gaw_eulerpool():
             "income": income, "balance_quarterly": balance, "cashflow": []}
 
 
+def _exh_yahoo_statements():
+    """Synthetic Yahoo statements for 2022-2025, equal to the synthetic Eulerpool years there (the gate passes)."""
+    income, balance, cash = {"Total Revenue": {}, "Net Income Common Stockholders": {}, "Basic EPS": {}}, {}, {}
+    rows = {"Total Assets": {}, "Stockholders Equity": {}, "Current Assets": {}, "Current Liabilities": {},
+            "Total Liabilities Net Minority Interest": {}, "Inventory": {}, "Ordinary Shares Number": {},
+            "Long Term Debt And Capital Lease Obligation": {}, "Long Term Capital Lease Obligation": {}}
+    for year in range(2022, 2026):
+        end, step = f"{year}-12-31", 2025 - year
+        income["Total Revenue"][end] = (900.0 - 20 * step) * 1e6
+        income["Net Income Common Stockholders"][end] = (60.0 - 2 * step) * 1e6
+        income["Basic EPS"][end] = (60.0 - 2 * step) / 20.0
+        for row, value in (("Total Assets", 1000.0 - 25 * step), ("Stockholders Equity", 520.0 - 15 * step),
+                           ("Current Assets", 600.0), ("Current Liabilities", 210.0),
+                           ("Total Liabilities Net Minority Interest", 480.0 - 10 * step), ("Inventory", 250.0),
+                           ("Ordinary Shares Number", 20.0), ("Long Term Debt And Capital Lease Obligation", 150.0),
+                           ("Long Term Capital Lease Obligation", 30.0)):
+            rows[row][end] = value * 1e6
+        cash.setdefault("Operating Cash Flow", {})[end] = 80.0e6
+        cash.setdefault("Cash Dividends Paid", {})[end] = -18.0e6
+    balance.update(rows)
+    return {"income": income, "balance": balance, "cashflow": cash}
+
+
 def _exh_eulerpool():
     income, balance, cash = [], [], []
     for year in range(2014, 2026):
@@ -73,7 +96,7 @@ COMPANIES = {
                 "info": {"longName": "Games Workshop Group PLC", "sector": "Consumer Cyclical", "industry": "Leisure",
                          "fullTimeEmployees": 3000, "financialCurrency": "GBP", "sharesOutstanding": 33_000_000,
                          "companyOfficers": [{"name": "Test CEO Eight", "title": "CEO & Director"}]}},
-    "EXH.XETRA": {"yahoo": "EXH.DE", "eulerpool": _exh_eulerpool(), "currency": "EUR", "last": 45.0, "base": 20.0,
+    "EXH.XETRA": {"yahoo": "EXH.DE", "eulerpool": _exh_eulerpool(), "statements": _exh_yahoo_statements(), "currency": "EUR", "last": 45.0, "base": 20.0,
                   "dividend": 0.9, "net_income": {"2025-12-31": 60.0e6, "2024-12-31": 58.0e6, "2023-12-31": 56.0e6},
                   "info": {"longName": "Example Holding AG", "sector": "Industrials", "industry": "Machinery",
                            "fullTimeEmployees": 4000, "financialCurrency": "EUR", "sharesOutstanding": 20_000_000,
@@ -88,7 +111,8 @@ def yahoo(home: str):
     dividends = {f"{year}-01-15": round(spec["dividend"] * 1.05 ** (year - 2026), 4) for year in range(2008, 2027)}
     return FakeYFinanceModule({spec["yahoo"]: {"last": spec["last"], "currency": spec["currency"], "closes": closes,
                                                "info": {"currency": spec["currency"], **spec["info"]},
-                                               "dividends": dividends, "net_income": spec["net_income"]}})
+                                               "dividends": dividends, "net_income": spec["net_income"],
+                                               "statements": spec.get("statements")}})
 
 
 @pytest.fixture
@@ -132,6 +156,8 @@ def test_european_path_snapshot(home, run_european_cli, snapshot):
         assert "History before FY2022: Eulerpool (vendor data, not filings) for FY2015-FY2021" in dossier
         assert "implies 1/100 of the listing's current share count" in dossier
     else:
-        assert "Eulerpool (vendor data, unverified) + Yahoo Finance" in dossier and "UNVERIFIED" in dossier
+        assert "Yahoo Finance statements (+ Eulerpool history)" in dossier
+        assert "History before FY2022: Eulerpool (vendor data, not filings) for FY2014-FY2021" in dossier
+        assert "checked only against Yahoo Finance" in dossier
     assert "test-key-not-real" not in dossier
     assert dossier == snapshot(extension_class=MarkdownSnapshotExtension)

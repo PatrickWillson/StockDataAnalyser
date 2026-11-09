@@ -1,8 +1,8 @@
-"""Eulerpool-only companies (no SEC or ESEF filings): EulerpoolOnlySource, checked against Yahoo. Synthetic data."""
+"""Companies with no SEC or ESEF filings: UnfiledCompanySource (Yahoo statements + Eulerpool). Synthetic data."""
 
 import pytest
 
-from clients.eulerpool_source import SOURCE_NAME, EulerpoolOnlySource
+from clients.unfiled_company_source import VENDOR_ONLY_SOURCE_NAME as SOURCE_NAME, UnfiledCompanySource
 from clients.yfinance_client import YahooCompanyData
 from core.errors import TickerNotCoveredError
 from tests.test_data_source_ports import assert_fundamentals_contract
@@ -41,9 +41,12 @@ class FakeYahoo:
     def fetch_annual_net_income(self, ticker):
         return self.net_income
 
+    def fetch_annual_statements(self, ticker):
+        return None                 # vendor-only path: no Yahoo statements
+
 
 def source(eulerpool=None, yahoo=None):
-    return EulerpoolOnlySource(eulerpool or FakeEulerpool(), yahoo or FakeYahoo())
+    return UnfiledCompanySource(yahoo or FakeYahoo(), eulerpool or FakeEulerpool())
 
 
 def test_a_company_with_no_filings_gets_eulerpools_figures_labelled_unverified():
@@ -76,3 +79,61 @@ def test_whole_millions_are_allowed_for():
 def test_disagreement_with_yahoo_gives_no_dossier(eulerpool, yahoo, message):
     with pytest.raises(TickerNotCoveredError, match=message):
         source(eulerpool, yahoo).fetch_fundamentals("HBH.XETRA")
+
+
+# --- Yahoo statements path ---
+
+from clients.unfiled_company_source import SOURCE_NAME as YAHOO_SOURCE  # noqa: E402
+from clients.yfinance_client import YahooStatements  # noqa: E402
+
+ENDS = ("2026-02-28", "2025-02-28", "2024-02-29")
+
+
+def _statements(missing_net_income=()):
+    income = {"Total Revenue": {e: 6000e6 for e in ENDS},
+              "Net Income Common Stockholders": {e: v for e, v in zip(ENDS, (140e6, 100e6, 160e6)) if e not in missing_net_income},
+              "Basic EPS": {e: v / 16e6 for e, v in zip(ENDS, (140e6, 100e6, 160e6)) if e not in missing_net_income}}
+    balance = {"Total Assets": {e: 4500e6 for e in ENDS}, "Stockholders Equity": {e: 2000e6 for e in ENDS},
+               "Ordinary Shares Number": {e: 16.0e6 for e in ENDS},
+               "Long Term Debt And Capital Lease Obligation": {e: 900e6 for e in ENDS},
+               "Long Term Capital Lease Obligation": {e: 600e6 for e in ENDS}}
+    return YahooStatements("HBH.DE", income, balance, {})
+
+
+class StatementsYahoo(FakeYahoo):
+    def __init__(self, statements):
+        super().__init__()
+        self.statements = statements
+
+    def fetch_annual_statements(self, ticker):
+        return self.statements
+
+
+def test_yahoo_statements_alone_give_the_recent_years():
+    f = UnfiledCompanySource(StatementsYahoo(_statements())).fetch_fundamentals("HBH.XETRA")
+    assert f.source == YAHOO_SOURCE
+    assert [r.period_end for r in f.annual_income_statements] == list(ENDS)
+    assert f.annual_income_statements[0].eps == pytest.approx(140e6 / 16e6)
+    assert f.annual_balance_sheets[0].long_term_debt == 900e6            # debt incl. the reported lease line
+    assert f.notes[0].startswith("Statements: Yahoo Finance annual statements for FY2024-FY2026")
+
+
+def test_eulerpool_fills_a_yahoo_year_without_net_income_when_its_net_income_passed_the_gate():
+    """Yahoo FY2025 and FY2023 agree with Eulerpool (140M, 160M); Yahoo's FY2024 has no net income: Eulerpool's 100M."""
+    ends = ("2025-02-28", "2024-02-29", "2023-02-28")
+    income = {"Total Revenue": {e: 6000e6 for e in ends},
+              "Net Income Common Stockholders": {"2025-02-28": 140e6, "2023-02-28": 160e6},
+              "Basic EPS": {"2025-02-28": 140e6 / 16e6, "2023-02-28": 160e6 / 16e6}}
+    balance = {"Total Assets": {e: 4500e6 for e in ends}, "Stockholders Equity": {e: 2000e6 for e in ends},
+               "Ordinary Shares Number": {e: 15.98e6 for e in ends}}
+    f = UnfiledCompanySource(StatementsYahoo(YahooStatements("HBH.DE", income, balance, {})),
+                             FakeEulerpool()).fetch_fundamentals("HBH.XETRA")
+    by_end = {r.period_end: r for r in f.annual_income_statements}
+    assert by_end["2024-02-29"].net_income == 100e6 and by_end["2024-02-29"].eps is None
+    assert any("Eulerpool: net income for FY2024" in n for n in f.notes)
+    assert "2022-02-28" in by_end                      # an older Eulerpool year, through the gate
+
+
+def test_without_yahoo_statements_or_eulerpool_there_is_no_dossier():
+    with pytest.raises(TickerNotCoveredError, match="no Yahoo Finance statements"):
+        UnfiledCompanySource(StatementsYahoo(None)).fetch_fundamentals("HBH.XETRA")
