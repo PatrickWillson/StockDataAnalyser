@@ -16,7 +16,7 @@
   - Price is not below conservative intrinsic value (margin of safety -990.2%)
 - Graham Number (Single-Year EPS): 23.68 CAD
 - Graham Number (3-Year Avg EPS): 23.40 CAD
-- Intrinsic Value (EPV per share): 47.89 CAD (10-year average EPS)
+- Intrinsic Value (EPV per share): 47.89 CAD (10-year average earnings on today's shares)
 - Net-Net Value: -9.46 CAD
 - Margin of Safety: -990.2% (Capped by Normalized Graham Number)
   - Conservative Intrinsic Value: 23.40 CAD
@@ -245,7 +245,8 @@
   - Net Incomes: 96,995,000,000 CAD, 99,803,000,000 CAD, 94,680,000,000 CAD, 89,946,000,000 CAD, 85,448,700,000 CAD, 81,176,265,000 CAD, 77,117,451,750 CAD, 73,261,579,162 CAD, 69,598,500,204 CAD, 66,118,575,194 CAD
   - Normalized Earnings: 83,414,507,131 CAD (average including losses)
   - EPV: 834,145,071,310 CAD (83,414,507,131 CAD / 10%)
-  - EPS: 6.24, 6.26, 5.76, 5.30, 4.81, 4.48, 4.17, 3.88, 3.62, 3.37 CAD
+  - Earnings per share on the present capitalization: 6.24, 6.26, 5.76, 5.30, 4.81, 4.48, 4.17, 3.88, 3.62, 3.37 CAD
+  - Share basis: each year's net income on the latest year-end count (15,550.06M shares: the present capitalization, Security Analysis ch. 39); FY2014, FY2015, FY2016, FY2017, FY2018, FY2019 on a larger count, their own or (with none) the nearest later year's (shares since bought back are not credited to earlier earnings)
   - EPV Per Share: 47.89 CAD (average EPS 4.79 CAD / 10%)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.

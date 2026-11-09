@@ -245,7 +245,11 @@ class MethodologySection(DossierSection):
             eps_values = or_default(epv_details.eps_values, ())
             normalized_eps = or_default(epv_details.normalized_eps, None)
             if eps_values and all(eps is not None for eps in eps_values):
-                lines.append(f"  - EPS: {', '.join(f'{eps:,.2f}' for eps in eps_values)} {unified_currency}")
+                lines.append(f"  - Earnings per share on the present capitalization: "
+                             f"{', '.join(f'{eps:,.2f}' for eps in eps_values)} {unified_currency}")
+                share_basis = or_default(epv_details.share_basis, None)
+                if share_basis:
+                    lines.append(f"  - Share basis: {share_basis}")
             if isinstance(epv_per_share, (int, float)):
                 epv_per_share_display = format_price_display(epv_per_share, unified_currency, unified_currency)
                 basis = (f" (average EPS {normalized_eps:,.2f} {unified_currency} / {cost_of_capital:.0%})"

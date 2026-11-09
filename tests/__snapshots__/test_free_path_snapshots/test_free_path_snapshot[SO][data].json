@@ -860,19 +860,19 @@
     "epv_details": {
       "cost_of_capital": 0.1,
       "eps_values": [
-        3.94,
-        4.02,
-        3.64,
-        3.28,
-        2.26,
-        2.95,
-        4.53,
-        2.18,
-        0.84,
-        2.57
+        3.8780005123338057,
+        3.9316010722831325,
+        3.551930439308733,
+        3.1481395543571367,
+        2.1377689993123234,
+        2.7863357746991797,
+        4.2335508933310075,
+        1.9885807741200303,
+        0.7521945246222217,
+        2.18690284593254
       ],
       "epv": 32009000000.0,
-      "epv_per_share": 30.21,
+      "epv_per_share": 28.6,
       "net_incomes": [
         4341000000.0,
         4401000000.0,
@@ -886,7 +886,8 @@
         2448000000.0
       ],
       "normalized_earnings": 3200900000.0,
-      "normalized_eps": 3.021,
+      "normalized_eps": 2.8595,
+      "share_basis": "each year's net income on the latest year-end count (1,119.39M shares: the present capitalization, Security Analysis ch. 39); shares rose over 10% in the window (990.20M to 1,119.39M): earlier years count the new shares in full, without Graham's allowance for stock sold cheaply (conservative)",
       "years_included": [
         "2025-12-31",
         "2024-12-31",
@@ -902,12 +903,12 @@
       "years_used": 10
     },
     "graham_number": 49.19,
-    "margin_of_safety": -191.3,
+    "margin_of_safety": -207.7,
     "margin_of_safety_details": {
-      "epv_per_share": 30.21,
-      "intrinsic_value_used": 30.21,
+      "epv_per_share": 28.6,
+      "intrinsic_value_used": 28.6,
       "limiting_factor": "EPV",
-      "mos_percentage": -191.3,
+      "mos_percentage": -207.7,
       "normalized_graham_number": 48.73,
       "note": null
     },
@@ -937,7 +938,7 @@
       ]
     },
     "verdict": "OVERVALUED",
-    "verdict_reason": "Price is not below conservative intrinsic value (margin of safety -191.3%)",
+    "verdict_reason": "Price is not below conservative intrinsic value (margin of safety -207.7%)",
     "warnings": []
   },
   "ttm_metrics": {

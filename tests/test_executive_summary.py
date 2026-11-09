@@ -146,7 +146,7 @@ class TestExecutiveSummarySection:
         # Check EPV: per-share value with the number of years averaged (not the whole-company EPV)
         epv_lines = [line for line in lines if "Intrinsic Value (EPV per share):" in line]
         assert len(epv_lines) == 1
-        assert "31.42 USD (10-year average EPS)" in epv_lines[0]
+        assert "31.42 USD (10-year average earnings on today's shares)" in epv_lines[0]
         assert "497,224,000,000" not in epv_lines[0]
         
         # Check Net-Net (negative value)
@@ -184,7 +184,7 @@ class TestExecutiveSummarySection:
 
         lines = ExecutiveSummarySection(financial_data, metrics).generate()
 
-        assert "- Intrinsic Value (EPV per share): 41.20 USD (7-year average EPS)" in lines
+        assert "- Intrinsic Value (EPV per share): 41.20 USD (7-year average earnings on today's shares)" in lines
 
     TOO_SHORT = "- Intrinsic Value (EPV per share): N/A (requires 7+ years of annual earnings with a positive average)"
     NO_EPS = "- Intrinsic Value (EPV per share): N/A (no per-share earnings for FY2019)"

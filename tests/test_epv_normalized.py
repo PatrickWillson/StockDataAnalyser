@@ -237,12 +237,13 @@ def _history(net_incomes, shares):
 @settings(max_examples=100, deadline=None)
 @given(st.lists(st.tuples(st.floats(1e3, 1e9), st.floats(1e3, 1e8)), min_size=7, max_size=12))
 def test_epv_per_share_is_average_eps_capitalized(years):
-    """Each year's earnings over that year's shares, averaged, divided by the cost of capital."""
+    """Each year's earnings on the present capitalization (ch. 39): over max(latest count, that year's count)."""
     net_incomes, shares = zip(*years)
     result = GrahamCalculator({'history': _history(net_incomes, shares)}).compute_epv_normalized(
         _history(net_incomes, shares), round_result=False)
     used = min(len(years), 10)
-    expected = sum(ni / s for ni, s in years[:used]) / used / COST_OF_CAPITAL
+    latest = shares[0]
+    expected = sum(ni / max(latest, s) for ni, s in years[:used]) / used / COST_OF_CAPITAL
     assert result['epv_per_share'] == pytest.approx(expected)
     assert result['epv'] == pytest.approx(sum(net_incomes[:used]) / used / COST_OF_CAPITAL)
 
@@ -255,9 +256,25 @@ def test_epv_per_share_is_not_company_value_over_todays_shares():
     assert result['normalized_eps'] == pytest.approx(0.11)
 
 
-def test_epv_per_share_na_when_a_year_has_no_eps():
+def test_a_year_without_a_share_count_takes_the_nearest_later_count():
+    """Vendor years carry no share count (§8.12): Graham needs none, the past record goes on today's shares."""
     history = _history([100.0] * 8, [1000.0] * 8)
     history["2020-12-31"].update(eps=0.0, shares_outstanding=0.0)
     result = GrahamCalculator({'history': history}).compute_epv()
-    assert result['epv_per_share'] == "N/A" and result['epv'] == 1000.0
-    assert result['epv_per_share_reason'] == "no per-share earnings for FY2020"
+    assert result['epv_per_share'] == pytest.approx(1.0) and result['epv'] == 1000.0
+
+
+def test_shares_since_issued_count_in_full_and_are_noted():
+    """Issuance (500 -> 1,000 shares): earlier earnings on today's 1,000 (ch. 39, no allowance for cheap stock)."""
+    history = _history([100.0] * 10, [1000.0] + [500.0] * 9)
+    result = GrahamCalculator({'history': history}).compute_epv()
+    assert result['epv_per_share'] == pytest.approx(1.0)
+    assert "shares rose over 10%" in result['share_basis']
+
+
+def test_epv_per_share_na_without_any_share_count():
+    history = _history([100.0] * 8, [1000.0] * 8)
+    for row in history.values():
+        row.update(eps=0.0, shares_outstanding=0.0)
+    result = GrahamCalculator({'history': history}).compute_epv()
+    assert result['epv_per_share'] == "N/A" and "no share count" in result['epv_per_share_reason']

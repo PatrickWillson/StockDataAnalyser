@@ -16,7 +16,7 @@
   - Price is not below conservative intrinsic value (margin of safety -291.4%)
 - Graham Number (Single-Year EPS): N/A
 - Graham Number (3-Year Avg EPS): N/A
-- Intrinsic Value (EPV per share): 47.89 USD (10-year average EPS)
+- Intrinsic Value (EPV per share): 47.89 USD (10-year average earnings on today's shares)
 - Net-Net Value: -9.46 USD
 - Margin of Safety: -291.4% (Capped by EPV)
   - Conservative Intrinsic Value: 47.89 USD
@@ -235,7 +235,8 @@
   - Net Incomes: 96,995,000,000 USD, 99,803,000,000 USD, 94,680,000,000 USD, 89,946,000,000 USD, 85,448,700,000 USD, 81,176,265,000 USD, 77,117,451,750 USD, 73,261,579,162 USD, 69,598,500,204 USD, 66,118,575,194 USD
   - Normalized Earnings: 83,414,507,131 USD (average including losses)
   - EPV: 834,145,071,310 USD (83,414,507,131 USD / 10%)
-  - EPS: 6.24, 6.26, 5.76, 5.30, 4.81, 4.48, 4.17, 3.88, 3.62, 3.37 USD
+  - Earnings per share on the present capitalization: 6.24, 6.26, 5.76, 5.30, 4.81, 4.48, 4.17, 3.88, 3.62, 3.37 USD
+  - Share basis: each year's net income on the latest year-end count (15,550.06M shares: the present capitalization, Security Analysis ch. 39); FY2014, FY2015, FY2016, FY2017, FY2018, FY2019 on a larger count, their own or (with none) the nearest later year's (shares since bought back are not credited to earlier earnings)
   - EPV Per Share: 47.89 USD (average EPS 4.79 USD / 10%)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.

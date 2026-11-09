@@ -37,6 +37,41 @@ NEGATIVE_EARNINGS_REASON = "N/A - Negative normalized earnings (company unprofit
 LONG_TERM_DEBT_NOT_IDENTIFIED = ("Long-term debt not identified: the source reports borrowings but no long-term debt "
                                  "figure; Graham's debt tests count as not met (GRAHAM_METHODOLOGY §8.9)")
 
+SUBSTANTIAL_SHARE_CHANGE = 0.10   # "substantial" (ch. 39) has no number in Graham: this project's best guess
+
+
+def per_share_on_present_capitalization(history, years, net_incomes):
+    """
+    (each year's net income / its divisor, reason if unavailable, note on the share basis) for EPV per share.
+
+    Divisor: max(latest reported year-end count, the year's own count, else the nearest later year's count). None
+    with a reason when no year in the window has a share count. The note lists years whose divisor is not the
+    latest count, and share-count changes over SUBSTANTIAL_SHARE_CHANGE (Graham's ch. 39 adjustments not made).
+    """
+    counts = {year: or_default(row_at(history, year).shares_outstanding, 0.0) for year in years}
+    known = [counts[year] for year in years if counts[year] > 0]   # years newest first
+    if not known:
+        return None, "no share count in any year of the window", None
+    latest, later, values, above = known[0], None, [], []
+    for year, net_income in zip(years, net_incomes):
+        own = counts[year] if counts[year] > 0 else later
+        later = own
+        divisor = max(latest, own or latest)
+        values.append(net_income / divisor)
+        if divisor > latest * (1 + SUBSTANTIAL_SHARE_CHANGE):
+            above.append(fiscal_year(year))
+    notes = [f"each year's net income on the latest year-end count ({latest / 1e6:,.2f}M shares: the present "
+             "capitalization, Security Analysis ch. 39)"]
+    if above:
+        notes.append(f"FY{', FY'.join(sorted(above))} on a larger count, their own or (with none) the nearest later "
+                     "year's (shares since bought back are not credited to earlier earnings)")
+    if min(known) < latest * (1 - SUBSTANTIAL_SHARE_CHANGE):
+        notes.append(f"shares rose over {SUBSTANTIAL_SHARE_CHANGE:.0%} in the window ({min(known) / 1e6:,.2f}M to "
+                     f"{latest / 1e6:,.2f}M): earlier years count the new shares in full, without Graham's allowance "
+                     "for stock sold cheaply (conservative)")
+    return values, None, "; ".join(notes)
+
+
 class GrahamCalculator:
     """
     Performs all Graham methodology calculations with strict formulas.
@@ -697,17 +732,17 @@ class GrahamCalculator:
         # Calculate EPV
         epv = normalized_earnings / COST_OF_CAPITAL
         
-        # Per share: average of each year's EPS (reported, else that year's net income / that
-        # year's shares). A year whose EPS is 0 despite non-zero earnings had no share count.
-        eps_values = []
-        for year, net_income in zip(years_to_use, net_incomes):
-            eps = or_default(row_at(history, year).eps, None)
-            eps_values.append(None if eps is None or (eps == 0 and net_income != 0) else float(eps))
-        missing = [fiscal_year(year) for year, eps in zip(years_to_use, eps_values) if eps is None]
-        per_share_reason = None
-        if missing:
+        # Per share: each year's earnings on the present capitalization (Security Analysis ch. 39: the past
+        # record restated "on the basis of the current number of shares"; ch. 37, U.S. Steel's normal earnings
+        # over its current 8.7M shares; GRAHAM_METHODOLOGY §2.4, decided 2026-11-09). The divisor is the larger of
+        # the latest reported count and the year's own count (or, with none, the nearest later year's): shares
+        # since bought back are not credited to earlier earnings, which were earned partly on capital since
+        # returned (ch. 44; no Graham rule, the conservative reading §8.4). Shares since issued count in full,
+        # without ch. 39's upward allowance for stock sold cheaply (also conservative).
+        eps_values, per_share_reason, share_basis = per_share_on_present_capitalization(
+            history, years_to_use, net_incomes)
+        if eps_values is None:
             normalized_eps = epv_per_share = "N/A"
-            per_share_reason = f"no per-share earnings for FY{', FY'.join(missing)}"
         else:
             normalized_eps = sum(eps_values) / len(eps_values)
             # share changes can turn a positive company average negative per share: no earning power
@@ -729,6 +764,8 @@ class GrahamCalculator:
         }
         if per_share_reason:
             result['epv_per_share_reason'] = per_share_reason
+        if share_basis:
+            result['share_basis'] = share_basis
         
         return result
     

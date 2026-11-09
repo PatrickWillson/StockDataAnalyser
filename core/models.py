@@ -112,13 +112,15 @@ class Model:
 @dataclass(frozen=True)
 class EPVDetails(Model):
     """Earnings power value: average net income (7-10 years) / COST_OF_CAPITAL (F3: N/A, not 0).
-    Per share: average of each year's EPS / COST_OF_CAPITAL (GRAHAM_METHODOLOGY §2.4, F22)."""
+    Per share: average of each year's net income on the present capitalization / COST_OF_CAPITAL
+    (GRAHAM_METHODOLOGY §2.4, Security Analysis ch. 39; decided 2026-11-09)."""
     epv: Number = MISSING
     epv_per_share: Number = MISSING
     normalized_earnings: Number = MISSING
     normalized_eps: Number = MISSING                 # average EPS of years_included, or "N/A"
-    eps_values: Tuple[Optional[float], ...] = MISSING   # each year's EPS (None = not available)
+    eps_values: Tuple[Optional[float], ...] = MISSING   # each year's net income / its divisor (present capitalization)
     epv_per_share_reason: str = MISSING              # why epv_per_share is "N/A"
+    share_basis: str = MISSING                       # the share counts used, and any substantial change
     years_used: int = MISSING
     years_included: Tuple[str, ...] = MISSING        # present when EPV is available
     net_incomes: Tuple[float, ...] = MISSING         # present when EPV is available

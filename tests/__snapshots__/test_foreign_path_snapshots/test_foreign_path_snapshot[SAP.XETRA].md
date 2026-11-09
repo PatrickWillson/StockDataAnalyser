@@ -16,7 +16,7 @@
   - Price is not below conservative intrinsic value (margin of safety -505.4%)
 - Graham Number (Single-Year EPS): 39.68 EUR
 - Graham Number (3-Year Avg EPS): 34.69 EUR
-- Intrinsic Value (EPV per share): 37.43 EUR (10-year average EPS)
+- Intrinsic Value (EPV per share): 37.43 EUR (10-year average earnings on today's shares)
 - Net-Net Value: -4.73 EUR
 - Margin of Safety: -505.4% (Capped by Normalized Graham Number)
   - Conservative Intrinsic Value: 34.69 EUR
@@ -267,7 +267,8 @@
   - Net Incomes: 7,161,000,000 EUR, 3,124,000,000 EUR, 6,139,000,000 EUR, 2,284,000,000 EUR, 5,256,000,000 EUR, 5,145,000,000 EUR, 3,321,000,000 EUR, 4,083,000,000 EUR, 4,008,000,000 EUR, 3,642,000,000 EUR
   - Normalized Earnings: 4,416,300,000 EUR (average including losses)
   - EPV: 44,163,000,000 EUR (4,416,300,000 EUR / 10%)
-  - EPS: 6.14, 2.68, 5.26, 1.95, 4.46, 4.35, 2.78, 3.42, 3.35, 3.04 EUR
+  - Earnings per share on the present capitalization: 6.14, 2.68, 5.26, 1.95, 4.45, 4.35, 2.78, 3.42, 3.35, 3.04 EUR
+  - Share basis: each year's net income on the latest year-end count (1,166.00M shares: the present capitalization, Security Analysis ch. 39)
   - EPV Per Share: 37.43 EUR (average EPS 3.74 EUR / 10%)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.

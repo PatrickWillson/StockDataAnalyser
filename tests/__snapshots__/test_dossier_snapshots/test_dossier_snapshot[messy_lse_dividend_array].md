@@ -17,7 +17,7 @@
 - Graham Number (Single-Year EPS): 12.78 GBP
 - Graham Number (3-Year Avg EPS): 8.42 GBP
   - ⚠️ Note: 3-year average (34% lower) reveals earnings peaked in recent year
-- Intrinsic Value (EPV per share): 3.57 GBP (10-year average EPS)
+- Intrinsic Value (EPV per share): 3.57 GBP (10-year average earnings on today's shares)
 - Net-Net Value: 0.06 GBP
 - Margin of Safety: -362.2% (Capped by EPV)
   - Conservative Intrinsic Value: 3.57 GBP
@@ -245,7 +245,8 @@
   - Net Incomes: 30,860,000 GBP, 4,769,000 GBP, 4,530,550 GBP, 4,304,022 GBP, 4,088,821 GBP, 3,884,380 GBP, 3,690,161 GBP, 3,505,653 GBP, 3,330,371 GBP, 3,163,852 GBP
   - Normalized Earnings: 6,612,681 GBP (average including losses)
   - EPV: 66,126,810 GBP (6,612,681 GBP / 10%)
-  - EPS: 1.71, 0.26, 0.25, 0.23, 0.22, 0.20, 0.19, 0.18, 0.16, 0.15 GBP
+  - Earnings per share on the present capitalization: 1.71, 0.26, 0.25, 0.23, 0.22, 0.20, 0.19, 0.18, 0.16, 0.15 GBP
+  - Share basis: each year's net income on the latest year-end count (18.00M shares: the present capitalization, Security Analysis ch. 39); FY2014, FY2015, FY2016 on a larger count, their own or (with none) the nearest later year's (shares since bought back are not credited to earlier earnings)
   - EPV Per Share: 3.57 GBP (average EPS 0.36 GBP / 10%)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.

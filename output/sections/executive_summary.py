@@ -161,7 +161,7 @@ class ExecutiveSummarySection(DossierSection):
         epv_years = or_default(epv_details.years_used, 0)
         if isinstance(epv_per_share, (int, float)) and epv_per_share > 0 and epv_years:
             epv_display = format_price_display(float(epv_per_share), unified_currency, unified_currency)
-            lines.append(f"- Intrinsic Value (EPV per share): {epv_display} ({epv_years}-year average EPS)")
+            lines.append(f"- Intrinsic Value (EPV per share): {epv_display} ({epv_years}-year average earnings on today's shares)")
         elif epv_years and isinstance(or_default(self.metrics.epv, None), (int, float)) and self.metrics.epv > 0:
             if epv_per_share == 0:   # positive company average, but not per share (share changes)
                 lines.append(f"- Intrinsic Value (EPV per share): {format_price_display(0.0, unified_currency, unified_currency)} (average EPS not positive)")

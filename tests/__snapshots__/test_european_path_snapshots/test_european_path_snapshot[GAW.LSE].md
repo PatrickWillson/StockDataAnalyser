@@ -16,7 +16,7 @@
   - Price is not below conservative intrinsic value (margin of safety -424.6%)
 - Graham Number (Single-Year EPS): 33.68 GBP
 - Graham Number (3-Year Avg EPS): 30.50 GBP
-- Intrinsic Value (EPV per share): N/A (no per-share earnings for FY2021, FY2020, FY2019, FY2018, FY2017, FY2016)
+- Intrinsic Value (EPV per share): 30.89 GBP (10-year average earnings on today's shares)
 - Net-Net Value: 3.80 GBP
 - Margin of Safety: -424.6% (Capped by Normalized Graham Number)
   - Conservative Intrinsic Value: 30.50 GBP
@@ -278,7 +278,9 @@
   - Net Incomes: 196,100,000 GBP, 151,100,000 GBP, 134,700,000 GBP, 128,400,000 GBP, 98,000,000 GBP, 86,000,000 GBP, 74,000,000 GBP, 62,000,000 GBP, 50,000,000 GBP, 38,000,000 GBP
   - Normalized Earnings: 101,830,000 GBP (average including losses)
   - EPV: 1,018,300,000 GBP (101,830,000 GBP / 10%)
-  - EPV Per Share: N/A (no per-share earnings for FY2021, FY2020, FY2019, FY2018, FY2017, FY2016)
+  - Earnings per share on the present capitalization: 5.95, 4.58, 4.09, 3.90, 2.97, 2.61, 2.24, 1.88, 1.52, 1.15 GBP
+  - Share basis: each year's net income on the latest year-end count (32.96M shares: the present capitalization, Security Analysis ch. 39)
+  - EPV Per Share: 30.89 GBP (average EPS 3.09 GBP / 10%)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
@@ -307,10 +309,12 @@
 
   **For This Stock**:
   - Normalized Graham Number: 30.50 GBP
-  - EPV per share: N/A
-  - **Intrinsic Value Used**: 30.50 GBP (Normalized Graham Number only)
+  - EPV per share: 30.89 GBP
+  - **Intrinsic Value Used**: 30.50 GBP (Capped by Normalized Graham Number)
 
-  **Interpretation**: Only the Normalized Graham Number is available.
+  **Interpretation**: Normalized Graham Number is lower than EPV, indicating
+  the stock trades at a premium to its asset value despite strong earnings power.
+  Graham would prefer to buy at a discount to both metrics.
 
   **Graham's Principle**: *"The margin of safety is always dependent on the price paid."*
   Graham counted an issue a bargain when its indicated value was at least 50% above the price (price at most

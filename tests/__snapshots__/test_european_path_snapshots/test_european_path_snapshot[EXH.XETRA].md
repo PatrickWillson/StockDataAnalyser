@@ -13,13 +13,13 @@
 *Current metrics (P/E, Price) reflect most recent available data*
 
 - Verdict: **OVERVALUED**
-  - Price is not below conservative intrinsic value (margin of safety -9.2%)
+  - Price is not below conservative intrinsic value (margin of safety -76.5%)
 - Graham Number (Single-Year EPS): 41.89 EUR
 - Graham Number (3-Year Avg EPS): 41.19 EUR
-- Intrinsic Value (EPV per share): N/A (no per-share earnings for FY2021, FY2020, FY2019, FY2018, FY2017, FY2016)
+- Intrinsic Value (EPV per share): 25.50 EUR (10-year average earnings on today's shares)
 - Net-Net Value: 6.00 EUR
-- Margin of Safety: -9.2% (Capped by Normalized Graham Number)
-  - Conservative Intrinsic Value: 41.19 EUR
+- Margin of Safety: -76.5% (Capped by EPV)
+  - Conservative Intrinsic Value: 25.50 EUR
 - Current Price: 45.00 EUR
 - Trailing Dividend: 0.86 EUR (Yield: 1.90%) - Declared (Dividend API) [2025]
 - P/E Ratio (Current Year): 15.00
@@ -102,9 +102,9 @@
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -9.2%** - Trading above conservative intrinsic value
+- **Margin of Safety: -76.5%** - Trading above conservative intrinsic value
   - Assessment: **High valuation risk** - no margin of safety
-  - Conservative Intrinsic Value: 41.19 EUR
+  - Conservative Intrinsic Value: 25.50 EUR
   - Current Price: 45.00 EUR
 
 ### Data Quality Risk:
@@ -258,7 +258,9 @@
   - Net Incomes: 60,000,000 EUR, 58,000,000 EUR, 56,000,000 EUR, 54,000,000 EUR, 52,000,000 EUR, 50,000,000 EUR, 48,000,000 EUR, 46,000,000 EUR, 44,000,000 EUR, 42,000,000 EUR
   - Normalized Earnings: 51,000,000 EUR (average including losses)
   - EPV: 510,000,000 EUR (51,000,000 EUR / 10%)
-  - EPV Per Share: N/A (no per-share earnings for FY2021, FY2020, FY2019, FY2018, FY2017, FY2016)
+  - Earnings per share on the present capitalization: 3.00, 2.90, 2.80, 2.70, 2.60, 2.50, 2.40, 2.30, 2.20, 2.10 EUR
+  - Share basis: each year's net income on the latest year-end count (20.00M shares: the present capitalization, Security Analysis ch. 39)
+  - EPV Per Share: 25.50 EUR (average EPS 2.55 EUR / 10%)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
@@ -268,7 +270,7 @@
   - Graham bought at no more than two-thirds of it, as a diversified group
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
-  - **Value**: -9.2%
+  - **Value**: -76.5%
   - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
 
   **Conservative Dual-Anchor Methodology**:
@@ -287,10 +289,12 @@
 
   **For This Stock**:
   - Normalized Graham Number: 41.19 EUR
-  - EPV per share: N/A
-  - **Intrinsic Value Used**: 41.19 EUR (Normalized Graham Number only)
+  - EPV per share: 25.50 EUR
+  - **Intrinsic Value Used**: 25.50 EUR (Capped by EPV)
 
-  **Interpretation**: Only the Normalized Graham Number is available.
+  **Interpretation**: EPV is lower than Normalized Graham Number, indicating
+  that long-term earnings power is weaker than asset-based valuation suggests.
+  This is a red flag - the company may be destroying value over the full cycle.
 
   **Graham's Principle**: *"The margin of safety is always dependent on the price paid."*
   Graham counted an issue a bargain when its indicated value was at least 50% above the price (price at most

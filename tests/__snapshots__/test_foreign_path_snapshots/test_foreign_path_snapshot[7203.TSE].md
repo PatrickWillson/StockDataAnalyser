@@ -13,13 +13,13 @@
 *Current metrics (P/E, Price) reflect most recent available data*
 
 - Verdict: **OVERVALUED**
-  - Price is not below conservative intrinsic value (margin of safety -54.8%)
+  - Price is not below conservative intrinsic value (margin of safety -53.7%)
 - Graham Number (Single-Year EPS): 4,510.73 JPY
 - Graham Number (3-Year Avg EPS): 4,842.29 JPY
-- Intrinsic Value (EPV per share): 2,131.19 JPY (10-year average EPS)
+- Intrinsic Value (EPV per share): 2,147.73 JPY (10-year average earnings on today's shares)
 - Net-Net Value: -1,747.77 JPY
-- Margin of Safety: -54.8% (Capped by EPV)
-  - Conservative Intrinsic Value: 2,131.19 JPY
+- Margin of Safety: -53.7% (Capped by EPV)
+  - Conservative Intrinsic Value: 2,147.73 JPY
 - Current Price: 3,300.00 JPY
 - Trailing Dividend: 86.54 JPY (Yield: 2.62%) - Declared (Dividend API) [2026]
   - Forward Rate: 95.00 JPY (Yield: 2.88%)
@@ -117,9 +117,9 @@
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -54.8%** - Trading above conservative intrinsic value
+- **Margin of Safety: -53.7%** - Trading above conservative intrinsic value
   - Assessment: **High valuation risk** - no margin of safety
-  - Conservative Intrinsic Value: 2,131.19 JPY
+  - Conservative Intrinsic Value: 2,147.73 JPY
   - Current Price: 3,300.00 JPY
 
 ### Data Quality Risk:
@@ -274,15 +274,16 @@
   - Net Incomes: 3,848,098,000,000 JPY, 4,765,086,000,000 JPY, 4,944,933,000,000 JPY, 2,451,318,000,000 JPY, 2,850,110,000,000 JPY, 2,245,261,000,000 JPY, 2,036,140,000,000 JPY, 1,868,085,000,000 JPY, 2,481,692,000,000 JPY, 1,821,314,000,000 JPY
   - Normalized Earnings: 2,931,203,700,000 JPY (average including losses)
   - EPV: 29,312,037,000,000 JPY (2,931,203,700,000 JPY / 10%)
-  - EPS: 295.25, 359.56, 365.94, 179.47, 205.23, 160.65, 145.49, 130.11, 168.40, 121.09 JPY
-  - EPV Per Share: 2,131.19 JPY (average EPS 213.12 JPY / 10%)
+  - Earnings per share on the present capitalization: 295.25, 365.17, 366.99, 180.71, 206.85, 160.61, 147.22, 131.91, 170.57, 122.45 JPY
+  - Share basis: each year's net income on the latest year-end count (13,033.38M shares: the present capitalization, Security Analysis ch. 39); FY2017, FY2018 on a larger count, their own or (with none) the nearest later year's (shares since bought back are not credited to earlier earnings)
+  - EPV Per Share: 2,147.73 JPY (average EPS 214.77 JPY / 10%)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
   **Graham on earning power**: *"Past earning power … should mean the average earnings over a stated period which would ordinarily be identified in the discussion. But if not so identified it would be some representative period such as five or seven or perhaps ten years in the past."* (Graham, Current Problems in Security Analysis, Lecture 4, 1946–47)
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
-  - **Value**: -54.8%
+  - **Value**: -53.7%
   - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
 
   **Conservative Dual-Anchor Methodology**:
@@ -301,8 +302,8 @@
 
   **For This Stock**:
   - Normalized Graham Number: 4,842.29 JPY
-  - EPV per share: 2,131.19 JPY
-  - **Intrinsic Value Used**: 2,131.19 JPY (Capped by EPV)
+  - EPV per share: 2,147.73 JPY
+  - **Intrinsic Value Used**: 2,147.73 JPY (Capped by EPV)
 
   **Interpretation**: EPV is lower than Normalized Graham Number, indicating
   that long-term earnings power is weaker than asset-based valuation suggests.

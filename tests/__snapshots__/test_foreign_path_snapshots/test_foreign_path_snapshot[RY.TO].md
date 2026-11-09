@@ -16,10 +16,10 @@
   - Price is not below conservative intrinsic value (margin of safety -89.0%)
 - Graham Number (Single-Year EPS): 159.48 CAD
 - Graham Number (3-Year Avg EPS): 146.51 CAD
-- Intrinsic Value (EPV per share): 100.51 CAD (9-year average EPS)
+- Intrinsic Value (EPV per share): 100.54 CAD (9-year average earnings on today's shares)
 - Net-Net Value: -1,560.66 CAD
 - Margin of Safety: -89.0% (Capped by EPV)
-  - Conservative Intrinsic Value: 100.51 CAD
+  - Conservative Intrinsic Value: 100.54 CAD
 - Current Price: 190.00 CAD
 - Trailing Dividend: 4.33 CAD (Yield: 2.28%) - Declared (Dividend API) [2025]
   - Forward Rate: 6.20 CAD (Yield: 3.26%)
@@ -110,7 +110,7 @@
 ### Valuation Risk (Margin of Safety):
 - **Margin of Safety: -89.0%** - Trading above conservative intrinsic value
   - Assessment: **High valuation risk** - no margin of safety
-  - Conservative Intrinsic Value: 100.51 CAD
+  - Conservative Intrinsic Value: 100.54 CAD
   - Current Price: 190.00 CAD
 
 ### Data Quality Risk:
@@ -264,8 +264,9 @@
   - Net Incomes: 19,868,000,000 CAD, 15,908,000,000 CAD, 14,369,000,000 CAD, 15,547,000,000 CAD, 15,781,000,000 CAD, 11,164,000,000 CAD, 12,591,000,000 CAD, 12,115,000,000 CAD, 11,128,000,000 CAD
   - Normalized Earnings: 14,274,555,556 CAD (average including losses)
   - EPV: 142,745,555,556 CAD (14,274,555,556 CAD / 10%)
-  - EPS: 14.10, 11.27, 10.33, 11.08, 11.08, 7.84, 8.78, 8.39, 7.59 CAD
-  - EPV Per Share: 100.51 CAD (average EPS 10.05 CAD / 10%)
+  - Earnings per share on the present capitalization: 14.18, 11.24, 10.25, 11.10, 11.07, 7.84, 8.80, 8.42, 7.59 CAD
+  - Share basis: each year's net income on the latest year-end count (1,400.64M shares: the present capitalization, Security Analysis ch. 39)
+  - EPV Per Share: 100.54 CAD (average EPS 10.05 CAD / 10%)
 
   **Note**: All 9 years were profitable, demonstrating consistent earnings power.
 
@@ -291,8 +292,8 @@
 
   **For This Stock**:
   - Normalized Graham Number: 146.51 CAD
-  - EPV per share: 100.51 CAD
-  - **Intrinsic Value Used**: 100.51 CAD (Capped by EPV)
+  - EPV per share: 100.54 CAD
+  - **Intrinsic Value Used**: 100.54 CAD (Capped by EPV)
 
   **Interpretation**: EPV is lower than Normalized Graham Number, indicating
   that long-term earnings power is weaker than asset-based valuation suggests.
