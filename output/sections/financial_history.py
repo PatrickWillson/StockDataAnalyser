@@ -245,7 +245,8 @@ class FinancialHistorySection(DossierSection):
                 payout_ratio_str = str(payout_ratio)
                 
                 # Format new columns using helper functions
-                debt_str = self.format_debt(total_debt, currency_symbol)
+                # long-term debt unknown (§8.9): the total would be its short-term part only (Jet2 FY2020: 1.81M)
+                debt_str = "N/A" if data.long_term_debt is None else self.format_debt(total_debt, currency_symbol)
                 shares_str = self.format_shares(shares_outstanding)
                 price_str = self.format_price(year_end_price, currency_symbol)
                 

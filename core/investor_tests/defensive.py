@@ -157,6 +157,8 @@ def utility_debt_to_equity(history: dict, years: list) -> str:
     equity = or_default(row_at(history, latest_year).total_equity, 0.0)
     if equity <= 0:
         return 'FAIL'
+    if row_at(history, latest_year).long_term_debt is None:   # long-term debt unknown: total unknown (§8.9)
+        return 'FAIL'
     total_debt = or_default(row_at(history, latest_year).total_debt, 0.0)
     return 'PASS' if total_debt <= DEFENSIVE.UTILITY_MAX_DEBT_TO_EQUITY * equity else 'FAIL'
 

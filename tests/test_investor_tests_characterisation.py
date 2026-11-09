@@ -476,3 +476,11 @@ class TestUnknownEps:
         history["2022-12-31"] = _year(eps=0.0, net_income=100.0)
         data = FinancialDataProcessor.extract_3year_eps_data(history)
         assert not data["valid"] and "2022-12-31" in data["warning"]
+
+
+def test_utility_debt_test_is_not_met_when_long_term_debt_is_unknown():
+    """§8.9: borrowings reported but no long-term debt identified; the total would be its short-term part only."""
+    history = {f"{2023 - i}-12-31": _year(long_term_debt=None, total_debt=10.0) for i in range(3)}
+    assert defensive.utility_debt_to_equity(history, _years(history)) == "FAIL"
+    history = {f"{2023 - i}-12-31": _year(total_debt=10.0) for i in range(3)}
+    assert defensive.utility_debt_to_equity(history, _years(history)) == "PASS"
