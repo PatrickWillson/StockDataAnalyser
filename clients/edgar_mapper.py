@@ -163,7 +163,10 @@ BORROWINGS_EVIDENCE = ("DebtInstrumentCarryingAmount", "NotesPayable", "SecuredD
                        "DebtLongtermAndShorttermCombinedAmount", "LongTermDebtNoncurrent", "LongTermDebt",
                        "ifrs-full:Borrowings", "ifrs-full:BondsIssued", "ifrs-full:DebtInstrumentsIssued",
                        "ifrs-full:LoansReceived", "ifrs-full:NoncurrentFinancialLiabilities",
-                       "ifrs-full:NoncurrentFinancialLiabilitiesAtAmortisedCost")
+                       "ifrs-full:NoncurrentFinancialLiabilitiesAtAmortisedCost",
+                       # Subordinated debentures, unclassified (Royal Bank of Canada FY2025: 13,961M; its senior notes
+                       # sit inside deposits): debt that ranks ahead of the stock, not mapped to a long-term figure
+                       "SubordinatedDebt", "ifrs-full:SubordinatedLiabilities", "ifrs-full:DatedSubordinatedLiabilities")
 INVENTORY = ("InventoryNet", "ifrs-full:Inventories")
 UTILITY_INVENTORY = ("EnergyRelatedInventoryNaturalGasInStorage", "EnergyRelatedInventoryOtherFossilFuel",
                      "EnergyRelatedInventoryCoal", "EnergyRelatedInventoryPropaneGas", "OtherInventorySupplies")

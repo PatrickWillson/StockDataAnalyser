@@ -1370,3 +1370,9 @@ def test_eps_tagged_for_the_ordinary_shares_as_a_class_is_the_companys():
     rows = facts["facts"]["ifrs-full"]["BasicEarningsLossPerShare"]["units"]["USD/shares"]
     assert rows == [{"start": "2020-01-01", "end": "2020-12-31", "val": -1.0042, "filed": "2021-03-19", "form": "20-F",
                      "accn": "acc-1"}]
+
+
+def test_subordinated_debentures_without_a_long_term_debt_figure_leave_the_debt_unknown():
+    """Royal Bank of Canada FY2025: subordinated debentures 13,961M, no long-term debt line (a bank)."""
+    data = _debt({"SubordinatedLiabilities": 13_961.0e6})
+    assert data.balance_sheets[0].long_term_debt is None and data.balance_sheets[0].long_term_debt_unknown
