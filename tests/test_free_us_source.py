@@ -216,6 +216,8 @@ def test_free_provider_is_registered():
     with_key = ClientFactory.create_fundamentals_source(
         {"SEC_USER_AGENT": "Test t@example.invalid", "EULERPOOL_API_KEY": "k"}, "free")
     assert type(with_key.routes["LSE"].sources[1].history).__name__ == "EulerpoolClient"
+    assert type(with_key.routes["LSE"].sources[2]).__name__ == "EulerpoolOnlySource"    # no filings at all
+    assert len(european.sources) == 2
     with pytest.raises(ValueError, match="contact email"):
         ClientFactory.create_fundamentals_source({"SEC_USER_AGENT": "no contact"}, "free")
 

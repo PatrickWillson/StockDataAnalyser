@@ -13,6 +13,7 @@ from clients.edgar_client import EdgarClient
 from clients.eodhd_client import EODHDClient
 from clients.esef_client import EsefClient
 from clients.eulerpool_client import EulerpoolClient
+from clients.eulerpool_source import EulerpoolOnlySource
 from clients.european_filings_source import EuropeanFilingsSource
 from clients.foreign_sec_source import ForeignSECFundamentalsSource
 from clients.free_us_source import FreeUSFundamentalsSource
@@ -72,16 +73,18 @@ class ClientFactory:
         The free resolution path: `.US` -> SEC EDGAR + Yahoo Finance; every other exchange Yahoo prices -> the
         company's SEC filings (20-F / 40-F) found from its home listing; for European exchanges (ESEF_EXCHANGES),
         a company with no SEC filer -> its ESEF annual reports (filings.xbrl.org), with Eulerpool for the years
-        before them when `eulerpool_api_key` is given (behind the overlap gate); neither: no dossier.
+        before them when `eulerpool_api_key` is given (behind the overlap gate), and then, for a company with
+        neither (Germany, Ireland, AIM), Eulerpool alone checked against Yahoo (labelled unverified); none: no dossier.
         """
         edgar = EdgarClient(sec_user_agent, debug=debug)
         yahoo = ClientFactory.create_yfinance_client(debug=debug)
         foreign = ForeignSECFundamentalsSource(edgar, yahoo)
         us = FreeUSFundamentalsSource(edgar, yahoo, debug=debug, foreign=foreign)
+        eulerpool = EulerpoolClient(eulerpool_api_key, debug=debug) if eulerpool_api_key else None
         european = FallbackFundamentalsSource(
-            (foreign, EuropeanFilingsSource(EsefClient(debug=debug), yahoo, history=(
-                EulerpoolClient(eulerpool_api_key, debug=debug) if eulerpool_api_key else None))),
-            name="SEC EDGAR, then ESEF")
+            (foreign, EuropeanFilingsSource(EsefClient(debug=debug), yahoo, history=eulerpool))
+            + ((EulerpoolOnlySource(eulerpool, yahoo),) if eulerpool else ()),
+            name="SEC EDGAR, then ESEF" + (", then Eulerpool" if eulerpool else ""))
         routes = {exchange: (us if not suffix else european if exchange in ESEF_EXCHANGES else foreign)
                   for exchange, suffix in YFinanceClient.EXCHANGE_MAPPING.items()}
         return RoutingFundamentalsSource(routes, name="free (SEC EDGAR / ESEF + Yahoo Finance)")

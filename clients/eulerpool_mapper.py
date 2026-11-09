@@ -235,3 +235,33 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
                      f"too few years to check): {', '.join(LABELS[n] for n in rejected)}"
                      + ("; long-term debt is then unknown in those years, not zero" if "long_term_debt" in rejected else ""))
     return OlderYears(tuple(balance), tuple(income), shares, dividends, cash, tuple(notes))
+
+
+def vendor_annual(data: EulerpoolData) -> EdgarAnnualData:
+    """
+    Every Eulerpool year as statement rows, unchecked against filings (companies with no filings on any route:
+    Germany, Ireland, AIM; the source checks them against Yahoo). EPS None (net income / the year's count
+    downstream); no intangibles; long-term debt as Eulerpool gives it.
+    """
+    balance, income, shares, dividends, cash = [], [], {}, {}, {}
+    for end in sorted(data.years, reverse=True):
+        values = data.years[end]
+        if values.get("net_income") is None:
+            continue
+        income.append(IncomeStatementRow(end, values.get("revenue"), values["net_income"], None))
+        if values.get("shares"):
+            shares[fiscal_year(end)] = values["shares"]
+        if "dividends_paid" in values:
+            dividends[end] = values["dividends_paid"]
+        if "operating_cash_flow" in values:
+            cash[end] = values["operating_cash_flow"]
+        if values.get("total_assets") is not None and values.get("total_equity") is not None:
+            balance.append(BalanceSheetRow(
+                period_end=end, total_equity=values["total_equity"], intangible_assets=None,
+                goodwill=values.get("goodwill"), current_assets=values.get("current_assets"),
+                current_liabilities=values.get("current_liabilities"),
+                total_liabilities=values.get("total_liabilities"), long_term_debt=values.get("long_term_debt"),
+                short_term_debt=values.get("short_term_debt"), total_debt_reported=None,
+                total_assets=values["total_assets"], inventory=values.get("inventory"), noncontrolling_interest=None,
+                shares_outstanding=values.get("shares")))
+    return EdgarAnnualData(tuple(balance), tuple(income), dividends, cash, shares, 0.0, (), data.currency)
