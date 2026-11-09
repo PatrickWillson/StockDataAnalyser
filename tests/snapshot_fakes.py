@@ -64,7 +64,8 @@ class FakeTicker:
 
     def __init__(self, last_price: Optional[float], closes: Dict[str, float], currency: Optional[str] = None,
                  info: Optional[Dict[str, Any]] = None, dividends: Optional[Dict[str, float]] = None,
-                 splits: Optional[Dict[str, float]] = None, net_income: Optional[Dict[str, float]] = None):
+                 splits: Optional[Dict[str, float]] = None, net_income: Optional[Dict[str, float]] = None,
+                 statements: Optional[Dict[str, Dict[str, Dict[str, float]]]] = None):
         self.fast_info = {} if last_price is None else {"lastPrice": last_price, "currency": currency}
         self.info = {} if last_price is None else {"regularMarketPrice": last_price}
         self.info.update(info or {})
@@ -75,6 +76,14 @@ class FakeTicker:
         items = sorted((net_income or {}).items(), reverse=True)
         self.income_stmt = pd.DataFrame([[v for _, v in items]], index=["Net Income"],
                                         columns=pd.DatetimeIndex([pd.Timestamp(d) for d, _ in items]))
+        # Full annual statements when given: {"income" | "balance" | "cashflow": {row: {"YYYY-MM-DD": value}}}
+        self.balance_sheet = self.cashflow = pd.DataFrame()
+        for key, attr in (("income", "income_stmt"), ("balance", "balance_sheet"), ("cashflow", "cashflow")):
+            if statements and statements.get(key):
+                rows = statements[key]
+                dates = sorted({d for values in rows.values() for d in values}, reverse=True)
+                setattr(self, attr, pd.DataFrame([[rows[r].get(d, float("nan")) for d in dates] for r in rows], index=list(rows),
+                                                 columns=pd.DatetimeIndex([pd.Timestamp(d) for d in dates])))
 
     def history(self, start=None, end=None, auto_adjust=False, **kwargs) -> pd.DataFrame:
         # Like yfinance, `end` is exclusive
@@ -92,7 +101,7 @@ class FakeYFinanceModule:
     {"last": float, "currency": str, "closes": {"YYYY-MM-DD": float}} and optionally "info" (extra
     Ticker.info keys), "dividends" and "splits" ({"YYYY-MM-DD": value}); currency is the quote
     currency as Yahoo reports it (e.g. "USD", "GBp" for pence), "net_income" ({"YYYY-MM-DD": value},
-    the annual income statement). Unknown symbols behave like yfinance for a missing ticker: no price
+    the annual income statement) or "statements" (full annual statements, FakeTicker). Unknown symbols behave like yfinance for a missing ticker: no price
     and an empty history. search maps a query to yfinance.Search quotes ({"symbol", "exchange",
     "longname"}).
     """
@@ -112,7 +121,8 @@ class FakeYFinanceModule:
         self.requested.append(symbol)
         entry = self._symbols.get(symbol, {})
         return FakeTicker(entry.get("last"), entry.get("closes", {}), entry.get("currency"),
-                          entry.get("info"), entry.get("dividends"), entry.get("splits"), entry.get("net_income"))
+                          entry.get("info"), entry.get("dividends"), entry.get("splits"), entry.get("net_income"),
+                          entry.get("statements"))
 
 
 class FakeSecSession:

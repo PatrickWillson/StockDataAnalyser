@@ -244,3 +244,19 @@ class TestYFinanceClient:
         prices = YFinanceClient().fetch_historical_prices("AAPL.US", "2023-01-01", "2024-01-01")
         assert prices == {'2023-12-29': 100.0}
         assert mock_ticker_class.return_value.history.call_args.kwargs['auto_adjust'] is False
+
+
+def test_annual_statements_are_read_from_yahoo(monkeypatch):
+    import sys
+    from tests.snapshot_fakes import FakeYFinanceModule
+    from clients.yfinance_client import YFinanceClient
+    fake = FakeYFinanceModule({"HBH.DE": {"last": 80.0, "currency": "EUR", "closes": {}, "statements": {
+        "income": {"Total Revenue": {"2026-02-28": 6433.9e6, "2025-02-28": 6200e6}, "Basic EPS": {"2026-02-28": 8.66}},
+        "balance": {"Total Assets": {"2026-02-28": 4800e6}}}}})
+    monkeypatch.setitem(sys.modules, "yfinance", fake)
+    s = YFinanceClient().fetch_annual_statements("HBH.XETRA")
+    assert s.yahoo_symbol == "HBH.DE"
+    assert s.income["Total Revenue"] == {"2026-02-28": 6433.9e6, "2025-02-28": 6200e6}
+    assert s.income["Basic EPS"] == {"2026-02-28": 8.66}                  # empty cell left out
+    assert s.balance["Total Assets"] == {"2026-02-28": 4800e6}
+    assert YFinanceClient().fetch_annual_statements("NOPE.XETRA") is None

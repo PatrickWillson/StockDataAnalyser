@@ -132,3 +132,42 @@ def test_search_us_listings_is_empty_when_nothing_is_listed_in_the_us(monkeypatc
 
     monkeypatch.setitem(sys.modules, "yfinance", _YF)
     assert YFinanceClient().search_us_listings("Yü Group PLC") == []
+
+
+# --- Annual statements (companies with no XBRL) ---
+
+from clients.yahoo_mapper import annual_statements  # noqa: E402
+from clients.yfinance_client import YahooStatements  # noqa: E402
+from core.fundamentals import IncomeStatementRow  # noqa: E402
+
+E26, E25 = "2026-02-28", "2025-02-28"
+STATEMENTS = YahooStatements(
+    "HBH.DE",
+    income={"Total Revenue": {E26: 6433.9e6, E25: 6200e6}, "Net Income Common Stockholders": {E26: 138.4e6, E25: 140.7e6},
+            "Basic EPS": {E26: 8.66, E25: 8.80}},
+    balance={"Stockholders Equity": {E26: 2070e6, E25: 1990e6}, "Total Assets": {E26: 4800e6, E25: 4700e6},
+             "Current Assets": {E26: 1900e6, E25: 1850e6}, "Current Liabilities": {E26: 1332e6, E25: 1300e6},
+             "Long Term Debt And Capital Lease Obligation": {E26: 1264.6e6, E25: 1300e6},
+             "Long Term Capital Lease Obligation": {E26: 913.9e6},                      # no lease line for FY2025
+             "Total Non Current Liabilities Net Minority Interest": {E26: 1346.7e6, E25: 1400e6},
+             "Ordinary Shares Number": {E26: 15.997e6, E25: 15.991e6}},
+    cashflow={"Operating Cash Flow": {E26: 400e6}, "Cash Dividends Paid": {E26: -38.4e6}})
+
+
+def test_yahoo_statements_become_annual_rows():
+    annual = annual_statements(STATEMENTS, "EUR")
+    assert [r.period_end for r in annual.income_statements] == [E26, E25]
+    assert annual.income_statements[0] == IncomeStatementRow(E26, 6433.9e6, 138.4e6, 8.66)
+    latest, older = annual.balance_sheets
+    assert latest.long_term_debt == 1264.6e6            # debt incl. the reported IFRS 16 lease line
+    assert older.long_term_debt == 1400e6               # no lease line: all non-current liabilities, the upper bound
+    assert annual.shares_by_year == {"2026": 15.997e6, "2025": 15.991e6}
+    assert annual.dividends_paid == {E26: 38.4e6} and annual.operating_cash_flow == {E26: 400e6}
+    assert annual.currency == "EUR"
+    assert any("FY2025 is all non-current liabilities" in n for n in annual.notes)
+
+
+def test_empty_yahoo_cells_stay_missing():
+    sparse = YahooStatements("X.L", income={"Net Income": {E26: 10e6}}, balance={})
+    annual = annual_statements(sparse, "GBP")
+    assert annual.income_statements[0] == IncomeStatementRow(E26, None, 10e6, None) and annual.balance_sheets == ()

@@ -5,13 +5,19 @@ The only code that knows Yahoo's `info` keys. Supplies what SEC filings do not c
 per-payment dividends, stock splits (for the share basis of EDGAR per-share facts), the profile
 (name, sector, industry, employees, CEO) and Yahoo's pre-computed market figures, which are display /
 labelled comparison only (CLAUDE.md raw-data rule), exactly like EODHD's Highlights.
+
+annual_statements maps Yahoo's annual statement line items (raw lines, not ratios) for companies with no XBRL filings
+(Germany, Ireland, AIM): Graham's analyst used the statistical services where the original reports were not to hand
+(Security Analysis ch. 3), and Yahoo's tested more accurate than Eulerpool's (claude-output/YAHOO_VS_XBRL_EULERPOOL_*).
 """
 
 from dataclasses import dataclass
 from typing import Any, Mapping, Optional, Sequence, Tuple
 
-from clients.yfinance_client import YahooCompanyData
-from core.fundamentals import DividendPayment, MarketData, number_or_zero, optional_float
+from clients.edgar_mapper import EdgarAnnualData
+from clients.yfinance_client import YahooCompanyData, YahooStatements
+from core.fundamentals import BalanceSheetRow, DividendPayment, IncomeStatementRow, MarketData, number_or_zero, optional_float
+from core.history import fiscal_year
 
 
 @dataclass(frozen=True)
@@ -97,3 +103,73 @@ def forward_dividend_rate(data: YahooCompanyData) -> Optional[float]:
     """Yahoo's forward annual dividend (an estimate: labelled display only, F21)."""
     rate = number_or_zero(data.info.get("dividendRate"))
     return rate or None
+
+
+# Yahoo statement rows -> fields (first row with a value wins)
+INCOME_ROWS = {"revenue": ("Total Revenue", "Operating Revenue"),
+               "net_income": ("Net Income Common Stockholders", "Net Income"),
+               "eps": ("Basic EPS",)}
+BALANCE_ROWS = {"total_equity": ("Stockholders Equity", "Common Stock Equity"),
+                "total_assets": ("Total Assets",), "total_liabilities": ("Total Liabilities Net Minority Interest",),
+                "current_assets": ("Current Assets",), "current_liabilities": ("Current Liabilities",),
+                "inventory": ("Inventory",), "goodwill": ("Goodwill",), "intangibles": ("Other Intangible Assets",),
+                "minority": ("Minority Interest",), "short_term_debt": ("Current Debt And Capital Lease Obligation", "Current Debt"),
+                "shares": ("Ordinary Shares Number", "Share Issued"),
+                "noncurrent_liabilities": ("Total Non Current Liabilities Net Minority Interest",)}
+# Long-term debt counts lease liabilities (GRAHAM_METHODOLOGY §8.10): Yahoo's debt-and-lease total, but only when Yahoo
+# reports the lease line it contains (IFRS 16 leases: SAP, Hornbach); otherwise all non-current liabilities, the upper
+# bound (§8.4, §8.9), since operating leases may be missing (US GAAP: Coca-Cola)
+DEBT_WITH_LEASES, LEASE_ROWS = "Long Term Debt And Capital Lease Obligation", ("Long Term Capital Lease Obligation", "Capital Lease Obligations")
+CASHFLOW_ROWS = {"operating_cash_flow": ("Operating Cash Flow",), "dividends_paid": ("Cash Dividends Paid", "Common Stock Dividend Paid")}
+SOURCE_LABEL = "Yahoo Finance"
+
+
+def _value(table: Mapping[str, Mapping[str, float]], rows: Sequence[str], end: str) -> Optional[float]:
+    for row in rows:
+        value = (table.get(row) or {}).get(end)
+        if value is not None:
+            return value
+    return None
+
+
+def annual_statements(statements: YahooStatements, currency: str) -> EdgarAnnualData:
+    """
+    Yahoo's annual statements as statement rows (newest first), in `currency` (Yahoo's financialCurrency). Empty cells
+    stay None. Long-term debt: the debt-and-lease total when a lease line is reported, else all non-current liabilities
+    (noted). Year-end shares: ordinary shares (net of treasury), else shares issued.
+    """
+    ends = sorted({end for row in statements.income.values() for end in row}
+                  | {end for row in statements.balance.values() for end in row}, reverse=True)
+    income, balance, shares, dividends, cash, upper_bound = [], [], {}, {}, {}, []
+    for end in ends:
+        get = lambda rows, table=statements.income: _value(table, rows, end)   # noqa: E731
+        net_income = get(INCOME_ROWS["net_income"])
+        if net_income is not None:
+            income.append(IncomeStatementRow(end, get(INCOME_ROWS["revenue"]), net_income, get(INCOME_ROWS["eps"])))
+        b = {k: _value(statements.balance, rows, end) for k, rows in BALANCE_ROWS.items()}
+        if b["total_assets"] is not None and b["total_equity"] is not None:
+            if any(_value(statements.balance, (row,), end) is not None for row in LEASE_ROWS):
+                ltd = _value(statements.balance, (DEBT_WITH_LEASES,), end) or 0.0
+            else:
+                ltd = b["noncurrent_liabilities"]
+                upper_bound.append(fiscal_year(end))
+            balance.append(BalanceSheetRow(
+                period_end=end, total_equity=b["total_equity"], intangible_assets=b["intangibles"], goodwill=b["goodwill"],
+                current_assets=b["current_assets"], current_liabilities=b["current_liabilities"],
+                total_liabilities=b["total_liabilities"], long_term_debt=ltd, short_term_debt=b["short_term_debt"],
+                total_debt_reported=None, total_assets=b["total_assets"], inventory=b["inventory"],
+                noncontrolling_interest=b["minority"], shares_outstanding=b["shares"],
+                long_term_debt_unknown=ltd is None))
+            if b["shares"]:
+                shares[fiscal_year(end)] = b["shares"]
+        ocf = _value(statements.cashflow, CASHFLOW_ROWS["operating_cash_flow"], end)
+        if ocf is not None:
+            cash[end] = ocf
+        paid = _value(statements.cashflow, CASHFLOW_ROWS["dividends_paid"], end)
+        if paid is not None:
+            dividends[end] = abs(paid)
+    notes = []
+    if upper_bound:
+        notes.append(f"{SOURCE_LABEL}: long-term debt for FY{', FY'.join(sorted(set(upper_bound)))} is all non-current "
+                     "liabilities (an upper bound: no lease line reported, so lease liabilities cannot be counted otherwise)")
+    return EdgarAnnualData(tuple(balance), tuple(income), dividends, cash, shares, 0.0, tuple(notes), currency)

@@ -23,6 +23,15 @@ class YahooCompanyData:
     splits: Tuple[Tuple[str, float], ...] = ()                    # (date, shares after / before), oldest first
 
 
+@dataclass(frozen=True)
+class YahooStatements:
+    """Yahoo's annual statements for one listing: row label -> {fiscal year end 'YYYY-MM-DD': value} (about 4 years)."""
+    yahoo_symbol: str
+    income: Mapping[str, Mapping[str, float]] = field(default_factory=dict)
+    balance: Mapping[str, Mapping[str, float]] = field(default_factory=dict)
+    cashflow: Mapping[str, Mapping[str, float]] = field(default_factory=dict)
+
+
 class YFinanceClient:
     """
     yfinance client for fetching current stock prices.
@@ -462,6 +471,40 @@ class YFinanceClient:
         us = self.US_MAIN_EXCHANGES | self.US_OTC_EXCHANGES
         return [(str(q["symbol"]), str(q.get("exchange")), str(q.get("longname") or q.get("shortname") or ""))
                 for q in quotes if q.get("symbol") and q.get("exchange") in us]
+
+    def fetch_annual_statements(self, ticker: str) -> Optional[YahooStatements]:
+        """
+        Yahoo's annual income statement, balance sheet and cash-flow statement (yfinance income_stmt, balance_sheet,
+        cashflow), in the company's financial currency; empty cells left out. None when unavailable. Used for
+        companies with no XBRL filings (clients/eulerpool_source.py; claude-output scope of 2026-11-09).
+        """
+        symbol, exchange = self._parse_ticker(ticker)
+        yf_ticker = self._translate_ticker(symbol, exchange) if symbol and exchange else None
+        if not yf_ticker:
+            return None
+        try:
+            import yfinance as yf
+            tk = yf.Ticker(yf_ticker)
+            frames = (tk.income_stmt, tk.balance_sheet, tk.cashflow)
+        except Exception as e:
+            self.logger.warning(f"Yahoo statements unavailable for {yf_ticker}: {type(e).__name__}: {e}")
+            return None
+
+        def table(frame) -> Dict[str, Dict[str, float]]:
+            out: Dict[str, Dict[str, float]] = {}
+            if frame is None or getattr(frame, "empty", True):
+                return out
+            for row in frame.index:
+                for column in frame.columns:
+                    value = frame.loc[row, column]
+                    if value == value and value is not None:
+                        out.setdefault(str(row), {})[column.strftime('%Y-%m-%d')] = float(value)
+            return out
+
+        income, balance, cashflow = (table(f) for f in frames)
+        if not income and not balance:
+            return None
+        return YahooStatements(yf_ticker, income, balance, cashflow)
 
     def fetch_annual_net_income(self, ticker: str) -> Dict[str, List[float]]:
         """
