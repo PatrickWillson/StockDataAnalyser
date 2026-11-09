@@ -92,7 +92,7 @@ def test_home_listing_gets_the_esef_statements_with_the_listings_market_data():
     assert [(p.amount, p.currency) for p in f.dividend_payments] == [(1.65, "GBP")]
     assert f.quarterly_income_statements == ()
     assert f.notes[0].startswith(f"Statements: ESEF annual reports of GAMES WORKSHOP GROUP PLC (LEI {LEI})")
-    assert any("the ESEF reports cover 3 fiscal years (from FY2023" in n for n in f.notes)
+    assert any("History: 3 fiscal years (the ESEF reports cover 3, from FY2023" in n for n in f.notes)
     assert any(n.startswith("ESEF: EPS: implies 1/100 of the listing's current share count") for n in f.notes)
 
 
@@ -148,3 +148,42 @@ def test_other_failures_are_not_passed_over():
     sources = (Named("SEC", SourceRateLimitError("429")), Named("ESEF", "fundamentals"))
     with pytest.raises(SourceRateLimitError):
         FallbackFundamentalsSource(sources, "n").fetch_fundamentals("X.LSE")
+
+
+class FakeHistory:
+    """Eulerpool: the two filed years plus FY2022 and FY2021 before them (synthetic, in millions)."""
+
+    def __init__(self, fail=None, profile=True):
+        self.fail, self.profile = fail, profile
+
+    def find_profile(self, symbol, name):
+        if self.fail:
+            raise self.fail
+        return {"isin": "GB0003718474", "name": name, "currency": "GBP"} if self.profile else None
+
+    def fetch_statements(self, isin):
+        income, balance = [], []
+        for year, ni in ((2024, 150.0), (2023, 130.0), (2022, 130.0), (2021, 110.0), (2020, 90.0)):
+            end = f"{year + 1}-05-31"
+            income.append({"period": end, "revenue": 500.0, "netIncome": ni})
+            balance.append({"period": end, "totalAssets": 380.0, "totalEquity": 280.0, "sharesOutstanding": 33.0})
+        return {"income": income, "balance_quarterly": balance, "cashflow": []}
+
+
+def test_eulerpool_adds_the_years_before_the_first_report_when_they_agree():
+    f = EuropeanFilingsSource(FakeClient(), FakeYahoo(), FakeLookup(), history=FakeHistory()).fetch_fundamentals("GAW.LSE")
+    assert [r.period_end for r in f.annual_income_statements] == ["2025-05-31", "2024-05-31", "2023-05-31",
+                                                                 "2022-05-31", "2021-05-31"]
+    assert f.annual_income_statements[-1].eps is None and f.shares_by_year["2021"] == pytest.approx(33e6)
+    assert any(n.startswith("History before FY2023: Eulerpool (vendor data, not filings) for FY2021-FY2022") for n in f.notes)
+    assert any("History: 5 fiscal years (the ESEF reports cover 3, from FY2023; ESEF tagging began with FY2020; "
+               "2 earlier from Eulerpool)" in n for n in f.notes)
+
+
+@pytest.mark.parametrize("history, note", [
+    (FakeHistory(fail=SourceRateLimitError("Eulerpool request limit reached (HTTP 429)")), "Eulerpool unavailable"),
+    (FakeHistory(profile=False), "Eulerpool has no listing GAW.L"),
+])
+def test_without_eulerpool_the_dossier_keeps_the_esef_years(history, note):
+    f = EuropeanFilingsSource(FakeClient(), FakeYahoo(), FakeLookup(), history=history).fetch_fundamentals("GAW.LSE")
+    assert len(f.annual_income_statements) == 3 and any(note in n for n in f.notes)

@@ -11,15 +11,18 @@ countries), so the history is about six years.
 """
 
 import logging
-from typing import List
+from dataclasses import replace
+from typing import List, Optional
 
-from clients import edgar_mapper, esef_mapper, yahoo_mapper
+from clients import edgar_mapper, esef_mapper, eulerpool_mapper, yahoo_mapper
 from clients.esef_client import EsefClient
 from clients.esef_entity_lookup import EsefEntityLookup
+from clients.eulerpool_client import EulerpoolClient
 from clients.foreign_sec_source import FULL_HISTORY_YEARS, _agreement, home_listing_fundamentals
 from clients.yfinance_client import YFinanceClient
-from core.errors import SourceRequestError, TickerNotCoveredError
+from core.errors import DataSourceError, SourceRequestError, TickerNotCoveredError
 from core.fundamentals import CompanyFundamentals
+from core.price_quote import major_currency
 
 logger = logging.getLogger(__name__)
 
@@ -31,10 +34,41 @@ class EuropeanFilingsSource:
 
     name = SOURCE_NAME
 
-    def __init__(self, client: EsefClient, yahoo: YFinanceClient, lookup: EsefEntityLookup = None):
+    def __init__(self, client: EsefClient, yahoo: YFinanceClient, lookup: EsefEntityLookup = None,
+                 history: Optional[EulerpoolClient] = None):
+        """
+        Args:
+            history: Eulerpool, for the years before the first ESEF report (optional: EULERPOOL_API_KEY)
+        """
         self.client = client
         self.yahoo = yahoo
         self.lookup = lookup or EsefEntityLookup(client)
+        self.history = history
+
+    def _with_older_years(self, yahoo, profile, annual: edgar_mapper.EdgarAnnualData,
+                          notes: List[str]) -> edgar_mapper.EdgarAnnualData:
+        """Eulerpool's years before the first ESEF report, behind the overlap gate (eulerpool_mapper); never fatal."""
+        try:
+            found = self.history.find_profile(yahoo.yahoo_symbol, profile.name or "")
+            if found is None:
+                notes.append(f"History before the filed years: Eulerpool has no listing {yahoo.yahoo_symbol} named like "
+                             f"{profile.name!r}; ESEF years only")
+                return annual
+            data = eulerpool_mapper.parse(found, self.history.fetch_statements(found["isin"]))
+        except DataSourceError as e:
+            logger.warning(f"Eulerpool history not used: {e}")
+            notes.append(f"History before the filed years: Eulerpool unavailable ({e}); ESEF years only")
+            return annual
+        quote = profile.quote_currency or annual.currency
+        older = eulerpool_mapper.older_years(annual, data, strict=(major_currency(quote) or quote) != annual.currency,
+                                             filed_source="the ESEF reports")
+        notes.extend(older.notes)
+        return replace(annual,
+                       balance_sheets=annual.balance_sheets + older.balance_sheets,
+                       income_statements=annual.income_statements + older.income_statements,
+                       shares_by_year={**older.shares_by_year, **annual.shares_by_year},
+                       dividends_paid={**older.dividends_paid, **annual.dividends_paid},
+                       operating_cash_flow={**older.operating_cash_flow, **annual.operating_cash_flow})
 
     def fetch_fundamentals(self, ticker: str) -> CompanyFundamentals:
         """
@@ -85,12 +119,16 @@ class EuropeanFilingsSource:
         if agrees is None:
             notes.append("ESEF filer matched by company name; Yahoo Finance has no overlapping year of net income to "
                          "confirm it")
+        filed_years = len(annual.income_statements)
+        first_filed = annual.income_statements[-1].period_end[:4]
+        if self.history is not None:
+            annual = self._with_older_years(yahoo, profile, annual, notes)
         years = len(annual.income_statements)
         if years < FULL_HISTORY_YEARS:
-            notes.append(f"History: the ESEF reports cover {years} fiscal years (from "
-                         f"FY{annual.income_statements[-1].period_end[:4]}; ESEF tagging began with FY2020); tests "
-                         "needing more years fail or show N/A because of this data limit, not because of the "
-                         "company's record")
+            older = f"; {years - filed_years} earlier from Eulerpool" if years > filed_years else ""
+            notes.append(f"History: {years} fiscal years (the ESEF reports cover {filed_years}, from FY{first_filed}; ESEF "
+                         f"tagging began with FY2020{older}); tests needing more years fail or show N/A because of this "
+                         "data limit, not because of the company's record")
         if splits:
             notes.append("Per-share figures and share counts adjusted to today's share basis for stock splits "
                          "(Yahoo Finance split history of this listing): "

@@ -12,6 +12,7 @@ from typing import Callable, Mapping, Optional, Tuple
 from clients.edgar_client import EdgarClient
 from clients.eodhd_client import EODHDClient
 from clients.esef_client import EsefClient
+from clients.eulerpool_client import EulerpoolClient
 from clients.european_filings_source import EuropeanFilingsSource
 from clients.foreign_sec_source import ForeignSECFundamentalsSource
 from clients.free_us_source import FreeUSFundamentalsSource
@@ -29,7 +30,8 @@ class FundamentalsProvider:
     name: str                                            # FUNDAMENTALS_PROVIDER value, e.g. "eodhd"
     required_env: Tuple[str, ...]                        # environment variables it needs (API keys, contacts)
     secret_env: Tuple[str, ...]                          # those whose values are redacted from logs
-    create: Callable[[Mapping[str, str], bool], FundamentalsSource]  # (required_env values, debug) -> adapter
+    create: Callable[[Mapping[str, str], bool], FundamentalsSource]  # (env values, debug) -> adapter
+    optional_env: Tuple[str, ...] = ()                   # environment variables it uses when set (passed in env too)
 
 
 DEFAULT_FUNDAMENTALS_PROVIDER = "eodhd"
@@ -59,23 +61,27 @@ class ClientFactory:
         The fundamentals adapter for `provider` (default "eodhd").
         
         Args:
-            env: values of the provider's required_env variables
+            env: values of the provider's required_env (and any set optional_env) variables
         """
         return ClientFactory.fundamentals_provider(provider).create(env, debug)
     
     @staticmethod
-    def create_free_source(sec_user_agent: str, debug: bool = False) -> FundamentalsSource:
+    def create_free_source(sec_user_agent: str, debug: bool = False,
+                           eulerpool_api_key: Optional[str] = None) -> FundamentalsSource:
         """
         The free resolution path: `.US` -> SEC EDGAR + Yahoo Finance; every other exchange Yahoo prices -> the
         company's SEC filings (20-F / 40-F) found from its home listing; for European exchanges (ESEF_EXCHANGES),
-        a company with no SEC filer -> its ESEF annual reports (filings.xbrl.org); neither: no dossier.
+        a company with no SEC filer -> its ESEF annual reports (filings.xbrl.org), with Eulerpool for the years
+        before them when `eulerpool_api_key` is given (behind the overlap gate); neither: no dossier.
         """
         edgar = EdgarClient(sec_user_agent, debug=debug)
         yahoo = ClientFactory.create_yfinance_client(debug=debug)
         foreign = ForeignSECFundamentalsSource(edgar, yahoo)
         us = FreeUSFundamentalsSource(edgar, yahoo, debug=debug, foreign=foreign)
         european = FallbackFundamentalsSource(
-            (foreign, EuropeanFilingsSource(EsefClient(debug=debug), yahoo)), name="SEC EDGAR, then ESEF")
+            (foreign, EuropeanFilingsSource(EsefClient(debug=debug), yahoo, history=(
+                EulerpoolClient(eulerpool_api_key, debug=debug) if eulerpool_api_key else None))),
+            name="SEC EDGAR, then ESEF")
         routes = {exchange: (us if not suffix else european if exchange in ESEF_EXCHANGES else foreign)
                   for exchange, suffix in YFinanceClient.EXCHANGE_MAPPING.items()}
         return RoutingFundamentalsSource(routes, name="free (SEC EDGAR / ESEF + Yahoo Finance)")
@@ -176,11 +182,14 @@ FUNDAMENTALS_PROVIDERS = {
         secret_env=("EODHD_API_KEY",),
         create=lambda env, debug: ClientFactory.create_eodhd_client(env["EODHD_API_KEY"], debug=debug),
     ),
-    # SEC_USER_AGENT: your name and contact email, as the SEC fair-access policy requires; not a secret
+    # SEC_USER_AGENT: your name and contact email, as the SEC fair-access policy requires; not a secret.
+    # EULERPOOL_API_KEY (optional, secret): older history for European companies (Eulerpool, behind the overlap gate)
     "free": FundamentalsProvider(
         name="free",
         required_env=("SEC_USER_AGENT",),
-        secret_env=(),
-        create=lambda env, debug: ClientFactory.create_free_source(env["SEC_USER_AGENT"], debug=debug),
+        secret_env=("EULERPOOL_API_KEY",),
+        create=lambda env, debug: ClientFactory.create_free_source(env["SEC_USER_AGENT"], debug=debug,
+                                                                   eulerpool_api_key=env.get("EULERPOOL_API_KEY")),
+        optional_env=("EULERPOOL_API_KEY",),
     ),
 }

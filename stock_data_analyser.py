@@ -73,6 +73,7 @@ def main():
         logger.error(str(e))
         sys.exit(1)
     env = {name: os.getenv(name) for name in provider.required_env}
+    optional = {name: os.getenv(name) for name in provider.optional_env if os.getenv(name)}
 
     # Configure logging based on debug flag
     configure_logging(debug=args.debug, secrets=[os.getenv(name) for name in provider.secret_env])
@@ -86,7 +87,8 @@ def main():
 
     try:
         # 1. Fetch Data
-        fundamentals_source = ClientFactory.create_fundamentals_source(env, provider.name, debug=args.debug)
+        fundamentals_source = ClientFactory.create_fundamentals_source({**env, **optional}, provider.name,
+                                                                       debug=args.debug)
         logger.info(f"[1/6] Fetching Fundamentals from {fundamentals_source.name}...")
         quote_source = ClientFactory.create_quote_source(debug=args.debug)
         financial_data = load_financial_data(ticker, fundamentals_source, quote_source,
