@@ -27,6 +27,15 @@ def has_statement_data(year_data: YearData) -> bool:
     )
 
 
+def eps_unknown(year_data: YearData) -> bool:
+    """
+    Net income reported but no EPS (0.0): the year has no share count to put it on (vendor history
+    without per-share figures, GRAHAM_METHODOLOGY §8.12), so its EPS is unknown, not zero.
+    """
+    row = HistoryRow.from_dict(year_data)
+    return not or_default(row.eps, 0.0) and or_default(row.net_income, 0.0) != 0
+
+
 def has_statement_or_current_assets(year_data: YearData) -> bool:
     """has_statement_data, or current assets reported."""
     return has_statement_data(year_data) or or_default(HistoryRow.from_dict(year_data).current_assets, 0.0) > 0

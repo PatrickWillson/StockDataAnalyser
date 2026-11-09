@@ -13,6 +13,7 @@ from hypothesis import given, settings, strategies as st
 from config.investor_thresholds import DEFENSIVE, ENTERPRISING
 from core.graham_math import GrahamCalculator
 from core.investor_tests import criteria, defensive, enterprising
+from core.financial_data_processor import FinancialDataProcessor
 from core.verdict import determine_verdict
 
 
@@ -156,7 +157,7 @@ class TestEarningsGrowth:
         history = {}
         for i in range(years):
             eps = recent_eps if i < 3 else base_eps if 9 <= i <= 11 else 2.0
-            history[f"{2023 - i}-12-31"] = _year(eps=eps)
+            history[f"{2023 - i}-12-31"] = _year(eps=eps, net_income=100.0 * eps)
         return history
 
     @settings(max_examples=200)
@@ -187,6 +188,12 @@ class TestEarningsGrowth:
     def test_non_positive_base_fails(self):
         assert _run("_test_earnings_growth", self._history(4.0, 0.0), 12) == "FAIL"
         assert _run("_test_earnings_growth", self._history(4.0, -1.0), 12) == "FAIL"
+
+    def test_a_year_with_net_income_but_no_eps_is_unknown_not_a_fail(self):
+        # Eulerpool years have no share count (GRAHAM_METHODOLOGY §8.12): EPS 0.0 beside a profit is unknown
+        history = self._history(4.0, 3.0)
+        history["2013-12-31"] = _year(eps=0.0, net_income=300.0)
+        assert _run("_test_earnings_growth", history, 12) == "N/A (EPS unknown)"
 
 
 def _three_years(eps_newest_first):
@@ -450,3 +457,22 @@ class TestPublicUtility:
         tests = {**ALL_PASS_DEFENSIVE, 'current_ratio': defensive.NOT_APPLICABLE_UTILITY}
         result = determine_verdict({'mos_percentage': 10.0, 'intrinsic_value_used': 25.0}, "N/A", 20.0, tests, None)
         assert result['verdict'] == "DEFENSIVE BUY"
+
+
+class TestUnknownEps:
+    """Net income without EPS (vendor years with no share count, GRAHAM_METHODOLOGY §8.12) is unknown, never zero."""
+
+    def test_enterprising_growth_is_na_not_a_pass_when_the_earlier_eps_is_unknown(self):
+        history = {f"{2023 - i}-12-31": _year(eps=2.0) for i in range(6)}
+        history["2018-12-31"] = _year(eps=0.0, net_income=100.0)
+        assert enterprising.earnings_growth(history, _years(history)) == "N/A (EPS unknown)"
+
+    def test_enterprising_growth_still_compares_known_eps(self):
+        history = {f"{2023 - i}-12-31": _year(eps=3.0 if i == 0 else 2.0) for i in range(6)}
+        assert enterprising.earnings_growth(history, _years(history)) == "PASS"
+
+    def test_three_year_eps_treats_an_unknown_eps_as_missing(self):
+        history = _three_years([3.0, 2.0, 1.0])
+        history["2022-12-31"] = _year(eps=0.0, net_income=100.0)
+        data = FinancialDataProcessor.extract_3year_eps_data(history)
+        assert not data["valid"] and "2022-12-31" in data["warning"]

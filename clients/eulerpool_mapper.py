@@ -10,8 +10,8 @@ Eulerpool is vendor data, checked here against the company's own filings whereve
   EULERPOOL_MIN_OVERLAP_YEARS), never rescaled to fit (a ratio inferred from the overlap is an estimate, not the
   reported figure);
 - net income and the year-end share count must both pass, or no older year is added (a year's balance sheet
-  needs total assets, equity, current assets and current liabilities to have passed): per-share figures for those
-  years are net income / that share count, never Eulerpool's EPS (on a non-standard count).
+  needs total assets, equity, current assets and current liabilities to have passed). The share count is a check
+  only: Eulerpool years carry no per-share figures (NO_SHARE_COUNT; GRAHAM_METHODOLOGY §8.12).
 """
 
 import datetime as dt
@@ -43,6 +43,13 @@ REQUIRED = ("net_income", "shares")
 SPIKE_MAX_YEARS, RUN_TOLERANCE, SPIKE_RATIO, SIDES_AGREE = 3, 0.10, 1.5, 0.20
 # A balance sheet for a year needs these (a missing one would show as zero: working capital of 0.00)
 BALANCE_REQUIRED = ("total_assets", "total_equity", "current_assets", "current_liabilities")
+# Eulerpool years carry no per-share figures (user decision 2026-11-09, option A; GRAHAM_METHODOLOGY §8.12): its
+# share counts over long runs cannot be checked (spikes, unstated restatements), and §2.4 puts each year's figures on
+# that year's own count. 0.0 in shares_by_year stops the processor falling back to today's count; EPS stays 0 (N/A).
+NO_SHARE_COUNT = 0.0
+NO_PER_SHARE = ("no per-share figures for those years (EPS, book value and dividends per share N/A): Eulerpool's "
+                "share counts over long runs cannot be checked against the filings, and each year's per-share figures "
+                "need that year's own count (GRAHAM_METHODOLOGY §8.12)")
 SOURCE = "Eulerpool (vendor data, not filings)"
 
 
@@ -246,7 +253,7 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
         if values.get("net_income") is None or not values.get("shares"):
             continue
         income.append(IncomeStatementRow(end, values.get("revenue"), values["net_income"], None))
-        shares[fiscal_year(end)] = values["shares"]
+        shares[fiscal_year(end)] = NO_SHARE_COUNT
         if "dividends_paid" in values:
             dividends[end] = values["dividends_paid"]
         if "operating_cash_flow" in values:
@@ -259,15 +266,14 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
                 total_liabilities=values.get("total_liabilities"), long_term_debt=values.get("long_term_debt"),
                 short_term_debt=values.get("short_term_debt"), total_debt_reported=None,
                 total_assets=values["total_assets"], inventory=values.get("inventory"), noncontrolling_interest=None,
-                shares_outstanding=values["shares"], long_term_debt_unknown="long_term_debt" not in accepted))
+                shares_outstanding=None, long_term_debt_unknown="long_term_debt" not in accepted))
     if not income:
         return not_used(f"it has no complete year before FY{fiscal_year(first_filed)}")
     years = sorted(fiscal_year(row.period_end) for row in income)
     notes = [f"History before FY{fiscal_year(first_filed)}: {SOURCE} for FY{years[0]}-FY{years[-1]} ({len(years)} "
              f"years), unverified against the company's reports. Used field by field, only where it agreed {checked} "
-             f"in every overlapping year: {', '.join(LABELS[n] for n in accepted)}. Never rescaled to fit; EPS for "
-             "those years is net income / Eulerpool's year-end share count (its own EPS is not used); no intangibles "
-             "(tangible book overstated); whole millions"]
+             f"in every overlapping year: {', '.join(LABELS[n] for n in accepted)}. Never rescaled to fit; "
+             f"{NO_PER_SHARE}; no intangibles (tangible book overstated); whole millions"]
     dropped = sorted(fiscal_year(end) for end in spiked if end in older)
     if dropped:
         notes.append(f"{SOURCE}: FY{', FY'.join(dropped)} not used: the year-end share count jumps over {SPIKE_RATIO:g}x "
@@ -283,8 +289,8 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
 def vendor_annual(data: EulerpoolData) -> EdgarAnnualData:
     """
     Every Eulerpool year as statement rows, unchecked against filings (companies with no filings on any route:
-    Germany, Ireland, AIM; the source checks them against Yahoo). EPS None (net income / the year's count
-    downstream); no intangibles. Long-term debt is non-current liabilities (total - current), an upper bound
+    Germany, Ireland, AIM; the source checks them against Yahoo). No per-share figures (NO_SHARE_COUNT, EPS None:
+    GRAHAM_METHODOLOGY §8.12); no intangibles. Long-term debt is non-current liabilities (total - current), an upper bound
     (GRAHAM_METHODOLOGY §8.11): Eulerpool's own figure includes lease liabilities for some companies and not for others
     (Hunting, Clas Ohlson with; Tesco, Renishaw, Manitou without) and is 0 for some with debt (Games Workshop), so it
     cannot show the debt Graham counts (§8.10); without both totals it is unknown, not zero (§8.9).
@@ -296,8 +302,7 @@ def vendor_annual(data: EulerpoolData) -> EdgarAnnualData:
         if values.get("net_income") is None or end in spiked:
             continue
         income.append(IncomeStatementRow(end, values.get("revenue"), values["net_income"], None))
-        if values.get("shares"):
-            shares[fiscal_year(end)] = values["shares"]
+        shares[fiscal_year(end)] = NO_SHARE_COUNT
         if "dividends_paid" in values:
             dividends[end] = values["dividends_paid"]
         if "operating_cash_flow" in values:
@@ -311,7 +316,7 @@ def vendor_annual(data: EulerpoolData) -> EdgarAnnualData:
                 current_liabilities=current, total_liabilities=total, long_term_debt=noncurrent,
                 short_term_debt=values.get("short_term_debt"), total_debt_reported=None,
                 total_assets=values["total_assets"], inventory=values.get("inventory"), noncontrolling_interest=None,
-                shares_outstanding=values.get("shares"), long_term_debt_unknown=noncurrent is None))
+                shares_outstanding=None, long_term_debt_unknown=noncurrent is None))
     notes = ((f"{SOURCE}: FY{', FY'.join(sorted(fiscal_year(e) for e in spiked))} not used: the year-end share count jumps "
               f"over {SPIKE_RATIO:g}x from the years on both sides and back (a vendor error, not a share change)",)
              if spiked else ())

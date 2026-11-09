@@ -43,7 +43,8 @@ def test_older_years_take_the_fields_that_agreed_in_every_overlapping_year():
     older = older_years(ANNUAL, _data({**OVERLAP, **OLDER}), strict=False, filed_source="the ESEF reports")
     assert [r.period_end for r in older.income_statements] == ["2022-12-31", "2021-12-31"]
     assert older.income_statements[1] == IncomeStatementRow("2021-12-31", 900 * M, -5 * M, None)   # EPS never taken
-    assert older.shares_by_year == {"2022": 52 * M, "2021": 53 * M}
+    assert older.shares_by_year == {"2022": 0.0, "2021": 0.0}   # no per-share figures (§8.12)
+    assert all(row.shares_outstanding is None for row in older.balance_sheets)
     row = older.balance_sheets[0]
     assert (row.total_assets, row.total_equity, row.intangible_assets) == (950 * M, 400 * M, None)
     # Eulerpool's long-term debt (140M) disagreed with the filed 100M: unknown in the older years, not zero

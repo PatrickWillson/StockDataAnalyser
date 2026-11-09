@@ -265,9 +265,7 @@
   - EPV per share: 47.89 USD
   - **Intrinsic Value Used**: 47.89 USD (EPV only)
 
-  **Interpretation**: EPV is lower than Normalized Graham Number, indicating
-  that long-term earnings power is weaker than asset-based valuation suggests.
-  This is a red flag - the company may be destroying value over the full cycle.
+  **Interpretation**: Only the EPV is available.
 
   **Graham's Principle**: *"The margin of safety is always dependent on the price paid."*
   Graham counted an issue a bargain when its indicated value was at least 50% above the price (price at most

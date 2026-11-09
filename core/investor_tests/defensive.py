@@ -8,7 +8,7 @@ from config.graham_constants import GRAHAM_MULTIPLIER
 from config.investor_thresholds import DEFENSIVE, REGULATED_UTILITY_INDUSTRIES
 from core.formulas import tangible_equity
 from core.financial_data_processor import FinancialDataProcessor
-from core.history import fiscal_year, has_statement_data, row_at
+from core.history import eps_unknown, fiscal_year, has_statement_data, row_at
 from core.models import or_default
 from core.investor_tests.criteria import current_ratio_test, earnings_stability, latest_financial_year
 
@@ -55,7 +55,8 @@ def earnings_growth(history: dict, years: list, num_years: int) -> str:
     years using three-year averages at the beginning and end" — mean EPS of the latest three
     reported years ≥ 4/3 × mean EPS of the reported years 9-11 back (window: user decision
     2026-11-01, GRAHAM_METHODOLOGY §4.5). Fewer than 12 reported years: "N/A (Too Young)", which
-    the verdict does not count as a pass. A non-positive base average fails.
+    the verdict does not count as a pass. A non-positive base average fails. A year in either average
+    with net income but no EPS (no share count, §8.12): "N/A (EPS unknown)", not a pass (§7).
     """
     reported = [year for year in years if has_statement_data(history[year])]
     span = DEFENSIVE.EARNINGS_GROWTH_AVERAGE_YEARS
@@ -66,6 +67,8 @@ def earnings_growth(history: dict, years: list, num_years: int) -> str:
     def average_eps(selected):
         return sum(or_default(row_at(history, year).eps, 0.0) for year in selected) / len(selected)
 
+    if any(eps_unknown(history[year]) for year in reported[:span] + reported[base_start:base_start + span]):
+        return 'N/A (EPS unknown)'
     recent = average_eps(reported[:span])
     base = average_eps(reported[base_start:base_start + span])
     if base <= 0:

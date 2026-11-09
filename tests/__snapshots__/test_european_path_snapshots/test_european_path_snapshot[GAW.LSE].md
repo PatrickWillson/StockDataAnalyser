@@ -16,7 +16,7 @@
   - Price is not below conservative intrinsic value (margin of safety -424.6%)
 - Graham Number (Single-Year EPS): 33.68 GBP
 - Graham Number (3-Year Avg EPS): 30.50 GBP
-- Intrinsic Value (EPV per share): 31.02 GBP (10-year average EPS)
+- Intrinsic Value (EPV per share): N/A (no per-share earnings for FY2021, FY2020, FY2019, FY2018, FY2017, FY2016)
 - Net-Net Value: 3.80 GBP
 - Margin of Safety: -424.6% (Capped by Normalized Graham Number)
   - Conservative Intrinsic Value: 30.50 GBP
@@ -57,7 +57,7 @@
 - Statements: ESEF annual reports of GAMES WORKSHOP GROUP PLC (LEI 213800RP9QJQYGWHNT41) from filings.xbrl.org (XBRL International's unofficial repository of the reports filed with national regulators), latest added 2025-09-24; company-wide IFRS figures only (a company's own XBRL tags are not read); price, dividends and profile from this listing
 - ESEF: FY2025 BasicEarningsLossPerShare tagged for a period longer than the year (a dating error); read as the year's figure
 - ESEF: FY2025 DilutedEarningsLossPerShare tagged for a period longer than the year (a dating error); read as the year's figure
-- History before FY2022: Eulerpool (vendor data, not filings) for FY2015-FY2021 (7 years), unverified against the company's reports. Used field by field, only where it agreed against the ESEF reports in FY2022-FY2025 (within 1.0%, or 1.1M for whole millions) in every overlapping year: revenue, net income, total assets, equity, year-end shares. Never rescaled to fit; EPS for those years is net income / Eulerpool's year-end share count (its own EPS is not used); no intangibles (tangible book overstated); whole millions
+- History before FY2022: Eulerpool (vendor data, not filings) for FY2015-FY2021 (7 years), unverified against the company's reports. Used field by field, only where it agreed against the ESEF reports in FY2022-FY2025 (within 1.0%, or 1.1M for whole millions) in every overlapping year: revenue, net income, total assets, equity, year-end shares. Never rescaled to fit; no per-share figures for those years (EPS, book value and dividends per share N/A): Eulerpool's share counts over long runs cannot be checked against the filings, and each year's per-share figures need that year's own count (GRAHAM_METHODOLOGY §8.12); no intangibles (tangible book overstated); whole millions
 - Eulerpool (vendor data, not filings): not used for the earlier years (disagreed with the ESEF reports in an overlapping year, or too few years to check): current assets, current liabilities, total liabilities, inventory, goodwill, long-term debt, short-term debt, operating cash flow, dividends paid; long-term debt is then unknown in those years, not zero
 - No quarterly figures: only annual ESEF reports are read, so TTM is N/A
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
@@ -71,13 +71,13 @@
 - Price Source: yfinance (primary source)
 - Currency Conversions: London Fix applied (GBp → GBP)
 - Year 2026-06-01: Incomplete data (missing: revenue, net_income, eps, total_equity)
-- Year 2021-05-30: Incomplete data (missing: total_equity)
-- Year 2020-05-31: Incomplete data (missing: total_equity)
-- Year 2019-06-02: Incomplete data (missing: total_equity)
-- Year 2018-06-03: Incomplete data (missing: total_equity)
-- Year 2017-05-28: Incomplete data (missing: total_equity)
-- Year 2016-05-29: Incomplete data (missing: total_equity)
-- Year 2015-05-31: Incomplete data (missing: total_equity)
+- Year 2021-05-30: Incomplete data (missing: eps, total_equity)
+- Year 2020-05-31: Incomplete data (missing: eps, total_equity)
+- Year 2019-06-02: Incomplete data (missing: eps, total_equity)
+- Year 2018-06-03: Incomplete data (missing: eps, total_equity)
+- Year 2017-05-28: Incomplete data (missing: eps, total_equity)
+- Year 2016-05-29: Incomplete data (missing: eps, total_equity)
+- Year 2015-05-31: Incomplete data (missing: eps, total_equity)
 - Year 2014-06-01: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Year 2013-06-01: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Year 2012-06-01: Incomplete data (missing: revenue, net_income, eps, total_equity)
@@ -167,7 +167,7 @@
    - Criterion: Long-term debt ≤ 110% of net current assets (current assets − current liabilities)
 4. **Dividend Record**: PASS
    - Criterion: Currently pays a dividend (last year > 0)
-5. **Earnings Growth**: PASS
+5. **Earnings Growth**: N/A (EPS unknown)
    - Criterion: Latest EPS above the EPS 5 reported years earlier
 6. **Price Test**: FAIL
    - Criterion: P/E < 10 AND Price < 120% of Net Tangible Assets
@@ -184,13 +184,13 @@
 | 2024 | 525.70M | 151.10M | 4.59 | 1.45 | 7.63 | 4.05 | 31.6% | 47.20M | 32.93M | 133.64 | 29.1 | 17.5 |
 | 2023 | 470.80M | 134.70M | 4.10 | 1.38 | 7.15 | 3.83 | 33.7% | 49.90M | 32.88M | 120.45 | 29.4 | 16.8 |
 | 2022 | 414.80M | 128.40M | 3.91 | 1.32 | 7.15 | 3.33 | 33.6% | 48.90M | 32.81M | 107.27 | 27.4 | 15.0 |
-| 2021 | 350.00M | 98.00M | 3.00 | 1.25 | N/A | N/A | 41.8% | N/A | 32.70M | 94.09 | 31.4 | N/A |
-| 2020 | 320.00M | 86.00M | 2.63 | 1.19 | N/A | N/A | 45.4% | N/A | 32.70M | 80.91 | 30.8 | N/A |
-| 2019 | 290.00M | 74.00M | 2.26 | 1.14 | N/A | N/A | 50.2% | N/A | 32.70M | 67.73 | 29.9 | N/A |
-| 2018 | 260.00M | 62.00M | 1.90 | 1.08 | N/A | N/A | 57.1% | N/A | 32.70M | 54.55 | 28.8 | N/A |
-| 2017 | 230.00M | 50.00M | 1.53 | 1.03 | N/A | N/A | 67.5% | N/A | 32.70M | 41.36 | 27.1 | N/A |
-| 2016 | 200.00M | 38.00M | 1.16 | 0.98 | N/A | N/A | 84.5% | N/A | 32.70M | 28.18 | 24.3 | N/A |
-| 2015 | 170.00M | 26.00M | 0.80 | 0.94 | N/A | N/A | 117.7% | N/A | 32.70M | 15.00 | 18.9 | N/A |
+| 2021 | 350.00M | 98.00M | N/A | 1.25 | N/A | N/A | N/A | N/A | N/A | 94.09 | N/A | N/A |
+| 2020 | 320.00M | 86.00M | N/A | 1.19 | N/A | N/A | N/A | N/A | N/A | 80.91 | N/A | N/A |
+| 2019 | 290.00M | 74.00M | N/A | 1.14 | N/A | N/A | N/A | N/A | N/A | 67.73 | N/A | N/A |
+| 2018 | 260.00M | 62.00M | N/A | 1.08 | N/A | N/A | N/A | N/A | N/A | 54.55 | N/A | N/A |
+| 2017 | 230.00M | 50.00M | N/A | 1.03 | N/A | N/A | N/A | N/A | N/A | 41.36 | N/A | N/A |
+| 2016 | 200.00M | 38.00M | N/A | 0.98 | N/A | N/A | N/A | N/A | N/A | 28.18 | N/A | N/A |
+| 2015 | 170.00M | 26.00M | N/A | 0.94 | N/A | N/A | N/A | N/A | N/A | 15.00 | N/A | N/A |
 | 2014 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.89 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2013 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.85 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2012 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.81 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
@@ -278,8 +278,7 @@
   - Net Incomes: 196,100,000 GBP, 151,100,000 GBP, 134,700,000 GBP, 128,400,000 GBP, 98,000,000 GBP, 86,000,000 GBP, 74,000,000 GBP, 62,000,000 GBP, 50,000,000 GBP, 38,000,000 GBP
   - Normalized Earnings: 101,830,000 GBP (average including losses)
   - EPV: 1,018,300,000 GBP (101,830,000 GBP / 10%)
-  - EPS: 5.95, 4.59, 4.10, 3.91, 3.00, 2.63, 2.26, 1.90, 1.53, 1.16 GBP
-  - EPV Per Share: 31.02 GBP (average EPS 3.10 GBP / 10%)
+  - EPV Per Share: N/A (no per-share earnings for FY2021, FY2020, FY2019, FY2018, FY2017, FY2016)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
@@ -308,12 +307,10 @@
 
   **For This Stock**:
   - Normalized Graham Number: 30.50 GBP
-  - EPV per share: 31.02 GBP
-  - **Intrinsic Value Used**: 30.50 GBP (Capped by Normalized Graham Number)
+  - EPV per share: N/A
+  - **Intrinsic Value Used**: 30.50 GBP (Normalized Graham Number only)
 
-  **Interpretation**: Normalized Graham Number is lower than EPV, indicating
-  the stock trades at a premium to its asset value despite strong earnings power.
-  Graham would prefer to buy at a discount to both metrics.
+  **Interpretation**: Only the Normalized Graham Number is available.
 
   **Graham's Principle**: *"The margin of safety is always dependent on the price paid."*
   Graham counted an issue a bargain when its indicated value was at least 50% above the price (price at most

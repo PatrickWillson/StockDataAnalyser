@@ -174,7 +174,7 @@ def test_eulerpool_adds_the_years_before_the_first_report_when_they_agree():
     f = EuropeanFilingsSource(FakeClient(), FakeYahoo(), FakeLookup(), history=FakeHistory()).fetch_fundamentals("GAW.LSE")
     assert [r.period_end for r in f.annual_income_statements] == ["2025-05-31", "2024-05-31", "2023-05-31",
                                                                  "2022-05-31", "2021-05-31"]
-    assert f.annual_income_statements[-1].eps is None and f.shares_by_year["2021"] == pytest.approx(33e6)
+    assert f.annual_income_statements[-1].eps is None and f.shares_by_year["2021"] == 0.0   # no per-share figures (§8.12)
     assert any(n.startswith("History before FY2023: Eulerpool (vendor data, not filings) for FY2021-FY2022") for n in f.notes)
     assert any("History: 5 fiscal years (the ESEF reports cover 3, from FY2023; ESEF tagging began with FY2020; "
                "2 earlier from Eulerpool)" in n for n in f.notes)

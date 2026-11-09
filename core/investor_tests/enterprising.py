@@ -7,7 +7,7 @@ Moved verbatim from GrahamCalculator (M4.4); the Graham alignment of each criter
 from typing import Optional
 
 from config.investor_thresholds import ENTERPRISING
-from core.history import has_statement_data, row_at
+from core.history import eps_unknown, has_statement_data, row_at
 from core.models import or_default
 from core.investor_tests.criteria import current_ratio_test, earnings_stability, latest_financial_year
 
@@ -61,11 +61,14 @@ def earnings_growth(history: dict, years: list) -> str:
     """
     Criterion 5.5: "last year's earnings more than those of 1966" (five years earlier in Graham's
     1971 data) — the latest reported EPS above the EPS of the reported year EARNINGS_GROWTH_YEARS
-    earlier. Fewer reported years: the criterion is not met.
+    earlier. Fewer reported years: the criterion is not met. Either year with net income but no EPS
+    (no share count, GRAHAM_METHODOLOGY §8.12): "N/A (EPS unknown)", not a pass (§7).
     """
     reported = [year for year in years if has_statement_data(history[year])]
     if len(reported) <= ENTERPRISING.EARNINGS_GROWTH_YEARS:
         return 'FAIL'
+    if eps_unknown(history[reported[0]]) or eps_unknown(history[reported[ENTERPRISING.EARNINGS_GROWTH_YEARS]]):
+        return 'N/A (EPS unknown)'
     latest_eps = or_default(row_at(history, reported[0]).eps, 0.0)
     earlier_eps = or_default(row_at(history, reported[ENTERPRISING.EARNINGS_GROWTH_YEARS]).eps, 0.0)
     return 'PASS' if latest_eps > earlier_eps else 'FAIL'

@@ -363,8 +363,9 @@ class MethodologySection(DossierSection):
             
             # Add interpretation based on limiting factor (a comparison only when both exist)
             mos_note = or_default(mos_details.note, None)
-            if mos_note and not both_anchors:
-                lines.append(f"  **Interpretation**: Only the {limiting_factor} is available ({mos_note}).")
+            if not both_anchors:
+                reason = f" ({mos_note})" if mos_note else ""
+                lines.append(f"  **Interpretation**: Only the {limiting_factor} is available{reason}.")
             elif limiting_factor == "EPV":
                 lines.append("  **Interpretation**: EPV is lower than Normalized Graham Number, indicating")
                 lines.append("  that long-term earnings power is weaker than asset-based valuation suggests.")

@@ -13,13 +13,13 @@
 *Current metrics (P/E, Price) reflect most recent available data*
 
 - Verdict: **OVERVALUED**
-  - Price is not below conservative intrinsic value (margin of safety -76.5%)
+  - Price is not below conservative intrinsic value (margin of safety -9.2%)
 - Graham Number (Single-Year EPS): 41.89 EUR
 - Graham Number (3-Year Avg EPS): 41.19 EUR
-- Intrinsic Value (EPV per share): 25.50 EUR (10-year average EPS)
+- Intrinsic Value (EPV per share): N/A (no per-share earnings for FY2021, FY2020, FY2019, FY2018, FY2017, FY2016)
 - Net-Net Value: 6.00 EUR
-- Margin of Safety: -76.5% (Capped by EPV)
-  - Conservative Intrinsic Value: 25.50 EUR
+- Margin of Safety: -9.2% (Capped by Normalized Graham Number)
+  - Conservative Intrinsic Value: 41.19 EUR
 - Current Price: 45.00 EUR
 - Trailing Dividend: 0.86 EUR (Yield: 1.90%) - Declared (Dividend API) [2025]
 - P/E Ratio (Current Year): 15.00
@@ -55,7 +55,7 @@
 
 ### Data Quality & Limitations:
 - Statements: Yahoo Finance annual statements for FY2022-FY2025 (a statistical service, not the company's filings: no SEC or ESEF XBRL on the free routes); price, dividends and profile from this listing
-- History before FY2022: Eulerpool (vendor data, not filings) for FY2014-FY2021 (8 years), checked only against Yahoo Finance. Used field by field, only where it agreed against Yahoo Finance's statements in FY2022-FY2025 (within 1.0%, or 1.1M for whole millions) in every overlapping year: revenue, net income, total assets, equity, current assets, current liabilities, total liabilities, inventory, year-end shares, operating cash flow, dividends paid. Never rescaled to fit; EPS for those years is net income / Eulerpool's year-end share count (its own EPS is not used); no intangibles (tangible book overstated); whole millions
+- History before FY2022: Eulerpool (vendor data, not filings) for FY2014-FY2021 (8 years), checked only against Yahoo Finance. Used field by field, only where it agreed against Yahoo Finance's statements in FY2022-FY2025 (within 1.0%, or 1.1M for whole millions) in every overlapping year: revenue, net income, total assets, equity, current assets, current liabilities, total liabilities, inventory, year-end shares, operating cash flow, dividends paid. Never rescaled to fit; no per-share figures for those years (EPS, book value and dividends per share N/A): Eulerpool's share counts over long runs cannot be checked against the filings, and each year's per-share figures need that year's own count (GRAHAM_METHODOLOGY §8.12); no intangibles (tangible book overstated); whole millions
 - Eulerpool (vendor data, not filings): not used for the earlier years (disagreed with Yahoo Finance's statements in an overlapping year, or too few years to check): goodwill, long-term debt, short-term debt; long-term debt is then unknown in those years, not zero
 - No quarterly figures: TTM is N/A
 - Dividends per year bucketed by ex-dividend date (Yahoo Finance has no payment dates)
@@ -67,6 +67,7 @@
 - Year 2010-12-31: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Year 2009-12-31: Incomplete data (missing: revenue, net_income, eps, total_equity)
 - Year 2008-12-31: Incomplete data (missing: revenue, net_income, eps, total_equity)
+- FY2014-FY2021: no EPS or other per-share figures in 8 years (net income without a share count for the year; see the data notes)
 - Potentially Stale Data: Most recent annual report is from 2025-12-31 (10 months old)
 - Historical prices unavailable for 7 fiscal year ends (no trading data within 7-day window). Historical P/E and P/B will show N/A for those years.
 - TTM Analysis: Periodic data not available from API
@@ -101,9 +102,9 @@
 - **Dividend History: 10 consecutive years** - Uninterrupted record (excellent)
 
 ### Valuation Risk (Margin of Safety):
-- **Margin of Safety: -76.5%** - Trading above conservative intrinsic value
+- **Margin of Safety: -9.2%** - Trading above conservative intrinsic value
   - Assessment: **High valuation risk** - no margin of safety
-  - Conservative Intrinsic Value: 25.50 EUR
+  - Conservative Intrinsic Value: 41.19 EUR
   - Current Price: 45.00 EUR
 
 ### Data Quality Risk:
@@ -122,7 +123,7 @@
    - Criterion: Long-term debt ≤ net current assets (current assets − current liabilities)
 4. **Dividend Record**: FAIL
    - Criterion: Uninterrupted dividend payments for at least 20 years
-5. **Earnings Growth**: PASS
+5. **Earnings Growth**: N/A (EPS unknown)
    - Criterion: Average EPS of the latest 3 reported years at least one-third (33.3%) above the average of the reported years 9-11 back
 6. **P/E Ratio**: FAIL
    - Criterion: Price ≤ 15 × average EPS of the last 3 reported years
@@ -146,7 +147,7 @@
    - Criterion: Long-term debt ≤ 110% of net current assets (current assets − current liabilities)
 4. **Dividend Record**: PASS
    - Criterion: Currently pays a dividend (last year > 0)
-5. **Earnings Growth**: PASS
+5. **Earnings Growth**: N/A (EPS unknown)
    - Criterion: Latest EPS above the EPS 5 reported years earlier
 6. **Price Test**: FAIL
    - Criterion: P/E < 10 AND Price < 120% of Net Tangible Assets
@@ -163,14 +164,14 @@
 | 2024 | 880.00M | 58.00M | 2.90 | 0.82 | 25.25 | 19.50 | 28.1% | 150.00M | 20.00M | 40.83 | 14.1 | 1.6 |
 | 2023 | 860.00M | 56.00M | 2.80 | 0.78 | 24.50 | 19.50 | 27.8% | 150.00M | 20.00M | 38.75 | 13.8 | 1.6 |
 | 2022 | 840.00M | 54.00M | 2.70 | 0.74 | 23.75 | 19.50 | 27.4% | 150.00M | 20.00M | 36.67 | 13.6 | 1.5 |
-| 2021 | 820.00M | 52.00M | 2.60 | 0.71 | 23.00 | 19.50 | 27.1% | N/A | 20.00M | 34.58 | 13.3 | 1.5 |
-| 2020 | 800.00M | 50.00M | 2.50 | 0.67 | 22.25 | 19.50 | 26.9% | N/A | 20.00M | 32.50 | 13.0 | 1.5 |
-| 2019 | 780.00M | 48.00M | 2.40 | 0.64 | 21.50 | 19.50 | 26.7% | N/A | 20.00M | 30.42 | 12.7 | 1.4 |
-| 2018 | 760.00M | 46.00M | 2.30 | 0.61 | 20.75 | 19.50 | 26.5% | N/A | 20.00M | 28.33 | 12.3 | 1.4 |
-| 2017 | 740.00M | 44.00M | 2.20 | 0.58 | 20.00 | 19.50 | 26.4% | N/A | 20.00M | 26.25 | 11.9 | 1.3 |
-| 2016 | 720.00M | 42.00M | 2.10 | 0.55 | 19.25 | 19.50 | 26.3% | N/A | 20.00M | 24.17 | 11.5 | 1.3 |
-| 2015 | 700.00M | 40.00M | 2.00 | 0.53 | 18.50 | 19.50 | 26.3% | N/A | 20.00M | 22.08 | 11.0 | 1.2 |
-| 2014 | 680.00M | 38.00M | 1.90 | 0.50 | 17.75 | 19.50 | 26.4% | N/A | 20.00M | 20.00 | 10.5 | 1.1 |
+| 2021 | 820.00M | 52.00M | N/A | 0.71 | N/A | N/A | N/A | N/A | N/A | 34.58 | N/A | N/A |
+| 2020 | 800.00M | 50.00M | N/A | 0.67 | N/A | N/A | N/A | N/A | N/A | 32.50 | N/A | N/A |
+| 2019 | 780.00M | 48.00M | N/A | 0.64 | N/A | N/A | N/A | N/A | N/A | 30.42 | N/A | N/A |
+| 2018 | 760.00M | 46.00M | N/A | 0.61 | N/A | N/A | N/A | N/A | N/A | 28.33 | N/A | N/A |
+| 2017 | 740.00M | 44.00M | N/A | 0.58 | N/A | N/A | N/A | N/A | N/A | 26.25 | N/A | N/A |
+| 2016 | 720.00M | 42.00M | N/A | 0.55 | N/A | N/A | N/A | N/A | N/A | 24.17 | N/A | N/A |
+| 2015 | 700.00M | 40.00M | N/A | 0.53 | N/A | N/A | N/A | N/A | N/A | 22.08 | N/A | N/A |
+| 2014 | 680.00M | 38.00M | N/A | 0.50 | N/A | N/A | N/A | N/A | N/A | 20.00 | N/A | N/A |
 | 2013 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.48 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2012 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.45 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
 | 2011 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | 0.43 | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] | [Data Unavailable] |
@@ -257,8 +258,7 @@
   - Net Incomes: 60,000,000 EUR, 58,000,000 EUR, 56,000,000 EUR, 54,000,000 EUR, 52,000,000 EUR, 50,000,000 EUR, 48,000,000 EUR, 46,000,000 EUR, 44,000,000 EUR, 42,000,000 EUR
   - Normalized Earnings: 51,000,000 EUR (average including losses)
   - EPV: 510,000,000 EUR (51,000,000 EUR / 10%)
-  - EPS: 3.00, 2.90, 2.80, 2.70, 2.60, 2.50, 2.40, 2.30, 2.20, 2.10 EUR
-  - EPV Per Share: 25.50 EUR (average EPS 2.55 EUR / 10%)
+  - EPV Per Share: N/A (no per-share earnings for FY2021, FY2020, FY2019, FY2018, FY2017, FY2016)
 
   **Note**: All 10 years were profitable, demonstrating consistent earnings power.
 
@@ -268,7 +268,7 @@
   - Graham bought at no more than two-thirds of it, as a diversified group
 
 - **Margin of Safety - Conservative Dual-Anchor Approach**:
-  - **Value**: -76.5%
+  - **Value**: -9.2%
   - **Formula**: ((Intrinsic Value - Current Price) / Intrinsic Value) × 100
 
   **Conservative Dual-Anchor Methodology**:
@@ -287,12 +287,10 @@
 
   **For This Stock**:
   - Normalized Graham Number: 41.19 EUR
-  - EPV per share: 25.50 EUR
-  - **Intrinsic Value Used**: 25.50 EUR (Capped by EPV)
+  - EPV per share: N/A
+  - **Intrinsic Value Used**: 41.19 EUR (Normalized Graham Number only)
 
-  **Interpretation**: EPV is lower than Normalized Graham Number, indicating
-  that long-term earnings power is weaker than asset-based valuation suggests.
-  This is a red flag - the company may be destroying value over the full cycle.
+  **Interpretation**: Only the Normalized Graham Number is available.
 
   **Graham's Principle**: *"The margin of safety is always dependent on the price paid."*
   Graham counted an issue a bargain when its indicated value was at least 50% above the price (price at most

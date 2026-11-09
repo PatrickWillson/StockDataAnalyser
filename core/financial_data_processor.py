@@ -10,7 +10,7 @@ import logging
 from typing import Dict, Any, List, Optional, Sequence
 from core.currency_converter import CurrencyConverter
 from core.fundamentals import CompanyFundamentals, DividendPayment, number_or_zero
-from core.history import fiscal_year, fiscal_year_of_date, has_statement_data, is_dividend_only_year
+from core.history import eps_unknown, fiscal_year, fiscal_year_of_date, has_statement_data, is_dividend_only_year
 from core.models import HistoryRow, or_default
 from core.price_quote import PriceQuote, same_currency
 from config.valuation_config import NORMALIZED_EPS_YEARS
@@ -508,11 +508,17 @@ class FinancialDataProcessor:
         required_fields = ['revenue', 'net_income', 'eps', 'total_equity']
         sorted_years = sorted(history.keys(), reverse=True)
         
+        no_eps = []
         for year in sorted_years:
             year_data = history[year]
             missing_fields = [field for field in required_fields if year_data.get(field, 0.0) == 0.0]
-            if missing_fields:
+            if missing_fields == ['eps'] and eps_unknown(year_data):
+                no_eps.append(fiscal_year(year))   # no share count for the year (vendor history, §8.12): one line
+            elif missing_fields:
                 warnings.append(f"Year {year}: Incomplete data (missing: {', '.join(missing_fields)})")
+        if no_eps:
+            warnings.append(f"FY{min(no_eps)}-FY{max(no_eps)}: no EPS or other per-share figures in {len(no_eps)} years "
+                            "(net income without a share count for the year; see the data notes)")
         
         # Check for data gaps: fiscal years with no annual report inside the reported range
         # (dividend-only placeholder years don't count as reports, so they can't hide a gap)
@@ -695,7 +701,7 @@ class FinancialDataProcessor:
             eps = or_default(HistoryRow.from_dict(history[year]).eps, None)
             
             # Check for null, "NA" strings, or non-numeric values
-            if eps is None or eps == "" or eps == "NA" or eps == "N/A":
+            if eps is None or eps == "" or eps == "NA" or eps == "N/A" or eps_unknown(history[year]):
                 missing_years.append(year)
                 eps_values.append(None)
             else:

@@ -113,12 +113,15 @@ class UnfiledCompanySource:
                                                  values["net_income"], None))
             if filled:
                 notes.append(f"Eulerpool: net income for FY{', FY'.join(sorted(r.period_end[:4] for r in filled))} (Yahoo "
-                             "Finance's statement has none; Eulerpool's net income passed the overlap gate)")
+                             "Finance's statement has none; Eulerpool's net income passed the overlap gate); "
+                             + eulerpool_mapper.NO_PER_SHARE.replace("those years", "that year" if len(filled) == 1 else "those years"))
         income = tuple(sorted(annual.income_statements + tuple(filled) + older.income_statements,
                               key=lambda r: r.period_end, reverse=True))
         return replace(annual, income_statements=income,
                        balance_sheets=annual.balance_sheets + older.balance_sheets,
-                       shares_by_year={**older.shares_by_year, **annual.shares_by_year},
+                       shares_by_year={**older.shares_by_year,
+                                       **{r.period_end[:4]: eulerpool_mapper.NO_SHARE_COUNT for r in filled},
+                                       **annual.shares_by_year},
                        dividends_paid={**older.dividends_paid, **annual.dividends_paid},
                        operating_cash_flow={**older.operating_cash_flow, **annual.operating_cash_flow})
 
@@ -136,7 +139,7 @@ class UnfiledCompanySource:
                                         f"Yahoo's statements in {profile.financial_currency or 'no stated currency'}: "
                                         "not used (vendor figures are never converted)")
         checked = self._check_net_income(ticker, annual)
-        latest = annual.balance_sheets[0].shares_outstanding if annual.balance_sheets else None
+        latest = data.years[annual.income_statements[0].period_end].get("shares")   # a check only, never used (§8.12)
         today = yahoo_mapper.total_shares(yahoo)
         if not latest or not today or abs(latest / today - 1) > MAX_SHARE_GAP:
             raise TickerNotCoveredError(f"{ticker}: Eulerpool's latest share count ({(latest or 0) / 1e6:,.1f}M) is not "
@@ -148,8 +151,8 @@ class UnfiledCompanySource:
             "UNVERIFIED against the company's reports (no SEC or ESEF filings on the free routes). Checked only against "
             f"Yahoo Finance: same reporting currency, net income within {MAX_NET_INCOME_GAP:.0%} (or 1.1M) in {checked}, latest "
             f"share count within {MAX_SHARE_GAP:.0%}; price, dividends and profile from this listing",
-            "Eulerpool figures: whole millions; EPS is net income / Eulerpool's year-end share count (its own EPS is not "
-            "used); no intangibles (tangible book overstated); long-term debt is taken as all non-current liabilities "
+            f"Eulerpool figures: whole millions; {eulerpool_mapper.NO_PER_SHARE.replace(' for those years', '')}; "
+            "no intangibles (tangible book overstated); long-term debt is taken as all non-current liabilities "
             "(an upper bound: it includes provisions and pensions as well as borrowings and leases), because "
             "Eulerpool's own long-term debt includes lease liabilities for some companies and not others, so the "
             "debt tests may fail a company whose debt alone would pass",
