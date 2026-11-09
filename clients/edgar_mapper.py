@@ -89,6 +89,8 @@ EPS_OTHER_YEARS_MIN, EPS_YEARS_SCALE_BAND, EPS_YEARS_IMPLAUSIBLE, EPS_YEARS_SIGN
 MIN_SALES_SHARE_OF_REVENUES = 0.75   # Berkshire 67-70%: revenue tag; Inogen 80-85%: sales
 # Consolidated profit incl. minority interests: ProfitLoss = NetIncomeLoss + NetIncomeLossAttributableToNoncontrollingInterest
 PROFIT_LOSS = ("ProfitLoss", "ifrs-full:ProfitLoss")
+# The owners' share of equity below this fraction of total equity needs a minority interest to explain it
+MIN_OWNERS_SHARE_OF_EQUITY = 0.5
 NCI_INCOME = ("NetIncomeLossAttributableToNoncontrollingInterest", "ifrs-full:ProfitLossAttributableToNoncontrollingInterests")
 # A minority balance below this share of ProfitLoss cannot move it materially (Ethan Allen FY2025: -85K of 51.6M)
 MINORITY_IMMATERIAL = 0.01
@@ -647,6 +649,14 @@ def _balance_row(facts: _Facts, end: str, notes: _Notes, period_kind: str = "yea
     minority = field("minority interest", MINORITY)
     equity_incl = field("equity incl. minority interest", EQUITY_INCL_NCI)
     equity = field("stockholders' equity", EQUITY)
+    if equity is not None and equity_incl is not None and equity_incl > 0 \
+            and equity < equity_incl * MIN_OWNERS_SHARE_OF_EQUITY - (minority or 0.0) \
+            and not _value(facts.get(NCI_INCOME, end, MONEY, "year")):
+        # The owners' share cannot be most of the way below total equity with no minority interest to explain the gap:
+        # another figure tagged as it (Bilia FY2019-20: 167M, total equity 3,968M, no minority interests)
+        notes.derive("stockholders' equity", f"filed figure {equity / 1e6:,.0f}M is under half of total equity with no "
+                     "minority interest to explain it; total equity - minority interest used", end)
+        equity = equity_incl - (minority or 0.0)
     if equity is None and equity_incl is not None:
         equity = equity_incl - (minority or 0.0)
         notes.derive("stockholders' equity", "derived as equity incl. minority interest - minority interest", end)

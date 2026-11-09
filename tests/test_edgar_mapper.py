@@ -1325,3 +1325,24 @@ def test_eps_near_the_listings_share_count_is_left_alone():
     data = annual_data(_ifrs(facts), eps_implied_shares=True, reference_shares=95.0e6)
     assert data.income_statements[0].eps == 1.0
     assert not any("current share count" in n for n in data.notes)
+
+
+def test_an_owners_equity_far_below_total_equity_with_no_minority_interest_is_another_figure():
+    """Bilia FY2020: EquityAttributableToOwnersOfParent 167M beside Equity 3,968M, no minority interests."""
+    end = "2020-12-31"
+    data = annual_data(_ifrs({"ProfitLossAttributableToOwnersOfParent": [("2020-01-01", end, 984.0e6, FILED, "SEK")],
+                              "Assets": [(None, end, 16_416.0e6, FILED, "SEK")],
+                              "Equity": [(None, end, 3_968.0e6, FILED, "SEK")],
+                              "EquityAttributableToOwnersOfParent": [(None, end, 167.0e6, FILED, "SEK")]}))
+    assert data.balance_sheets[0].total_equity == 3_968.0e6
+    assert any("under half of total equity" in n for n in data.notes)
+
+
+def test_a_large_minority_interest_explains_a_small_owners_share():
+    end = "2020-12-31"
+    data = annual_data(_ifrs({"ProfitLossAttributableToOwnersOfParent": [("2020-01-01", end, 10.0e6, FILED, "EUR")],
+                              "ProfitLossAttributableToNoncontrollingInterests": [("2020-01-01", end, 30.0e6, FILED, "EUR")],
+                              "Assets": [(None, end, 1_000.0e6, FILED, "EUR")],
+                              "Equity": [(None, end, 400.0e6, FILED, "EUR")],
+                              "EquityAttributableToOwnersOfParent": [(None, end, 100.0e6, FILED, "EUR")]}))
+    assert data.balance_sheets[0].total_equity == 100.0e6
