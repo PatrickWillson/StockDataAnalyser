@@ -261,15 +261,9 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
             dividends[end] = values["dividends_paid"]
         if "operating_cash_flow" in values:
             cash[end] = values["operating_cash_flow"]
-        if all(values.get(name) is not None for name in BALANCE_REQUIRED):
-            balance.append(BalanceSheetRow(
-                period_end=end, total_equity=values["total_equity"], intangible_assets=None,
-                goodwill=values.get("goodwill"), current_assets=values.get("current_assets"),
-                current_liabilities=values.get("current_liabilities"),
-                total_liabilities=values.get("total_liabilities"), long_term_debt=values.get("long_term_debt"),
-                short_term_debt=values.get("short_term_debt"), total_debt_reported=None,
-                total_assets=values["total_assets"], inventory=values.get("inventory"), noncontrolling_interest=None,
-                shares_outstanding=None, long_term_debt_unknown="long_term_debt" not in accepted))
+        row = balance_row(end, values, accepted)
+        if row is not None:
+            balance.append(row)
     if not income:
         return not_used(f"it has no complete year before FY{fiscal_year(first_filed)}")
     years = sorted(fiscal_year(row.period_end) for row in income)
@@ -287,6 +281,26 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
                      f"or too few years to check): {', '.join(LABELS[n] for n in rejected)}"
                      + ("; long-term debt is then unknown in those years, not zero" if "long_term_debt" in rejected else ""))
     return OlderYears(tuple(balance), tuple(income), shares, dividends, cash, tuple(notes), tuple(accepted))
+
+
+def balance_row(end: str, values: Mapping[str, float], accepted: Sequence[str],
+                shares: Optional[float] = None) -> Optional[BalanceSheetRow]:
+    """
+    A year's balance sheet from the gated fields (values: only fields in `accepted`), or None unless total assets,
+    equity, current assets and current liabilities all passed. No intangibles; long-term debt not accepted ->
+    unknown (§8.9). `shares`: a count from another source (never Eulerpool's, §8.12), else None.
+    """
+    values = {name: value for name, value in values.items() if name in accepted}
+    if not all(values.get(name) is not None for name in BALANCE_REQUIRED):
+        return None
+    return BalanceSheetRow(
+        period_end=end, total_equity=values["total_equity"], intangible_assets=None,
+        goodwill=values.get("goodwill"), current_assets=values.get("current_assets"),
+        current_liabilities=values.get("current_liabilities"),
+        total_liabilities=values.get("total_liabilities"), long_term_debt=values.get("long_term_debt"),
+        short_term_debt=values.get("short_term_debt"), total_debt_reported=None,
+        total_assets=values["total_assets"], inventory=values.get("inventory"), noncontrolling_interest=None,
+        shares_outstanding=shares, long_term_debt_unknown="long_term_debt" not in accepted)
 
 
 def vendor_annual(data: EulerpoolData) -> EdgarAnnualData:

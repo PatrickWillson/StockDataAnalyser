@@ -127,15 +127,51 @@ class UnfiledCompanySource:
                     note += (f"; FY{', FY'.join(without)}: "
                              + eulerpool_mapper.NO_PER_SHARE.replace("for those years ", ""))
                 notes.append(note)
+        filled_balance, filled_shares = self._filled_balance_sheets(yahoo, annual, data, older, filled, notes)
         income = tuple(sorted(annual.income_statements + tuple(filled) + older.income_statements,
                               key=lambda r: r.period_end, reverse=True))
         return replace(annual, income_statements=income,
-                       balance_sheets=annual.balance_sheets + older.balance_sheets,
+                       balance_sheets=tuple(sorted(annual.balance_sheets + filled_balance + older.balance_sheets,
+                                                   key=lambda r: r.period_end, reverse=True)),
                        shares_by_year={**older.shares_by_year,
                                        **{r.period_end[:4]: eulerpool_mapper.NO_SHARE_COUNT for r in filled},
-                                       **annual.shares_by_year},
+                                       **filled_shares, **annual.shares_by_year},
                        dividends_paid={**older.dividends_paid, **annual.dividends_paid},
                        operating_cash_flow={**older.operating_cash_flow, **annual.operating_cash_flow})
+
+    @staticmethod
+    def _filled_balance_sheets(yahoo, annual, data, older, filled, notes: List[str]):
+        """
+        Balance sheets for filled years Yahoo has none for (Fevertree FY2025), from the Eulerpool fields that passed the
+        gate: "the book value last reported" (GRAHAM_METHODOLOGY §3.4, §8.12; decision 2026-11-09). Per-share figures
+        only for the latest year, on today's share count (Yahoo, the present capitalization: Security Analysis ch. 42),
+        and only when Yahoo has that year's EPS, so no EPS is derived from today's count.
+        """
+        have = [dt.date.fromisoformat(row.period_end) for row in annual.balance_sheets]
+        newest = max((row.period_end for row in annual.income_statements + tuple(filled)), default=None)
+        rows, shares = [], {}
+        for income_row in filled:
+            day = dt.date.fromisoformat(income_row.period_end)
+            if any(abs((day - h).days) <= MATCH_DAYS for h in have):
+                continue
+            count = yahoo_mapper.total_shares(yahoo) if income_row.period_end == newest and income_row.eps else None
+            row = eulerpool_mapper.balance_row(income_row.period_end, data.years[income_row.period_end],
+                                               older.accepted, shares=count)
+            if row is None:
+                continue
+            rows.append(row)
+            if count:
+                shares[income_row.period_end[:4]] = count
+        if rows:
+            years = sorted(r.period_end[:4] for r in rows)
+            per_share = (f"; per-share book value for FY{', FY'.join(sorted(shares))} on today's share count "
+                         "(Yahoo Finance: the present capitalization)") if shares else ""
+            debt = ("; long-term debt unknown (it did not pass the gate)"
+                    if any(r.long_term_debt_unknown for r in rows) else "")
+            notes.append(f"Eulerpool: balance sheet for FY{', FY'.join(years)} (Yahoo Finance's statement has none), "
+                         "from the fields that passed the overlap gate; no intangibles (tangible book overstated)"
+                         + per_share + debt)
+        return tuple(rows), shares
 
     def _vendor_only(self, ticker: str, yahoo, profile) -> CompanyFundamentals:
         """No Yahoo statements: Eulerpool alone, checked against Yahoo's net income (labelled unverified)."""

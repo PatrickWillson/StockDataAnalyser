@@ -27,7 +27,8 @@ class FakeEulerpool:
         rows = [("2025-02-28", 140.0), ("2024-02-29", self.ni), ("2023-02-28", 160.0), ("2022-02-28", 250.0)]
         return {"income": [{"period": e, "revenue": 6000.0, "netIncome": ni} for e, ni in rows],
                 "balance_quarterly": [{"period": e, "totalAssets": 4500.0, "totalEquity": 2000.0,
-                                       "sharesOutstanding": self.shares, "longTermDebt": 900.0} for e, _ in rows],
+                                       "sharesOutstanding": self.shares, "longTermDebt": 900.0,
+                                       "currentAssets": 1500.0, "currentLiabilities": 1000.0} for e, _ in rows],
                 "cashflow": []}
 
 
@@ -153,3 +154,21 @@ def test_a_filled_year_keeps_yahoos_own_basic_eps():
 def test_without_yahoo_statements_or_eulerpool_there_is_no_dossier():
     with pytest.raises(TickerNotCoveredError, match="no Yahoo Finance statements"):
         UnfiledCompanySource(StatementsYahoo(None)).fetch_fundamentals("HBH.XETRA")
+
+
+def test_a_filled_latest_year_gets_eulerpools_gated_balance_sheet_on_todays_shares():
+    """Fevertree FY2025: Yahoo's column is empty but for EPS; Eulerpool's balance fields passed the gate."""
+    ends = ("2024-02-29", "2023-02-28")
+    income = {"Total Revenue": {e: 6000e6 for e in ends},
+              "Net Income Common Stockholders": {"2024-02-29": 100e6, "2023-02-28": 160e6},
+              "Basic EPS": {"2025-02-28": 8.75, "2024-02-29": 100e6 / 16e6, "2023-02-28": 160e6 / 16e6}}
+    balance = {"Total Assets": {e: 4500e6 for e in ends}, "Stockholders Equity": {e: 2000e6 for e in ends},
+               "Current Assets": {e: 1500e6 for e in ends}, "Current Liabilities": {e: 1000e6 for e in ends},
+               "Ordinary Shares Number": {e: 15.98e6 for e in ends}}
+    f = UnfiledCompanySource(StatementsYahoo(YahooStatements("HBH.DE", income, balance, {})),
+                             FakeEulerpool()).fetch_fundamentals("HBH.XETRA")
+    latest = f.annual_balance_sheets[0]
+    assert latest.period_end == "2025-02-28" and latest.total_equity == 2000e6 and latest.current_assets == 1500e6
+    assert latest.shares_outstanding == 16e6 and f.shares_by_year["2025"] == 16e6      # today's count, Yahoo
+    assert f.annual_income_statements[0].eps == 8.75                                    # Yahoo's own EPS
+    assert any("Eulerpool: balance sheet for FY2025" in n for n in f.notes)
