@@ -75,7 +75,9 @@ class ClientFactory:
         a company with no SEC filer -> its ESEF annual reports (filings.xbrl.org), with Eulerpool for the years
         before them when `eulerpool_api_key` is given (behind the overlap gate), and then, for a company with
         neither (Germany, Ireland, AIM), Yahoo's annual statements, with Eulerpool's older years gated against them
-        (no Yahoo statements: Eulerpool alone, labelled unverified); none: no dossier.
+        (no Yahoo statements: Eulerpool alone, labelled unverified); every other exchange (Switzerland, Japan,
+        Australia, Canada, ...): the SEC route, then the same Yahoo statements + Eulerpool route for a company with
+        no SEC filer (user decision 2026-11-10, GRAHAM_METHODOLOGY §8.12); none: no dossier.
         """
         edgar = EdgarClient(sec_user_agent, debug=debug)
         yahoo = ClientFactory.create_yfinance_client(debug=debug)
@@ -86,7 +88,10 @@ class ClientFactory:
             (foreign, EuropeanFilingsSource(EsefClient(debug=debug), yahoo, history=eulerpool))
             + (UnfiledCompanySource(yahoo, eulerpool),),
             name="SEC EDGAR, then ESEF, then Yahoo statements" + (" + Eulerpool" if eulerpool else ""))
-        routes = {exchange: (us if not suffix else european if exchange in ESEF_EXCHANGES else foreign)
+        elsewhere = FallbackFundamentalsSource(
+            (foreign, UnfiledCompanySource(yahoo, eulerpool)),
+            name="SEC EDGAR, then Yahoo statements" + (" + Eulerpool" if eulerpool else ""))
+        routes = {exchange: (us if not suffix else european if exchange in ESEF_EXCHANGES else elsewhere)
                   for exchange, suffix in YFinanceClient.EXCHANGE_MAPPING.items()}
         return RoutingFundamentalsSource(routes, name="free (SEC EDGAR / ESEF + Yahoo Finance)")
     

@@ -476,7 +476,7 @@ class YFinanceClient:
         """
         Yahoo's annual income statement, balance sheet and cash-flow statement (yfinance income_stmt, balance_sheet,
         cashflow), in the company's financial currency; empty cells left out. None when unavailable. Used for
-        companies with no XBRL filings (clients/eulerpool_source.py; claude-output scope of 2026-11-09).
+        companies with no XBRL filings (clients/unfiled_company_source.py; claude-output scope of 2026-11-09).
         """
         symbol, exchange = self._parse_ticker(ticker)
         yf_ticker = self._translate_ticker(symbol, exchange) if symbol and exchange else None

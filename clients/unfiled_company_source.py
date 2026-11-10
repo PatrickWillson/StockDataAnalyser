@@ -1,6 +1,7 @@
 """
 Companies with no filings on any free route (Germany, Ireland, AIM: no SEC filer, no ESEF report on
-filings.xbrl.org): Yahoo Finance's annual statements for the recent years, Eulerpool for the years before them.
+filings.xbrl.org; and, after the SEC route, companies on every other non-US exchange: Switzerland, Japan, Australia,
+Canada, ...): Yahoo Finance's annual statements for the recent years, Eulerpool for the years before them.
 
 Graham's analyst consulted the original reports "wherever possible" and otherwise the statistical services (Security
 Analysis ch. 3); with no filed XBRL, Yahoo's statements, the more accurate service in testing (94-100% against filed
