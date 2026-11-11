@@ -45,6 +45,12 @@ LABELS = {"revenue": "revenue", "net_income": "net income", "total_assets": "tot
 REQUIRED = ("net_income",)
 # spiked_share_years: a temporary jump in the vendor's share count
 SPIKE_MAX_YEARS, RUN_TOLERANCE, SPIKE_RATIO, SIDES_AGREE = 3, 0.10, 1.5, 0.20
+# Continuity: the older years of these fields (sizes that cannot move tenfold in a year; not net income, which can) are
+# followed back from the earliest filed year and cut at the first year-to-year move over CONTINUITY_RATIO: the overlap
+# vouches only for the series connected to it (Braime: equity 15.9M in FY2021, 0.15M in FY2018-20, 10.2M in FY2016)
+CONTINUITY_FIELDS = ("revenue", "total_assets", "total_equity", "current_assets", "current_liabilities",
+                     "total_liabilities")
+CONTINUITY_RATIO = 10.0
 # A balance sheet for a year needs these (a missing one would show as zero: working capital of 0.00)
 BALANCE_REQUIRED = ("total_assets", "total_equity", "current_assets", "current_liabilities")
 # Eulerpool years carry no per-share figures (user decision 2026-11-09, option A; GRAHAM_METHODOLOGY §8.12): its
@@ -190,6 +196,27 @@ def allowed_gap(filed: float, relative: float) -> float:
 ROUNDING_NOTE = f"or 1.1M for whole millions, at most {EULERPOOL_MAX_ROUNDING_SHARE:.0%} of the figure"
 
 
+def continuity_breaks(older: Sequence[str], years: Mapping[str, Mapping[str, float]],
+                      anchor: Mapping[str, float]) -> Dict[str, str]:
+    """
+    Per CONTINUITY_FIELDS field, the first older year end (older: newest first) whose figure is over CONTINUITY_RATIO
+    times, or under 1/CONTINUITY_RATIO of, the next later known figure (starting from `anchor`, the earliest filed
+    year's figures); that year and all before it are not used for the field. Only positive figures are compared.
+    """
+    breaks: Dict[str, str] = {}
+    for name in CONTINUITY_FIELDS:
+        last = anchor.get(name)
+        for end in older:
+            value = years[end].get(name)
+            if value is None or value <= 0:
+                continue
+            if last is not None and last > 0 and max(value, last) / min(value, last) > CONTINUITY_RATIO:
+                breaks[name] = end
+                break
+            last = value
+    return breaks
+
+
 def _agrees(name: str, theirs: float, filed: float, relative: float) -> bool:
     if name == "shares":
         return filed > 0 and abs(theirs / filed - 1) <= EULERPOOL_SHARES_REL
@@ -261,11 +288,13 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
     older = sorted((end for end in data.years if end < first_filed and end not in used
                     and _days(end, first_filed) > EULERPOOL_DATE_TOLERANCE_DAYS), reverse=True)
     spiked = set(spiked_share_years({end: data.years[end].get("shares") for end in data.years}))
+    breaks = continuity_breaks([end for end in older if end not in spiked], data.years, filed[first_filed])
     income, balance, shares, dividends, cash = [], [], {}, {}, {}
     for end in older:
         if end in spiked:
             continue
-        values = {name: value for name, value in data.years[end].items() if name in accepted}
+        values = {name: value for name, value in data.years[end].items()
+                  if name in accepted and not (name in breaks and end <= breaks[name])}
         if values.get("net_income") is None:
             continue
         income.append(IncomeStatementRow(end, values.get("revenue"), values["net_income"], None))
@@ -289,6 +318,11 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
         notes.append(f"{SOURCE}: FY{', FY'.join(dropped)} not used: the year-end share count jumps over {SPIKE_RATIO:g}x "
                      "from the years on both sides and back (a vendor error, not a share change), so per-share figures "
                      "for those years cannot be put on the same basis")
+    cut = sorted(((fiscal_year(end), name) for name, end in breaks.items() if name in accepted), reverse=True)
+    if cut:
+        notes.append(f"{SOURCE}: not used from the year its figure jumps over {CONTINUITY_RATIO:g}x from the next later "
+                     "year back (a break in the vendor's series: the overlap vouches only for the years connected to "
+                     "it): " + "; ".join(f"{LABELS[name]} FY{year} and earlier" for year, name in cut))
     if rejected:
         notes.append(f"{SOURCE}: not used for the earlier years (disagreed with {filed_source} in an overlapping year, "
                      f"or too few years to check): {', '.join(LABELS[n] for n in rejected)}"

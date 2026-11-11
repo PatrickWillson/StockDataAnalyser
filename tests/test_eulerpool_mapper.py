@@ -177,3 +177,20 @@ def test_the_whole_million_allowance_is_at_most_a_tenth_of_the_figure():
     assert abs(2e6 - 2.71e6) > allowed_gap(2.71e6, 0.01)
     assert allowed_gap(48.29e6, 0.01) == pytest.approx(1.1e6)      # Guillin: whole millions still agree
     assert allowed_gap(5_000e6, 0.01) == pytest.approx(50e6)       # large figures: the relative band
+
+
+def test_a_field_is_cut_where_the_vendor_series_breaks_tenfold():
+    """Braime: equity 15.9M in FY2021, then 0.15M; the overlap vouches only for the years connected to it."""
+    broken = {"2022-12-31": _year(50.0), "2021-12-31": {**_year(40.0), "total_equity": 0.04 * M},
+              "2020-12-31": _year(30.0)}
+    older = older_years(ANNUAL, _data({**OVERLAP, **broken}), strict=False, filed_source="the ESEF reports")
+    assert [r.period_end for r in older.income_statements] == ["2022-12-31", "2021-12-31", "2020-12-31"]
+    assert [r.period_end for r in older.balance_sheets] == ["2022-12-31"]   # equity cut from FY2021 back
+    assert any("equity FY2021 and earlier" in note for note in older.notes)
+
+
+def test_a_net_income_moving_tenfold_is_not_a_break():
+    swing = {"2022-12-31": _year(5.0), "2021-12-31": _year(80.0)}
+    older = older_years(ANNUAL, _data({**OVERLAP, **swing}), strict=False, filed_source="the ESEF reports")
+    assert [r.net_income for r in older.income_statements] == [5 * M, 80 * M]
+    assert not any("jumps over" in note for note in older.notes)
