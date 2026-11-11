@@ -234,7 +234,7 @@ def test_margin_of_safety_formula_correctness(eps, tbvps, price):
 @settings(max_examples=100)
 @given(
     earnings_list=st.lists(
-        st.floats(min_value=-1e9, max_value=1e9, allow_nan=False, allow_infinity=False),
+        st.floats(min_value=-1e9, max_value=1e9, allow_nan=False, allow_infinity=False).filter(bool),  # 0.0 = unreported
         min_size=7,  # Changed from 5 to 7 to match new requirement
         max_size=10
     )
@@ -293,7 +293,8 @@ def test_epv_normalization_correctness(earnings_list):
 @settings(max_examples=100)
 @given(
     net_incomes=st.lists(
-        st.floats(min_value=-1000000, max_value=1000000, allow_nan=False, allow_infinity=False),
+        # 0.0 is an unreported net income (core.history.net_income_known), never a break-even year
+        st.floats(min_value=-1000000, max_value=1000000, allow_nan=False, allow_infinity=False).filter(bool),
         min_size=7,
         max_size=10
     ).filter(lambda x: any(abs(ni) > 0.01 for ni in x))  # Ensure at least one non-zero value
@@ -356,7 +357,8 @@ def test_full_cycle_epv_includes_all_years(net_incomes):
 @given(
     # Generate lists where the average will be negative
     net_incomes=st.lists(
-        st.floats(min_value=-1000000, max_value=1000000, allow_nan=False, allow_infinity=False),
+        # 0.0 is an unreported net income (core.history.net_income_known), never a break-even year
+        st.floats(min_value=-1000000, max_value=1000000, allow_nan=False, allow_infinity=False).filter(bool),
         min_size=7,
         max_size=10
     ).filter(lambda x: sum(x) / len(x) <= 0 and any(abs(ni) > 0.01 for ni in x))  # Negative avg, at least one non-zero

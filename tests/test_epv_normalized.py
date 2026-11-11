@@ -278,3 +278,24 @@ def test_epv_per_share_na_without_any_share_count():
         row.update(eps=0.0, shares_outstanding=0.0)
     result = GrahamCalculator({'history': history}).compute_epv()
     assert result['epv_per_share'] == "N/A" and "no share count" in result['epv_per_share_reason']
+
+
+def test_a_year_without_net_income_is_left_out_not_averaged_as_zero():
+    """A year with only a balance sheet (net income 0.0 = unreported) is unknown earnings, not a zero year."""
+    history = {str(2025 - i): {'net_income': 2_000_000.0, 'revenue': 50_000_000.0, 'total_equity': 20_000_000.0,
+                               'eps': 2.0, 'shares_outstanding': 1_000_000} for i in range(7)}
+    for year in ("2018", "2017", "2016"):
+        history[year] = {'net_income': 0.0, 'revenue': 0.0, 'total_equity': 15_000_000.0, 'eps': 0.0}
+    result = GrahamCalculator({'ticker': 'TEST.LSE', 'price': 10.0, 'currency': 'GBP',
+                               'history': history}).compute_epv_normalized(history)
+    assert result['years_used'] == 7 and result['normalized_earnings'] == pytest.approx(2_000_000.0)
+
+
+def test_too_few_years_with_net_income_leave_epv_unavailable():
+    history = {str(2025 - i): {'net_income': 2_000_000.0, 'revenue': 50_000_000.0, 'total_equity': 20_000_000.0,
+                               'eps': 2.0, 'shares_outstanding': 1_000_000} for i in range(4)}
+    for i in range(4, 10):
+        history[str(2025 - i)] = {'net_income': 0.0, 'revenue': 36_000_000.0, 'total_equity': 15_000_000.0, 'eps': 0.0}
+    result = GrahamCalculator({'ticker': 'TEST.LSE', 'price': 10.0, 'currency': 'GBP',
+                               'history': history}).compute_epv_normalized(history)
+    assert isinstance(result, str) and "4 complete years" in result

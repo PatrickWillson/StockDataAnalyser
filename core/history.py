@@ -27,6 +27,15 @@ def has_statement_data(year_data: YearData) -> bool:
     )
 
 
+def net_income_known(year_data: YearData) -> bool:
+    """
+    Net income reported (a profit or a loss). The history stores an unreported figure as 0.0 (a year with
+    only a balance sheet, or a vendor's 0 for a year it lacks), and filed net income is never exactly zero,
+    so 0.0 is unknown, not a break-even year.
+    """
+    return or_default(HistoryRow.from_dict(year_data).net_income, 0.0) != 0
+
+
 def eps_unknown(year_data: YearData) -> bool:
     """
     Net income reported but no EPS (0.0): the year has no share count to put it on (vendor history

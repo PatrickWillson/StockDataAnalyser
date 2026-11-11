@@ -17,7 +17,7 @@ from typing import Dict, Optional, Union
 
 from config.graham_constants import GRAHAM_MULTIPLIER, COST_OF_CAPITAL
 from core.history import (fiscal_year, has_balance_sheet_data, has_statement_data, has_statement_or_current_assets,
-                          row_at)
+                          net_income_known, row_at)
 from core.investor_tests import defensive, enterprising
 from core.investor_tests.criteria import latest_current_ratio
 from core.verdict import determine_verdict
@@ -700,14 +700,11 @@ class GrahamCalculator:
         # Get sorted years (most recent first)
         sorted_years = sorted(history.keys(), reverse=True)
         
-        # Filter out incomplete years (years with no financial data, only dividends)
-        # Incomplete years have revenue=0, net_income=0, total_equity=0
-        complete_years = []
-        for year in sorted_years:
-            year_data = history[year]
-            has_financial_data = has_statement_data(year_data)
-            if has_financial_data:
-                complete_years.append(year)
+        # Only years whose net income is known: a year with other statement data but no net income (a
+        # balance sheet alone, or a vendor's 0) is unknown earnings, not zero earnings, so it is left out
+        # rather than averaged in as 0
+        complete_years = [year for year in sorted_years
+                          if has_statement_data(history[year]) and net_income_known(history[year])]
         
         # Need at least 7 years per Graham's methodology
         if len(complete_years) < EPV_MIN_YEARS:
