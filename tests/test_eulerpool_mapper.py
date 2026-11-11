@@ -3,7 +3,7 @@
 import pytest
 
 from clients.edgar_mapper import EdgarAnnualData
-from clients.eulerpool_mapper import EulerpoolData, older_years, parse
+from clients.eulerpool_mapper import EulerpoolData, allowed_gap, older_years, parse
 from core.fundamentals import BalanceSheetRow, IncomeStatementRow
 
 M = 1e6
@@ -169,3 +169,11 @@ def test_vendor_only_history_leaves_out_spiked_years():
     annual = vendor_annual(_data(years))
     assert [r.period_end for r in annual.income_statements] == ["2022-12-31", "2020-12-31"]
     assert any("FY2021 not used" in n for n in annual.notes)
+
+
+def test_the_whole_million_allowance_is_at_most_a_tenth_of_the_figure():
+    """Braime: Eulerpool's 2 (whole millions, truncated) against a filed 2.71M is 26% off, so it does not agree."""
+    assert allowed_gap(2.71e6, 0.01) == pytest.approx(0.271e6)
+    assert abs(2e6 - 2.71e6) > allowed_gap(2.71e6, 0.01)
+    assert allowed_gap(48.29e6, 0.01) == pytest.approx(1.1e6)      # Guillin: whole millions still agree
+    assert allowed_gap(5_000e6, 0.01) == pytest.approx(50e6)       # large figures: the relative band

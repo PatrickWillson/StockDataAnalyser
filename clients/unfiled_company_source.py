@@ -22,7 +22,6 @@ from core.price_quote import major_currency
 from clients.eulerpool_client import EulerpoolClient
 from clients.foreign_sec_source import FULL_HISTORY_YEARS, MATCH_DAYS, MAX_NET_INCOME_GAP, home_listing_fundamentals
 from clients.yfinance_client import YFinanceClient
-from config.eulerpool_config import EULERPOOL_MATCH_ABS
 from core.errors import DataSourceError, TickerNotCoveredError
 from core.fundamentals import CompanyFundamentals
 
@@ -198,7 +197,7 @@ class UnfiledCompanySource:
         notes: List[str] = [
             f"Statements: Eulerpool (commercial vendor data) for {data.name} (ISIN {data.isin}), FY{years[-1]}-FY{years[0]}: "
             "UNVERIFIED against the company's reports (no SEC or ESEF filings on the free routes). Checked only against "
-            f"Yahoo Finance: same reporting currency, net income within {MAX_NET_INCOME_GAP:.0%} (or 1.1M) in {checked}, latest "
+            f"Yahoo Finance: same reporting currency, net income within {MAX_NET_INCOME_GAP:.0%} ({eulerpool_mapper.ROUNDING_NOTE}) in {checked}, latest "
             f"share count within {MAX_SHARE_GAP:.0%}; price, dividends and profile from this listing",
             f"Eulerpool figures: whole millions; {eulerpool_mapper.NO_PER_SHARE.replace(' for those years', '')}; "
             "no intangibles (tangible book overstated); long-term debt is taken as all non-current liabilities "
@@ -228,8 +227,7 @@ class UnfiledCompanySource:
                            if abs((dt.date.fromisoformat(e) - end).days) <= MATCH_DAYS), None)
             if values is None:
                 continue
-            allowed = max(MAX_NET_INCOME_GAP * abs(row.net_income), EULERPOOL_MATCH_ABS)   # whole millions
-            if not any(abs(v - row.net_income) <= allowed for v in values):
+            if not any(abs(v - row.net_income) <= eulerpool_mapper.allowed_gap(v, MAX_NET_INCOME_GAP) for v in values):
                 raise TickerNotCoveredError(f"{ticker}: Eulerpool's FY{row.period_end[:4]} net income "
                                             f"({row.net_income / 1e6:,.1f}M) differs from Yahoo Finance's: not used")
             agreed.append(row.period_end[:4])

@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from clients.edgar_mapper import EdgarAnnualData
 from config.eulerpool_config import (EULERPOOL_DATE_TOLERANCE_DAYS, EULERPOOL_MATCH_ABS, EULERPOOL_MATCH_REL,
+                                     EULERPOOL_MAX_ROUNDING_SHARE,
                                      EULERPOOL_MATCH_REL_STRICT, EULERPOOL_MIN_OVERLAP_YEARS, EULERPOOL_SHARES_REL)
 from core.fundamentals import BalanceSheetRow, IncomeStatementRow
 from core.history import fiscal_year
@@ -177,10 +178,22 @@ def filed_values(annual: EdgarAnnualData) -> Dict[str, Dict[str, float]]:
     return out
 
 
+def allowed_gap(filed: float, relative: float) -> float:
+    """
+    How far a whole-million vendor figure may be from the filed one: `relative` of it, or the whole-million rounding
+    allowance (EULERPOOL_MATCH_ABS) capped at EULERPOOL_MAX_ROUNDING_SHARE of it, whichever is larger. A small
+    company's figure cannot be checked to whole millions (2 against a filed 2.71M is 26% off).
+    """
+    return max(relative * abs(filed), min(EULERPOOL_MATCH_ABS, EULERPOOL_MAX_ROUNDING_SHARE * abs(filed)))
+
+
+ROUNDING_NOTE = f"or 1.1M for whole millions, at most {EULERPOOL_MAX_ROUNDING_SHARE:.0%} of the figure"
+
+
 def _agrees(name: str, theirs: float, filed: float, relative: float) -> bool:
     if name == "shares":
         return filed > 0 and abs(theirs / filed - 1) <= EULERPOOL_SHARES_REL
-    return abs(theirs - filed) <= max(relative * abs(filed), EULERPOOL_MATCH_ABS)
+    return abs(theirs - filed) <= allowed_gap(filed, relative)
 
 
 def _pairs(filed: Mapping[str, Any], data: EulerpoolData, shift_years: int = 0) -> List[Tuple[str, str]]:
@@ -236,8 +249,8 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
             rejected.append(name)
     overlap_years = sorted(fiscal_year(end) for end, _ in pairs)
     stricter = "; stricter, as the reporting currency is not the listing's" if strict else ""
-    checked = (f"against {filed_source} in FY{overlap_years[0]}-FY{overlap_years[-1]} (within {relative:.1%}, or 1.1M "
-               f"for whole millions{stricter})")
+    checked = (f"against {filed_source} in FY{overlap_years[0]}-FY{overlap_years[-1]} (within {relative:.1%}, {ROUNDING_NOTE}"
+               f"{stricter})")
     missing = [LABELS[name] for name in REQUIRED if name not in accepted]
     if missing:
         return not_used(f"its {' and '.join(missing)} did not agree {checked} in every overlapping year, so its "

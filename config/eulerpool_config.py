@@ -24,6 +24,10 @@ EULERPOOL_MIN_OVERLAP_YEARS: Final[int] = 2
 EULERPOOL_MATCH_REL: Final[float] = 0.01
 EULERPOOL_MATCH_REL_STRICT: Final[float] = 0.005
 EULERPOOL_MATCH_ABS: Final[float] = 1.1e6
+# ... but only up to this share of the filed figure: rounding to whole millions is up to 1M off, which hides a small
+# company's figure (Braime: Eulerpool 2/2/2/2 against filed 2.71/2.28/2.27/2.77M, truncated, agreed within 1.1M),
+# so below 11M the whole-million allowance shrinks to 10% of the figure (decided 2026-11-11, GRAHAM_METHODOLOGY §8.11)
+EULERPOOL_MAX_ROUNDING_SHARE: Final[float] = 0.10
 EULERPOOL_SHARES_REL: Final[float] = 0.05
 # A fiscal year end in Eulerpool matches the filed one within this many days
 EULERPOOL_DATE_TOLERANCE_DAYS: Final[int] = 10
