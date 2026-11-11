@@ -79,6 +79,36 @@ def test_search_is_the_last_resort_and_needs_one_matching_stock():
     assert client.find_profile("KBA.DE", "Koenig & Bauer AG") == profile
 
 
+def test_a_hong_kong_code_is_tried_without_leading_zeros():
+    profile = {"isin": "BMG677491539", "name": "Orient Overseas (International) Ltd", "currency": "USD"}
+    client = _client({"equity/profile/316.HK": FakeResponse(200, profile)})
+    assert client.find_profile("0316.HK", "Orient Overseas (International) Limited") == profile
+
+
+def test_a_listing_named_with_and_for_ampersand_or_another_word_order_is_used():
+    heath = {"isin": "GB0004178710", "name": "Samuel Heath and Sons PLC", "currency": "GBP"}
+    itmg = {"isin": "ID1000108509", "name": "Indo Tambangraya Megah Tbk PT", "currency": "USD"}
+    client = _client({"equity/profile/HSM.L": FakeResponse(200, heath), "equity/profile/ITMG.JK": FakeResponse(200, itmg)})
+    assert client.find_profile("HSM.L", "Samuel Heath & Sons plc") == heath
+    assert client.find_profile("ITMG.JK", "PT Indo Tambangraya Megah Tbk") == itmg
+
+
+def test_a_listing_eulerpool_lacks_is_found_by_the_company_name():
+    sixt = {"isin": "DE0007231326", "name": "Sixt SE", "currency": "EUR"}
+    search = {"results": [{"name": "Sixt SE", "isin": "DE0007231326", "type": "stock"},
+                          {"name": "Evolve S&P/TSX 60 CleanBeta Fund", "isin": "CA30052H1064", "type": "etf"}]}
+    client = _client({"equity/search?q=Sixt%20SE": FakeResponse(200, search),
+                      "equity/profile/DE0007231326": FakeResponse(200, sixt)})
+    assert client.find_profile("SIX3.DE", "Sixt SE") == sixt
+
+
+def test_a_name_search_with_two_matching_stocks_is_not_used():
+    search = {"results": [{"name": "Braime Group PLC", "isin": "GB0001185056", "type": "stock"},
+                          {"name": "Braime Group PLC", "isin": "GB0001185270", "type": "stock"}]}
+    client = _client({"equity/search?q=Braime%20Group%20PLC": FakeResponse(200, search)})
+    assert client.find_profile("BMT.L", "Braime Group PLC") is None
+
+
 def test_statements_missing_come_back_empty():
     client = _client({"equity/incomestatement/GB0003718474": FakeResponse(200, [{"period": "2025-06-01"}])})
     assert client.fetch_statements("GB0003718474") == {"income": [{"period": "2025-06-01"}], "balance_quarterly": [],

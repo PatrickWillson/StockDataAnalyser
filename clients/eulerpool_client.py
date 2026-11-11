@@ -14,7 +14,7 @@ from urllib.parse import quote
 import requests
 
 from clients.base_client import BaseAPIClient
-from clients.sec_filer_lookup import names_match
+from clients.sec_filer_lookup import names_match, without_accents
 from config.eulerpool_config import EULERPOOL_BASE_URL, EULERPOOL_MIN_REQUEST_INTERVAL, EULERPOOL_USER_AGENT
 from core.errors import SourceAuthError, SourceRateLimitError, SourceRequestError
 
@@ -73,22 +73,36 @@ class EulerpoolClient(BaseAPIClient):
 
     def find_profile(self, yahoo_symbol: str, name: str) -> Optional[Dict[str, Any]]:
         """
-        Eulerpool's profile of a listing (isin, name, currency, ...), found by its Yahoo symbol, the symbol with a
-        space for '-' (share classes), else its own search for the symbol; only when the names match. None if not
-        found.
+        Eulerpool's profile of a listing (isin, name, currency, ...), only when the names match. Tried in turn: the
+        Yahoo symbol; with a space for '-' (share classes); a Hong Kong code without leading zeros ('0316.HK' is
+        Eulerpool's '316.HK'); Eulerpool's search for the symbol; its search for the company name (a listing it
+        does not carry, e.g. a preference line, under the company's other listing: the statements are the
+        company's). A search counts only with exactly one matching stock. None if not found.
         """
-        candidates = [yahoo_symbol] + ([yahoo_symbol.replace("-", " ")] if "-" in yahoo_symbol else [])
+        candidates = [yahoo_symbol]
+        if "-" in yahoo_symbol:
+            candidates.append(yahoo_symbol.replace("-", " "))
+        code, _, suffix = yahoo_symbol.rpartition(".")
+        if suffix == "HK" and code.startswith("0") and code.lstrip("0"):
+            candidates.append(f"{code.lstrip('0')}.HK")
         for identifier in candidates:
             profile = self._get(f"equity/profile/{quote(identifier)}")
-            if isinstance(profile, dict) and profile.get("isin"):
-                return profile if names_match(name, str(profile.get("name") or "")) else None
-        found = self._get(f"equity/search?q={quote(yahoo_symbol)}")
+            if isinstance(profile, dict) and profile.get("isin") and names_match(name, str(profile.get("name") or "")):
+                return profile
+        for query in (yahoo_symbol, without_accents(name).strip()):
+            if query and (profile := self._search(query, name)):
+                return profile
+        return None
+
+    def _search(self, query: str, name: str) -> Optional[Dict[str, Any]]:
+        """The profile of the one stock Eulerpool's search finds for `query` under the company's name, else None."""
+        found = self._get(f"equity/search?q={quote(query)}")
         results = (found or {}).get("results") or [] if isinstance(found, dict) else []
-        isins = [r.get("isin") for r in results
-                 if r.get("type") == "stock" and r.get("isin") and names_match(name, str(r.get("name") or ""))]
-        if len(set(isins)) != 1:
+        isins = {r.get("isin") for r in results
+                 if r.get("type") == "stock" and r.get("isin") and names_match(name, str(r.get("name") or ""))}
+        if len(isins) != 1:
             return None
-        profile = self._get(f"equity/profile/{isins[0]}")
+        profile = self._get(f"equity/profile/{isins.pop()}")
         return profile if isinstance(profile, dict) and profile.get("isin") else None
 
     def fetch_statements(self, isin: str) -> Dict[str, List[Dict[str, Any]]]:

@@ -87,6 +87,9 @@ def test_names_match_ignores_legal_forms_and_listing_words():
     assert names_match("Companhia Siderúrgica Nacional", "Companhia Siderurgica Nacional")
     assert not names_match("Capital Limited", "Burford Capital Limited")
     assert not names_match("Hilton Food Group plc", "Hilton Worldwide Holdings Inc")
+    assert names_match("Samuel Heath & Sons plc", "Samuel Heath and Sons PLC")
+    assert names_match("Etablissements Maurel & Prom S.A.", "Etablissements Maurel et Prom SA")
+    assert names_match("PT Indo Tambangraya Megah Tbk", "Indo Tambangraya Megah Tbk PT")
 
 
 def test_latest_annual_report_takes_the_newest_annual_form():
