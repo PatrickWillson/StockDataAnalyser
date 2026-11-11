@@ -15,6 +15,7 @@ from clients.esef_client import EsefClient
 from clients.eulerpool_client import EulerpoolClient
 from clients.european_filings_source import EuropeanFilingsSource
 from clients.foreign_sec_source import ForeignSECFundamentalsSource
+from clients.rns_client import RnsClient
 from clients.free_us_source import FreeUSFundamentalsSource
 from clients.unfiled_company_source import UnfiledCompanySource
 from clients.routing_source import FallbackFundamentalsSource, RoutingFundamentalsSource
@@ -74,7 +75,8 @@ class ClientFactory:
         company's SEC filings (20-F / 40-F) found from its home listing; for European exchanges (ESEF_EXCHANGES),
         a company with no SEC filer -> its ESEF annual reports (filings.xbrl.org), with Eulerpool for the years
         before them when `eulerpool_api_key` is given (behind the overlap gate), and then, for a company with
-        neither (Germany, Ireland, AIM), Yahoo's annual statements, with Eulerpool's older years gated against them
+        neither (Germany, Ireland, AIM), Yahoo's annual statements, with the older years gated against them: for a
+        London listing the company's RNS results announcements (rns_client, no key), else Eulerpool's
         (no Yahoo statements: Eulerpool alone, labelled unverified); every other exchange (Switzerland, Japan,
         Australia, Canada, ...): the SEC route, then the same Yahoo statements + Eulerpool route for a company with
         no SEC filer (user decision 2026-11-10, GRAHAM_METHODOLOGY §8.12); none: no dossier.
@@ -84,12 +86,13 @@ class ClientFactory:
         foreign = ForeignSECFundamentalsSource(edgar, yahoo)
         us = FreeUSFundamentalsSource(edgar, yahoo, debug=debug, foreign=foreign)
         eulerpool = EulerpoolClient(eulerpool_api_key, debug=debug) if eulerpool_api_key else None
+        rns = RnsClient(debug=debug)      # London listings: results announcements before Eulerpool (no key)
         european = FallbackFundamentalsSource(
             (foreign, EuropeanFilingsSource(EsefClient(debug=debug), yahoo, history=eulerpool))
-            + (UnfiledCompanySource(yahoo, eulerpool),),
+            + (UnfiledCompanySource(yahoo, eulerpool, rns),),
             name="SEC EDGAR, then ESEF, then Yahoo statements" + (" + Eulerpool" if eulerpool else ""))
         elsewhere = FallbackFundamentalsSource(
-            (foreign, UnfiledCompanySource(yahoo, eulerpool)),
+            (foreign, UnfiledCompanySource(yahoo, eulerpool, rns)),
             name="SEC EDGAR, then Yahoo statements" + (" + Eulerpool" if eulerpool else ""))
         routes = {exchange: (us if not suffix else european if exchange in ESEF_EXCHANGES else elsewhere)
                   for exchange, suffix in YFinanceClient.EXCHANGE_MAPPING.items()}

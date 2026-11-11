@@ -46,6 +46,7 @@ clients/ (Data Acquisition Layer)
     ├── eodhd_mapper.py - EODHD JSON → CompanyFundamentals (the only code that knows EODHD keys)
     ├── edgar_client.py / edgar_mapper.py - SEC EDGAR XBRL statements (free path, US)
     ├── yahoo_mapper.py - Yahoo dividends, splits, profile (free path)
+    ├── rns_client.py / rns_mapper.py - UK results announcements (Investegate archive): older history for London listings
     ├── free_us_source.py / routing_source.py - free resolution path (FUNDAMENTALS_PROVIDER=free)
     ├── yfinance_client.py - Yahoo Finance for real-time prices
     ├── fx_client.py - Live FX rates

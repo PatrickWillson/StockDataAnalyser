@@ -16,10 +16,11 @@ import logging
 from dataclasses import replace
 from typing import List, Optional
 
-from clients import eulerpool_mapper, yahoo_mapper
+from clients import eulerpool_mapper, rns_mapper, yahoo_mapper
 from core.fundamentals import IncomeStatementRow
 from core.price_quote import major_currency
 from clients.eulerpool_client import EulerpoolClient
+from clients.rns_client import RnsClient
 from clients.foreign_sec_source import FULL_HISTORY_YEARS, MATCH_DAYS, MAX_NET_INCOME_GAP, home_listing_fundamentals
 from clients.yfinance_client import YFinanceClient
 from core.errors import DataSourceError, TickerNotCoveredError
@@ -38,9 +39,11 @@ class UnfiledCompanySource:
 
     name = SOURCE_NAME
 
-    def __init__(self, yahoo: YFinanceClient, eulerpool: Optional[EulerpoolClient] = None):
+    def __init__(self, yahoo: YFinanceClient, eulerpool: Optional[EulerpoolClient] = None,
+                 rns: Optional[RnsClient] = None):
         self.yahoo = yahoo
         self.eulerpool = eulerpool
+        self.rns = rns                  # London listings: the company's results announcements before Eulerpool
 
     def fetch_fundamentals(self, ticker: str) -> CompanyFundamentals:
         """
@@ -69,16 +72,48 @@ class UnfiledCompanySource:
             "ESEF XBRL on the free routes); price, dividends and profile from this listing"]
         notes.extend(annual.notes)
         yahoo_years = len(annual.income_statements)
-        if self.eulerpool is not None:
+        history_source = "Eulerpool"
+        if self.rns is not None and yahoo.yahoo_symbol.upper().endswith(".L"):
+            with_rns = self._with_rns(yahoo, annual, notes)
+            if with_rns is not None:
+                annual, history_source = with_rns, "RNS results announcements"
+        if self.eulerpool is not None and history_source == "Eulerpool":
             annual = self._with_eulerpool(yahoo, profile, annual, notes, yahoo_eps)
         years = len(annual.income_statements)
         if years < FULL_HISTORY_YEARS:
-            older = f"; {years - yahoo_years} from Eulerpool" if years > yahoo_years else ""
+            older = f"; {years - yahoo_years} from {history_source}" if years > yahoo_years else ""
             notes.append(f"History: {years} fiscal years ({yahoo_years} from Yahoo Finance{older}); tests needing more years "
                          "fail or show N/A because of this data limit, not because of the company's record")
         notes.append("No quarterly figures: TTM is N/A")
         return home_listing_fundamentals(ticker, SOURCE_NAME, yahoo, profile, replace(annual, notes=()), notes,
                                          fallback_name=profile.name or ticker, data_name="Yahoo Finance's statements")
+
+    def _with_rns(self, yahoo, annual, notes: List[str]):
+        """
+        The company's own announced net income (and revenue) for the years before Yahoo's, from its RNS final-results
+        announcements, when it agreed with Yahoo's in every overlapping year (rns_mapper.rns_history; GRAHAM_METHODOLOGY
+        §8.12: the company's figures before a vendor's); None when not used (Eulerpool is then tried).
+        """
+        tidm = yahoo.yahoo_symbol[:-2]
+        try:
+            announcements = self.rns.results_announcements(tidm)
+            statements = [s for a in announcements
+                          if (s := rns_mapper.parse_statement(self.rns.fetch_announcement(a), a.announcement_id))]
+        except DataSourceError as e:
+            notes.append(f"History before Yahoo Finance's years: {rns_mapper.SOURCE} unavailable ({e})")
+            return None
+        if not announcements:
+            notes.append(f"History before Yahoo Finance's years: {rns_mapper.SOURCE}: no final-results announcements "
+                         f"found for {tidm}")
+            return None
+        history = rns_mapper.rns_history(annual, statements)
+        notes.extend(n.replace("History before the filed years", "History before Yahoo Finance's years")
+                     for n in history.notes)
+        if not history.income_statements:
+            return None
+        return replace(annual, income_statements=tuple(sorted(annual.income_statements + history.income_statements,
+                                                              key=lambda r: r.period_end, reverse=True)),
+                       shares_by_year={**history.shares_by_year, **annual.shares_by_year})
 
     def _with_eulerpool(self, yahoo, profile, annual, notes: List[str], yahoo_eps=None):
         """

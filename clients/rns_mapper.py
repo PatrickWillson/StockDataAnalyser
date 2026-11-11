@@ -1,0 +1,376 @@
+"""
+RNS final-results announcement -> the company's announced revenue and net income for the year and the year before
+(UK route; config/rns_config.py; GRAHAM_METHODOLOGY §8.12), and the overlap gate against Yahoo Finance's years.
+
+The consolidated income statement is found by its heading (a short row naming the group's income statement, profit
+and loss account or statement of comprehensive income), then read row by row until the next statement:
+- a row is its label and its figures (a dash is zero; pence and percentages are not figures); a row with a label and
+  no figures is joined to the next ("Profit attributable to:" + "Owners of the parent | 2,714 | 2,280");
+- the columns: the commonest number of figures in a row; a note reference before them is dropped; with three
+  columns a year (underlying / exceptional / total) the last of each year's group is the total;
+- the unit and currency from the statement's own header (£'000, $m, £); none found: the statement is not read;
+- net income: profit or loss attributable to the owners (equity holders, shareholders) of the parent, else profit or
+  loss for the year (UK GAAP: for the financial year, or on ordinary activities after taxation).
+Then the figures agree with Yahoo Finance's in every overlapping year, or none is used (rns_history).
+"""
+
+import datetime as dt
+import html as html_lib
+import re
+from collections import Counter
+from dataclasses import dataclass, field
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple
+
+from clients.edgar_mapper import EdgarAnnualData
+from clients.eulerpool_mapper import CONTINUITY_RATIO, NO_PER_SHARE, NO_SHARE_COUNT
+from config.rns_config import (RNS_CHAIN_REL, RNS_DATE_TOLERANCE_DAYS, RNS_MATCH_REL, RNS_MATCH_UNITS,
+                               RNS_MIN_OVERLAP_YEARS)
+from core.fundamentals import IncomeStatementRow
+from core.history import fiscal_year
+
+SOURCE = "RNS results announcements (the company's own announced results, via the Investegate archive)"
+MONTHS = ("january", "february", "march", "april", "may", "june", "july", "august", "september", "october",
+          "november", "december")
+_MONTH = "|".join(MONTHS)
+DATE = re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+({_MONTH}),?\s+((?:19|20)\d{{2}})\b|"
+                  rf"\b({_MONTH})\s+(\d{{1,2}})(?:st|nd|rd|th)?,?\s+((?:19|20)\d{{2}})\b", re.I)
+HEADING = re.compile(r"^(?:(?:unaudited|audited|condensed|preliminary|summary|summarised|abridged)\s+)*"
+                     r"(?:consolidated|group)\b[^|]{0,40}?\b(?:income statement|statement of (?:comprehensive )?income|"
+                     r"profit and loss(?: account)?|statement of profit or loss)", re.I)
+OTHER_STATEMENT = re.compile(r"^(?:(?:unaudited|audited|condensed)\s+)*(?:consolidated|group|company|parent)\b[^|]{0,40}?"
+                             r"\b(?:statement of financial position|balance sheet|cash ?flow|statement of changes in equity|"
+                             r"reconciliation of movements)", re.I)
+VALUE = re.compile(r"^(?!\(?0+\)?$)\(?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?$|^(?!\(?0+\)?$)\(?-?\d+(?:\.\d+)?\)?$|^0$")
+DASH = re.compile(r"^[-–—]+$")
+NOT_A_FIGURE = re.compile(r"^\(?-?\d+(?:\.\d+)?\)?\s*(?:p|c|cents?|pence|%)$", re.I)
+YEAR = re.compile(r"^(?:19|20)\d{2}$")
+NOTE_REF = re.compile(r"\d{1,2}(?:\.\d{1,2})?[a-z]?")
+THOUSANDS = re.compile(r"['’`]\s?000|\b000s\b|[£$€]\s?000\b|[£$€]k\b|\bthousands?\b", re.I)
+MILLIONS = re.compile(r"[£$€]\s?m\b|[£$€]\s?mn\b|\b(?:gbp|usd|eur)\s?m\b|\bmillions?\b", re.I)
+UNITS = re.compile(r"(?:^|[\s|])(?:£|\$|€|US\$)(?:\s|\||$)")
+REVENUE = re.compile(r"^(?:total |group )?(?:revenue|turnover|sales)\b(?!.*\bcost)", re.I)
+OWNERS = re.compile(r"attributable to\s*[:\-\u2013]*\s*(?:-\s*)?(?:the )?(?:owners|equity holders|equity shareholders|ordinary shareholders|"
+                    r"shareholders|members)\b", re.I)
+FOR_THE_YEAR = re.compile(r"^(?:net |retained )?(?:\(loss\)/profit|profit/\(loss\)|\(profit\)/loss|loss/\(profit\)|"
+                          r"\(loss\)|profit|loss)(?: after tax(?:ation)?)?(?: and total comprehensive (?:income|loss|expense))?"
+                          r"(?: attributable to [a-z ]+)? (?:for|of) the (?:financial )?(?:year|period)\b", re.I)
+ORDINARY_ACTIVITIES = re.compile(r"^(?:\(loss\)/profit|profit/\(loss\)|profit|loss) on ordinary activities after tax", re.I)
+
+
+@dataclass(frozen=True)
+class RnsStatement:
+    """One announcement's consolidated income statement: the year and the year before (figures in currency units)."""
+    announcement_id: int
+    period_end: str
+    prior_end: str
+    currency: Optional[str]
+    unit: float
+    net_income: Tuple[float, float]
+    revenue: Tuple[Optional[float], Optional[float]]
+    label: str
+
+
+@dataclass(frozen=True)
+class RnsHistory:
+    """Years before Yahoo Finance's (newest first) that passed the gate, or none, and the notes that explain them."""
+    income_statements: Tuple[IncomeStatementRow, ...] = ()
+    shares_by_year: Mapping[str, float] = field(default_factory=dict)
+    notes: Tuple[str, ...] = ()
+
+
+def _clean(text: str) -> str:
+    text = html_lib.unescape(text).replace("\xa0", " ").replace("Â£", "£").replace("â€™", "'").replace("’", "'")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _bare(text: str) -> str:
+    """A row's text without the rules and punctuation drawn around a heading ('____ INCOME STATEMENT ____')."""
+    return re.sub(r"^[\W_]+|[\W_]+$", "", text)
+
+
+def rows_of(page: str) -> List[List[str]]:
+    """The announcement as rows of cells, in order: table rows, else (legacy text) lines split at wide gaps."""
+    page = re.sub(r"<(script|style)\b.*?</\1>", " ", page, flags=re.S | re.I)
+    legacy = re.search(r'class="legacy-text-announcement"[^>]*>(.*?)</div>', page, flags=re.S | re.I)
+    if legacy:
+        rows = []
+        for line in html_lib.unescape(re.sub(r"<[^>]+>", "", legacy.group(1))).splitlines():
+            line = line.replace("Â£", "£").replace("\xa0", " ").rstrip()
+            if line.strip():
+                rows.append([c for c in (_clean(c) for c in re.split(r"\s{2,}", line.strip())) if c])
+        return rows
+    rows = []
+    for segment in re.split(r"(<tr\b.*?</tr>)", page, flags=re.S | re.I):
+        if segment[:3].lower() == "<tr":
+            cells = [_clean(re.sub(r"<[^>]+>", " ", c)) for c in re.findall(r"<t[dh]\b.*?</t[dh]>", segment, re.S | re.I)]
+            if any(cells):
+                rows.append([c for c in cells if c])
+        else:
+            text = re.sub(r"<br\s*/?>|</(?:p|div|li|h\d)>", "\n", segment, flags=re.I)
+            for line in re.sub(r"<[^>]+>", " ", text).splitlines():
+                if _clean(line):
+                    rows.append([_clean(line)])
+    return rows
+
+
+def _value(token: str) -> Optional[float]:
+    token = token.strip()
+    if DASH.match(token):
+        return 0.0
+    if not VALUE.match(token):
+        return None
+    negative = token.startswith("(") or token.startswith("-")
+    return (-1 if negative else 1) * float(re.sub(r"[(),\-]", "", token))
+
+
+def _split(cells: Sequence[str]) -> Tuple[str, List[str]]:
+    """(label, figure tokens) of a row; a legacy line's trailing figures are split off its label."""
+    label, figures = [], []
+    for cell in cells:
+        if NOT_A_FIGURE.match(cell):
+            continue
+        if _value(cell) is not None:
+            figures.append(cell)
+            continue
+        words = cell.split(" ")
+        tail = []
+        while words and _value(words[-1]) is not None:
+            tail.insert(0, words.pop())
+        if tail and not figures:
+            label.append(" ".join(words))
+            figures.extend(tail)
+        else:
+            label.append(cell)
+    return " ".join(x for x in label if x).strip(), figures
+
+
+def _dates(text: str) -> List[dt.date]:
+    out = []
+    for m in DATE.finditer(text):
+        day, month, year = (m.group(1), m.group(2), m.group(3)) if m.group(1) else (m.group(5), m.group(4), m.group(6))
+        try:
+            out.append(dt.date(int(year), MONTHS.index(month.lower()) + 1, int(day)))
+        except ValueError:
+            continue
+    return out
+
+
+def _year_before(day: dt.date) -> dt.date:
+    try:
+        return day.replace(year=day.year - 1)
+    except ValueError:                       # 29 February
+        return day.replace(year=day.year - 1, day=28)
+
+
+def _unit(header: str) -> Tuple[Optional[float], Optional[str]]:
+    if THOUSANDS.search(header):
+        unit = 1e3
+    elif MILLIONS.search(header):
+        unit = 1e6
+    elif UNITS.search(f" {header} "):
+        unit = 1.0
+    else:
+        return None, None
+    lowered = header.lower()
+    currency = ("USD" if ("$" in header or "usd" in lowered) else "EUR" if ("€" in header or "eur" in lowered)
+                else "GBP" if ("£" in header or "gbp" in lowered) else None)
+    return unit, currency
+
+
+def parse_statement(page: str, announcement_id: int) -> Optional[RnsStatement]:
+    """The consolidated income statement of a results announcement, or None when it cannot be read."""
+    rows = rows_of(page)
+    announced_period = next((d for row in rows[:60] for d in _dates(" ".join(row))
+                             if re.search(r"(?:year|period|months) ended", " ".join(row), re.I)), None)
+    for start, row in enumerate(rows):
+        heading = _bare(" ".join(row))
+        if len(heading) > 200 or not HEADING.match(heading):
+            continue
+        statement = _read_block(rows[start + 1:start + 180], heading, announced_period, announcement_id)
+        if statement is not None:
+            return statement
+    return None
+
+
+def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.date],
+                announcement_id: int) -> Optional[RnsStatement]:
+    header, data, prefix = [heading], [], ""
+    for cells in block:
+        text = " ".join(cells)
+        if HEADING.match(_bare(text)) or OTHER_STATEMENT.match(_bare(text)):
+            break
+        label, figures = _split(cells)
+        if figures and all(YEAR.match(f) for f in figures):
+            header.append(text)
+            continue
+        if not figures:
+            if not data:
+                header.append(text)
+            prefix = label
+            continue
+        if len(figures) % 2 and NOTE_REF.fullmatch(figures[0]):
+            figures = figures[1:]                    # a note reference before the year columns
+        data.append((label, f"{prefix} {label}".strip(), figures))
+        if not prefix.endswith(":"):                 # 'Profit attributable to:' heads each line of its list
+            prefix = ""
+    widths = Counter(len(f) for _, _, f in data if len(f) >= 2)
+    if len(data) < 4 or not widths:
+        return None
+    width = min(w for w, n in widths.items() if n == max(widths.values()))
+    unit, currency = _unit(" | ".join(header))
+    if unit is None or width % 2:
+        return None
+    picks = (0, 1) if width == 2 else (width // 2 - 1, width - 1)
+
+    def figures_of(tokens: List[str]) -> Optional[Tuple[float, float]]:
+        if len(tokens) != width:
+            return None
+        return _value(tokens[picks[0]]) * unit, _value(tokens[picks[1]]) * unit
+
+    def first(predicate) -> Optional[Tuple[str, Tuple[float, float]]]:
+        for own, joined, tokens in data:
+            if predicate(own, joined):
+                got = figures_of(tokens)
+                if got is not None:
+                    return joined, got
+        return None
+
+    def excluded(text: str) -> bool:
+        return bool(re.search(r"per share|earnings per|dividend|non-controlling|minority", text, re.I))
+
+    found = (first(lambda own, joined: bool(OWNERS.search(joined)) and not excluded(joined)
+                   and ("comprehensive" not in joined.lower()
+                        or re.search(r"(?:profit|loss) and total comprehensive", joined, re.I) is not None))
+             or first(lambda own, joined: any(FOR_THE_YEAR.match(t) and not excluded(t)
+                                              and not re.search(r"continuing|discontinued", t, re.I) for t in (own, joined)))
+             or first(lambda own, joined: any(FOR_THE_YEAR.match(t) and not excluded(t) for t in (own, joined)))
+             or first(lambda own, joined: bool(ORDINARY_ACTIVITIES.match(own)) and not excluded(joined)))
+    if found is None:
+        return None
+    revenue = first(lambda own, joined: bool(REVENUE.match(own)))
+    dates = sorted(set(_dates(" | ".join(header))), reverse=True)
+    end = dates[0] if dates else announced
+    if end is None:
+        return None
+    prior = next((d for d in dates[1:] if abs((_year_before(end) - d).days) <= 15), _year_before(end))
+    return RnsStatement(announcement_id, end.isoformat(), prior.isoformat(), currency, unit, found[1],
+                        revenue[1] if revenue else (None, None), found[0][:120])
+
+
+def _days_apart(a: str, b: str) -> int:
+    return abs((dt.date.fromisoformat(a) - dt.date.fromisoformat(b)).days)
+
+
+def linked_chain(statements: Sequence[RnsStatement]) -> Tuple[List[RnsStatement], Optional[RnsStatement]]:
+    """
+    The statements linked year by year from the newest (config RNS_CHAIN_REL), newest first, and the first one that
+    did not link (None if all did). Of several for one year end, the latest announcement is taken.
+    """
+    by_end: Dict[str, RnsStatement] = {}
+    for s in sorted(statements, key=lambda s: s.announcement_id):
+        same = next((e for e in by_end if _days_apart(e, s.period_end) <= RNS_DATE_TOLERANCE_DAYS), None)
+        if same is not None:
+            del by_end[same]
+        by_end[s.period_end] = s
+    ordered = [by_end[e] for e in sorted(by_end, reverse=True)]
+    if not ordered:
+        return [], None
+    chain = [ordered[0]]
+    for s in ordered[1:]:
+        later = chain[-1]
+        allowed = max(RNS_CHAIN_REL * abs(later.net_income[1]), RNS_MATCH_UNITS * max(s.unit, later.unit))
+        if _days_apart(s.period_end, later.prior_end) > RNS_DATE_TOLERANCE_DAYS \
+                or abs(s.net_income[0] - later.net_income[1]) > allowed:
+            return chain, s
+        chain.append(s)
+    return chain, None
+
+
+def _years(statements: Sequence[RnsStatement]) -> Dict[str, Dict[str, object]]:
+    """Per year end: net income, revenue, unit and the announcement; a later announcement's comparative (the
+    restated figure) replaces the year's own, which is kept as first_reported."""
+    years: Dict[str, Dict[str, object]] = {}
+    for s in sorted(statements, key=lambda s: s.announcement_id):
+        for end, ni, rev in ((s.prior_end, s.net_income[1], s.revenue[1]), (s.period_end, s.net_income[0], s.revenue[0])):
+            match = next((e for e in years if abs((dt.date.fromisoformat(e) - dt.date.fromisoformat(end)).days)
+                          <= RNS_DATE_TOLERANCE_DAYS), None)
+            if match is not None and match != end:
+                years[end] = years.pop(match)
+            first_reported = years.get(end, {}).get("first_reported", ni)
+            years[end] = {"net_income": ni, "revenue": rev, "unit": s.unit, "id": s.announcement_id,
+                          "first_reported": first_reported}
+    return years
+
+
+def rns_history(annual: EdgarAnnualData, statements: Sequence[RnsStatement],
+                filed_source: str = "Yahoo Finance's statements") -> RnsHistory:
+    """
+    The announced years before the filed ones, when the announced net income agreed with the filed figure in every
+    overlapping year (at least RNS_MIN_OVERLAP_YEARS; within RNS_MATCH_REL or RNS_MATCH_UNITS of the statement's
+    unit). Statements in another currency are left out. Revenue is cut at the first year-to-year move over
+    CONTINUITY_RATIO from the earliest filed year back (as the vendor gate); net income is not (it can move tenfold).
+    """
+    def not_used(reason: str) -> RnsHistory:
+        return RnsHistory(notes=(f"History before the filed years: {SOURCE} not used: {reason}",))
+
+    other = [s for s in statements if s.currency and s.currency != annual.currency]
+    statements = [s for s in statements if s not in other]
+    if not statements:
+        return not_used("no consolidated income statement could be read from the company's results announcements"
+                        if not other else f"its statements are in {other[0].currency}, the filings' in {annual.currency}")
+    statements, broken = linked_chain(statements)
+    years = _years(statements)
+    filed = {row.period_end: row for row in annual.income_statements if row.net_income is not None}
+    if not filed:
+        return not_used("no filed years to check it against")
+    pairs, disagreed = [], []
+    for end, row in filed.items():
+        match = next((e for e in years if abs((dt.date.fromisoformat(e) - dt.date.fromisoformat(end)).days)
+                      <= RNS_DATE_TOLERANCE_DAYS), None)
+        if match is None:
+            continue
+        ours, theirs = years[match]["net_income"], row.net_income
+        allowed = max(RNS_MATCH_REL * abs(theirs), RNS_MATCH_UNITS * float(years[match]["unit"]))
+        pairs.append(end)
+        # either of the company's figures for the year: as first reported, or restated in the next announcement
+        if all(abs(value - theirs) > allowed for value in (ours, years[match]["first_reported"])):
+            disagreed.append(f"FY{fiscal_year(end)} {ours / 1e6:,.3f}M announced, {theirs / 1e6:,.3f}M in {filed_source}")
+    checked = (f"within {RNS_MATCH_REL:.0%}, or {RNS_MATCH_UNITS:g} of the statement's rounding unit")
+    if len(pairs) < RNS_MIN_OVERLAP_YEARS:
+        return not_used(f"its announced years overlap {filed_source} in {len(pairs)} year(s), fewer than "
+                        f"{RNS_MIN_OVERLAP_YEARS}")
+    if disagreed:
+        return not_used(f"its net income did not agree with {filed_source} ({checked}) in every overlapping year: "
+                        + "; ".join(disagreed))
+    first_filed = min(filed)
+    older = sorted((e for e in years if e < first_filed and (dt.date.fromisoformat(first_filed)
+                                                              - dt.date.fromisoformat(e)).days > RNS_DATE_TOLERANCE_DAYS),
+                   reverse=True)
+    if not older:
+        return not_used(f"it has no year before FY{fiscal_year(first_filed)}")
+    last, cut = filed[first_filed].revenue, None
+    rows = []
+    for end in older:
+        revenue = years[end]["revenue"]
+        if cut is None and revenue is not None and revenue > 0:
+            if last is not None and last > 0 and max(revenue, last) / min(revenue, last) > CONTINUITY_RATIO:
+                cut = end
+            else:
+                last = revenue
+        rows.append(IncomeStatementRow(end, None if (cut is not None or revenue is None) else revenue,
+                                       float(years[end]["net_income"]), None))
+    overlap = sorted(fiscal_year(e) for e in pairs)
+    span = sorted(fiscal_year(r.period_end) for r in rows)
+    notes = [f"History before FY{fiscal_year(first_filed)}: {SOURCE} for FY{span[0]}-FY{span[-1]} ({len(span)} years), "
+             f"net income checked against {filed_source} in FY{overlap[0]}-FY{overlap[-1]} ({checked}) in every "
+             f"overlapping year; a year's figures are from the next year's announcement where it restated them. Revenue "
+             f"and net income (attributable to the owners of the parent) only: no balance sheets; {NO_PER_SHARE}"]
+    if broken is not None:
+        notes.append(f"{SOURCE}: announcements before FY{fiscal_year(statements[-1].period_end)} not used: the next older "
+                     f"one read (year ended {broken.period_end}) does not link to it (its year end or net income does not "
+                     "match the later announcement's prior-year comparative: a gap, a restatement, or another company "
+                     "under the same ticker)")
+    if cut is not None:
+        notes.append(f"{SOURCE}: revenue not used for FY{fiscal_year(cut)} and earlier (it moves over "
+                     f"{CONTINUITY_RATIO:g}x in a year: a reading of the wrong line, not a change of business)")
+    return RnsHistory(tuple(rows), {fiscal_year(r.period_end): NO_SHARE_COUNT for r in rows}, tuple(notes))

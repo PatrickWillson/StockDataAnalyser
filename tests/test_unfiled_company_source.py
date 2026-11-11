@@ -172,3 +172,70 @@ def test_a_filled_latest_year_gets_eulerpools_gated_balance_sheet_on_todays_shar
     assert latest.shares_outstanding == 16e6 and f.shares_by_year["2025"] == 16e6      # today's count, Yahoo
     assert f.annual_income_statements[0].eps == 8.75                                    # Yahoo's own EPS
     assert any("Eulerpool: balance sheet for FY2025" in n for n in f.notes)
+
+
+# London listings: the company's RNS results announcements before Eulerpool (synthetic announcements)
+from dataclasses import replace as _replace  # noqa: E402
+
+from clients.rns_client import RnsAnnouncement  # noqa: E402
+
+LONDON = _replace(YAHOO, yahoo_symbol="HBH.L", info={**YAHOO.info, "currency": "GBp", "financialCurrency": "EUR"})
+
+
+def _announcement(year_end, ni, prior):
+    rows = [["", "€'000", "€'000"], ["Revenue", "6,000,000", "6,000,000"], ["Cost of sales", "(1)", "(1)"],
+            ["Profit before tax", "1", "1"], ["Profit for the year attributable to owners of the parent",
+                                              f"{ni:,.0f}", f"{prior:,.0f}"]]
+    cells = "".join("<tr>" + "".join(f"<td>{c}</td>" for c in r) + "</tr>" for r in rows)
+    return f"<p>Consolidated income statement for the year ended {year_end}</p><table>{cells}</table>"
+
+
+class FakeRns:
+    def __init__(self, fy2024=160_000):
+        self.pages = {3: _announcement("28 February 2026", 140_000, 100_000),
+                      2: _announcement("28 February 2025", 100_000, fy2024),
+                      1: _announcement("29 February 2024", 160_000, 90_000)}
+        self.asked = []
+
+    def results_announcements(self, tidm):
+        self.asked.append(tidm)
+        return [RnsAnnouncement(i, f"https://example.invalid/{i}") for i in sorted(self.pages, reverse=True)]
+
+    def fetch_announcement(self, announcement):
+        return self.pages[announcement.announcement_id]
+
+
+def _london_statements():
+    statements = _statements()
+    return YahooStatements("HBH.L", statements.income, statements.balance, {})
+
+
+class LondonYahoo(StatementsYahoo):
+    def __init__(self):
+        super().__init__(_london_statements())
+        self.data = LONDON
+
+
+def test_a_london_listing_takes_the_announced_years_before_eulerpool():
+    """The announced FY2026-FY2024 agree with Yahoo (140M, 100M, 160M): FY2023 (90M) is added, Eulerpool not asked."""
+    rns, eulerpool = FakeRns(), FakeEulerpool()
+    eulerpool.find_profile = lambda symbol, name: pytest.fail("Eulerpool asked although RNS passed")
+    f = UnfiledCompanySource(LondonYahoo(), eulerpool, rns).fetch_fundamentals("HBH.LSE")
+    assert rns.asked == ["HBH"]
+    by_end = {r.period_end: r for r in f.annual_income_statements}
+    assert by_end["2023-02-28"].net_income == 90e6 and by_end["2023-02-28"].eps is None
+    assert any(n.startswith("History before FY2024: RNS results announcements") for n in f.notes)
+
+
+def test_announcements_that_disagree_with_yahoo_leave_eulerpool_to_try():
+    rns = FakeRns(fy2024=150_000)        # FY2024 announced 150M against Yahoo's 160M (as first reported 160M agrees)
+    rns.pages[1] = _announcement("29 February 2024", 150_000, 90_000)
+    f = UnfiledCompanySource(LondonYahoo(), None, rns).fetch_fundamentals("HBH.LSE")
+    assert "2023-02-28" not in {r.period_end for r in f.annual_income_statements}
+    assert any("did not agree" in n for n in f.notes)
+
+
+def test_other_exchanges_never_ask_for_announcements():
+    rns = FakeRns()
+    UnfiledCompanySource(StatementsYahoo(_statements()), None, rns).fetch_fundamentals("HBH.XETRA")
+    assert rns.asked == []
