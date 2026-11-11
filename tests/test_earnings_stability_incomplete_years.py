@@ -433,3 +433,23 @@ class TestEarningsStabilityIntegration:
         # Should PASS earnings stability (5+ positive years in last 5 complete years)
         assert tests['earnings_stability'] == 'PASS', \
             "MPE should PASS enterprising earnings stability (5+ positive years)"
+
+
+def _year(net_income, revenue=1e8, equity=5e7):
+    return {'revenue': revenue, 'net_income': net_income, 'total_equity': equity, 'eps': net_income / 1e7}
+
+
+def test_a_year_without_net_income_is_unknown_not_a_deficit():
+    """Balance sheet only (net income 0.0 = unreported): the record cannot be judged, so N/A, not FAIL or PASS."""
+    history = {f'{2025 - i}-12-31': _year(1e7) for i in range(7)}
+    history.update({f'{2018 - i}-12-31': _year(0.0, revenue=0.0) for i in range(3)})
+    years = sorted(history, reverse=True)
+    assert earnings_stability(history, years, min_years=10, period=10) == 'N/A (Net income unknown)'
+
+
+def test_a_known_deficit_still_fails_alongside_unknown_years():
+    history = {f'{2025 - i}-12-31': _year(1e7) for i in range(6)}
+    history['2019-12-31'] = _year(-2e6)
+    history.update({f'{2018 - i}-12-31': _year(0.0, revenue=0.0) for i in range(3)})
+    years = sorted(history, reverse=True)
+    assert earnings_stability(history, years, min_years=10, period=10) == 'FAIL'

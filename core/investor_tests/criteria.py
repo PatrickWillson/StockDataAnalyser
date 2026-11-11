@@ -7,7 +7,8 @@ Moved verbatim from GrahamCalculator (M4.4); the Graham alignment of each criter
 
 from typing import Optional, Tuple
 
-from core.history import has_balance_sheet_data, has_statement_data, has_statement_or_current_assets, row_at
+from core.history import (has_balance_sheet_data, has_statement_data, has_statement_or_current_assets,
+                          net_income_known, row_at)
 from core.models import or_default
 
 
@@ -30,14 +31,22 @@ def earnings_stability(history: dict, years: list, min_years: int = 8, period: i
     - Defensive Investor: Positive earnings in each of the past 10 years
     - Enterprising Investor: no deficit in the last five years
 
-    Incomplete years (dividend data only, no statements) are skipped.
+    Incomplete years (dividend data only, no statements) are skipped. A year with statement data but
+    no net income (core.history.net_income_known) is unknown, not a deficit: the test FAILs when the
+    known years alone settle it (too many deficits), else it is "N/A (Net income unknown)", never a pass.
     """
     complete_years = [year for year in years if has_statement_data(history[year])]
     test_years = complete_years[:period]
     if len(test_years) < min_years:
         return 'FAIL'
-    positive_years = sum(1 for year in test_years if or_default(row_at(history, year).net_income, 0.0) > 0)
-    return 'PASS' if positive_years >= min_years else 'FAIL'
+    known = [year for year in test_years if net_income_known(history[year])]
+    positive_years = sum(1 for year in known if row_at(history, year).net_income > 0)
+    deficits = len(known) - positive_years
+    if positive_years >= min_years:
+        return 'PASS'
+    if len(test_years) - deficits < min_years:
+        return 'FAIL'
+    return 'N/A (Net income unknown)'
 
 
 def latest_current_ratio(history: dict, years: list) -> Tuple[Optional[str], Optional[float]]:

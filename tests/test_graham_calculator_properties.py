@@ -401,7 +401,8 @@ def test_negative_epv_returns_na(net_incomes):
 @settings(max_examples=100)
 @given(
     earnings_list=st.lists(
-        st.floats(min_value=-1e9, max_value=1e9, allow_nan=False, allow_infinity=False),
+        # 0.0 is an unreported net income (core.history.net_income_known), never a break-even year
+        st.floats(min_value=-1e9, max_value=1e9, allow_nan=False, allow_infinity=False).filter(bool),
         min_size=10,
         max_size=10
     )
