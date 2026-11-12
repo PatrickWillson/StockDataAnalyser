@@ -34,34 +34,41 @@ MONTHS = ("january", "february", "march", "april", "may", "june", "july", "augus
 _MONTH = "|".join(MONTHS)
 DATE = re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+({_MONTH}),?\s+((?:19|20)\d{{2}})\b|"
                   rf"\b({_MONTH})\s+(\d{{1,2}})(?:st|nd|rd|th)?,?\s+((?:19|20)\d{{2}})\b", re.I)
-HEADING = re.compile(r"^(?:(?:unaudited|audited|condensed|preliminary|summary|summarised|abridged)\s+)*"
-                     r"(?:consolidated|group)\b[^|]{0,40}?\b(?:income statement|statement of (?:comprehensive )?income|"
-                     r"profit and loss(?: account)?|statement of profit or loss)", re.I)
+HEADING = re.compile(r"^(?:the )?(?:(?:unaudited|audited|condensed|preliminary|summary|summarised|abridged)\s+)*"
+                     r"(?:(?:consolidated|group)\b[^|]{0,40}?\b(?:income statements?|statements? of (?:comprehensive )?income|"
+                     r"profit and loss(?: account)?|statements? of profit or loss|statements? of total return)|"
+                     r"statements? of (?:consolidated|group) (?:comprehensive )?income)", re.I)
 # a heading without 'consolidated' or 'group' (a company presenting its group statement plainly), read only when the
 # announcement has no consolidated one; never the parent company's own ('Company statement of ...')
-PLAIN_HEADING = re.compile(r"^(?:(?:unaudited|audited|condensed|preliminary|summary)\s+)*(?:the )?(?:income statement|"
-                           r"statement of (?:comprehensive )?income|profit and loss(?: account)?|statement of profit or loss)",
-                           re.I)
+PLAIN_HEADING = re.compile(r"^(?:the )?(?:(?:unaudited|audited|condensed|preliminary|summary)\s+)*(?:income statements?|"
+                           r"statements? of (?:comprehensive )?income|profit and loss(?: account)?|statements? of profit or loss|"
+                           r"statements? of total return)", re.I)
 OTHER_STATEMENT = re.compile(r"^(?:(?:unaudited|audited|condensed)\s+)*(?:(?:consolidated|group|company|parent)\b[^|]{0,40}?)?"
                              r"\b(?:statement of financial position|balance sheet|cash ?flow|statement of changes in equity|"
                              r"reconciliation of movements)", re.I)
-VALUE = re.compile(r"^(?!\(?0+\)?$)\(?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?$|^(?!\(?0+\)?$)\(?-?\d+(?:\.\d+)?\)?$|^0$")
+_NUMBER = r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?"
+VALUE = re.compile(rf"^(?:\(-?{_NUMBER}\)|-?{_NUMBER})$")                # brackets in pairs: '11)' is not a figure
 DASH = re.compile(r"^[-–—]+$")
 NOT_A_FIGURE = re.compile(r"^\(?-?\d+(?:\.\d+)?\)?\s*(?:p|c|cents?|pence|%)$", re.I)
 YEAR = re.compile(r"^(?:19|20)\d{2}$")
 NOTE_REF = re.compile(r"\d{1,2}(?:\.\d{1,2})?[a-z]?")
-THOUSANDS = re.compile(r"['’`]\s?000|\b000s\b|[£$€]\s?000\b|[£$€]k\b|\bthousands?\b", re.I)
+THOUSANDS = re.compile(r"['’`]\s?000|\b000['’]?s\b|[£$€]\s?000\b|[£$€]k\b|\bthousands?\b", re.I)
 MILLIONS = re.compile(r"[£$€]\s?m\b|[£$€]\s?mn\b|\b(?:gbp|usd|eur)\s?m\b|\bmillions?\b", re.I)
-UNITS = re.compile(r"(?:^|[\s|])(?:£|\$|€|US\$)(?:\s|\||$)")
+UNITS = re.compile(r"(?:^|[\s|(])(?:£|\$|€|US\$|USD|GBP|EUR|euros?)(?:\s|\||\)|$)", re.I)
 REVENUE = re.compile(r"^(?:total |group )?(?:revenue|turnover|sales)\b(?!.*\bcost)", re.I)
 OWNERS = re.compile(r"attributable to\s*[:\-\u2013]*\s*(?:-\s*)?(?:the )?(?:owners|equity holders|equity shareholders|ordinary shareholders|"
                     r"shareholders|members)\b", re.I)
 OWNER_LINE = re.compile(r"^(?:-\s*)?(?:the )?(?:owners|equity holders|equity shareholders|ordinary shareholders|"
                         r"shareholders|members)\b", re.I)
 COLUMN_HEADER = re.compile(r"^(?:notes?\b|[£$€]|us\$|['\u2019]?000)[\s£$€'\u20190-9a-z]*$", re.I)
-FOR_THE_YEAR = re.compile(r"^(?:net |retained )?(?:\(loss\)/profit|profit/\(loss\)|\(profit\)/loss|loss/\(profit\)|"
-                          r"\(loss\)|profit|loss)(?: after tax(?:ation)?)?(?: and total comprehensive (?:income|loss|expense))?"
-                          r"(?: attributable to [a-z ]+)? (?:for|of) the (?:financial )?(?:year|period)\b", re.I)
+FOR_THE_YEAR = re.compile(r"^(?:net |retained |total )?(?:\(loss\)/profit|profit/\(loss\)|\(profit\)/loss|loss/\(profit\)|"
+                          r"\(loss\)|profit|loss)(?: after tax(?:ation)?)?"
+                          r"(?: and (?:total |other )?comprehensive (?:income|loss|expense))?"
+                          r"(?: attributable to [a-z ]+)? (?:for|of) (?:the )?(?:financial )?(?:year|period)\b", re.I)
+AFTER_TAX = re.compile(r"^(?:net |total )?(?:\(loss\)/profit|profit/\(loss\)|\(profit\)/loss|loss/\(profit\)|\(loss\)|profit|loss|"
+                       r"return/\(loss\)|\(loss\)/return|return)(?: (?:for|of) the (?:financial )?(?:year|period))?"
+                       r"(?: on ordinary activities)? (?:before and )?after tax(?:ation)?\b"
+                       r"|^(?:net |total )?return attributable to (?:equity |ordinary )?shareholders", re.I)
 ORDINARY_ACTIVITIES = re.compile(r"^(?:\(loss\)/profit|profit/\(loss\)|profit|loss) on ordinary activities after tax", re.I)
 
 
@@ -88,7 +95,8 @@ class RnsHistory:
 
 def _clean(text: str) -> str:
     text = html_lib.unescape(text).replace("\xa0", " ").replace("Â£", "£").replace("â€™", "'").replace("’", "'")
-    return re.sub(r"\s+", " ", text).strip()
+    text = re.sub(r"\s+", " ", text).strip()
+    return re.sub(r"\b((?:19|20)\d) (\d)\b", r"\1\2", text)          # a year split by a stray space: '202 5'
 
 
 def _bare(text: str) -> str:
@@ -151,7 +159,9 @@ def _split(cells: Sequence[str]) -> Tuple[str, List[str]]:
         else:
             label.append(cell)
     # 'Profit / (loss) for the year' is 'Profit/(loss) for the year'
-    return re.sub(r"\s*/\s*", "/", " ".join(x for x in label if x)).strip(), figures
+    text = re.sub(r"\s*/\s*", "/", " ".join(x for x in label if x))
+    text = re.sub(r"\(\s+", "(", re.sub(r"\s+\)", ")", text))           # 'profit/( loss)' is 'profit/(loss)'
+    return re.sub(r"\)(?=[a-z])", ") ", text, flags=re.I).strip(), figures  # '(loss)for' is '(loss) for'
 
 
 def _dates(text: str) -> List[dt.date]:
@@ -182,7 +192,8 @@ def _unit(header: str) -> Tuple[Optional[float], Optional[str]]:
     else:
         return None, None
     lowered = header.lower()
-    currency = ("USD" if ("$" in header or "usd" in lowered) else "EUR" if ("€" in header or "eur" in lowered)
+    currency = ("USD" if ("$" in header or "usd" in lowered) else "EUR" if ("€" in header or "eur" in lowered
+                                                                          or "euro" in lowered)
                 else "GBP" if ("£" in header or "gbp" in lowered) else None)
     return unit, currency
 
@@ -222,11 +233,14 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
         label, figures = _split(cells)
         if not data:
             # a header row naming each column's year ('Underlying 2025 | Non-underlying 2025 | Total 2025 | 2024')
-            cell_years = [re.findall(r"\b((?:19|20)\d{2})\b", cell) for cell in cells]
-            if len(cells) >= 2 and all(len(y) == 1 for y in cell_years):
+            cell_years = [y for y in (re.findall(r"\b((?:19|20)\d{2})\b", cell) for cell in cells) if y]
+            if len(cell_years) >= 2 and all(len(y) == 1 for y in cell_years):
                 year_columns = [int(y[0]) for y in cell_years]
         if figures and all(YEAR.match(f) for f in figures):
             header.append(text)
+            continue
+        if len(figures) == 1 and not data:
+            header.append(text)                      # 'Year ended | 31 March 2026' before the first line of figures
             continue
         if not figures:
             if not data:
@@ -253,11 +267,16 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
     if unit is None:
         return None
     years_desc = sorted(set(year_columns), reverse=True)
-    if len(year_columns) == width and len(years_desc) >= 2 and years_desc[0] - years_desc[1] == 1:
+    group_and_company = re.search(r"\band company\b", heading, re.I) or re.search(r"\bthe company\b", " ".join(header), re.I)
+    if group_and_company and len(year_columns) == width and len(years_desc) >= 2:
+        picks = (year_columns.index(years_desc[0]), year_columns.index(years_desc[1]))     # the group's, first
+    elif len(year_columns) == width and len(years_desc) >= 2 and years_desc[0] - years_desc[1] == 1:
         # columns headed by year (Billington: underlying, non-underlying, total 2025 | total 2024): the last column
         # under each year is its total
         picks = (max(i for i, y in enumerate(year_columns) if y == years_desc[0]),
                  max(i for i, y in enumerate(year_columns) if y == years_desc[1]))
+    elif group_and_company and width == 4:
+        picks = (0, 1)                               # group 2025, group 2024 | company 2025, company 2024
     elif width % 2:
         return None
     else:
@@ -287,6 +306,8 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
              or first(lambda own, joined: any(FOR_THE_YEAR.match(t) and not excluded(t)
                                               and not re.search(r"continuing|discontinued", t, re.I) for t in (own, joined)))
              or first(lambda own, joined: any(FOR_THE_YEAR.match(t) and not excluded(t) for t in (own, joined)))
+             or first(lambda own, joined: bool(AFTER_TAX.match(own)) and not excluded(own)
+                      and not re.search(r"continuing|discontinued", own, re.I))
              or first(lambda own, joined: bool(ORDINARY_ACTIVITIES.match(own)) and not excluded(joined)))
     if found is None:
         return None

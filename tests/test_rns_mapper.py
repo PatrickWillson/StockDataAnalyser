@@ -229,3 +229,47 @@ def test_a_plain_heading_is_read_when_there_is_no_consolidated_statement():
     both = _table("Consolidated income statement for the year ended 31 December 2025",
                   [r if r[0] != "Loss for the year" else ["Loss for the year", "(1,000)", "(700)"] for r in rows])
     assert parse_statement(both + plain, 1).net_income == (-1_000_000, -700_000)
+
+
+def test_a_header_cell_ending_in_a_note_number_is_not_a_figure():
+    from clients.rns_mapper import _value
+    assert _value("11)") is None and _value("(11") is None and _value("(1,234)") == -1234 and _value("0") == 0
+    page = _table("CONSOLIDATED INCOME STATEMENT", [
+        ["FOR THE YEAR ENDED 31 DECEMBER 2025"], ["Year ended 31 December 2025", "Year ended 31 December 2024"],
+        ["Underlying", "Non-underlying 1 (Note 11)", "Total", "Underlying", "Non-underlying 1 (Note 11)", "Total"],
+        ["Note", "£'000", "£'000", "£'000", "£'000", "£'000", "£'000"],
+        ["Revenue", "7", "1,035,897", "-", "1,035,897", "962,506", "-", "962,506"],
+        ["Operating profit", "40,000", "(5,000)", "35,000", "30,000", "(1,000)", "29,000"],
+        ["Profit before tax", "38,000", "(5,000)", "33,000", "28,000", "(1,000)", "27,000"],
+        ["Profit for the year", "30,000", "(4,000)", "26,000", "21,000", "(800)", "20,200"]])
+    assert parse_statement(page, 1).net_income == (26_000_000, 20_200_000)
+
+
+def test_group_and_company_columns_take_the_groups():
+    page = _table("Consolidated and Company Statements of Comprehensive Income", [
+        ["for the year ended 31 December 2020"], ["The Group", "The Company", "The Group", "The Company"],
+        ["(Euro 000's)", "Note", "2020", "2020", "2019", "2019"], ["Revenue", "5", "252,784", "1,442", "187,868", "1,283"],
+        ["Operating profit", "40,000", "100", "30,000", "90"], ["Profit before tax", "38,000", "90", "28,000", "80"],
+        ["Profit for the year", "30,000", "80", "21,000", "70"]])
+    s = parse_statement(page, 1)
+    assert (s.currency, s.unit, s.net_income) == ("EUR", 1e3, (30_000_000, 21_000_000))
+
+
+def test_a_year_split_by_a_space_and_for_year_without_the():
+    page = _table("Consolidated Income Statement", [
+        ["for the year ended 31 December 202 5"], ["Notes", "202 5", "202 4"], ["£", "£"], ["Continuing Operations"],
+        ["Revenue", "500,000", "400,000"], ["Operating loss", "(90,000)", "(80,000)"],
+        ["Loss before tax", "(95,000)", "(85,000)"], ["(Loss)/profit for year", "(95,000)", "(85,000)"]])
+    s = parse_statement(page, 1)
+    assert (s.period_end, s.unit, s.net_income) == ("2025-12-31", 1.0, (-95_000, -85_000))
+
+
+def test_after_tax_and_investment_trust_return_lines():
+    rows = [["2025", "2024"], ["£'000", "£'000"], ["Revenue", "500", "400"], ["Operating profit", "120", "100"],
+            ["Profit before tax", "110", "90"]]
+    after_tax = _table("Consolidated income statement for the year ended 31 December 2025",
+                       rows + [["Profit after tax and total comprehensive income", "80", "70"]])
+    trust = _table("Statement of total return for the year ended 31 December 2025",
+                   rows + [["Net return after taxation", "80", "70"]])
+    assert parse_statement(after_tax, 1).net_income == (80_000, 70_000)
+    assert parse_statement(trust, 1).net_income == (80_000, 70_000)
