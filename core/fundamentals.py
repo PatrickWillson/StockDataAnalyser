@@ -121,14 +121,20 @@ class IncomeStatementRow:
     revenue: Optional[float]
     net_income: Optional[float]                  # for the common, special items included (GRAHAM_METHODOLOGY §2.3)
     eps: Optional[float]                         # reported EPS, when the source has one
+    # Approximate figures (vendor history, whole millions): the relative error to allow for, measured against the
+    # filings where they overlap; EPV takes such a year at the low end of its range (GRAHAM_METHODOLOGY §8.11)
+    net_income_allowance: Optional[float] = None
 
     def as_history_fields(self) -> Dict[str, float]:
         """Income-statement fields of a history row (missing values as 0.0)."""
-        return {
+        fields = {
             'revenue': _zero_if_missing(self.revenue),
             'net_income': _zero_if_missing(self.net_income),
             'eps': _zero_if_missing(self.eps),
         }
+        if self.net_income_allowance:
+            fields['net_income_allowance'] = self.net_income_allowance
+        return fields
 
 
 @dataclass(frozen=True)

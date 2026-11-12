@@ -718,6 +718,14 @@ class GrahamCalculator:
         for year in years_to_use:
             net_income = or_default(row_at(history, year).net_income, 0.0)
             net_incomes.append(net_income)
+        # Approximate years (vendor history in whole millions) at the low end of their range: Graham's "range of
+        # approximate value" widens with uncertainty, and a conclusion holds only when the price is outside the
+        # minimum appraisal (Security Analysis, 1940; GRAHAM_METHODOLOGY §8.11): a profit less its allowance, a loss
+        # more
+        allowances = [or_default(row_at(history, year).net_income_allowance, 0.0) for year in years_to_use]
+        reported = list(net_incomes)
+        if any(allowances):
+            net_incomes = [ni - a * abs(ni) for ni, a in zip(net_incomes, allowances)]
         
         # Arithmetic mean of all years (including losses)
         normalized_earnings = sum(net_incomes) / len(net_incomes)
@@ -759,6 +767,9 @@ class GrahamCalculator:
             'years_included': years_to_use,
             'net_incomes': [round(ni, 2) if round_result else ni for ni in net_incomes]
         }
+        if any(allowances):
+            result['net_incomes_reported'] = [round(ni, 2) if round_result else ni for ni in reported]
+            result['allowances'] = allowances
         if per_share_reason:
             result['epv_per_share_reason'] = per_share_reason
         if share_basis:

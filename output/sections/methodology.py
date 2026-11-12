@@ -236,6 +236,13 @@ class MethodologySection(DossierSection):
                 
                 # Show net incomes
                 lines.append(f"  - Net Incomes: {', '.join(net_income_strs)}")
+                allowances = or_default(epv_details.allowances, ())
+                if any(allowances):
+                    marked = [f"FY{fiscal_year(y)} ({a:.0%})" for y, a in zip(years_included, allowances) if a]
+                    lines.append(f"  - Minimum appraisal: approximate years (vendor history in whole millions) taken at the "
+                                 f"low end of their range, net income less (a loss more) the error measured against the "
+                                 f"filings: {', '.join(marked)}; reported figures "
+                                 + ", ".join(f"{ni:,.0f}" for ni in or_default(epv_details.net_incomes_reported, ())))
             
             if normalized_earnings > 0:
                 lines.append(f"  - Normalized Earnings: {normalized_earnings:,.0f} {unified_currency} (average including losses)")

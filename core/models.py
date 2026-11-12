@@ -123,7 +123,9 @@ class EPVDetails(Model):
     share_basis: str = MISSING                       # the share counts used, and any substantial change
     years_used: int = MISSING
     years_included: Tuple[str, ...] = MISSING        # present when EPV is available
-    net_incomes: Tuple[float, ...] = MISSING         # present when EPV is available
+    net_incomes: Tuple[float, ...] = MISSING         # present when EPV is available (the low end for approximate years)
+    net_incomes_reported: Tuple[float, ...] = MISSING   # the figures before the allowance, when any year has one
+    allowances: Tuple[float, ...] = MISSING          # each year's allowance (0.0 = exact), when any year has one
     cost_of_capital: float = MISSING
     unavailable_reason: str = MISSING                # present when EPV is unavailable
 
@@ -249,6 +251,7 @@ class HistoryRow(Model):
     payout_ratio: str = MISSING                      # "34.0%" or "N/A"
     year_end_price: Optional[float] = MISSING        # added by core.historical_prices
     operating_cash_flow: float = MISSING             # annual net cash from operations (cash-flow currency converted); absent if not reported
+    net_income_allowance: float = MISSING            # approximate figure: relative error allowed for (EPV takes the low end)
 
 
 @dataclass(frozen=True)

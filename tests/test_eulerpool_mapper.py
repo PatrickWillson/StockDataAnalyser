@@ -171,9 +171,9 @@ def test_vendor_only_history_leaves_out_spiked_years():
     assert any("FY2021 not used" in n for n in annual.notes)
 
 
-def test_the_whole_million_allowance_is_at_most_a_tenth_of_the_figure():
+def test_the_whole_million_allowance_is_at_most_a_quarter_of_the_figure():
     """Braime: Eulerpool's 2 (whole millions, truncated) against a filed 2.71M is 26% off, so it does not agree."""
-    assert allowed_gap(2.71e6, 0.01) == pytest.approx(0.271e6)
+    assert allowed_gap(2.71e6, 0.01) == pytest.approx(0.6775e6)
     assert abs(2e6 - 2.71e6) > allowed_gap(2.71e6, 0.01)
     assert allowed_gap(48.29e6, 0.01) == pytest.approx(1.1e6)      # Guillin: whole millions still agree
     assert allowed_gap(5_000e6, 0.01) == pytest.approx(50e6)       # large figures: the relative band
@@ -194,3 +194,14 @@ def test_a_net_income_moving_tenfold_is_not_a_break():
     older = older_years(ANNUAL, _data({**OVERLAP, **swing}), strict=False, filed_source="the ESEF reports")
     assert [r.net_income for r in older.income_statements] == [5 * M, 80 * M]
     assert not any("jumps over" in note for note in older.notes)
+
+
+def test_older_years_carry_the_overlap_error_as_their_allowance():
+    """Eulerpool's FY2024 net income is 61M against a filed 60M (1.7% off, within the whole-million allowance): the
+    older years carry that error as their allowance."""
+    off = {**OVERLAP, "2024-12-31": _year(net_income=61.0)}
+    older = older_years(ANNUAL, _data({**off, **OLDER}, currency="EUR"), strict=False, filed_source="the ESEF reports")
+    assert [r.net_income_allowance for r in older.income_statements] == [pytest.approx(1 / 60)] * 2
+    assert older.net_income_error == pytest.approx(1 / 60) and "low end of that range" in older.notes[0]
+    exact = older_years(ANNUAL, _data({**OVERLAP, **OLDER}), strict=False, filed_source="the ESEF reports")
+    assert all(r.net_income_allowance is None for r in exact.income_statements)

@@ -60,7 +60,7 @@ def test_a_company_with_no_filings_gets_eulerpools_figures_labelled_unverified()
     assert f.annual_balance_sheets[0].long_term_debt is None and f.annual_balance_sheets[0].long_term_debt_unknown
     assert any("all non-current liabilities" in n for n in f.notes)
     assert f.shares_by_year["2022"] == 0.0   # no per-share figures (§8.12); the count was only checked
-    assert "UNVERIFIED against the company's reports" in f.notes[0] and "net income within 2% (or 1.1M for whole millions, at most 10% of the figure) in FY2023-FY2025" in f.notes[0]
+    assert "UNVERIFIED against the company's reports" in f.notes[0] and "net income within 2% (or 1.1M for whole millions, at most 25% of the figure) in FY2023-FY2025" in f.notes[0]
     assert any("History: Eulerpool has 4 fiscal years" in n for n in f.notes)
 
 

@@ -166,7 +166,7 @@ class UnfiledCompanySource:
                 eps = next((v for e, v in (yahoo_eps or {}).items()
                             if abs((dt.date.fromisoformat(e) - day).days) <= MATCH_DAYS), None)
                 filled.append(IncomeStatementRow(end, values.get("revenue") if "revenue" in older.accepted else None,
-                                                 values["net_income"], eps))
+                                                 values["net_income"], eps, older.net_income_error or None))
             if filled:
                 with_eps = sorted(r.period_end[:4] for r in filled if r.eps is not None)
                 without = sorted(r.period_end[:4] for r in filled if r.eps is None)

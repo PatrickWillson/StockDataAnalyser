@@ -276,15 +276,15 @@ def test_after_tax_and_investment_trust_return_lines():
 
 
 def test_eulerpool_settles_a_disagreement_with_yahoo_when_it_has_the_announced_figure():
-    """FY2024 announced 2.28M, Yahoo 2.0M: Eulerpool's 2.3M (whole millions) sides with the announcement."""
-    yahoo = {**YAHOO, 2024: 2_000_000.0}
+    """FY2024 announced 2.28M, Yahoo 1.5M: Eulerpool's 2.3M (whole millions) sides with the announcement."""
+    yahoo = {**YAHOO, 2024: 1_500_000.0}
     assert rns_history(_annual(yahoo), STATEMENTS).income_statements == ()
     vendor = {"2024-12-31": 2_300_000.0}
     history = rns_history(_annual(yahoo), STATEMENTS, vendor=vendor)
     assert [r.period_end for r in history.income_statements][:1] == ["2022-12-31"]
     assert any("two sources against one" in n for n in history.notes)
     # a vendor that has Yahoo's figure does not side with the announcement
-    assert rns_history(_annual(yahoo), STATEMENTS, vendor={"2024-12-31": 2_000_000.0}).income_statements == ()
+    assert rns_history(_annual(yahoo), STATEMENTS, vendor={"2024-12-31": 1_500_000.0}).income_statements == ()
 
 
 def _chain_with(older):

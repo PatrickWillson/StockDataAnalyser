@@ -82,6 +82,7 @@ class OlderYears:
     operating_cash_flow: Mapping[str, float] = field(default_factory=dict)
     notes: Tuple[str, ...] = ()
     accepted: Tuple[str, ...] = ()            # fields that passed the overlap gate
+    net_income_error: float = 0.0             # largest relative net-income error in the overlap (the allowance)
 
 
 def _date(text: Any) -> Optional[str]:
@@ -289,6 +290,10 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
                     and _days(end, first_filed) > EULERPOOL_DATE_TOLERANCE_DAYS), reverse=True)
     spiked = set(spiked_share_years({end: data.years[end].get("shares") for end in data.years}))
     breaks = continuity_breaks([end for end in older if end not in spiked], data.years, filed[first_filed])
+    # the allowance for the older years: the largest net-income error where Eulerpool and the filings overlap
+    error = max((abs(data.years[theirs]["net_income"] - filed[end]["net_income"]) / abs(filed[end]["net_income"])
+                 for end, theirs in pairs if filed[end].get("net_income") and "net_income" in data.years[theirs]),
+                default=0.0)
     income, balance, shares, dividends, cash = [], [], {}, {}, {}
     for end in older:
         if end in spiked:
@@ -297,7 +302,7 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
                   if name in accepted and not (name in breaks and end <= breaks[name])}
         if values.get("net_income") is None:
             continue
-        income.append(IncomeStatementRow(end, values.get("revenue"), values["net_income"], None))
+        income.append(IncomeStatementRow(end, values.get("revenue"), values["net_income"], None, error or None))
         shares[fiscal_year(end)] = NO_SHARE_COUNT
         if "dividends_paid" in values:
             dividends[end] = values["dividends_paid"]
@@ -312,7 +317,9 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
     notes = [f"History before FY{fiscal_year(first_filed)}: {SOURCE} for FY{years[0]}-FY{years[-1]} ({len(years)} "
              f"years), unverified against the company's reports. Used field by field, only where it agreed {checked} "
              f"in every overlapping year: {', '.join(LABELS[n] for n in accepted)}. Never rescaled to fit; "
-             f"{NO_PER_SHARE}; no intangibles (tangible book overstated); whole millions"]
+             f"{NO_PER_SHARE}; no intangibles (tangible book overstated); whole millions"
+             + (f". Net income agreed within {error:.1%} at most in the overlap: EPV takes these years at the low end of "
+                "that range (net income less, a loss more, by that much)" if error else "")]
     dropped = sorted(fiscal_year(end) for end in spiked if end in older)
     if dropped:
         notes.append(f"{SOURCE}: FY{', FY'.join(dropped)} not used: the year-end share count jumps over {SPIKE_RATIO:g}x "
@@ -327,7 +334,7 @@ def older_years(annual: EdgarAnnualData, data: EulerpoolData, strict: bool, file
         notes.append(f"{SOURCE}: not used for the earlier years (disagreed with {filed_source} in an overlapping year, "
                      f"or too few years to check): {', '.join(LABELS[n] for n in rejected)}"
                      + ("; long-term debt is then unknown in those years, not zero" if "long_term_debt" in rejected else ""))
-    return OlderYears(tuple(balance), tuple(income), shares, dividends, cash, tuple(notes), tuple(accepted))
+    return OlderYears(tuple(balance), tuple(income), shares, dividends, cash, tuple(notes), tuple(accepted), error)
 
 
 def balance_row(end: str, values: Mapping[str, float], accepted: Sequence[str],

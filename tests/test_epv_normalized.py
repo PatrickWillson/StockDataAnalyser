@@ -299,3 +299,16 @@ def test_too_few_years_with_net_income_leave_epv_unavailable():
     result = GrahamCalculator({'ticker': 'TEST.LSE', 'price': 10.0, 'currency': 'GBP',
                                'history': history}).compute_epv_normalized(history)
     assert isinstance(result, str) and "4 complete years" in result
+
+
+def test_approximate_years_enter_epv_at_the_low_end_of_their_range():
+    """A profit less its allowance, a loss more: 7 years of 2.0M, two of them approximate at 20%, one a loss."""
+    history = {str(2025 - i): {'net_income': 2_000_000.0, 'revenue': 5e7, 'total_equity': 2e7, 'eps': 2.0,
+                               'shares_outstanding': 1_000_000} for i in range(5)}
+    history["2020"] = {'net_income': 2_000_000.0, 'revenue': 5e7, 'total_equity': 2e7, 'net_income_allowance': 0.2}
+    history["2019"] = {'net_income': -1_000_000.0, 'revenue': 5e7, 'total_equity': 2e7, 'net_income_allowance': 0.2}
+    result = GrahamCalculator({'ticker': 'T.LSE', 'price': 10.0, 'currency': 'GBP', 'history': history}
+                              ).compute_epv_normalized(history)
+    assert result['net_incomes'][-2:] == [1_600_000.0, -1_200_000.0]
+    assert result['net_incomes_reported'][-2:] == [2_000_000.0, -1_000_000.0]
+    assert result['normalized_earnings'] == pytest.approx((5 * 2e6 + 1.6e6 - 1.2e6) / 7)
