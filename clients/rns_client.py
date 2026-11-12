@@ -23,8 +23,9 @@ logger = logging.getLogger(__name__)
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # The slug of a final (annual) results announcement; interims, trading updates and the like are left out
 RESULTS_SLUG = re.compile(
-    r"/(?:final-results|full-year-results|preliminary-results|annual-results|audited-results|final-audited-results|"
-    r"audited-final-results|preliminary-final-results|results-for-the-year|final-results-for-the-year|"
+    r"/(?!(?:[a-z0-9-]*-)?(?:interim|half-year|half-yearly|six-month|quarter|q[1-4]|h1|trading|placing|notice-of-results))"
+    r"(?:(?:final|full-year|annual|preliminary|audited|financial|unaudited-final|final-audited|audited-final)-"
+    r"(?:audited-|unaudited-)?results|results-for-the-(?:year|financial-year|12-months|twelve-months)|"
     r"annual-financial-report|annual-report-and-accounts)[a-z0-9-]*/(\d+)$")
 ANNOUNCEMENT_LINK = re.compile(r'href="(https://www\.investegate\.co\.uk/announcement/[^"]+)"')
 

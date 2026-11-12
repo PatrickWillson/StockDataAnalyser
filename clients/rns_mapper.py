@@ -37,7 +37,12 @@ DATE = re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+({_MONTH}),?\s+((?:19|20)\d
 HEADING = re.compile(r"^(?:(?:unaudited|audited|condensed|preliminary|summary|summarised|abridged)\s+)*"
                      r"(?:consolidated|group)\b[^|]{0,40}?\b(?:income statement|statement of (?:comprehensive )?income|"
                      r"profit and loss(?: account)?|statement of profit or loss)", re.I)
-OTHER_STATEMENT = re.compile(r"^(?:(?:unaudited|audited|condensed)\s+)*(?:consolidated|group|company|parent)\b[^|]{0,40}?"
+# a heading without 'consolidated' or 'group' (a company presenting its group statement plainly), read only when the
+# announcement has no consolidated one; never the parent company's own ('Company statement of ...')
+PLAIN_HEADING = re.compile(r"^(?:(?:unaudited|audited|condensed|preliminary|summary)\s+)*(?:the )?(?:income statement|"
+                           r"statement of (?:comprehensive )?income|profit and loss(?: account)?|statement of profit or loss)",
+                           re.I)
+OTHER_STATEMENT = re.compile(r"^(?:(?:unaudited|audited|condensed)\s+)*(?:(?:consolidated|group|company|parent)\b[^|]{0,40}?)?"
                              r"\b(?:statement of financial position|balance sheet|cash ?flow|statement of changes in equity|"
                              r"reconciliation of movements)", re.I)
 VALUE = re.compile(r"^(?!\(?0+\)?$)\(?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?$|^(?!\(?0+\)?$)\(?-?\d+(?:\.\d+)?\)?$|^0$")
@@ -51,6 +56,9 @@ UNITS = re.compile(r"(?:^|[\s|])(?:£|\$|€|US\$)(?:\s|\||$)")
 REVENUE = re.compile(r"^(?:total |group )?(?:revenue|turnover|sales)\b(?!.*\bcost)", re.I)
 OWNERS = re.compile(r"attributable to\s*[:\-\u2013]*\s*(?:-\s*)?(?:the )?(?:owners|equity holders|equity shareholders|ordinary shareholders|"
                     r"shareholders|members)\b", re.I)
+OWNER_LINE = re.compile(r"^(?:-\s*)?(?:the )?(?:owners|equity holders|equity shareholders|ordinary shareholders|"
+                        r"shareholders|members)\b", re.I)
+COLUMN_HEADER = re.compile(r"^(?:notes?\b|[£$€]|us\$|['\u2019]?000)[\s£$€'\u20190-9a-z]*$", re.I)
 FOR_THE_YEAR = re.compile(r"^(?:net |retained )?(?:\(loss\)/profit|profit/\(loss\)|\(profit\)/loss|loss/\(profit\)|"
                           r"\(loss\)|profit|loss)(?: after tax(?:ation)?)?(?: and total comprehensive (?:income|loss|expense))?"
                           r"(?: attributable to [a-z ]+)? (?:for|of) the (?:financial )?(?:year|period)\b", re.I)
@@ -85,7 +93,8 @@ def _clean(text: str) -> str:
 
 def _bare(text: str) -> str:
     """A row's text without the rules and punctuation drawn around a heading ('____ INCOME STATEMENT ____')."""
-    return re.sub(r"^[\W_]+|[\W_]+$", "", text)
+    text = re.sub(r"^[\W_]+|[\W_]+$", "", text)
+    return re.sub(r"^([A-Za-z]) ([A-Za-z]{2,})", r"\1\2", text)      # a drop capital: 'C ONSOLIDATED
 
 
 def rows_of(page: str) -> List[List[str]]:
@@ -114,7 +123,7 @@ def rows_of(page: str) -> List[List[str]]:
 
 
 def _value(token: str) -> Optional[float]:
-    token = token.strip()
+    token = re.sub(r"\s+(?=\))|(?<=\()\s+", "", token.strip())     # '(1,756 )' is '(1,756)'; '5 1,234' stays two
     if DASH.match(token):
         return 0.0
     if not VALUE.match(token):
@@ -141,7 +150,8 @@ def _split(cells: Sequence[str]) -> Tuple[str, List[str]]:
             figures.extend(tail)
         else:
             label.append(cell)
-    return " ".join(x for x in label if x).strip(), figures
+    # 'Profit / (loss) for the year' is 'Profit/(loss) for the year'
+    return re.sub(r"\s*/\s*", "/", " ".join(x for x in label if x)).strip(), figures
 
 
 def _dates(text: str) -> List[dt.date]:
@@ -182,35 +192,57 @@ def parse_statement(page: str, announcement_id: int) -> Optional[RnsStatement]:
     rows = rows_of(page)
     announced_period = next((d for row in rows[:60] for d in _dates(" ".join(row))
                              if re.search(r"(?:year|period|months) ended", " ".join(row), re.I)), None)
-    for start, row in enumerate(rows):
-        heading = _bare(" ".join(row))
-        if len(heading) > 200 or not HEADING.match(heading):
-            continue
-        statement = _read_block(rows[start + 1:start + 180], heading, announced_period, announcement_id)
-        if statement is not None:
-            return statement
+    for pattern in (HEADING, PLAIN_HEADING):
+        fallback = None
+        for start, row in enumerate(rows):
+            heading = _bare(" ".join(row))
+            if len(heading) > 200 or not pattern.match(heading):
+                continue
+            statement = _read_block(rows[start + 1:start + 180], heading, announced_period, announcement_id)
+            if statement is not None and statement.revenue[0] is not None:
+                return statement
+            fallback = fallback or statement
+        # a statement without a revenue line (a separate statement of comprehensive income) only when none has one
+        if fallback is not None:
+            return fallback
     return None
 
 
 def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.date],
                 announcement_id: int) -> Optional[RnsStatement]:
-    header, data, prefix = [heading], [], ""
+    header, data, prefix, year_columns, attribution = [heading], [], "", [], ""
     for cells in block:
         text = " ".join(cells)
-        if HEADING.match(_bare(text)) or OTHER_STATEMENT.match(_bare(text)):
+        bare = _bare(text)
+        if (HEADING.match(bare) or PLAIN_HEADING.match(bare)) and re.search(r"\bcontinued\b", text, re.I):
+            continue                                 # the same statement over a page break
+        if HEADING.match(bare) or PLAIN_HEADING.match(bare) or OTHER_STATEMENT.match(bare) \
+                or re.match(r"^company\b[^|]{0,40}?\b(?:income|profit)", bare, re.I):
             break
         label, figures = _split(cells)
+        if not data:
+            # a header row naming each column's year ('Underlying 2025 | Non-underlying 2025 | Total 2025 | 2024')
+            cell_years = [re.findall(r"\b((?:19|20)\d{2})\b", cell) for cell in cells]
+            if len(cells) >= 2 and all(len(y) == 1 for y in cell_years):
+                year_columns = [int(y[0]) for y in cell_years]
         if figures and all(YEAR.match(f) for f in figures):
             header.append(text)
             continue
         if not figures:
             if not data:
                 header.append(text)
+            if COLUMN_HEADER.match(label):           # 'Note £'000 £'000' heads columns, not lines
+                continue
+            if re.search(r"attributable to", label, re.I):
+                attribution = label
             prefix = label
             continue
         if len(figures) % 2 and NOTE_REF.fullmatch(figures[0]):
             figures = figures[1:]                    # a note reference before the year columns
-        data.append((label, f"{prefix} {label}".strip(), figures))
+        if not OWNER_LINE.match(label) and not re.match(r"non-controlling|minority", label, re.I):
+            attribution = ""                         # the list of attributions has ended
+        context = attribution if attribution and attribution != prefix else ""
+        data.append((label, " ".join(x for x in (context, prefix, label) if x), figures))
         if not prefix.endswith(":"):                 # 'Profit attributable to:' heads each line of its list
             prefix = ""
     widths = Counter(len(f) for _, _, f in data if len(f) >= 2)
@@ -218,9 +250,18 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
         return None
     width = min(w for w, n in widths.items() if n == max(widths.values()))
     unit, currency = _unit(" | ".join(header))
-    if unit is None or width % 2:
+    if unit is None:
         return None
-    picks = (0, 1) if width == 2 else (width // 2 - 1, width - 1)
+    years_desc = sorted(set(year_columns), reverse=True)
+    if len(year_columns) == width and len(years_desc) >= 2 and years_desc[0] - years_desc[1] == 1:
+        # columns headed by year (Billington: underlying, non-underlying, total 2025 | total 2024): the last column
+        # under each year is its total
+        picks = (max(i for i, y in enumerate(year_columns) if y == years_desc[0]),
+                 max(i for i, y in enumerate(year_columns) if y == years_desc[1]))
+    elif width % 2:
+        return None
+    else:
+        picks = (0, 1) if width == 2 else (width // 2 - 1, width - 1)
 
     def figures_of(tokens: List[str]) -> Optional[Tuple[float, float]]:
         if len(tokens) != width:
@@ -238,7 +279,9 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
     def excluded(text: str) -> bool:
         return bool(re.search(r"per share|earnings per|dividend|non-controlling|minority", text, re.I))
 
-    found = (first(lambda own, joined: bool(OWNERS.search(joined)) and not excluded(joined)
+    found = (first(lambda own, joined: bool(OWNERS.search(joined) or (re.search(r"attributable to", joined, re.I)
+                                                                     and OWNER_LINE.match(own)))
+                   and not excluded(joined)
                    and ("comprehensive" not in joined.lower()
                         or re.search(r"(?:profit|loss) and total comprehensive", joined, re.I) is not None))
              or first(lambda own, joined: any(FOR_THE_YEAR.match(t) and not excluded(t)

@@ -70,3 +70,13 @@ def test_an_unusable_symbol_or_unknown_company_has_no_announcements(tmp_path):
 def test_failures_raise_a_typed_error(tmp_path, route):
     with pytest.raises(RnsRequestError):
         _client(tmp_path, {f"{SITE}/company/BMTO?page=1": route}).results_announcements("BMTO")
+
+
+@pytest.mark.parametrize("slug, counted", [
+    ("final-results", True), ("financial-results-for-the-year-ended-30-june-2025", True),
+    ("results-for-the-year-ended-31-march-2026", True), ("full-year-results", True),
+    ("final-results-for-30-june-2023-and-notice-of-agm", True), ("annual-results-for-the-year-ended-31-december-2020", True),
+    ("interim-results", False), ("half-year-results", False), ("trading-update-and-notice-of-results", False),
+    ("notice-of-results", False), ("holding-s-in-company", False)])
+def test_which_announcements_are_annual_results(slug, counted):
+    assert bool(rns_client.RESULTS_SLUG.search(f"/announcement/rns/x--y/{slug}/123")) == counted

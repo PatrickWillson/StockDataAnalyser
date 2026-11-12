@@ -159,3 +159,73 @@ def test_an_announcement_that_does_not_link_ends_the_history():
     history = rns_history(_annual(YAHOO), STATEMENTS + [stranger])
     assert [r.period_end for r in history.income_statements] == ["2022-12-31", "2021-12-31", "2020-12-31"]
     assert any("does not link" in n for n in history.notes)
+
+
+def test_a_total_written_with_spaced_slashes_is_the_net_income_not_the_continuing_line():
+    """ActiveOps FY2021: -2,791 from continuing activities, +8,992 in all (a gain on discontinued activities)."""
+    page = _table("Consolidated statement of profit and loss and other comprehensive income", [
+        ["Year ended 31 March 2022", "Notes", "2022 £000", "2021 £000"], ["Revenue", "22,917", "20,394"],
+        ["Operating loss", "(2,550)", "(1,767)"], ["Loss before taxation", "(2,612)", "(2,048)"],
+        ["Loss for the year from continuing activities", "(2,731)", "(2,791)"],
+        ["Profit for the year from discontinued activities, net of tax", "-", "11,783"],
+        ["Profit / (loss) for the year", "(2,731)", "8,992"]])
+    assert parse_statement(page, 1).net_income == (-2_731_000, 8_992_000)
+
+
+def test_columns_headed_by_year_take_each_years_last_column():
+    """Billington 2025: underlying / non-underlying / total 2025, then total 2024."""
+    page = _table("Consolidated Income Statement", [
+        ["Underlying", "Non-underlying", "Total"], ["2025", "2025", "2025", "2024"], ["£'000", "£'000", "£'000", "£'000"],
+        ["Revenue", "95,694", "-", "95,694", "113,061"], ["Operating profit", "3,462", "(2,758)", "704", "10,021"],
+        ["Profit before tax", "4,095", "(2,758)", "1,337", "10,814"],
+        ["Profit after tax", "3,451", "(2,124)", "1,327", "8,272"],
+        ["Profit for the year attributable to equity holders", "3,451", "(2,124)", "1,327", "8,272"]],
+        before="Results for the year ended 31 December 2025")
+    s = parse_statement(page, 1)
+    assert s.net_income == (1_327_000, 8_272_000) and s.revenue == (95_694_000, 113_061_000)
+
+
+def test_years_inside_column_labels_head_the_columns():
+    page = _table("Consolidated income statement for the year ended 31 December 2025", [
+        ["Underlying 2025", "Non-underlying 2025", "Total 2025", "2024"], ["£'000", "£'000"],
+        ["Revenue", "95,694", "-", "95,694", "113,061"], ["Operating profit", "3,462", "(2,758)", "704", "10,021"],
+        ["Profit before tax", "4,095", "(2,758)", "1,337", "10,814"], ["Tax", "(644)", "634", "(10)", "(2,542)"],
+        ["Profit for the year attributable to equity holders of the parent company", "3,451", "(2,124)", "1,327", "8,272"]])
+    assert parse_statement(page, 1).net_income == (1_327_000, 8_272_000)
+
+
+def test_owners_under_a_nested_attribution_list():
+    """Ironveld FY2025: 'Attributable to:', a column header, 'Loss for the year', then the owners' line."""
+    page = _table("Consolidated Statement of Comprehensive Income for the year ended 30 June 2025", [
+        ["Note", "£'000", "£'000"], ["Revenue", "4", "164"], ["Loss before taxation", "(1,556)", "(1,756)"],
+        ["Taxation", "5", "-", "(494)"], ["Loss for the year from continuing operations", "(1,556)", "(2,250)"],
+        ["Attributable to:"], ["Note", "£'000", "£'000"], ["Loss for the year"],
+        ["Owners of the Company", "(1,414)", "(2,236)"], ["Non-controlling interest", "(142)", "(14)"],
+        ["Total comprehensive loss for the year"], ["Owners of the Company", "(2,436)", "(1,597)"]])
+    assert parse_statement(page, 1).net_income == (-1_414_000, -2_236_000)
+
+
+def test_a_statement_continued_over_a_page_break_is_one_statement():
+    page = _table("CONSOLIDATED STATEMENT OF COMPREHENSIVE INCOME", [
+        ["Year ended 30 June 2025", "Year ended 30 June 2024"], ["Note", "£'000", "£'000"], ["Revenue", "4", "164"],
+        ["Loss before taxation", "(1,556)", "(1,756 )"], ["Taxation", "5", "-", "(494)"],
+        ["Loss for the year from continuing operations", "(1,556)", "(2,250)"],
+        ["CONSOLIDATED STATEMENT OF COMPREHENSIVE INCOME (CONTINUED)"], ["Attributable to:"],
+        ["Note", "£'000", "£'000"], ["Loss for the year"], ["Owners of the Company", "(1,414)", "(2,236)"],
+        ["Non-controlling interest", "(142)", "(14)"]])
+    assert parse_statement(page, 1).net_income == (-1_414_000, -2_236_000)
+
+
+def test_a_note_and_a_figure_in_one_cell_stay_apart():
+    from clients.rns_mapper import _value
+    assert _value("( 1,756 )") == -1756 and _value("5 1,234") is None
+
+
+def test_a_plain_heading_is_read_when_there_is_no_consolidated_statement():
+    rows = [["2025", "2024"], ["£'000", "£'000"], ["Revenue", "10", "8"], ["Administrative expenses", "(900)", "(800)"],
+            ["Loss before tax", "(890)", "(792)"], ["Loss for the year", "(890)", "(792)"]]
+    plain = _table("STATEMENT OF COMPREHENSIVE INCOME for the year ended 31 December 2025", rows)
+    assert parse_statement(plain, 1).net_income == (-890_000, -792_000)
+    both = _table("Consolidated income statement for the year ended 31 December 2025",
+                  [r if r[0] != "Loss for the year" else ["Loss for the year", "(1,000)", "(700)"] for r in rows])
+    assert parse_statement(both + plain, 1).net_income == (-1_000_000, -700_000)
