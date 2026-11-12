@@ -217,12 +217,13 @@ class LondonYahoo(StatementsYahoo):
 
 
 def test_a_london_listing_takes_the_announced_years_before_eulerpool():
-    """The announced FY2026-FY2024 agree with Yahoo (140M, 100M, 160M): FY2023 (90M) is added, Eulerpool not asked."""
+    """The announced FY2026-FY2024 agree with Yahoo (140M, 100M, 160M): FY2023 (90M) is added; Eulerpool is only the
+    second source (its own FY2022 is not added)."""
     rns, eulerpool = FakeRns(), FakeEulerpool()
-    eulerpool.find_profile = lambda symbol, name: pytest.fail("Eulerpool asked although RNS passed")
     f = UnfiledCompanySource(LondonYahoo(), eulerpool, rns).fetch_fundamentals("HBH.LSE")
     assert rns.asked == ["HBH"]
     by_end = {r.period_end: r for r in f.annual_income_statements}
+    assert "2022-02-28" not in by_end
     assert by_end["2023-02-28"].net_income == 90e6 and by_end["2023-02-28"].eps is None
     assert any(n.startswith("History before FY2024: RNS results announcements") for n in f.notes)
 

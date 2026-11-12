@@ -44,6 +44,7 @@ class UnfiledCompanySource:
         self.yahoo = yahoo
         self.eulerpool = eulerpool
         self.rns = rns                  # London listings: the company's results announcements before Eulerpool
+        self._vendor = {}               # Yahoo symbol -> (Eulerpool data or None, note), fetched once per listing
 
     def fetch_fundamentals(self, ticker: str) -> CompanyFundamentals:
         """
@@ -74,7 +75,7 @@ class UnfiledCompanySource:
         yahoo_years = len(annual.income_statements)
         history_source = "Eulerpool"
         if self.rns is not None and yahoo.yahoo_symbol.upper().endswith(".L"):
-            with_rns = self._with_rns(yahoo, annual, notes)
+            with_rns = self._with_rns(yahoo, profile, annual, notes)
             if with_rns is not None:
                 annual, history_source = with_rns, "RNS results announcements"
         if self.eulerpool is not None and history_source == "Eulerpool":
@@ -88,7 +89,20 @@ class UnfiledCompanySource:
         return home_listing_fundamentals(ticker, SOURCE_NAME, yahoo, profile, replace(annual, notes=()), notes,
                                          fallback_name=profile.name or ticker, data_name="Yahoo Finance's statements")
 
-    def _with_rns(self, yahoo, annual, notes: List[str]):
+    def _eulerpool_data(self, yahoo, profile):
+        """(Eulerpool's data for the listing or None, a note when it is not there), fetched once per listing."""
+        if yahoo.yahoo_symbol not in self._vendor:
+            try:
+                found = self.eulerpool.find_profile(yahoo.yahoo_symbol, profile.name or "")
+                self._vendor[yahoo.yahoo_symbol] = (
+                    (eulerpool_mapper.parse(found, self.eulerpool.fetch_statements(found["isin"])), None) if found else
+                    (None, f"History before Yahoo Finance's years: Eulerpool has no listing {yahoo.yahoo_symbol} named "
+                           f"like {profile.name!r}"))
+            except DataSourceError as e:
+                self._vendor[yahoo.yahoo_symbol] = (None, f"History before Yahoo Finance's years: Eulerpool unavailable ({e})")
+        return self._vendor[yahoo.yahoo_symbol]
+
+    def _with_rns(self, yahoo, profile, annual, notes: List[str]):
         """
         The company's own announced net income (and revenue) for the years before Yahoo's, from its RNS final-results
         announcements, when it agreed with Yahoo's in every overlapping year (rns_mapper.rns_history; GRAHAM_METHODOLOGY
@@ -106,7 +120,15 @@ class UnfiledCompanySource:
             notes.append(f"History before Yahoo Finance's years: {rns_mapper.SOURCE}: no final-results announcements "
                          f"found for {tidm}")
             return None
-        history = rns_mapper.rns_history(annual, statements)
+        vendor = None
+        if self.eulerpool is not None:
+            # Eulerpool's net income per year, as a second source: it settles a disagreement with Yahoo and bridges
+            # gaps in the announcements (two sources against one); only in the filings' currency
+            data, _ = self._eulerpool_data(yahoo, profile)
+            if data is not None and data.currency == annual.currency:
+                vendor = {end: values["net_income"] for end, values in data.years.items()
+                          if values.get("net_income") is not None}
+        history = rns_mapper.rns_history(annual, statements, vendor=vendor)
         notes.extend(n.replace("History before the filed years", "History before Yahoo Finance's years")
                      for n in history.notes)
         if not history.income_statements:
@@ -120,15 +142,9 @@ class UnfiledCompanySource:
         Eulerpool's years before Yahoo's, gated against them; it also fills Yahoo years without net income, keeping
         Yahoo's own basic EPS for such a year where Yahoo reports one (yahoo_eps: period end -> EPS).
         """
-        try:
-            found = self.eulerpool.find_profile(yahoo.yahoo_symbol, profile.name or "")
-            if found is None:
-                notes.append(f"History before Yahoo Finance's years: Eulerpool has no listing {yahoo.yahoo_symbol} named "
-                             f"like {profile.name!r}")
-                return annual
-            data = eulerpool_mapper.parse(found, self.eulerpool.fetch_statements(found["isin"]))
-        except DataSourceError as e:
-            notes.append(f"History before Yahoo Finance's years: Eulerpool unavailable ({e})")
+        data, missing = self._eulerpool_data(yahoo, profile)
+        if data is None:
+            notes.append(missing)
             return annual
         quote = profile.quote_currency or annual.currency
         older = eulerpool_mapper.older_years(annual, data, strict=(major_currency(quote) or quote) != annual.currency,

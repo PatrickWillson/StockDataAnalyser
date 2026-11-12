@@ -273,3 +273,43 @@ def test_after_tax_and_investment_trust_return_lines():
                    rows + [["Net return after taxation", "80", "70"]])
     assert parse_statement(after_tax, 1).net_income == (80_000, 70_000)
     assert parse_statement(trust, 1).net_income == (80_000, 70_000)
+
+
+def test_eulerpool_settles_a_disagreement_with_yahoo_when_it_has_the_announced_figure():
+    """FY2024 announced 2.28M, Yahoo 2.0M: Eulerpool's 2.3M (whole millions) sides with the announcement."""
+    yahoo = {**YAHOO, 2024: 2_000_000.0}
+    assert rns_history(_annual(yahoo), STATEMENTS).income_statements == ()
+    vendor = {"2024-12-31": 2_300_000.0}
+    history = rns_history(_annual(yahoo), STATEMENTS, vendor=vendor)
+    assert [r.period_end for r in history.income_statements][:1] == ["2022-12-31"]
+    assert any("two sources against one" in n for n in history.notes)
+    # a vendor that has Yahoo's figure does not side with the announcement
+    assert rns_history(_annual(yahoo), STATEMENTS, vendor={"2024-12-31": 2_000_000.0}).income_statements == ()
+
+
+def _chain_with(older):
+    return STATEMENTS[:3] + older
+
+
+def test_a_restatement_links_by_revenue():
+    """FY2022 announced 2.5M, restated to 2.768M in the next announcement; the revenue links (48M)."""
+    restated = [_statement(2022, 2_500_000, 1_500_000, revenue=(48e6, 47e6))]
+    history = rns_history(_annual(YAHOO), _chain_with(restated))
+    assert [r.period_end for r in history.income_statements] == ["2022-12-31", "2021-12-31"]
+    assert any("restated in the next announcement" in n and "its revenue" in n for n in history.notes)
+
+
+def test_a_gap_is_bridged_only_by_the_second_source():
+    """No FY2022 announcement read: FY2021's statement links only where Eulerpool has its net income."""
+    gap = [_statement(2021, 1_500_000, 900_000)]
+    without = rns_history(_annual(YAHOO), _chain_with(gap))
+    assert [r.period_end for r in without.income_statements] == ["2022-12-31"]      # the comparative only
+    with_vendor = rns_history(_annual(YAHOO), _chain_with(gap), vendor={"2021-12-31": 1_550_000.0})
+    assert [r.period_end for r in with_vendor.income_statements] == ["2022-12-31", "2021-12-31", "2020-12-31"]
+    assert any("missing (no announcement read)" in n for n in with_vendor.notes)
+
+
+def test_another_companys_results_do_not_link_even_with_a_vendor():
+    stranger = RnsStatement(1, "2015-03-31", "2014-03-31", "GBP", 1e6, (37_900_000, 52_900_000), (None, None), "x")
+    history = rns_history(_annual(YAHOO), STATEMENTS + [stranger], vendor={"2015-03-31": 1_000_000.0})
+    assert "2015-03-31" not in [r.period_end for r in history.income_statements]

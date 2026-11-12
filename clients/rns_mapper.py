@@ -22,7 +22,8 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 from clients.edgar_mapper import EdgarAnnualData
-from clients.eulerpool_mapper import CONTINUITY_RATIO, NO_PER_SHARE, NO_SHARE_COUNT
+from clients.eulerpool_mapper import CONTINUITY_RATIO, NO_PER_SHARE, NO_SHARE_COUNT, allowed_gap
+from config.eulerpool_config import EULERPOOL_MATCH_REL
 from config.rns_config import (RNS_CHAIN_REL, RNS_DATE_TOLERANCE_DAYS, RNS_MATCH_REL, RNS_MATCH_UNITS,
                                RNS_MIN_OVERLAP_YEARS)
 from core.fundamentals import IncomeStatementRow
@@ -325,10 +326,27 @@ def _days_apart(a: str, b: str) -> int:
     return abs((dt.date.fromisoformat(a) - dt.date.fromisoformat(b)).days)
 
 
-def linked_chain(statements: Sequence[RnsStatement]) -> Tuple[List[RnsStatement], Optional[RnsStatement]]:
+def vendor_confirms(vendor: Optional[Mapping[str, float]], end: str, value: float) -> Optional[bool]:
     """
-    The statements linked year by year from the newest (config RNS_CHAIN_REL), newest first, and the first one that
-    did not link (None if all did). Of several for one year end, the latest announcement is taken.
+    Whether a second source (Eulerpool's net income per year end, in currency units) has the same figure for the year:
+    within its whole-million allowance (eulerpool_mapper.allowed_gap); None when it has no figure for the year.
+    """
+    match = next((e for e in (vendor or {}) if _days_apart(e, end) <= RNS_DATE_TOLERANCE_DAYS), None)
+    if match is None or vendor[match] is None:
+        return None
+    return abs(vendor[match] - value) <= allowed_gap(value, EULERPOOL_MATCH_REL)
+
+
+def linked_chain(statements: Sequence[RnsStatement], vendor: Optional[Mapping[str, float]] = None
+                 ) -> Tuple[List[RnsStatement], Optional[RnsStatement], List[str]]:
+    """
+    The statements linked year by year from the newest (config RNS_CHAIN_REL), newest first; the first one that
+    did not link (None if all did); and the bridged links, described. Of several for one year end, the latest
+    announcement is taken. A link is bridged, not broken:
+    - a restatement (the year end links, the net income moved over RNS_CHAIN_REL): when the revenue links within
+      RNS_CHAIN_REL (the same business) or the second source has the older statement's net income for its year;
+    - a gap of one or two years (no announcement read: the year end is the later one's prior year end one or two
+      years earlier): only when the second source has the older statement's net income for its year.
     """
     by_end: Dict[str, RnsStatement] = {}
     for s in sorted(statements, key=lambda s: s.announcement_id):
@@ -338,16 +356,44 @@ def linked_chain(statements: Sequence[RnsStatement]) -> Tuple[List[RnsStatement]
         by_end[s.period_end] = s
     ordered = [by_end[e] for e in sorted(by_end, reverse=True)]
     if not ordered:
-        return [], None
-    chain = [ordered[0]]
+        return [], None, []
+    chain, bridged = [ordered[0]], []
     for s in ordered[1:]:
         later = chain[-1]
         allowed = max(RNS_CHAIN_REL * abs(later.net_income[1]), RNS_MATCH_UNITS * max(s.unit, later.unit))
-        if _days_apart(s.period_end, later.prior_end) > RNS_DATE_TOLERANCE_DAYS \
-                or abs(s.net_income[0] - later.net_income[1]) > allowed:
-            return chain, s
-        chain.append(s)
-    return chain, None
+        dates_link = _days_apart(s.period_end, later.prior_end) <= RNS_DATE_TOLERANCE_DAYS
+        if dates_link and abs(s.net_income[0] - later.net_income[1]) <= allowed:
+            chain.append(s)
+            continue
+        confirmed = vendor_confirms(vendor, s.period_end, s.net_income[0])
+        if dates_link:
+            revenue_links = (s.revenue[0] is not None and later.revenue[1] not in (None, 0)
+                             and abs(s.revenue[0] - later.revenue[1]) <= RNS_CHAIN_REL * abs(later.revenue[1]))
+            if revenue_links or confirmed:
+                bridged.append(f"FY{fiscal_year(s.period_end)} restated in the next announcement "
+                               f"({s.net_income[0] / 1e6:,.3f}M -> {later.net_income[1] / 1e6:,.3f}M), linked by "
+                               + ("its revenue" if revenue_links else "Eulerpool's net income for the year"))
+                chain.append(s)
+                continue
+            return chain, s, bridged
+        prior = dt.date.fromisoformat(later.prior_end)
+        gap = next((k for k in (1, 2) if _days_apart(s.period_end, _years_before(prior, k).isoformat())
+                    <= RNS_DATE_TOLERANCE_DAYS), None)
+        if gap is not None and confirmed:
+            prior = int(fiscal_year(later.prior_end))
+            missing = f"FY{prior}" if gap == 1 else f"FY{prior - 1}-FY{prior}"
+            bridged.append(f"{missing} results announcement missing (no announcement read), "
+                           f"FY{fiscal_year(s.period_end)} linked by Eulerpool's net income for the year")
+            chain.append(s)
+            continue
+        return chain, s, bridged
+    return chain, None, bridged
+
+
+def _years_before(day: dt.date, years: int) -> dt.date:
+    for _ in range(years):
+        day = _year_before(day)
+    return day
 
 
 def _years(statements: Sequence[RnsStatement]) -> Dict[str, Dict[str, object]]:
@@ -367,11 +413,14 @@ def _years(statements: Sequence[RnsStatement]) -> Dict[str, Dict[str, object]]:
 
 
 def rns_history(annual: EdgarAnnualData, statements: Sequence[RnsStatement],
-                filed_source: str = "Yahoo Finance's statements") -> RnsHistory:
+                filed_source: str = "Yahoo Finance's statements",
+                vendor: Optional[Mapping[str, float]] = None) -> RnsHistory:
     """
     The announced years before the filed ones, when the announced net income agreed with the filed figure in every
     overlapping year (at least RNS_MIN_OVERLAP_YEARS; within RNS_MATCH_REL or RNS_MATCH_UNITS of the statement's
-    unit). Statements in another currency are left out. Revenue is cut at the first year-to-year move over
+    unit), or, where they disagreed, when the second source (vendor: Eulerpool's net income per year end, in the
+    filings' currency) has the announced figure and not the filed one (two sources against one). The vendor also
+    bridges gaps and restatements in the chain (linked_chain). Statements in another currency are left out. Revenue is cut at the first year-to-year move over
     CONTINUITY_RATIO from the earliest filed year back (as the vendor gate); net income is not (it can move tenfold).
     """
     def not_used(reason: str) -> RnsHistory:
@@ -382,12 +431,12 @@ def rns_history(annual: EdgarAnnualData, statements: Sequence[RnsStatement],
     if not statements:
         return not_used("no consolidated income statement could be read from the company's results announcements"
                         if not other else f"its statements are in {other[0].currency}, the filings' in {annual.currency}")
-    statements, broken = linked_chain(statements)
+    statements, broken, bridged = linked_chain(statements, vendor)
     years = _years(statements)
     filed = {row.period_end: row for row in annual.income_statements if row.net_income is not None}
     if not filed:
         return not_used("no filed years to check it against")
-    pairs, disagreed = [], []
+    pairs, disagreed, sided = [], [], []
     for end, row in filed.items():
         match = next((e for e in years if abs((dt.date.fromisoformat(e) - dt.date.fromisoformat(end)).days)
                       <= RNS_DATE_TOLERANCE_DAYS), None)
@@ -398,6 +447,9 @@ def rns_history(annual: EdgarAnnualData, statements: Sequence[RnsStatement],
         pairs.append(end)
         # either of the company's figures for the year: as first reported, or restated in the next announcement
         if all(abs(value - theirs) > allowed for value in (ours, years[match]["first_reported"])):
+            if vendor_confirms(vendor, end, ours) and not vendor_confirms(vendor, end, theirs):
+                sided.append(f"FY{fiscal_year(end)} {ours / 1e6:,.3f}M announced, {theirs / 1e6:,.3f}M in {filed_source}")
+                continue
             disagreed.append(f"FY{fiscal_year(end)} {ours / 1e6:,.3f}M announced, {theirs / 1e6:,.3f}M in {filed_source}")
     checked = (f"within {RNS_MATCH_REL:.0%}, or {RNS_MATCH_UNITS:g} of the statement's rounding unit")
     if len(pairs) < RNS_MIN_OVERLAP_YEARS:
@@ -429,6 +481,11 @@ def rns_history(annual: EdgarAnnualData, statements: Sequence[RnsStatement],
              f"net income checked against {filed_source} in FY{overlap[0]}-FY{overlap[-1]} ({checked}) in every "
              f"overlapping year; a year's figures are from the next year's announcement where it restated them. Revenue "
              f"and net income (attributable to the owners of the parent) only: no balance sheets; {NO_PER_SHARE}"]
+    if sided:
+        notes.append(f"{SOURCE}: where the announced net income and {filed_source} disagreed, Eulerpool has the "
+                     f"announced figure (two sources against one), so the announcements are used: " + "; ".join(sided))
+    if bridged:
+        notes.append(f"{SOURCE}: links bridged: " + "; ".join(bridged))
     if broken is not None:
         notes.append(f"{SOURCE}: announcements before FY{fiscal_year(statements[-1].period_end)} not used: the next older "
                      f"one read (year ended {broken.period_end}) does not link to it (its year end or net income does not "
