@@ -41,11 +41,11 @@ HEADING = re.compile(r"^(?:the )?(?:(?:unaudited|audited|condensed|preliminary|s
                      r"statements? of (?:consolidated|group) (?:comprehensive )?income)", re.I)
 # a heading without 'consolidated' or 'group' (a company presenting its group statement plainly), read only when the
 # announcement has no consolidated one; never the parent company's own ('Company statement of ...')
-PLAIN_HEADING = re.compile(r"^(?:the )?(?:(?:unaudited|audited|condensed|preliminary|summary)\s+)*(?:income statements?|"
+PLAIN_HEADING = re.compile(r"^(?:the )?(?:(?:unaudited|audited|condensed|preliminary|summary)\s+)*(?:company\s+)?(?:income statements?|"
                            r"statements? of (?:comprehensive )?income|profit and loss(?: account)?|statements? of profit or loss|"
                            r"statements? of total return)", re.I)
 OTHER_STATEMENT = re.compile(r"^(?:(?:unaudited|audited|condensed)\s+)*(?:(?:consolidated|group|company|parent)\b[^|]{0,40}?)?"
-                             r"\b(?:statement of financial position|balance sheet|cash ?flow|statement of changes in equity|"
+                             r"\b(?:statements? of financial position|balance sheets?|cash ?flows?|statements? of changes in equity|"
                              r"reconciliation of movements)", re.I)
 _NUMBER = r"(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?"
 VALUE = re.compile(rf"^(?:\(-?{_NUMBER}\)|-?{_NUMBER})$")                # brackets in pairs: '11)' is not a figure
@@ -65,11 +65,12 @@ COLUMN_HEADER = re.compile(r"^(?:notes?\b|[£$€]|us\$|['\u2019]?000)[\s£$€'
 FOR_THE_YEAR = re.compile(r"^(?:net |retained |total )?(?:\(loss\)/profit|profit/\(loss\)|\(profit\)/loss|loss/\(profit\)|"
                           r"\(loss\)|profit|loss)(?: after tax(?:ation)?)?"
                           r"(?: and (?:total |other )?comprehensive (?:income|loss|expense))?"
-                          r"(?: attributable to [a-z ]+)? (?:for|of) (?:the )?(?:financial )?(?:year|period)\b", re.I)
+                          r"(?: attributable to [a-z ]+)? (?:for|of) (?:the )?(?:financial )?(?:year|period)(?:/(?:year|period))?\b",
+                          re.I)
 AFTER_TAX = re.compile(r"^(?:net |total )?(?:\(loss\)/profit|profit/\(loss\)|\(profit\)/loss|loss/\(profit\)|\(loss\)|profit|loss|"
                        r"return/\(loss\)|\(loss\)/return|return)(?: (?:for|of) the (?:financial )?(?:year|period))?"
                        r"(?: on ordinary activities)? (?:before and )?after tax(?:ation)?\b"
-                       r"|^(?:net |total )?return attributable to (?:equity |ordinary )?shareholders", re.I)
+                       r"|^(?:net |total )?return attributable to (?:equity|ordinary)?\s*(?:shareholders|holders)?\b", re.I)
 ORDINARY_ACTIVITIES = re.compile(r"^(?:\(loss\)/profit|profit/\(loss\)|profit|loss) on ordinary activities after tax", re.I)
 
 
@@ -84,6 +85,9 @@ class RnsStatement:
     net_income: Tuple[float, float]
     revenue: Tuple[Optional[float], Optional[float]]
     label: str
+    # the statement's total 'profit for the year' (incl. minority interests) where net income is the owners' line:
+    # a second reading of the year for the overlap check only (Yahoo may carry either)
+    total: Optional[Tuple[float, float]] = None
 
 
 @dataclass(frozen=True)
@@ -95,7 +99,7 @@ class RnsHistory:
 
 
 def _clean(text: str) -> str:
-    text = html_lib.unescape(text).replace("\xa0", " ").replace("Â£", "£").replace("â€™", "'").replace("’", "'")
+    text = html_lib.unescape(text).replace("\xa0", " ").replace("Â£", "£").replace("â€™", "'").replace("’", "'").replace("‘", "'")
     text = re.sub(r"\s+", " ", text).strip()
     return re.sub(r"\b((?:19|20)\d) (\d)\b", r"\1\2", text)          # a year split by a stray space: '202 5'
 
@@ -162,6 +166,7 @@ def _split(cells: Sequence[str]) -> Tuple[str, List[str]]:
     # 'Profit / (loss) for the year' is 'Profit/(loss) for the year'
     text = re.sub(r"\s*/\s*", "/", " ".join(x for x in label if x))
     text = re.sub(r"\(\s+", "(", re.sub(r"\s+\)", ")", text))           # 'profit/( loss)' is 'profit/(loss)'
+    text = re.sub(r"\b([b-hj-z]) (?=[a-z]{2,}\b)", r"\1", text, flags=re.I)  # a word split by a space: 'y ear'
     return re.sub(r"\)(?=[a-z])", ") ", text, flags=re.I).strip(), figures  # '(loss)for' is '(loss) for'
 
 
@@ -208,8 +213,9 @@ def parse_statement(page: str, announcement_id: int) -> Optional[RnsStatement]:
         fallback = None
         for start, row in enumerate(rows):
             heading = _bare(" ".join(row))
-            if len(heading) > 200 or not pattern.match(heading):
-                continue
+            if len(heading) > 200 or not pattern.match(heading) or any(
+                    not re.search(r"\b(?:19|20)\d{2}\b", cell) for cell in row[1:]):
+                continue                             # a table's header row ('Income statement | 1% increase ...')
             statement = _read_block(rows[start + 1:start + 180], heading, announced_period, announcement_id)
             if statement is not None and statement.revenue[0] is not None:
                 return statement
@@ -249,7 +255,10 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
             if COLUMN_HEADER.match(label):           # 'Note £'000 £'000' heads columns, not lines
                 continue
             if re.search(r"attributable to", label, re.I):
-                attribution = label
+                # a bare 'Attributable to:' belongs to the line above it ('Total comprehensive income ...')
+                attribution = (f"{data[-1][0]} {label}" if data and re.match(r"^attributable to:?$", label, re.I)
+                               else label)
+                label = attribution
             prefix = label
             continue
         if len(figures) % 2 and NOTE_REF.fullmatch(figures[0]):
@@ -297,13 +306,16 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
         return None
 
     def excluded(text: str) -> bool:
-        return bool(re.search(r"per share|earnings per|dividend|non-controlling|minority", text, re.I))
+        return bool(re.search(r"per share|earnings per|dividend|non-controlling|minority|^(?:total )?equity\b", text, re.I))
 
     found = (first(lambda own, joined: bool(OWNERS.search(joined) or (re.search(r"attributable to", joined, re.I)
                                                                      and OWNER_LINE.match(own)))
                    and not excluded(joined)
                    and ("comprehensive" not in joined.lower()
                         or re.search(r"(?:profit|loss) and total comprehensive", joined, re.I) is not None))
+             # 'Total (loss)/profit for the year' after continuing and discontinued lines is the year's net income
+             or first(lambda own, joined: re.match(r"^total ", own, re.I) is not None and bool(FOR_THE_YEAR.match(own))
+                      and "comprehensive" not in own.lower() and not excluded(own))
              or first(lambda own, joined: any(FOR_THE_YEAR.match(t) and not excluded(t)
                                               and not re.search(r"continuing|discontinued", t, re.I) for t in (own, joined)))
              or first(lambda own, joined: any(FOR_THE_YEAR.match(t) and not excluded(t) for t in (own, joined)))
@@ -313,13 +325,16 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
     if found is None:
         return None
     revenue = first(lambda own, joined: bool(REVENUE.match(own)))
+    total = first(lambda own, joined: bool(FOR_THE_YEAR.match(own)) and not excluded(own)
+                  and not re.search(r"continuing|discontinued|attributable|comprehensive", own, re.I))
     dates = sorted(set(_dates(" | ".join(header))), reverse=True)
     end = dates[0] if dates else announced
     if end is None:
         return None
     prior = next((d for d in dates[1:] if abs((_year_before(end) - d).days) <= 15), _year_before(end))
     return RnsStatement(announcement_id, end.isoformat(), prior.isoformat(), currency, unit, found[1],
-                        revenue[1] if revenue else (None, None), found[0][:120])
+                        revenue[1] if revenue else (None, None), found[0][:120],
+                        total[1] if total and total[1] != found[1] else None)
 
 
 def _days_apart(a: str, b: str) -> int:
@@ -401,14 +416,17 @@ def _years(statements: Sequence[RnsStatement]) -> Dict[str, Dict[str, object]]:
     restated figure) replaces the year's own, which is kept as first_reported."""
     years: Dict[str, Dict[str, object]] = {}
     for s in sorted(statements, key=lambda s: s.announcement_id):
-        for end, ni, rev in ((s.prior_end, s.net_income[1], s.revenue[1]), (s.period_end, s.net_income[0], s.revenue[0])):
+        totals = s.total or (None, None)
+        for end, ni, rev, tot in ((s.prior_end, s.net_income[1], s.revenue[1], totals[1]),
+                                  (s.period_end, s.net_income[0], s.revenue[0], totals[0])):
             match = next((e for e in years if abs((dt.date.fromisoformat(e) - dt.date.fromisoformat(end)).days)
                           <= RNS_DATE_TOLERANCE_DAYS), None)
             if match is not None and match != end:
                 years[end] = years.pop(match)
-            first_reported = years.get(end, {}).get("first_reported", ni)
+            earlier = years.get(end, {})
             years[end] = {"net_income": ni, "revenue": rev, "unit": s.unit, "id": s.announcement_id,
-                          "first_reported": first_reported}
+                          "first_reported": earlier.get("first_reported", ni),
+                          "totals": tuple(earlier.get("totals", ())) + ((tot,) if tot is not None else ())}
     return years
 
 
@@ -446,7 +464,10 @@ def rns_history(annual: EdgarAnnualData, statements: Sequence[RnsStatement],
         allowed = max(RNS_MATCH_REL * abs(theirs), RNS_MATCH_UNITS * float(years[match]["unit"]))
         pairs.append(end)
         # either of the company's figures for the year: as first reported, or restated in the next announcement
-        if all(abs(value - theirs) > allowed for value in (ours, years[match]["first_reported"])):
+        # the year agrees when any of the company's own readings does: the owners' figure as first reported or as
+        # restated, or the statement's total profit for the year (Yahoo may carry the figure incl. minorities)
+        if all(abs(value - theirs) > allowed
+               for value in (ours, years[match]["first_reported"]) + tuple(years[match]["totals"])):
             if vendor_confirms(vendor, end, ours) and not vendor_confirms(vendor, end, theirs):
                 sided.append(f"FY{fiscal_year(end)} {ours / 1e6:,.3f}M announced, {theirs / 1e6:,.3f}M in {filed_source}")
                 continue

@@ -313,3 +313,81 @@ def test_another_companys_results_do_not_link_even_with_a_vendor():
     stranger = RnsStatement(1, "2015-03-31", "2014-03-31", "GBP", 1e6, (37_900_000, 52_900_000), (None, None), "x")
     history = rns_history(_annual(YAHOO), STATEMENTS + [stranger], vendor={"2015-03-31": 1_000_000.0})
     assert "2015-03-31" not in [r.period_end for r in history.income_statements]
+
+
+def test_a_bare_attribution_under_total_comprehensive_income_is_not_net_income():
+    """Midwich: 'Attributable to: Owners' under total comprehensive income; the profit line is the year's figure."""
+    page = _table("Consolidated statement of comprehensive income for the year ended 31 December 2024", [
+        ["Notes", "2024", "2023"], ["£'000", "£'000"], ["Revenue", "1,000,000", "900,000"],
+        ["Profit before taxation", "22,311", "36,547"], ["Profit after taxation", "16,962", "28,926"],
+        ["Profit for the financial year", "16,962", "28,926"], ["Total comprehensive income for the year", "11,193", "23,322"],
+        ["Attributable to:"], ["Owners of the Parent Company", "10,696", "21,681"]])
+    assert parse_statement(page, 1).net_income == (16_962_000, 28_926_000)
+
+
+def test_the_total_line_after_continuing_and_discontinued_is_net_income():
+    """Hercules FY2024: 'Net profit for the year' (continuing) 1,636; 'Total (loss)/profit for the year' -1,671."""
+    page = _table("CONSOLIDATED STATEMENT OF COMPREHENSIVE INCOME", [
+        ["Year ended 30 September 2024", "Year ended 30 September 2023"], ["Continuing operations", "Note", "£000", "£000"],
+        ["Revenue", "100,000", "90,000"], ["Profit before tax expense", "2,247", "1,540"],
+        ["Tax (charge)/credit on profit", "13", "(611)", "129"], ["Net profit for the year", "1,636", "1,669"],
+        ["Discontinued operations Loss for the year", "33", "(3,307)", "(899)"],
+        ["Total (loss)/profit for the year", "(1,671)", "770"]])
+    assert parse_statement(page, 1).net_income == (-1_671_000, 770_000)
+
+
+def test_a_sensitivity_table_headed_income_statement_is_not_a_statement():
+    """SCP: 'Income statement - return after taxation | 1.0% increase in rate £'000 | ...' heads a risk note table."""
+    statement = _table("Statement of Comprehensive Income for the year ended 30 September 2025", [
+        ["2025", "2024"], ["Note", "Revenue £'000", "Capital £'000", "Total £'000", "Revenue £'000", "Capital £'000", "Total £'000"],
+        ["Gross return", "10,321", "18,613", "28,934", "8,737", "31,395", "40,132"],
+        ["Net return before finance costs and taxation", "9,038", "17,549", "26,587", "7,504", "30,240", "37,744"],
+        ["Net return before taxation", "8,648", "16,639", "25,287", "7,102", "29,303", "36,405"],
+        ["Net return after taxation", "8,648", "16,639", "25,287", "7,102", "29,303", "36,405"]])
+    note = ("<table><tr><td>Income statement - return after taxation</td><td>1.0% increase in rate £'000</td>"
+            "<td>1.0% decrease in rate £'000</td></tr><tr><td>Revenue return</td><td>47</td><td>(47)</td></tr>"
+            "<tr><td>Capital return</td><td>1</td><td>(1)</td></tr><tr><td>Other</td><td>2</td><td>(2)</td></tr>"
+            "<tr><td>Total return after taxation</td><td>47</td><td>(47)</td></tr></table>")
+    assert parse_statement(statement + note, 1).net_income == (25_287_000, 36_405_000)
+
+
+def test_a_group_and_company_balance_sheet_ends_the_statement_and_equity_is_never_net_income():
+    page = _table("GROUP STATEMENT OF COMPREHENSIVE INCOME", [
+        ["For the year ended 30 June 2025"], ["Notes", "Year ended 30 June 2025 £'000", "Year ended 30 June 2024 £'000"],
+        ["Revenue", "10", "20"], ["Operating loss", "6", "(4,489)", "(3,324)"], ["Loss before taxation", "(4,180)", "(2,917)"],
+        ["Loss attributable to owners of the Company", "(4,019)", "(2,823)"], ["GROUP AND COMPANY STATEMENTS OF FINANCIAL POSITION"],
+        ["Notes", "2025 £'000", "2024 £'000", "2025 £'000", "2024 £'000"],
+        ["Equity attributable to owners of the Company", "4,238", "8,178", "6,763", "9,282"]])
+    assert parse_statement(page, 1).net_income == (-4_019_000, -2_823_000)
+
+
+def test_a_left_quotation_mark_in_the_unit():
+    page = _table("STATEMENT OF COMPREHENSIVE INCOME AT 30TH JUNE 2026", [
+        ["Year ended 30th June 2026", "Year ended 30th June 2025"], ["Notes", "£ ‘000", "£ ‘000"],
+        ["Investment income", "2,720", "2,693"], ["Expenses", "(500)", "(480)"], ["Profit before tax", "25,500", "3,000"],
+        ["PROFIT/(LOSS) FOR THE YEAR", "25,347", "2,870"]])
+    assert parse_statement(page, 1).unit == 1e3
+
+
+def test_a_year_agrees_when_yahoo_has_the_total_including_minorities():
+    """The owners' line is 2.28M; the statement's total profit for the year 2.4M is Yahoo's figure."""
+    with_total = [RnsStatement(s.announcement_id, s.period_end, s.prior_end, s.currency, s.unit, s.net_income,
+                               s.revenue, s.label, (s.net_income[0] + 120_000, s.net_income[1] + 120_000))
+                  for s in STATEMENTS]
+    yahoo = {**YAHOO, 2024: 2_400_000.0}
+    assert rns_history(_annual(yahoo), STATEMENTS).income_statements == ()
+    history = rns_history(_annual(yahoo), with_total)
+    assert [r.net_income for r in history.income_statements][:1] == [2_768_000]     # still the owners' figure
+
+
+def test_label_variants_year_period_split_words_and_company_statements():
+    rows = [["2025", "2024"], ["£'000", "£'000"], ["Revenue", "500", "400"], ["Operating loss", "(120)", "(100)"],
+            ["Loss before tax", "(110)", "(90)"]]
+    period = _table("Consolidated income statement for the year ended 31 December 2025",
+                    rows + [["Loss for the year/period attributable to owners of the parent", "(80)", "(70)"]])
+    split = _table("Consolidated income statement for the year ended 31 December 2025",
+                   rows + [["Loss for the y ear", "(80)", "(70)"]])
+    company = _table("Company Income Statement for the year ended 31 December 2025",
+                     rows + [["Loss for the year", "(80)", "(70)"]])
+    for page in (period, split, company):
+        assert parse_statement(page, 1).net_income == (-80_000, -70_000)
