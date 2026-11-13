@@ -136,3 +136,31 @@ def test_a_wrapped_label_is_joined_to_its_line():
     reading = read_statement(rows_from_words(words), "2025-12-31")
     assert "<td>Profit for the year</td><td>2,708</td>" in reading.html
     assert reading.accepted and reading.accepted.net_income == (2_708_000, 2_333_000)
+
+
+def test_split_year_headers_name_the_year_they_end():
+    """ALU 2010: '2009/10  2008/09'."""
+    words = [Word("2009/10", w.x, w.y, w.w, w.h, w.c, w.line) if w.t == "2025" else
+             Word("2008/09", w.x, w.y, w.w, w.h, w.c, w.line) if w.t == "2024" else w for w in statement()]
+    reading = read_statement(rows_from_words(words), "2010-03-31")
+    assert "<td>2010</td><td>2009</td>" in reading.html
+    assert reading.accepted and reading.accepted.net_income == (2_708_000, 2_333_000)
+
+
+def test_the_minorities_beside_the_chosen_figure_are_used():
+    """ALU 2010: total comprehensive income attributable (owners 703, minorities 10) above the profit attributable
+    (owners 2,234, minorities 6); profit for the year 2,240 = 2,234 + 6."""
+    rows = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2010", CUR), ("2009", PRI)]),
+            (230, [("£000", CUR), ("£000", PRI)]), (300, [("Revenue", 200), ("92,972", CUR), ("109,088", PRI)]),
+            (350, [("Profit", 140), ("before", 290), ("taxation", 450), ("3,378", CUR), ("1,804", PRI)]),
+            (400, [("Tax", 80), ("expense", 260), ("(1,138)", CUR), ("(744)", PRI)]),
+            (450, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("2,240", CUR), ("1,060", PRI)]),
+            (500, [("Total", 120), ("comprehensive", 400), ("income", 540), ("attributable", 780), ("to", 840)]),
+            (550, [("Equity", 140), ("holders", 300), ("of", 340), ("the", 410), ("parent", 540), ("703", CUR), ("3,551", PRI)]),
+            (600, [("Non-controlling", 300), ("interest", 470), ("10", CUR), ("35", PRI)]),
+            (650, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("attributable", 640), ("to", 700)]),
+            (700, [("Equity", 140), ("holders", 300), ("of", 340), ("the", 410), ("parent", 540), ("2,234", CUR), ("1,052", PRI)]),
+            (750, [("Non-controlling", 300), ("interest", 470), ("6", CUR), ("8", PRI)])]
+    words = [Word(w.t, w.x, w.y, w.w, w.h, w.c, (3, 1, w.y)) for w in page(rows)]
+    reading = read_statement(rows_from_words(words), "2010-06-30")
+    assert reading.accepted and reading.accepted.net_income == (2_234_000, 1_052_000)

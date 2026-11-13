@@ -149,6 +149,17 @@ def is_statement_page(text: str) -> bool:
                 and len(FIGURE.findall(text)) >= 10)
 
 
+# a year column header: '2025', or a split year '2009/10' (named by the year it ends: 2010)
+YEAR_HEADER = re.compile(r"((?:19|20)\d\d)(?:/(\d\d))?")
+
+
+def _header_year(token: str) -> Optional[int]:
+    m = YEAR_HEADER.fullmatch(token)
+    if not m:
+        return None
+    return int(m.group(1)) + 1 if m.group(2) else int(m.group(1))
+
+
 UNIT_TOKEN = re.compile(r"^[£$€]?['\u2019]?0{3}s?$|^[£$€]m$", re.I)
 NOTE_REF = re.compile(r"^\d{1,2}(?:[.,]\s?\d{1,2})*[a-z]?$")
 
@@ -194,8 +205,7 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
     day = dt.date.fromisoformat(made_up_date)
     heading = f"{rows[start].text} for the year ended {day.day} {day:%B %Y}"
     body = rows[start + 1:start + 70]
-    year_row = next((i for i, r in enumerate(body) if sum(bool(re.fullmatch(r"(19|20)\d\d", w.t)) for w in r.words) >= 2),
-                    None)
+    year_row = next((i for i, r in enumerate(body) if sum(_header_year(w.t) is not None for w in r.words) >= 2), None)
     if year_row is None:
         return None
     cols = figure_columns(body[year_row + 1:])
@@ -206,7 +216,7 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
             html.append(f"<tr><td>{r.text}</td></tr>")
             continue
         if k == year_row:
-            years = [w.t for w in r.words if re.fullmatch(r"(19|20)\d\d", w.t)]
+            years = [_header_year(w.t) for w in r.words if _header_year(w.t) is not None]
             html.append("<tr>" + "".join(f"<td>{y}</td>" for y in years) + "</tr>")
             continue
         placed: Dict[int, Word] = {}
@@ -270,6 +280,9 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     for label, figures in rows:
         if len(figures) == width and label:
             lines.append((label.lower(), [_figure(figures[picks[0]]), _figure(figures[picks[1]])]))
+        elif len(figures) == 2 and label:
+            # a two-figure line under a wider table (an attribution list: owners | minorities) is current | prior
+            lines.append((label.lower(), [_figure(figures[0]), _figure(figures[1])]))
 
     def find(pattern, exclude=r"$^"):
         return next((v for lab, v in lines if re.search(pattern, lab) and not re.search(exclude, lab)), None)
@@ -278,9 +291,14 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     tax = find(r"^(income )?tax(ation)?\b|^tax(ation)? on (profit|loss)|^taxation", r"before tax")
     pfy = find(r"(profit|loss).*(for the (financial )?(year|period)|after tax)",
                r"attributable|comprehensive|continuing|discontinued|owners|per share")
-    nci = find(r"non-controlling|minority")
     unit = statement.unit or 1.0
     ni = [statement.net_income[0] / unit, statement.net_income[1] / unit]
+    # the minorities beside the chosen figure: the nearest such line after it in the same attribution list (not the
+    # total comprehensive income list's, ALU 2010: 10 there, 6 beside the profit)
+    at = next((i for i, (lab, v) in enumerate(lines) if all(abs(a - b) <= 1 for a, b in zip(v, ni))), None)
+    nci = None
+    if at is not None:
+        nci = next((v for lab, v in lines[at + 1:at + 4] if re.search(r"non-controlling|minority", lab)), None)
     held, failed = [], []
 
     def check(name, left, right):
