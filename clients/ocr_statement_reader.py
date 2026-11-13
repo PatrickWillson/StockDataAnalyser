@@ -25,7 +25,13 @@ from config.companies_house_config import OCR_CONFIRM_DPI, OCR_FIND_DPI, OCR_MIN
 HEAD = re.compile(r"(consolidated|group)\s+(income\s+statement|profit\s+and\s+loss\s+account|statement\s+of\s+"
                   r"(comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss)", re.I)
 # loose: survives low-resolution damage ('INCOME STATEME!', 'Consol / lated income statement')
-CANDIDATE = re.compile(r"income\s+stat|comprehensive\s+income|profit\s+and\s+loss\s+acc|statement\s+of\s+profit", re.I)
+CANDIDATE = re.compile(r"income\s+stat|comprehensive\s+income|statement\s+of\s+compreh|profit\s+and\s+loss\s+acc|"
+                       r"statement\s+of\s+profit", re.I)
+# the heading as a whole line of its own anywhere on the page: tesseract can read a page's label column first, putting
+# the heading far below the top (Samuel Heath 2025); a list item ('• the consolidated income statement;') is not one
+HEADING_LINE = re.compile(r"^(?:consolidated|group)\s+(?:income\s+statement|profit\s+and\s+loss\s+account|"
+                          r"statement\s+of\s+(?:comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss"
+                          r"(?:\s+and\s+other\s+comprehensive\s+income)?)[\s.:]*$", re.I)
 FIGURE = re.compile(r"\(?\d[\d,.]*\d\)?")
 NUM = re.compile(r"^\(?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?$|^[-–—]$")
 
@@ -134,7 +140,11 @@ def is_candidate_page(text: str) -> bool:
     """First look (low resolution): a heading-like line near the top suggests an income statement; not the parent
     company's own."""
     top = "\n".join(_top(text))
-    return bool(CANDIDATE.search(top) and not re.search(r"company\s+(income|profit)", top, re.I))
+    return bool((CANDIDATE.search(top) or _heading_line(text)) and not re.search(r"company\s+(income|profit)", top, re.I))
+
+
+def _heading_line(text: str) -> bool:
+    return any(HEADING_LINE.match(line.strip()) for line in text.splitlines())
 
 
 def is_statement_page(text: str) -> bool:
@@ -143,7 +153,7 @@ def is_statement_page(text: str) -> bool:
     figures of any form (a small company's, or £m with decimals)."""
     top = _top(text)
     heading = any(HEAD.search(line) and len(line) <= 120 and not re.search(r"\b(we|our|the group's|in our opinion)\b", line, re.I)
-                  for line in top)
+                  for line in top) or _heading_line(text)
     return bool(heading and not re.search(r"company\s+(income|profit)", "\n".join(top), re.I)
                 and re.search(r"revenue|turnover|sales", text, re.I) and re.search(r"before\s+(tax|t\w{1,3}ation)", text, re.I)
                 and len(FIGURE.findall(text)) >= 10)

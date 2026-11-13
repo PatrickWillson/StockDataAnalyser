@@ -101,6 +101,23 @@ def test_low_resolution_damage_still_makes_a_candidate_and_a_small_company_or_m_
     assert is_statement_page(in_m) and is_statement_page(small)
 
 
+def test_a_cut_heading_or_one_read_below_the_label_column_still_finds_the_page():
+    """Ascent 2024 at 100 dpi: 'Consolidated Statement of Comprehen:'. Samuel Heath 2025: two statements on the page,
+    tesseract reading the label column first, so the heading is a line of its own far below the top."""
+    assert is_candidate_page("Consolidated Statement of Comprehen:\nFor the year ended 31 December 2024\n")
+    labels = ["Note", "Revenue 5", "Cost of sales", "Gross profit", "Selling and distribution costs", "Administrative expenses",
+              "Other operating income 25", "Operating profit 6", "Finance income 8", "Finance cost 8",
+              "Profit before taxation", "Taxation 9", "Profit for the year attributable to owners of the", "Parent Company",
+              "Basic and diluted earnings per ordinary share 1", "CONSOLIDATED STATEMENT OF COMPREHENSIVE INCOME",
+              "for the year ended 31 March 2025", "SAMUEL HEATH", "CONSOLIDATED INCOME STATEMENT.",
+              "for the year ended 31 March 2025", "2025", "£000", "14,769", "(7,930)", "6,839", "(3,711)", "(2,163)", "61",
+              "1,026", "137", "1,163", "(275)", "888"]
+    assert is_candidate_page("\n".join(labels)) and is_statement_page("\n".join(labels))
+    # a heading-only line far down a note's page does not count when it is part of a list (the auditor's '• the ...;')
+    listed = "\n".join(labels[:15] + ["• the consolidated income statement;"] + labels[20:])
+    assert not is_statement_page(listed)
+
+
 def test_an_auditors_paragraph_naming_the_statement_does_not_confirm():
     audit = ("Independent auditor's report\nIn our opinion the consolidated income statement gives a true and fair view\n"
              "We have audited revenue 1,234 and profit before tax 5,678 " + "12,345 " * 12)
