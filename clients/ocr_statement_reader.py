@@ -163,13 +163,14 @@ def is_statement_page(text: str, single_entity: bool = False) -> bool:
     """Confirmation (higher resolution): the group income statement heading as a line of its own near the top (not a
     sentence or an auditor's paragraph that names it), revenue or turnover (or, without revenue, administrative
     expenses or an operating profit or loss: an exploration company), a 'before tax' line (_before_tax) and at least 10
-    figures of any form (a small company's, or £m with decimals). For a single company's accounts (single_entity: the
+    figures of any form (a small company's, or £m with decimals); never an auditor's report (its top lines). For a single company's accounts (single_entity: the
     filing is not a group's) a plain heading near the top ('Income Statement') also counts."""
     top = _top(text)
     heading = any(HEAD.search(line) and len(line) <= 120 and not re.search(r"\b(we|our|the group's|in our opinion)\b", line, re.I)
                   for line in top) or _heading_line(text) \
         or (single_entity and any(PLAIN_HEADING_LINE.match(line) for line in top))
-    return bool(heading and not re.search(r"company\s+(income|profit)", "\n".join(top), re.I)
+    # an auditor's report names the statements, sometimes as a short line of its own (Empresaria 2024, two columns)
+    return bool(heading and not re.search(r"company\s+(income|profit)|\bauditor", "\n".join(top), re.I)
                 and re.search(r"revenue|turnover|sales|administrative\s+expenses|operating\s+(?:profit|loss|activities)",
                               text, re.I)
                 and _before_tax(text)

@@ -164,6 +164,13 @@ def test_an_auditors_paragraph_naming_the_statement_does_not_confirm():
     audit = ("Independent auditor's report\nIn our opinion the consolidated income statement gives a true and fair view\n"
              "We have audited revenue 1,234 and profit before tax 5,678 " + "12,345 " * 12)
     assert not is_statement_page(audit)
+    # Empresaria 2024: a two-column auditor's report whose short lines name the statement, with revenue, 'loss before
+    # tax' and figures (materiality, coverage) further down
+    emr = ("Empresaria Annual report and accounts 2024\nIndependent auditor's report\nto the members of Empresaria Group plc\n"
+           "Opinion\nWe have audited the financial statements of Empresaria Group Plc\nended 31 December 2024 which comprise\n"
+           "consolidated income statement.\nconsolidated statement of comprehensive income,\n"
+           "94.7% of group revenue, 81.8% of net fee income, 72.5% of loss before tax " + "12,345 " * 12)
+    assert not is_statement_page(emr)
 
 
 def test_a_tilted_page_keeps_each_printed_line_whole():
