@@ -118,6 +118,16 @@ def test_a_cut_heading_or_one_read_below_the_label_column_still_finds_the_page()
     assert not is_statement_page(listed)
 
 
+def test_a_company_without_revenue_still_confirms_by_its_expenses():
+    """Ascent 2016, an exploration company: no revenue line, administrative expenses and a loss from operations."""
+    text = ("Consolidated Income Statement & Statement of Other Comprehensive\nIncome\nFor the year ended 31 December 2016\n"
+            "2016 2015\nNotes £'000s £'000s\nOther administrative expenses (1,382) (1,609)\nTermination payments - (279)\n"
+            "Loss from operating activities 3 (1,382) (1,888)\nFinance income 5 159 745\nFinance cost 5 (1,453) (2,501)\n"
+            "Loss before taxation (2,676) (3,644)\nLoss for the year (2,676) (3,644)\n")
+    assert is_statement_page(text)
+    assert not is_statement_page(text.replace("administrative expenses", "items").replace("operating activities", "x"))
+
+
 def test_an_auditors_paragraph_naming_the_statement_does_not_confirm():
     audit = ("Independent auditor's report\nIn our opinion the consolidated income statement gives a true and fair view\n"
              "We have audited revenue 1,234 and profit before tax 5,678 " + "12,345 " * 12)
