@@ -105,3 +105,24 @@ def test_an_auditors_paragraph_naming_the_statement_does_not_confirm():
     audit = ("Independent auditor's report\nIn our opinion the consolidated income statement gives a true and fair view\n"
              "We have audited revenue 1,234 and profit before tax 5,678 " + "12,345 " * 12)
     assert not is_statement_page(audit)
+
+
+def test_a_tilted_page_keeps_each_printed_line_whole():
+    """ALU 2025, tilted 0.74 degrees: a line's right-hand figures sit 25 px lower than its label."""
+    tilted = [Word(w.t, w.x, w.y + (25 if w.x > LABEL else 0), w.w, w.h, w.c, w.line) for w in statement()]
+    reading = read_statement(rows_from_words(tilted), "2025-12-31")
+    assert reading.accepted and reading.accepted.net_income == (2_708_000, 2_333_000)
+
+
+def test_three_columns_a_year_and_a_note_column():
+    """Underlying | non-underlying | total per year, and a note column of bare references: the totals are taken."""
+    N, U1, E1, T1, U2, E2, T2 = 700, 950, 1150, 1350, 1600, 1800, 2000
+    rows = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]),
+            (180, [("2025", T1), ("2024", T2)]), (230, [("£'000", U1), ("£'000", E1), ("£'000", T1), ("£'000", U2), ("£'000", E2), ("£'000", T2)]),
+            (300, [("Revenue", 200), ("3", N), ("9,000", U1), ("-", E1), ("9,000", T1), ("8,000", U2), ("-", E2), ("8,000", T2)]),
+            (350, [("Expenses", 200), ("4", N), ("(6,000)", U1), ("(500)", E1), ("(6,500)", T1), ("(5,500)", U2), ("(200)", E2), ("(5,700)", T2)]),
+            (400, [("Profit", 140), ("before", 290), ("tax", 370), ("3,000", U1), ("(500)", E1), ("2,500", T1), ("2,500", U2), ("(200)", E2), ("2,300", T2)]),
+            (450, [("Taxation", 200), ("5", N), ("(600)", U1), ("100", E1), ("(500)", T1), ("(500)", U2), ("40", E2), ("(460)", T2)]),
+            (500, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("2,400", U1), ("(400)", E1), ("2,000", T1), ("2,000", U2), ("(160)", E2), ("1,840", T2)])]
+    reading = read_statement(rows_from_words(page(rows)), "2025-06-30")
+    assert reading.accepted and reading.accepted.net_income == (2_000_000, 1_840_000)

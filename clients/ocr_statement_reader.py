@@ -99,17 +99,28 @@ def _rejoin_thousands(words: List[Word], mh: float) -> List[Word]:
 
 
 def rows_from_words(words: List[Word]) -> List[Row]:
-    """Rows by vertical position (words whose centres are within 0.6 x the median word height), left to right."""
+    """
+    Rows as tesseract grouped the words into printed lines (block, paragraph, line), so a slightly tilted page keeps
+    each line whole; without line numbers, by vertical position (centres within 0.6 x the median word height).
+    Words left to right; rows top to bottom.
+    """
     if not words:
         return []
     mh = _median_height(words)
     rows: List[Row] = []
-    for w in sorted(words, key=lambda w: w.y + w.h / 2):
-        cy = w.y + w.h / 2
-        if rows and abs(rows[-1].cy - cy) < 0.6 * mh:
-            rows[-1].words.append(w)
-        else:
-            rows.append(Row([w], cy))
+    if any(w.line != (0, 0, 0) for w in words):
+        by_line: Dict[Tuple[int, int, int], List[Word]] = {}
+        for w in words:
+            by_line.setdefault(w.line, []).append(w)
+        rows = [Row(ws, statistics.median(w.y + w.h / 2 for w in ws)) for ws in by_line.values()]
+        rows.sort(key=lambda r: r.cy)
+    else:
+        for w in sorted(words, key=lambda w: w.y + w.h / 2):
+            cy = w.y + w.h / 2
+            if rows and abs(rows[-1].cy - cy) < 0.6 * mh:
+                rows[-1].words.append(w)
+            else:
+                rows.append(Row([w], cy))
     for r in rows:
         r.words = _rejoin_thousands(sorted(r.words, key=lambda w: w.x), mh)
     return rows
@@ -138,54 +149,85 @@ def is_statement_page(text: str) -> bool:
                 and len(FIGURE.findall(text)) >= 10)
 
 
+UNIT_TOKEN = re.compile(r"^[£$€]?['\u2019]?0{3}s?$|^[£$€]m$", re.I)
+NOTE_REF = re.compile(r"^\d{1,2}(?:[.,]\s?\d{1,2})*[a-z]?$")
+
+
+def _is_figure_like(w: Word) -> bool:
+    return bool(re.search(r"\d", w.t) or re.fullmatch(r"[-\u2013\u2014]", w.t)) and not UNIT_TOKEN.match(w.t)
+
+
+def figure_columns(rows: List[Row]) -> List[float]:
+    """
+    The figure columns' right edges: the right edges of figure-like words cluster (within 2 x the median word height,
+    at least 4 words) where the columns are; a column of bare note references (mostly '3', '4,5') is left out.
+    """
+    words = [w for r in rows for w in r.words if _is_figure_like(w)]
+    if not words:
+        return []
+    mh = _median_height(words)
+    clusters: List[List[Word]] = []
+    for w in sorted(words, key=lambda w: w.x + w.w):
+        if clusters and w.x + w.w - (clusters[-1][-1].x + clusters[-1][-1].w) < 2 * mh:
+            clusters[-1].append(w)
+        else:
+            clusters.append([w])
+    return [statistics.median(w.x + w.w for w in c) for c in clusters
+            if len(c) >= 4 and sum(bool(NOTE_REF.match(w.t)) for w in c) < 0.6 * len(c)]
+
+
 def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[float]]]:
     """
     The statement as a table for parse_statement: the heading (with the register's year end, more reliable than OCR's
-    '21st' for '31st'), the first row naming two or more years as the year columns, and per row the figure
-    right-aligned nearest each year column. Returns (html, confidences of the figures placed) or None.
+    '21st' for '31st'), the first row naming two or more years as the header, then per row its label and the figure
+    in each figure column (figure_columns: underlying / exceptional / total columns all pass through; the parser takes
+    each year's total). Returns (html, confidences of the figures placed) or None.
     """
     start = next((i for i, r in enumerate(rows) if HEAD.search(r.text)), None)
     if start is None:
         return None
     day = dt.date.fromisoformat(made_up_date)
     heading = f"{rows[start].text} for the year ended {day.day} {day:%B %Y}"
-    cols: Optional[List[Tuple[int, int]]] = None
+    body = rows[start + 1:start + 70]
+    year_row = next((i for i, r in enumerate(body) if sum(bool(re.fullmatch(r"(19|20)\d\d", w.t)) for w in r.words) >= 2),
+                    None)
+    if year_row is None:
+        return None
+    cols = figure_columns(body[year_row + 1:])
+    mh = _median_height([w for r in body for w in r.words])
     html, confs = [f"<p>{heading}</p><table>"], []
-    for r in rows[start + 1:start + 60]:
-        years = [(int(w.t), w.x + w.w) for w in r.words if re.fullmatch(r"(19|20)\d\d", w.t)]
-        if cols is None and len(years) >= 2:
-            cols = years
-            html.append("<tr>" + "".join(f"<td>{y}</td>" for y, _ in cols) + "</tr>")
-            continue
-        figs = [w for w in r.words if NUM.match(w.t)]
-        if cols is not None and _unreadable(r.words, cols):
-            # a figure misread ('$88' for 888) or uncertain: the line is shown without figures, so never taken
-            html.append(f"<tr><td>{' '.join(w.t for w in r.words if w not in figs)} [unreadable]</td></tr>")
-            continue
-        if not figs or cols is None:
+    for k, r in enumerate(body):
+        if k < year_row:
             html.append(f"<tr><td>{r.text}</td></tr>")
             continue
-        label = " ".join(w.t for w in r.words if w not in figs)
-        width = max(edge for _, edge in cols)
-        cells = []
-        for _, edge in cols:
-            near = min(figs, key=lambda w: abs(w.x + w.w - edge))
-            if abs(near.x + near.w - edge) < 0.12 * width:
-                cells.append(near.t)
-                confs.append(near.c)
-        html.append(f"<tr><td>{label}</td>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>")
+        if k == year_row:
+            years = [w.t for w in r.words if re.fullmatch(r"(19|20)\d\d", w.t)]
+            html.append("<tr>" + "".join(f"<td>{y}</td>" for y in years) + "</tr>")
+            continue
+        placed: Dict[int, Word] = {}
+        for w in r.words:
+            if not _is_figure_like(w) or not cols:
+                continue
+            j = min(range(len(cols)), key=lambda j: abs(w.x + w.w - cols[j]))
+            if abs(w.x + w.w - cols[j]) < 1.5 * mh:
+                placed[j] = w
+        if _unreadable(list(placed.values())):
+            # a figure misread ('$88' for 888) or uncertain: the line is shown without figures, so never taken
+            html.append(f"<tr><td>{' '.join(w.t for w in r.words if w not in placed.values())} [unreadable]</td></tr>")
+            continue
+        label = " ".join(w.t for w in r.words if w not in placed.values())
+        if not placed:
+            html.append(f"<tr><td>{label}</td></tr>")
+            continue
+        html.append(f"<tr><td>{label}</td>" + "".join(f"<td>{placed[j].t}</td>" for j in sorted(placed)) + "</tr>")
+        confs += [w.c for w in placed.values()]
     html.append("</table>")
     return "".join(html), confs
 
 
-def _unreadable(words: List[Word], cols: List[Tuple[int, int]]) -> bool:
-    """A token in a figure column that is not a clean figure ('$88', '1,0O6') or below OCR_MIN_FIGURE_CONFIDENCE."""
-    width = max(edge for _, edge in cols)
-    for w in words:
-        in_column = any(abs(w.x + w.w - edge) < 0.12 * width for _, edge in cols)
-        if in_column and re.search(r"\d|^[-\u2013\u2014]$", w.t) and (not NUM.match(w.t) or w.c < OCR_MIN_FIGURE_CONFIDENCE):
-            return True
-    return False
+def _unreadable(placed: List[Word]) -> bool:
+    """A word in a figure column that is not a clean figure ('$88', '1,0O6') or is below OCR_MIN_FIGURE_CONFIDENCE."""
+    return any(not NUM.match(w.t) or w.c < OCR_MIN_FIGURE_CONFIDENCE for w in placed)
 
 
 def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
@@ -195,11 +237,25 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     net income + minority interests = profit for the year (minorities 0 when none is shown), or, with no profit for
     the year line, net income = profit before tax + tax (- minorities). (passed, which identities held or failed.)
     """
-    lines = []
+    rows = []
     for cells in rows_of(html):
         label, figures = _split(cells)
-        if len(figures) >= 2 and label:
-            lines.append((label.lower(), [_figure(f) for f in figures[:2]]))
+        if len(figures) % 2 and re.fullmatch(r"\d{1,2}", figures[0]):
+            figures = figures[1:]                      # a note reference, as the parser drops it
+        rows.append((label, figures))
+    header = next((f for lab, f in rows if f and all(re.fullmatch(r"(19|20)\d\d", x) for x in f)), [])
+    widths = [len(f) for lab, f in rows if lab and len(f) >= 2]
+    width = max(set(widths), key=widths.count) if widths else 2
+    years = [int(y) for y in header]
+    if len(years) == width and len(set(years)) >= 2:          # the parser's choice: each year's last column
+        top = sorted(set(years), reverse=True)
+        picks = (max(i for i, y in enumerate(years) if y == top[0]), max(i for i, y in enumerate(years) if y == top[1]))
+    else:
+        picks = (0, 1) if width == 2 else (width // 2 - 1, width - 1)
+    lines = []
+    for label, figures in rows:
+        if len(figures) == width and label:
+            lines.append((label.lower(), [_figure(figures[picks[0]]), _figure(figures[picks[1]])]))
 
     def find(pattern, exclude=r"$^"):
         return next((v for lab, v in lines if re.search(pattern, lab) and not re.search(exclude, lab)), None)
