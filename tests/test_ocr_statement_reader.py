@@ -204,3 +204,22 @@ def test_a_stray_token_between_the_columns_voids_its_line():
     words = statement(owners=("2,708", "2,333")) + [Word("-", CUR - 230, 550, 20, H, 0.0, (1, 1, 9))]
     reading = read_statement(rows_from_words(words), "2025-12-31")
     assert "owners [unreadable]" in reading.html
+
+
+def test_plain_pounds_over_small_figures_is_not_believed():
+    """AST 2009: '£ £' (the '000 lost) over figures like 898 and (10,756): a 1,000x error if taken as pounds."""
+    words = [Word("£", w.x + w.w - 20, w.y, 20, w.h, w.c, w.line) if w.t == "£'000" else w for w in statement()]
+    reading = read_statement(rows_from_words(words), "2025-12-31")
+    assert reading.statement.unit == 1.0 and reading.accepted is None
+    assert "unit unknown" in reading.notes[0]
+
+
+def test_plain_pounds_over_full_pound_figures_is_believed():
+    """Braime 2006 style: exact pounds (11,119,745)."""
+    big = {"50,935": "50,935,412", "48,947": "48,947,118", "(28,440)": "(28,440,310)", "(27,292)": "(27,292,004)",
+           "4,089": "4,089,377", "3,198": "3,198,250", "(1,381)": "(1,381,101)", "(865)": "(865,050)",
+           "2,708": "2,708,276", "2,333": "2,333,200"}
+    words = [Word("£", w.x + w.w - 20, w.y, 20, w.h, w.c, w.line) if w.t == "£'000" else
+             Word(big.get(w.t, w.t), w.x, w.y, w.w, w.h, w.c, w.line) for w in statement()]
+    reading = read_statement(rows_from_words(words), "2025-12-31")
+    assert reading.accepted and reading.accepted.net_income == (2_708_276, 2_333_200)

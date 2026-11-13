@@ -374,6 +374,19 @@ def _value(token: str) -> float:
     return (-1 if token.startswith("(") else 1) * float(re.sub(r"[(),]", "", token))
 
 
+def unit_plausible(html: str, unit: float) -> bool:
+    """
+    A unit of whole pounds (£, not £'000) is believed only when the statement's figures are of that size: a listed
+    company in exact pounds shows figures like 11,119,745. Plain '£' with no figure reaching 100,000 is far more
+    likely a '£'000' whose '000 OCR lost (AST 2009: '£ £' over figures like 898 and (10,756), in £'000).
+    """
+    if unit != 1.0:
+        return True
+    figures = [abs(_figure(f)) for cells in rows_of(html) for f in _split(cells)[1]
+               if not re.fullmatch(r"(19|20)\d\d", f)]
+    return bool(figures) and max(figures) >= 100_000
+
+
 def read_statement(rows: List[Row], made_up_date: str) -> OcrReading:
     """The statement on a page's rows, with its checks."""
     table = table_html(rows, made_up_date)
@@ -383,6 +396,9 @@ def read_statement(rows: List[Row], made_up_date: str) -> OcrReading:
     statement = parse_statement(html, 0)
     if statement is None:
         return OcrReading(None, html, min(confs) if confs else None, None, ("statement not read",))
+    if not unit_plausible(html, statement.unit):
+        return OcrReading(statement, html, min(confs) if confs else None, None,
+                          ("unit unknown: '£' over figures below 100,000 (a lost '000?)",), False)
     passed, checks = verify(html, statement)
     # the profit before tax identity on its own, for reporting (verify() decides acceptance)
     arithmetic = (True if re.search(r"held:[^|]*profit before tax \+ tax", checks.split(" failed:")[0])
@@ -424,9 +440,9 @@ def read_filing(pdf_path: str, made_up_date: str) -> Tuple[Optional[int], OcrRea
         return None, OcrReading(None, notes=("group income statement page not found",))
     rows = page_rows(doc[index])
     reading = read_statement(rows, made_up_date)
-    if reading.statement is None:
+    if reading.statement is None or reading.notes[:1] == ("unit unknown: '£' over figures below 100,000 (a lost '000?)",):
         unit = _reread_unit_strip(doc[index], rows)
-        if unit:
+        if unit and unit.endswith(("000", "m")):
             reading = read_statement(_with_unit_row(rows, unit), made_up_date)
     return index, reading
 
