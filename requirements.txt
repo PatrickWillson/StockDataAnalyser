@@ -3,3 +3,7 @@
 requests>=2.31.0
 python-dotenv>=1.0.0
 yfinance==1.0
+# Companies House accounts read by OCR (clients/ocr_statement_reader.py; also needs the tesseract-ocr system package)
+pymupdf>=1.24
+pytesseract>=0.3.10
+pillow>=10.0
