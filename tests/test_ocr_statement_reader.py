@@ -1,6 +1,6 @@
 """ocr_statement_reader: synthetic OCR words (no tesseract) -> rows -> statement, with its checks."""
 
-from clients.ocr_statement_reader import (Word, is_statement_page, read_statement, rows_from_words,
+from clients.ocr_statement_reader import (Word, is_candidate_page, is_statement_page, read_statement, rows_from_words,
                                           words_from_tesseract)
 
 H = 30     # word height in pixels
@@ -86,3 +86,22 @@ def test_a_low_confidence_figure_voids_its_line():
     words = [Word(w.t, w.x, w.y, w.w, w.h, 30.0, w.line) if w.t == "2,708" else w for w in statement()]
     reading = read_statement(rows_from_words(words), "2025-12-31")
     assert reading.accepted is None
+
+
+def test_low_resolution_damage_still_makes_a_candidate_and_a_small_company_or_m_page_confirms():
+    """At 100 dpi: 'INCOME STATEME!' and a split 'Consol / lated'; at 200 dpi: £m with decimals, a small company."""
+    assert is_candidate_page("SAMUEL HEATH\nCONSOLIDATED INCOME STATEME!\nfor the year\n")
+    assert is_candidate_page("Consol\nlated income statement\n2024 2023\n")
+    assert not is_candidate_page("Company income statement\n2025 2024\n")
+    in_m = ("Consolidated income statement\nfor the year ended 30 September 2025\n£m £m\nRevenue 690.1 718.2\n"
+            "Cost of sales (380.4) (390.6)\nGross profit 309.7 327.6\nProfit before tax 52.1 70.3\nTaxation (13.2) (17.5)\n"
+            "Profit for the year 38.9 52.8\n")
+    small = ("Consolidated income statement\n2025 2024\n£000 £000\nRevenue 812 790\nCost of sales (402) (395)\n"
+             "Gross profit 410 395\nProfit before taxation 61 57\nTax (12) (11)\nProfit for the year 49 46\n")
+    assert is_statement_page(in_m) and is_statement_page(small)
+
+
+def test_an_auditors_paragraph_naming_the_statement_does_not_confirm():
+    audit = ("Independent auditor's report\nIn our opinion the consolidated income statement gives a true and fair view\n"
+             "We have audited revenue 1,234 and profit before tax 5,678 " + "12,345 " * 12)
+    assert not is_statement_page(audit)

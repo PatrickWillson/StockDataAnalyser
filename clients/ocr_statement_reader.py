@@ -20,10 +20,13 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from clients.rns_mapper import RnsStatement, _split, _value as _figure, parse_statement, rows_of
-from config.companies_house_config import OCR_FIND_DPI, OCR_MIN_FIGURE_CONFIDENCE, OCR_READ_DPI
+from config.companies_house_config import OCR_CONFIRM_DPI, OCR_FIND_DPI, OCR_MIN_FIGURE_CONFIDENCE, OCR_READ_DPI
 
 HEAD = re.compile(r"(consolidated|group)\s+(income\s+statement|profit\s+and\s+loss\s+account|statement\s+of\s+"
                   r"(comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss)", re.I)
+# loose: survives low-resolution damage ('INCOME STATEME!', 'Consol / lated income statement')
+CANDIDATE = re.compile(r"income\s+stat|comprehensive\s+income|profit\s+and\s+loss\s+acc|statement\s+of\s+profit", re.I)
+FIGURE = re.compile(r"\(?\d[\d,.]*\d\)?")
 NUM = re.compile(r"^\(?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?$|^[-–—]$")
 
 
@@ -112,13 +115,27 @@ def rows_from_words(words: List[Word]) -> List[Row]:
     return rows
 
 
+def _top(text: str) -> List[str]:
+    return [line.strip() for line in text.splitlines() if line.strip()][:15]
+
+
+def is_candidate_page(text: str) -> bool:
+    """First look (low resolution): a heading-like line near the top suggests an income statement; not the parent
+    company's own."""
+    top = "\n".join(_top(text))
+    return bool(CANDIDATE.search(top) and not re.search(r"company\s+(income|profit)", top, re.I))
+
+
 def is_statement_page(text: str) -> bool:
-    """Headed (near its top) by the group income statement, with revenue or turnover, a 'before tax' line and figures:
-    not a note that mentions the statement."""
-    top = "\n".join([line for line in text.splitlines() if line.strip()][:15])
-    return bool(HEAD.search(top) and not re.search(r"company\s+(income|profit)", top, re.I)
-                and re.search(r"revenue|turnover|sales", text, re.I) and re.search(r"before\s+tax", text, re.I)
-                and len(re.findall(r"\d{1,3},\d{3}", text)) >= 6)
+    """Confirmation (higher resolution): the group income statement heading as a line of its own near the top (not a
+    sentence or an auditor's paragraph that names it), revenue or turnover, a 'before tax' line and at least 10
+    figures of any form (a small company's, or £m with decimals)."""
+    top = _top(text)
+    heading = any(HEAD.search(line) and len(line) <= 120 and not re.search(r"\b(we|our|the group's|in our opinion)\b", line, re.I)
+                  for line in top)
+    return bool(heading and not re.search(r"company\s+(income|profit)", "\n".join(top), re.I)
+                and re.search(r"revenue|turnover|sales", text, re.I) and re.search(r"before\s+(tax|t\w{1,3}ation)", text, re.I)
+                and len(FIGURE.findall(text)) >= 10)
 
 
 def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[float]]]:
@@ -263,10 +280,12 @@ def _render(page, dpi: int):
 
 
 def find_statement_page(doc) -> Optional[int]:
-    """The index of the group income statement page (low-resolution OCR of each page), or None."""
+    """The index of the group income statement page, or None: every page at OCR_FIND_DPI for candidates
+    (is_candidate_page), candidates re-read at OCR_CONFIRM_DPI to confirm (is_statement_page)."""
     import pytesseract
     for i, page in enumerate(doc):
-        if is_statement_page(pytesseract.image_to_string(_render(page, OCR_FIND_DPI))):
+        if is_candidate_page(pytesseract.image_to_string(_render(page, OCR_FIND_DPI))) \
+                and is_statement_page(pytesseract.image_to_string(_render(page, OCR_CONFIRM_DPI))):
             return i
     return None
 

@@ -18,6 +18,7 @@ COMPANIES_HOUSE_CACHE_DIR: Final[str] = "data/cache/companies_house"   # relativ
 
 # OCR (tesseract): resolutions for finding the statement page and for reading it, and the lowest tesseract word
 # confidence (0-100) accepted for a figure that is used
-OCR_FIND_DPI: Final[int] = 100
+OCR_FIND_DPI: Final[int] = 100          # a quick first look at every page
+OCR_CONFIRM_DPI: Final[int] = 200       # candidate pages re-read to confirm the statement
 OCR_READ_DPI: Final[int] = 300
 OCR_MIN_FIGURE_CONFIDENCE: Final[float] = 60.0
