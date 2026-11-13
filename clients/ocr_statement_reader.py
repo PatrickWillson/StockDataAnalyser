@@ -200,10 +200,18 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
     each year's total). Returns (html, confidences of the figures placed) or None.
     """
     start = next((i for i, r in enumerate(rows) if HEAD.search(r.text)), None)
-    if start is None:
-        return None
     day = dt.date.fromisoformat(made_up_date)
-    heading = f"{rows[start].text} for the year ended {day.day} {day:%B %Y}"
+    if start is None:
+        # the page was confirmed as the statement (find_statement_page), but this read dropped its large heading
+        # (ALU 2017): the statement starts just above the first row naming two years near the top
+        first_years = next((i for i, r in enumerate(rows[:20]) if sum(_header_year(w.t) is not None for w in r.words) >= 2),
+                           None)
+        if first_years is None:
+            return None
+        start = first_years - 1
+        heading = f"Consolidated income statement for the year ended {day.day} {day:%B %Y}"
+    else:
+        heading = f"{rows[start].text} for the year ended {day.day} {day:%B %Y}"
     body = rows[start + 1:start + 70]
     year_row = next((i for i, r in enumerate(body) if sum(_header_year(w.t) is not None for w in r.words) >= 2), None)
     if year_row is None:

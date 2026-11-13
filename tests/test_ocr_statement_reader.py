@@ -164,3 +164,10 @@ def test_the_minorities_beside_the_chosen_figure_are_used():
     words = [Word(w.t, w.x, w.y, w.w, w.h, w.c, (3, 1, w.y)) for w in page(rows)]
     reading = read_statement(rows_from_words(words), "2010-06-30")
     assert reading.accepted and reading.accepted.net_income == (2_234_000, 1_052_000)
+
+
+def test_a_dropped_heading_starts_the_statement_at_the_year_row():
+    """ALU 2017: the large heading line is missing from the high-resolution read."""
+    words = [w for w in statement() if w.y != 100]
+    reading = read_statement(rows_from_words(words), "2025-12-31")
+    assert reading.accepted and reading.accepted.net_income == (2_708_000, 2_333_000)
