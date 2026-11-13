@@ -135,6 +135,10 @@ def test_a_before_tax_label_wrapped_onto_the_next_line_still_confirms():
             "Taxation 12 (7,576) 929 (6,647) (9,012) 158 (8,854)\n")
     assert is_statement_page(text)
     assert not is_statement_page(text.replace("Taxation", "Dividends"))
+    vct = ("INCOME STATEMENT\nFOR THE YEAR ENDED 30 NOVEMBER 2025\nRevenue Capital Total\n"
+           "Income from investments 2 - 833 817 - 817\nInvestment management fees 3 (1,359) (1,698) (311) (1,243) (1,554)\n"
+           "Net return on ordinary activities before 630 588 1,900 2,488\ntaxation\nTax on ordinary activities 5 - - -\n")
+    assert is_statement_page(vct, single_entity=True)          # Maven VCT 3 2025: 'return ... before' / 'taxation'
 
 
 def test_a_plain_income_statement_heading_confirms_only_for_a_single_companys_accounts():

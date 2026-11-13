@@ -152,11 +152,10 @@ def _heading_line(text: str) -> bool:
 
 
 def _before_tax(text: str) -> bool:
-    """A 'before tax' line, or one whose 'tax' wrapped below it ('Profit /(loss) before  29,319', Vertu 2025) followed by a
-    taxation line."""
+    """A 'before tax' line, or a profit, loss or return line whose 'tax' wrapped below it ('Profit /(loss) before  29,319',
+    Vertu 2025; 'Net return on ordinary activities before' / 'taxation', Maven VCT 3 2025) followed by a taxation line."""
     return bool(re.search(r"before\s+(tax|t\w{1,3}ation)", text, re.I)
-                or re.search(r"(?:profit|loss)\)?\s*/?\s*\(?(?:profit|loss)?\)?\s+before\b[^\n]*\n(?:[^\n]*\n)?\s*(?:income\s+)?tax",
-                             text, re.I))
+                or re.search(r"(?:profit|loss|return)\b[^\n]*?\bbefore\b[^\n]*\n(?:[^\n]*\n)?\s*(?:income\s+)?tax", text, re.I))
 
 
 def is_statement_page(text: str, single_entity: bool = False) -> bool:
