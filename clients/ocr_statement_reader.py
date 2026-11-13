@@ -334,7 +334,8 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     the printed precision: 1 for whole figures, 0.1 for figures to one decimal place):
     profit before tax + tax = profit for the year where all three lines are there; and the net income ties in:
     net income + minority interests = profit for the year (minorities 0 when none is shown), or, with no profit for
-    the year line, net income = profit before tax + tax (- minorities). (passed, which identities held or failed.)
+    the year line, net income = profit before tax + tax (- minorities); with neither, net income + minorities + other
+    comprehensive income = total comprehensive income. (passed, which identities held or failed.)
     """
     rows = []
     for cells in rows_of(html):
@@ -353,6 +354,7 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
         picks = (0, 1) if width == 2 else (width // 2 - 1, width - 1)
     lines = []
     for label, figures in rows:
+        label = re.sub(r"^\d{1,2}(?:[.,]\d{1,2})?[a-z]?\s+(?=[A-Za-z])", "", label)   # a note number before it: '8 Taxation'
         if len(figures) == width and label:
             lines.append((label.lower(), [_figure(figures[picks[0]]), _figure(figures[picks[1]])]))
         elif len(figures) == 2 and label:
@@ -369,6 +371,11 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
                  if re.search(r"(profit|loss|return).*(for the (financial )?(year|period)|after tax)", lab)
                  and not re.search(r"attributable|comprehensive|continuing|discontinued|owners|per share", lab)]
     pfy = pfy_lines[0][1] if pfy_lines else None
+    # the statement of comprehensive income's totals (not an attribution of them)
+    oci = find(r"^(total )?other comprehensive (income|loss|expense|\(loss\)|\(expense\))\S*( for the (financial )?(year|period))?"
+               r"( net of tax)?$", r"attributable")
+    tci = find(r"^total comprehensive (income|loss|expense|\(loss\)|\(expense\))\S*( for the (financial )?(year|period))?$",
+               r"attributable")
     continuing, discontinued = None, None
     for (i, v) in pfy_lines[1:]:
         between = [w for lab, w in lines[pfy_lines[0][0] + 1:i] if "discontinued" in lab]
@@ -408,6 +415,10 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     elif pbt and tax:
         tied = check("net income = profit before tax + tax - minorities",
                      ni, [a + b - m for a, b, m in zip(pbt, tax, minorities)])
+    elif oci and tci:
+        # no usable tax line (Braime 2010): the statement of comprehensive income below gives the profit back
+        tied = check("net income + minorities + other comprehensive income = total comprehensive income",
+                     [a + m + o for a, m, o in zip(ni, minorities, oci)], tci)
     else:
         tied = False
         failed.append("no profit for the year or profit before tax and tax lines to tie the net income to")

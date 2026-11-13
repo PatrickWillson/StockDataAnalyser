@@ -359,3 +359,40 @@ def test_a_lost_decimal_point_is_restored_in_a_statement_in_tenths_and_must_stil
                                 [("1,234", "1,100"), ("(567)", "(500)"), ("667", "600"), ("(120)", "(100)"), ("547", "500"),
                                  ("4.62", "5.48"), ("4.29", "5.10")]) + "</table>"
     assert restore_decimals(pence) == (pence, 0)
+
+
+def test_with_no_tax_line_the_net_income_ties_to_total_comprehensive_income():
+    """Braime 2010: the tax line unreadable; below, the statement of comprehensive income: profit 945,138 + other
+    comprehensive income (64,254) = total comprehensive income 880,884 (2009: 387,087 - 180,605 = 206,482)."""
+    def soci(tci):
+        rows = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2010", CUR), ("2009", PRI)]),
+                (230, [("£", CUR), ("£", PRI)]), (300, [("Revenue", 200), ("18,057,661", CUR), ("15,685,218", PRI)]),
+                (350, [("Depreciation", 300), ("(286,938)", CUR), ("(302,865)", PRI)]),
+                (400, [("Profit", 140), ("before", 290), ("tax", 370), ("1,361,378", CUR), ("624,992", PRI)]),
+                (450, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("attributable", 640), ("to", 700),
+                       ("equity", 820), ("shareholders", 1050), ("945,138", CUR), ("387,087", PRI)]),
+                (550, [("Actuarial", 220), ("gains", 330), ("(168,000)", CUR), ("76,000", PRI)]),
+                (600, [("Other", 120), ("comprehensive", 380), ("income", 520), ("for", 600), ("the", 680), ("year", 780),
+                       ("(64,254)", CUR), ("(180,605)", PRI)]),
+                (650, [("Total", 120), ("comprehensive", 380), ("income", 520), ("for", 600), ("the", 680), ("year", 780),
+                       (tci, CUR), ("206,482", PRI)])]
+        return read_statement(rows_from_words(page(rows)), "2010-12-31")
+    reading = soci("880,884")
+    assert reading.accepted and reading.accepted.net_income == (945_138, 387_087)
+    assert "net income + minorities + other comprehensive income = total comprehensive income" in reading.notes[0]
+    assert soci("880,084").accepted is None
+
+
+def test_a_note_number_printed_before_a_label_does_not_hide_the_tax_line():
+    """Fletcher King 2018: '8 Taxation (65) (159)' and 'Profit and total comprehensive income for the year attributable
+    to equity shareholders 209 579': 274 - 65 = 209."""
+    rows = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2018", CUR), ("2017", PRI)]),
+            (230, [("£000", CUR), ("£000", PRI)]), (300, [("4", 40), ("Revenue", 200), ("3,080", CUR), ("4,094", PRI)]),
+            (350, [("Other", 120), ("expenses", 300), ("(1,181)", CUR), ("(1,214)", PRI)]),
+            (400, [("Profit", 140), ("before", 290), ("taxation", 450), ("274", CUR), ("738", PRI)]),
+            (450, [("8", 40), ("Taxation", 230), ("(65)", CUR), ("(159)", PRI)]),
+            (500, [("Profit", 140), ("and", 210), ("total", 300), ("comprehensive", 560), ("income", 700), ("for", 780),
+                   ("the", 860), ("year", 960), ("attributable", 1200), ("to", 1260), ("equity", 1380),
+                   ("shareholders", 1600), ("209", CUR), ("579", PRI)])]
+    reading = read_statement(rows_from_words(page(rows)), "2018-04-30")
+    assert reading.accepted and reading.accepted.net_income == (209_000, 579_000)
