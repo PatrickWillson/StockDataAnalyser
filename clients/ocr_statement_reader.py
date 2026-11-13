@@ -297,8 +297,16 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
 
     pbt = find(r"(profit|loss).*before tax")
     tax = find(r"^(income )?tax(ation)?\b|^tax(ation)? on (profit|loss)|^taxation", r"before tax")
-    pfy = find(r"(profit|loss).*(for the (financial )?(year|period)|after tax)",
-               r"attributable|comprehensive|continuing|discontinued|owners|per share")
+    # profit for the year: the last such line when a discontinued-operations line comes before it (the total)
+    pfy_lines = [(i, v) for i, (lab, v) in enumerate(lines)
+                 if re.search(r"(profit|loss).*(for the (financial )?(year|period)|after tax)", lab)
+                 and not re.search(r"attributable|comprehensive|continuing|discontinued|owners|per share", lab)]
+    pfy = pfy_lines[0][1] if pfy_lines else None
+    continuing, discontinued = None, None
+    for (i, v) in pfy_lines[1:]:
+        between = [w for lab, w in lines[pfy_lines[0][0] + 1:i] if "discontinued" in lab]
+        if between:
+            continuing, discontinued, pfy = pfy_lines[0][1], between[0], v
     unit = statement.unit or 1.0
     ni = [statement.net_income[0] / unit, statement.net_income[1] / unit]
     # the minorities beside the chosen figure: the nearest such line after it in the same attribution list (not the
@@ -314,7 +322,14 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
         (held if ok else failed).append(name)
         return ok
 
-    if pbt and tax and pfy:
+    if continuing is not None:
+        # with discontinued operations: profit before tax + tax = the continuing profit, and continuing +
+        # discontinued = the total profit for the year
+        if pbt and tax:
+            check("profit before tax + tax = profit from continuing operations", [a + b for a, b in zip(pbt, tax)],
+                  continuing)
+        check("continuing + discontinued = profit for the year", [a + b for a, b in zip(continuing, discontinued)], pfy)
+    elif pbt and tax and pfy:
         check("profit before tax + tax = profit for the year", [a + b for a, b in zip(pbt, tax)], pfy)
     minorities = nci or [0.0, 0.0]
     if pfy:

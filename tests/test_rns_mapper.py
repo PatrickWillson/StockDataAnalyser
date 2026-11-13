@@ -391,3 +391,15 @@ def test_label_variants_year_period_split_words_and_company_statements():
                      rows + [["Loss for the year", "(80)", "(70)"]])
     for page in (period, split, company):
         assert parse_statement(page, 1).net_income == (-80_000, -70_000)
+
+
+def test_the_profit_after_discontinued_operations_is_the_net_income():
+    """ALU 2017: 'Profit for the period' under continuing operations (5,178 prior), then a discontinued line and the
+    total 'Profit for the period' (6,484)."""
+    page = _table("Consolidated income statement for the year ended 30 June 2017", [
+        ["2017", "2016"], ["Continuing operations Notes £000 £000"], ["Revenue", "104,761", "92,233"],
+        ["Profit before taxation", "8,123", "6,759"], ["Tax expense", "(1,583)", "(1,581)"],
+        ["Profit for the period", "6,540", "5,178"], ["Discontinued operations:"],
+        ["Profit after taxation for the period from discontinued operations", "-", "1,306"],
+        ["Profit for the period", "6,540", "6,484"]])
+    assert parse_statement(page, 1).net_income == (6_540_000, 6_484_000)

@@ -171,3 +171,18 @@ def test_a_dropped_heading_starts_the_statement_at_the_year_row():
     words = [w for w in statement() if w.y != 100]
     reading = read_statement(rows_from_words(words), "2025-12-31")
     assert reading.accepted and reading.accepted.net_income == (2_708_000, 2_333_000)
+
+
+def test_continuing_and_discontinued_operations_reconcile_to_the_total():
+    """ALU 2017: profit before tax + tax = the continuing profit; + discontinued = the total, which is net income."""
+    rows = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2017", CUR), ("2016", PRI)]),
+            (230, [("£000", CUR), ("£000", PRI)]), (300, [("Revenue", 200), ("104,761", CUR), ("92,233", PRI)]),
+            (350, [("Profit", 140), ("before", 290), ("taxation", 450), ("8,123", CUR), ("6,759", PRI)]),
+            (400, [("Tax", 80), ("expense", 260), ("(1,583)", CUR), ("(1,581)", PRI)]),
+            (450, [("Profit", 140), ("for", 220), ("the", 300), ("period", 440), ("6,540", CUR), ("5,178", PRI)]),
+            (500, [("Discontinued", 260), ("operations", 480)]),
+            (550, [("Profit", 140), ("from", 240), ("discontinued", 500), ("operations", 720), ("-", CUR), ("1,306", PRI)]),
+            (600, [("Profit", 140), ("for", 220), ("the", 300), ("period", 440), ("6,540", CUR), ("6,484", PRI)])]
+    words = [Word(w.t, w.x, w.y, w.w, w.h, w.c, (4, 1, w.y)) for w in page(rows)]
+    reading = read_statement(rows_from_words(words), "2017-06-30")
+    assert reading.accepted and reading.accepted.net_income == (6_540_000, 6_484_000)

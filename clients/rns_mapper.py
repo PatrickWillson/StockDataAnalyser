@@ -305,6 +305,20 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
                     return joined, got
         return None
 
+    def after_discontinued(predicate) -> Optional[Tuple[str, Tuple[float, float]]]:
+        """The first line the predicate takes, unless a discontinued-operations line follows it and then another line
+        the predicate takes: that later line is the total after discontinued operations (ALU 2017: 'Profit for the
+        period' 5,178 under continuing operations, 'Profit for the period' 6,484 after the discontinued line)."""
+        hits = [i for i, (own, joined, tokens) in enumerate(data) if predicate(own, joined) and figures_of(tokens)]
+        if not hits:
+            return None
+        chosen = hits[0]
+        for later in hits[1:]:
+            if any(re.search(r"discontinued", data[k][0], re.I) for k in range(chosen + 1, later)):
+                chosen = later
+        own, joined, tokens = data[chosen]
+        return joined, figures_of(tokens)
+
     def excluded(text: str) -> bool:
         return bool(re.search(r"per share|earnings per|dividend|non-controlling|minority|^(?:total )?equity\b", text, re.I))
 
@@ -316,8 +330,9 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
              # 'Total (loss)/profit for the year' after continuing and discontinued lines is the year's net income
              or first(lambda own, joined: re.match(r"^total ", own, re.I) is not None and bool(FOR_THE_YEAR.match(own))
                       and "comprehensive" not in own.lower() and not excluded(own))
-             or first(lambda own, joined: any(FOR_THE_YEAR.match(t) and not excluded(t)
-                                              and not re.search(r"continuing|discontinued", t, re.I) for t in (own, joined)))
+             or after_discontinued(lambda own, joined: any(FOR_THE_YEAR.match(t) and not excluded(t)
+                                                           and not re.search(r"continuing|discontinued", t, re.I)
+                                                           for t in (own, joined)))
              or first(lambda own, joined: any(FOR_THE_YEAR.match(t) and not excluded(t) for t in (own, joined)))
              or first(lambda own, joined: bool(AFTER_TAX.match(own)) and not excluded(own)
                       and not re.search(r"continuing|discontinued", own, re.I))
@@ -325,8 +340,8 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
     if found is None:
         return None
     revenue = first(lambda own, joined: bool(REVENUE.match(own)))
-    total = first(lambda own, joined: bool(FOR_THE_YEAR.match(own)) and not excluded(own)
-                  and not re.search(r"continuing|discontinued|attributable|comprehensive", own, re.I))
+    total = after_discontinued(lambda own, joined: bool(FOR_THE_YEAR.match(own)) and not excluded(own)
+                               and not re.search(r"continuing|discontinued|attributable|comprehensive", own, re.I))
     dates = sorted(set(_dates(" | ".join(header))), reverse=True)
     end = dates[0] if dates else announced
     if end is None:
