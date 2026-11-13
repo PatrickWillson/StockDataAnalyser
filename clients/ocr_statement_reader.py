@@ -170,18 +170,26 @@ def _is_figure_like(w: Word) -> bool:
 
 def unit_token(text: str) -> Optional[str]:
     """A header word read as a unit, allowing OCR's confusions: '£m', 'gm', '&m' -> '£m'; '£000', "£'000", '£°000'
-    -> '£000' (also $ and €). None for anything else."""
+    -> '£000', and '£7000' (also $ and €). None for anything else."""
     t = text.strip()
     if re.fullmatch(r"[£&g€$]m", t, re.I):
         return ("$" if t[0] == "$" else "€" if t[0] == "€" else "£") + "m"
-    if re.fullmatch(r"[£€$]?['\u2019`°]?0{3}s?", t):
+    if re.fullmatch(r"[£€$]?['\u2019`°]?0{3}s?|[£€$]70{3}", t):          # '£7000': the apostrophe read as a 7
         return ("$" if t.startswith("$") else "€" if t.startswith("€") else "£") + "000"
     return None
 
 
+PROFIT_OR_LOSS = re.compile(r"^\(?(?:profit|loss|return)\)?$", re.I)
+
+
 def _clean_label(words) -> str:
-    """A label without the stray punctuation OCR picks up between words ('Profit for the : year')."""
-    return " ".join(t for t in words if not re.fullmatch(r"[^\w£$€()]+", t)).strip()
+    """A label without the stray punctuation OCR picks up between words ('Profit for the : year'); a '/' between
+    profit and loss is kept ('(Loss) / profit for year')."""
+    words = list(words)
+    kept = [t for k, t in enumerate(words)
+            if not re.fullmatch(r"[^\w£$€()]+", t)
+            or (t == "/" and 0 < k < len(words) - 1 and PROFIT_OR_LOSS.match(words[k - 1]) and PROFIT_OR_LOSS.match(words[k + 1]))]
+    return " ".join(kept).strip()
 
 
 def figure_columns(rows: List[Row]) -> List[float]:

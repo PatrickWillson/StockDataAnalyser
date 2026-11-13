@@ -138,6 +138,20 @@ def test_a_wrapped_label_is_joined_to_its_line():
     assert reading.accepted and reading.accepted.net_income == (2_708_000, 2_333_000)
 
 
+def test_a_slash_between_profit_and_loss_is_kept_and_a_7_for_the_apostrophe_is_still_thousands():
+    """Plexus 2025: 'Notes  £7000  £7000' and '(Loss) / profit for year'; a stray '/' elsewhere is still dropped."""
+    words = [w for w in statement() if w.y not in (230, 500)] + page([
+        (230, [("Notes", 1000), ("£7000", CUR), ("£7000", PRI)]),
+        (500, [("(Loss)", 120), ("/", 150), ("profit", 280), ("for", 360), ("year", 460), ("2,708", CUR), ("2,333", PRI)])])
+    words = [Word(w.t, w.x, w.y, w.w, w.h, w.c, (2, 1, w.y)) for w in words]          # a line id per y
+    reading = read_statement(rows_from_words(words), "2025-06-30")
+    assert "<td>(Loss) / profit for year</td>" in reading.html
+    assert reading.accepted and reading.accepted.net_income == (2_708_000, 2_333_000)
+    from clients.ocr_statement_reader import _clean_label
+    assert _clean_label(["Profit", "for", "the", "/", "year"]) == "Profit for the year"
+    assert _clean_label(["Profit", "/", "(loss)", "for", "the", "year"]) == "Profit / (loss) for the year"
+
+
 def test_split_year_headers_name_the_year_they_end():
     """ALU 2010: '2009/10  2008/09'."""
     words = [Word("2009/10", w.x, w.y, w.w, w.h, w.c, w.line) if w.t == "2025" else
@@ -191,6 +205,8 @@ def test_continuing_and_discontinued_operations_reconcile_to_the_total():
 def test_unit_tokens_allow_ocrs_confusions():
     assert [unit_token(t) for t in ("£m", "gm", "&m", "$m", "£000", "£'000", "£°000", "000", "2025", "Revenue")] == \
         ["£m", "£m", "£m", "$m", "£000", "£000", "£000", "£000", None, None]
+    # Plexus 2025: the apostrophe of £'000 read as a 7; only after a currency sign (a bare 7000 is a figure)
+    assert [unit_token(t) for t in ("£7000", "$7000", "7000", "£70000", "£7,000")] == ["£000", "$000", None, None, None]
 
 
 def test_a_unit_row_read_gm_still_gives_millions():
