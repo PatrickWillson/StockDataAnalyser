@@ -364,7 +364,10 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     def find(pattern, exclude=r"$^"):
         return next((v for lab, v in lines if re.search(pattern, lab) and not re.search(exclude, lab)), None)
 
-    pbt = find(r"(profit|loss|return).*before tax")      # an investment company's 'return'
+    # the statutory line ('Profit before tax') before an adjusted one ('Profit before tax, amortisation ... and
+    # exceptional charges', Vertu 2011); 'return' for an investment company
+    pbt = find(r"^(net )?(\(?(profit|loss|return)\)?/?)+ (on ordinary activities )?before tax(ation)?$") \
+        or find(r"(profit|loss|return).*before tax")
     tax = find(r"^(income )?tax(ation)?\b|^tax(ation)? on (profit|loss)|^taxation", r"before tax")
     # profit for the year: the last such line when a discontinued-operations line comes before it (the total)
     pfy_lines = [(i, v) for i, (lab, v) in enumerate(lines)

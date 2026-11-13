@@ -396,3 +396,19 @@ def test_a_note_number_printed_before_a_label_does_not_hide_the_tax_line():
                    ("shareholders", 1600), ("209", CUR), ("579", PRI)])]
     reading = read_statement(rows_from_words(page(rows)), "2018-04-30")
     assert reading.accepted and reading.accepted.net_income == (209_000, 579_000)
+
+
+def test_the_statutory_profit_before_tax_is_preferred_to_an_adjusted_one():
+    """Vertu 2011: 'Profit before tax, amortisation, share based payments charge and total exceptional charges 8,369'
+    comes first; 'Profit before tax 5,251' - 1,227 tax = 4,024 is the one that ties."""
+    rows = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2011", CUR), ("2010", PRI)]),
+            (230, [("£000", CUR), ("£000", PRI)]), (300, [("Revenue", 200), ("998,926", CUR), ("818,922", PRI)]),
+            (350, [("Profit", 140), ("before", 290), ("tax,", 380), ("amortisation", 640), ("and", 720),
+                   ("exceptional", 960), ("charges", 1120), ("8,369", CUR), ("6,856", PRI)]),
+            (400, [("Total", 120), ("exceptional", 360), ("charges", 520), ("(2,763)", CUR), ("(1,902)", PRI)]),
+            (450, [("Profit", 140), ("before", 290), ("tax", 370), ("5,251", CUR), ("4,626", PRI)]),
+            (500, [("Taxation", 200), ("(1,227)", CUR), ("(844)", PRI)]),
+            (550, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("attributable", 640), ("to", 700),
+                   ("equity", 820), ("holders", 980), ("4,024", CUR), ("3,782", PRI)])]
+    reading = read_statement(rows_from_words(page(rows)), "2011-02-28")
+    assert reading.accepted and reading.accepted.net_income == (4_024_000, 3_782_000)
