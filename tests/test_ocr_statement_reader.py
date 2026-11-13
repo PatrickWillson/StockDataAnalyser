@@ -1,7 +1,7 @@
 """ocr_statement_reader: synthetic OCR words (no tesseract) -> rows -> statement, with its checks."""
 
 from clients.ocr_statement_reader import (Word, is_candidate_page, is_statement_page, read_statement, rows_from_words,
-                                          words_from_tesseract)
+                                          unit_token, words_from_tesseract)
 
 H = 30     # word height in pixels
 
@@ -186,3 +186,14 @@ def test_continuing_and_discontinued_operations_reconcile_to_the_total():
     words = [Word(w.t, w.x, w.y, w.w, w.h, w.c, (4, 1, w.y)) for w in page(rows)]
     reading = read_statement(rows_from_words(words), "2017-06-30")
     assert reading.accepted and reading.accepted.net_income == (6_540_000, 6_484_000)
+
+
+def test_unit_tokens_allow_ocrs_confusions():
+    assert [unit_token(t) for t in ("£m", "gm", "&m", "$m", "£000", "£'000", "£°000", "000", "2025", "Revenue")] == \
+        ["£m", "£m", "£m", "$m", "£000", "£000", "£000", "£000", None, None]
+
+
+def test_a_unit_row_read_gm_still_gives_millions():
+    words = [Word("gm", w.x, w.y, 40, w.h, w.c, w.line) if w.t == "£'000" else w for w in statement()]
+    reading = read_statement(rows_from_words(words), "2025-12-31")
+    assert reading.statement.unit == 1e6

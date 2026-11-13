@@ -168,6 +168,17 @@ def _is_figure_like(w: Word) -> bool:
     return bool(re.search(r"\d", w.t) or re.fullmatch(r"[-\u2013\u2014]", w.t)) and not UNIT_TOKEN.match(w.t)
 
 
+def unit_token(text: str) -> Optional[str]:
+    """A header word read as a unit, allowing OCR's confusions: '£m', 'gm', '&m' -> '£m'; '£000', "£'000", '£°000'
+    -> '£000' (also $ and €). None for anything else."""
+    t = text.strip()
+    if re.fullmatch(r"[£&g€$]m", t, re.I):
+        return ("$" if t[0] == "$" else "€" if t[0] == "€" else "£") + "m"
+    if re.fullmatch(r"[£€$]?['\u2019`°]?0{3}s?", t):
+        return ("$" if t.startswith("$") else "€" if t.startswith("€") else "£") + "000"
+    return None
+
+
 def _clean_label(words) -> str:
     """A label without the stray punctuation OCR picks up between words ('Profit for the : year')."""
     return " ".join(t for t in words if not re.fullmatch(r"[^\w£$€()]+", t)).strip()
@@ -219,10 +230,17 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
     cols = figure_columns(body[year_row + 1:])
     mh = _median_height([w for r in body for w in r.words])
     html, confs, pending = [f"<p>{heading}</p><table>"], [], None
+    data_started = False
     for k, r in enumerate(body):
         if k < year_row:
             html.append(f"<tr><td>{r.text}</td></tr>")
             continue
+        if k > year_row and not data_started:
+            units = [unit_token(w.t) for w in r.words]
+            if any(units) and all(u or not _is_figure_like(w) for u, w in zip(units, r.words)):
+                # the unit row ('£m £m', read 'gm gm'): normalised so the parser finds the unit
+                html.append("<tr><td>" + " ".join(u or w.t for u, w in zip(units, r.words)) + "</td></tr>")
+                continue
         if k == year_row:
             years = [_header_year(w.t) for w in r.words if _header_year(w.t) is not None]
             html.append("<tr>" + "".join(f"<td>{y}</td>" for y in years) + "</tr>")
@@ -239,6 +257,7 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
             html.append(f"<tr><td>{' '.join(w.t for w in r.words if w not in placed.values())} [unreadable]</td></tr>")
             continue
         label = _clean_label(w.t for w in r.words if w not in placed.values())
+        data_started = data_started or bool(placed)
         if not placed:
             if pending is not None and re.match(r"[a-z]", label):      # a label continued on the next line
                 pending = f"{pending} {label}"
@@ -414,7 +433,46 @@ def read_filing(pdf_path: str, made_up_date: str) -> Tuple[Optional[int], OcrRea
     index = find_statement_page(doc)
     if index is None:
         return None, OcrReading(None, notes=("group income statement page not found",))
-    return index, read_statement(page_rows(doc[index]), made_up_date)
+    rows = page_rows(doc[index])
+    reading = read_statement(rows, made_up_date)
+    if reading.statement is None:
+        unit = _reread_unit_strip(doc[index], rows)
+        if unit:
+            reading = read_statement(_with_unit_row(rows, unit), made_up_date)
+    return index, reading
+
+
+def _year_and_first_figure_rows(rows: List[Row]) -> Tuple[Optional[int], Optional[int]]:
+    year = next((i for i, r in enumerate(rows) if sum(_header_year(w.t) is not None for w in r.words) >= 2), None)
+    if year is None:
+        return None, None
+    first = next((i for i in range(year + 1, len(rows)) if sum(bool(NUM.match(w.t)) for w in rows[i].words) >= 2), None)
+    return year, first
+
+
+def _with_unit_row(rows: List[Row], unit: str) -> List[Row]:
+    """The rows with a unit row ('£m £m') inserted after the year row (the unit re-read from its strip)."""
+    year, _ = _year_and_first_figure_rows(rows)
+    if year is None:
+        return rows
+    row = Row([Word(unit, 0, 0, 0, 0, 100.0)], rows[year].cy + 1)
+    return rows[:year + 1] + [row] + rows[year + 1:]
+
+
+def _reread_unit_strip(page, rows: List[Row]) -> Optional[str]:
+    """The unit read from the strip between the year row and the first row of figures on its own (a thick rule under
+    a header can turn '£m £m' into 'ee LLL' when the whole page is read)."""
+    import pytesseract
+    year, first = _year_and_first_figure_rows(rows)
+    if year is None or first is None:
+        return None
+    image = _render(page, OCR_READ_DPI)
+    top = int(max(w.y + w.h for w in rows[year].words))
+    bottom = int(min(w.y for w in rows[first].words))
+    if bottom - top < 10:
+        return None
+    text = pytesseract.image_to_string(image.crop((0, top, image.width, bottom)), config="--psm 6")
+    return next((u for u in (unit_token(t) for t in text.split()) if u), None)
 
 
 def page_dpi(pdf_path: str) -> Optional[int]:
