@@ -85,3 +85,13 @@ def test_failures_raise_a_typed_error_without_the_key(tmp_path, route):
 def test_a_key_is_required():
     with pytest.raises(ValueError):
         CompaniesHouseClient(" ")
+
+
+@pytest.mark.parametrize("description, group, annual", [
+    ("accounts-with-accounts-type-group", True, True), ("accounts-with-accounts-type-full", False, True),
+    ("accounts-with-accounts-type-interim", False, False), ("accounts-with-accounts-type-initial", False, False),
+    ("accounts-with-accounts-type-dormant", False, False), ("accounts-with-accounts-type-full-group", True, True)])
+def test_a_filing_says_whether_it_is_a_groups_accounts_and_whether_it_is_annual(description, group, annual):
+    """Maven VCT 3 files full (single-company) accounts each year and interim accounts for its dividends."""
+    filing = AccountsFiling("T1", "2025-11-30", description, 40, "https://doc/T1")
+    assert (filing.group, filing.annual) == (group, annual)

@@ -27,6 +27,10 @@ HEAD = re.compile(r"(consolidated|group)\s+(income\s+statement|profit\s+and\s+lo
 # loose: survives low-resolution damage ('INCOME STATEME!', 'Consol / lated income statement')
 CANDIDATE = re.compile(r"income\s+stat|comprehensive\s+income|statement\s+of\s+compreh|profit\s+and\s+loss\s+acc|"
                        r"statement\s+of\s+profit", re.I)
+# a single company's own statement (accounts that are not a group's: Maven VCT 3), as a whole line
+PLAIN_HEADING_LINE = re.compile(r"^(?:the\s+)?(?:income\s+statement|profit\s+and\s+loss\s+account|statement\s+of\s+"
+                                r"(?:comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss"
+                                r"(?:\s+and\s+other\s+comprehensive\s+income)?)[\s.:]*$", re.I)
 # the heading as a whole line of its own anywhere on the page: tesseract can read a page's label column first, putting
 # the heading far below the top (Samuel Heath 2025); a list item ('• the consolidated income statement;') is not one
 HEADING_LINE = re.compile(r"^(?:consolidated|group)\s+(?:income\s+statement|profit\s+and\s+loss\s+account|"
@@ -155,14 +159,16 @@ def _before_tax(text: str) -> bool:
                              text, re.I))
 
 
-def is_statement_page(text: str) -> bool:
+def is_statement_page(text: str, single_entity: bool = False) -> bool:
     """Confirmation (higher resolution): the group income statement heading as a line of its own near the top (not a
     sentence or an auditor's paragraph that names it), revenue or turnover (or, without revenue, administrative
     expenses or an operating profit or loss: an exploration company), a 'before tax' line (_before_tax) and at least 10
-    figures of any form (a small company's, or £m with decimals)."""
+    figures of any form (a small company's, or £m with decimals). For a single company's accounts (single_entity: the
+    filing is not a group's) a plain heading near the top ('Income Statement') also counts."""
     top = _top(text)
     heading = any(HEAD.search(line) and len(line) <= 120 and not re.search(r"\b(we|our|the group's|in our opinion)\b", line, re.I)
-                  for line in top) or _heading_line(text)
+                  for line in top) or _heading_line(text) \
+        or (single_entity and any(PLAIN_HEADING_LINE.match(line) for line in top))
     return bool(heading and not re.search(r"company\s+(income|profit)", "\n".join(top), re.I)
                 and re.search(r"revenue|turnover|sales|administrative\s+expenses|operating\s+(?:profit|loss|activities)",
                               text, re.I)
@@ -240,6 +246,8 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
     each year's total). Returns (html, confidences of the figures placed) or None.
     """
     start = next((i for i, r in enumerate(rows) if HEAD.search(r.text)), None)
+    if start is None:              # a single company's own statement ('Income Statement'), on a page confirmed as one
+        start = next((i for i, r in enumerate(rows[:20]) if PLAIN_HEADING_LINE.match(r.text.strip())), None)
     day = dt.date.fromisoformat(made_up_date)
     if start is None:
         # the page was confirmed as the statement (find_statement_page), but this read dropped its large heading
@@ -347,11 +355,11 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     def find(pattern, exclude=r"$^"):
         return next((v for lab, v in lines if re.search(pattern, lab) and not re.search(exclude, lab)), None)
 
-    pbt = find(r"(profit|loss).*before tax")
+    pbt = find(r"(profit|loss|return).*before tax")      # an investment company's 'return'
     tax = find(r"^(income )?tax(ation)?\b|^tax(ation)? on (profit|loss)|^taxation", r"before tax")
     # profit for the year: the last such line when a discontinued-operations line comes before it (the total)
     pfy_lines = [(i, v) for i, (lab, v) in enumerate(lines)
-                 if re.search(r"(profit|loss).*(for the (financial )?(year|period)|after tax)", lab)
+                 if re.search(r"(profit|loss|return).*(for the (financial )?(year|period)|after tax)", lab)
                  and not re.search(r"attributable|comprehensive|continuing|discontinued|owners|per share", lab)]
     pfy = pfy_lines[0][1] if pfy_lines else None
     continuing, discontinued = None, None
@@ -443,13 +451,14 @@ def _render(page, dpi: int):
     return Image.frombytes("L", (pix.width, pix.height), pix.samples)
 
 
-def find_statement_page(doc) -> Optional[int]:
-    """The index of the group income statement page, or None: every page at OCR_FIND_DPI for candidates
-    (is_candidate_page), candidates re-read at OCR_CONFIRM_DPI to confirm (is_statement_page)."""
+def find_statement_page(doc, single_entity: bool = False) -> Optional[int]:
+    """The index of the group income statement page (or, single_entity, the company's own), or None: every page at
+    OCR_FIND_DPI for candidates (is_candidate_page), candidates re-read at OCR_CONFIRM_DPI to confirm
+    (is_statement_page)."""
     import pytesseract
     for i, page in enumerate(doc):
         if is_candidate_page(pytesseract.image_to_string(_render(page, OCR_FIND_DPI))) \
-                and is_statement_page(pytesseract.image_to_string(_render(page, OCR_CONFIRM_DPI))):
+                and is_statement_page(pytesseract.image_to_string(_render(page, OCR_CONFIRM_DPI)), single_entity):
             return i
     return None
 
@@ -460,11 +469,12 @@ def page_rows(page, dpi: int = OCR_READ_DPI) -> List[Row]:
     return rows_from_words(words_from_tesseract(data))
 
 
-def read_filing(pdf_path: str, made_up_date: str) -> Tuple[Optional[int], OcrReading]:
-    """(the statement page index or None, the reading) for one filed accounts PDF."""
+def read_filing(pdf_path: str, made_up_date: str, single_entity: bool = False) -> Tuple[Optional[int], OcrReading]:
+    """(the statement page index or None, the reading) for one filed accounts PDF; single_entity when the filing is not a
+    group's accounts (AccountsFiling.group)."""
     import pymupdf
     doc = pymupdf.open(pdf_path)
-    index = find_statement_page(doc)
+    index = find_statement_page(doc, single_entity)
     if index is None:
         return None, OcrReading(None, notes=("group income statement page not found",))
     rows = page_rows(doc[index])

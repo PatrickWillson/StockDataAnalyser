@@ -33,6 +33,16 @@ class AccountsFiling:
     pages: Optional[int]
     document_metadata_url: str
 
+    @property
+    def group(self) -> bool:
+        """A group's consolidated accounts (else one company's own)."""
+        return "group" in self.description
+
+    @property
+    def annual(self) -> bool:
+        """Annual accounts: not interim or initial accounts (filed to justify a dividend) and not a dormant company's."""
+        return not any(kind in self.description for kind in ("interim", "initial", "dormant"))
+
 
 class CompaniesHouseClient:
     """A company's accounts filings and their PDFs."""

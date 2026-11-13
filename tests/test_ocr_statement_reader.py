@@ -137,6 +137,25 @@ def test_a_before_tax_label_wrapped_onto_the_next_line_still_confirms():
     assert not is_statement_page(text.replace("Taxation", "Dividends"))
 
 
+def test_a_plain_income_statement_heading_confirms_only_for_a_single_companys_accounts():
+    """Maven VCT 3 2011 (no subsidiaries): 'Income Statement'. In a group's accounts a plain heading could be the parent
+    company's own statement, so it is not taken there."""
+    text = ("Income Statement\nFor the year ended 30 November 2011\nYear ended 30 November 2011 Year ended 30 November 2010\n"
+            "Revenue Capital Total Revenue Capital Total\nGains on investments 8 1,846 1,846 - 1,439 1,439\n"
+            "Income from investments 2 1,034 - 1,034 731 - 731\nInvestment management fees 3 (182) (424) (606) (153)\n"
+            "Return on ordinary activities before taxation 798 1,422 2,220 513 1,015 1,528\n")
+    assert is_statement_page(text, single_entity=True) and not is_statement_page(text)
+    rows = [(100, [("Income", 150), ("Statement", 350)]), (180, [("2011", CUR), ("2010", PRI)]),
+            (230, [("£'000", CUR), ("£'000", PRI)]), (300, [("Income", 150), ("from", 230), ("investments", 450), ("1,034", CUR), ("731", PRI)]),
+            (350, [("Gains", 120), ("on", 170), ("investments", 400), ("1,846", CUR), ("1,439", PRI)]),
+            (400, [("Return", 140), ("on", 190), ("ordinary", 360), ("activities", 560), ("before", 690), ("taxation", 870), ("2,220", CUR), ("1,528", PRI)]),
+            (450, [("Taxation", 200), ("(66)", CUR), ("(335)", PRI)]),
+            (500, [("Return", 140), ("on", 190), ("ordinary", 360), ("activities", 560), ("after", 670), ("taxation", 850), ("2,154", CUR), ("1,193", PRI)])]
+    reading = read_statement(rows_from_words(page(rows)), "2011-11-30")
+    assert "<p>Income Statement for the year ended 30 November 2011</p>" in reading.html
+    assert reading.accepted and reading.accepted.net_income == (2_154_000, 1_193_000)
+
+
 def test_an_auditors_paragraph_naming_the_statement_does_not_confirm():
     audit = ("Independent auditor's report\nIn our opinion the consolidated income statement gives a true and fair view\n"
              "We have audited revenue 1,234 and profit before tax 5,678 " + "12,345 " * 12)
