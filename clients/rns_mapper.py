@@ -137,6 +137,8 @@ def rows_of(page: str) -> List[List[str]]:
 
 def _value(token: str) -> Optional[float]:
     token = re.sub(r"\s+(?=\))|(?<=\()\s+", "", token.strip())     # '(1,756 )' is '(1,756)'; '5 1,234' stays two
+    # a stray space inside a thousands group, from two spans of one cell: '1,01 8' and '1, 499' (three digits after the comma)
+    token = re.sub(r",(\d{0,2}) (\d{1,3})(?=\)?$)", lambda m: "," + m[1] + m[2] if len(m[1] + m[2]) == 3 else m[0], token)
     if DASH.match(token):
         return 0.0
     if not VALUE.match(token):

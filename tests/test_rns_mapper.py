@@ -221,6 +221,19 @@ def test_a_note_and_a_figure_in_one_cell_stay_apart():
     assert _value("( 1,756 )") == -1756 and _value("5 1,234") is None
 
 
+def test_a_figure_split_by_a_stray_space_inside_its_thousands_group_is_one_figure():
+    # Plexus 2009: '1,01' and '8' in two spans of one cell; the statement of changes in equity: '1, 499'
+    from clients.rns_mapper import _value
+    assert _value("1,01 8") == 1018 and _value("1, 499") == 1499 and _value("(1,7 56)") == -1756
+    assert _value("1,01 85") is None and _value("5 1,234") is None and _value("1,234 5") is None
+    page = _table("CONSOLIDATED INCOME STATEMENT", [
+        ["for the year ended 30 June 2009"], ["2009", "2008"], ["£000", "£000"], ["Revenue", "15,105", "13,300"],
+        ["Cost of sales", "(6,364)", "(6,023)"], ["Profit before taxation", "1,798", "1,905"],
+        ["Income tax expense", "(780)", "(616)"],
+        ["Profit after taxation being profit for the financial year", "1,01 8", "1,289"]])
+    assert parse_statement(page, 1).net_income == (1_018_000, 1_289_000)
+
+
 def test_a_plain_heading_is_read_when_there_is_no_consolidated_statement():
     rows = [["2025", "2024"], ["£'000", "£'000"], ["Revenue", "10", "8"], ["Administrative expenses", "(900)", "(800)"],
             ["Loss before tax", "(890)", "(792)"], ["Loss for the year", "(890)", "(792)"]]
