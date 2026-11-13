@@ -37,6 +37,7 @@ HEADING_LINE = re.compile(r"^(?:consolidated|group)\s+(?:income\s+statement|prof
                           r"statement\s+of\s+(?:comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss"
                           r"(?:\s+and\s+other\s+comprehensive\s+income)?)[\s.:]*$", re.I)
 FIGURE = re.compile(r"\(?\d[\d,.]*\d\)?")
+DASH_TOKEN = re.compile(r"^[-\u2013\u2014]$")
 NUM = re.compile(r"^\(?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?$|^[-–—]$")
 
 
@@ -291,7 +292,7 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
                 placed[j] = w
             elif w.x + w.w > min(cols) - 8 * mh and not NOTE_REF.match(w.t):
                 stray.append(w)          # a figure-like token in the figure area but in no column
-        if stray or _unreadable(list(placed.values())):
+        if stray or _unreadable(list(placed.values()), mh):
             # a figure misread ('$88' for 888) or uncertain: the line is shown without figures, so never taken
             kept = [w.t for w in r.words if w not in placed.values() and w not in stray]
             html.append(f"<tr><td>{' '.join(kept)} [unreadable]</td></tr>")
@@ -316,9 +317,12 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
     return "".join(html), confs
 
 
-def _unreadable(placed: List[Word]) -> bool:
-    """A word in a figure column that is not a clean figure ('$88', '1,0O6') or is below OCR_MIN_FIGURE_CONFIDENCE."""
-    return any(not NUM.match(w.t) or w.c < OCR_MIN_FIGURE_CONFIDENCE for w in placed)
+def _unreadable(placed: List[Word], mh: float) -> bool:
+    """A word in a figure column that is not a clean figure ('$88', '1,0O6') or is below OCR_MIN_FIGURE_CONFIDENCE. A nil
+    dash no wider than the text is tall is exempt from the confidence floor: tesseract scores dashes low (Plexus 2025:
+    47), and a misread figure is wider; a wrong nil would still have to pass verify's arithmetic."""
+    return any(not NUM.match(w.t) or (w.c < OCR_MIN_FIGURE_CONFIDENCE and not (DASH_TOKEN.match(w.t) and w.w <= mh))
+               for w in placed)
 
 
 def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:

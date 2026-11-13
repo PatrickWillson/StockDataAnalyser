@@ -211,6 +211,21 @@ def test_a_slash_between_profit_and_loss_is_kept_and_a_7_for_the_apostrophe_is_s
     assert _clean_label(["Profit", "/", "(loss)", "for", "the", "year"]) == "Profit / (loss) for the year"
 
 
+def test_a_nil_dash_read_with_low_confidence_is_still_nil_but_a_wide_one_is_not():
+    """Plexus 2025: 'Income tax credit  -  130', the dash at 47% confidence (dashes routinely score low); a misread
+    figure is wider than a dash, so a wide low-confidence token still voids its line."""
+    rows = [w for w in statement() if w.y not in (400, 450, 500)] + page([
+        (400, [("Profit", 140), ("before", 290), ("tax", 370), ("2,708", CUR), ("3,198", PRI)]),
+        (450, [("Tax", 80), ("credit", 230), ("-", CUR), ("(865)", PRI)]),
+        (500, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("2,708", CUR), ("2,333", PRI)])])
+    low = [Word(w.t, w.x, w.y, w.w, w.h, 47.0 if w.t == "-" else w.c, (2, 1, w.y)) for w in rows]
+    reading = read_statement(rows_from_words(low), "2025-06-30")
+    assert "<td>Tax credit</td><td>-</td><td>(865)</td>" in reading.html
+    assert reading.accepted and reading.accepted.net_income == (2_708_000, 2_333_000)
+    wide = [Word(w.t, w.x - 60, w.y, w.w + 60, w.h, w.c, w.line) if w.t == "-" else w for w in low]
+    assert "[unreadable]" in read_statement(rows_from_words(wide), "2025-06-30").html
+
+
 def test_split_year_headers_name_the_year_they_end():
     """ALU 2010: '2009/10  2008/09'."""
     words = [Word("2009/10", w.x, w.y, w.w, w.h, w.c, w.line) if w.t == "2025" else
