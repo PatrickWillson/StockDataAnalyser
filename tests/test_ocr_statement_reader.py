@@ -128,6 +128,15 @@ def test_a_company_without_revenue_still_confirms_by_its_expenses():
     assert not is_statement_page(text.replace("administrative expenses", "items").replace("operating activities", "x"))
 
 
+def test_a_before_tax_label_wrapped_onto_the_next_line_still_confirms():
+    """Vertu 2025: 'Profit /(loss) before  29,319 ...' with 'tax' printed below, then 'Taxation 12 (7,576) ...'."""
+    text = ("Consolidated Income Statement\nFor the year ended 28 February 2025\nRevenue 5 4,763,926 - 4,763,926 4,686,280\n"
+            "Operating profit 46,486 (4,228) 42,258 52,406\nProfit /(loss) before 29,319 (4,569) 24,750 34,727 (160) 34,567\n"
+            "Taxation 12 (7,576) 929 (6,647) (9,012) 158 (8,854)\n")
+    assert is_statement_page(text)
+    assert not is_statement_page(text.replace("Taxation", "Dividends"))
+
+
 def test_an_auditors_paragraph_naming_the_statement_does_not_confirm():
     audit = ("Independent auditor's report\nIn our opinion the consolidated income statement gives a true and fair view\n"
              "We have audited revenue 1,234 and profit before tax 5,678 " + "12,345 " * 12)
