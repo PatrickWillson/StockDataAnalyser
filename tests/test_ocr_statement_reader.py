@@ -1,7 +1,7 @@
 """ocr_statement_reader: synthetic OCR words (no tesseract) -> rows -> statement, with its checks."""
 
 from clients.ocr_statement_reader import (Word, is_candidate_page, is_statement_page, read_statement, rows_from_words,
-                                          unit_token, words_from_tesseract)
+                                          unit_token, words_from_tesseract, year_row_from_reread)
 
 H = 30     # word height in pixels
 
@@ -320,3 +320,15 @@ def test_plain_pounds_over_full_pound_figures_is_believed():
              Word(big.get(w.t, w.t), w.x, w.y, w.w, w.h, w.c, w.line) for w in statement()]
     reading = read_statement(rows_from_words(words), "2025-12-31")
     assert reading.accepted and reading.accepted.net_income == (2_708_276, 2_333_200)
+
+
+def test_a_year_row_re_read_on_its_own_is_used_only_when_it_names_the_accounts_year():
+    """Empresaria 2024: the shaded year row read 'BRE BOBS' with the page, 'AlAtan 2024 2023' on its own. Years that do
+    not include the register's year end are not the statement's (a misread), so nothing is substituted."""
+    def line(*texts):
+        return [Word(t, 1000 + 300 * n, 5, 100, H, 90.0, (1, 1, 1)) for n, t in enumerate(texts)]
+    row = year_row_from_reread(line("AlAtan", "2024", "2023"), 400, "2024-12-31")
+    assert [w.t for w in row.words] == ["AlAtan", "2024", "2023"] and row.words[1].y == 405
+    assert year_row_from_reread(line("2009/10", "2008/09"), 0, "2010-03-31") is not None
+    assert year_row_from_reread(line("2019", "2018"), 400, "2024-12-31") is None
+    assert year_row_from_reread(line("Note", "£m", "£m"), 400, "2024-12-31") is None

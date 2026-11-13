@@ -20,7 +20,8 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
 from clients.rns_mapper import RnsStatement, _split, _value as _figure, parse_statement, rows_of
-from config.companies_house_config import OCR_CONFIRM_DPI, OCR_FIND_DPI, OCR_MIN_FIGURE_CONFIDENCE, OCR_READ_DPI
+from config.companies_house_config import (OCR_CONFIRM_DPI, OCR_FIND_DPI, OCR_MIN_FIGURE_CONFIDENCE, OCR_READ_DPI,
+                                           OCR_YEAR_REREAD_DPIS)
 
 HEAD = re.compile(r"(consolidated|group)\s+(income\s+statement|profit\s+and\s+loss\s+account|statement\s+of\s+"
                   r"(comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss)", re.I)
@@ -483,6 +484,11 @@ def read_filing(pdf_path: str, made_up_date: str, single_entity: bool = False) -
         return None, OcrReading(None, notes=("group income statement page not found",))
     rows = page_rows(doc[index])
     reading = read_statement(rows, made_up_date)
+    if reading.statement is None:
+        reread = _reread_year_row(doc[index], rows, made_up_date)
+        if reread is not None:
+            rows = reread
+            reading = read_statement(rows, made_up_date)
     if reading.statement is None or reading.notes[:1] == ("unit unknown: '£' over figures below 100,000 (a lost '000?)",):
         unit = _reread_unit_strip(doc[index], rows)
         if unit and unit.endswith(("000", "m")):
@@ -496,6 +502,42 @@ def _year_and_first_figure_rows(rows: List[Row]) -> Tuple[Optional[int], Optiona
         return None, None
     first = next((i for i in range(year + 1, len(rows)) if sum(bool(NUM.match(w.t)) for w in rows[i].words) >= 2), None)
     return year, first
+
+
+def year_row_from_reread(words: List[Word], top: int, made_up_date: str) -> Optional[Row]:
+    """A header line re-read on its own (words placed in its strip, which starts at y = top on the page) as the year
+    row, when it names two or more years and one is the accounts' own (the register's year end): else None."""
+    words = [Word(w.t, w.x, w.y + top, w.w, w.h, w.c, w.line) for w in words]
+    years = [y for y in (_header_year(w.t) for w in words) if y is not None]
+    if len(years) < 2 or int(made_up_date[:4]) not in years:
+        return None
+    return Row(words, sum(w.y + w.h / 2 for w in words) / len(words))
+
+
+def _reread_year_row(page, rows: List[Row], made_up_date: str) -> Optional[List[Row]]:
+    """The rows with the year row re-read when the page read lost it (Empresaria 2024: a shaded band read 'BRE BOBS'):
+    each line between the heading and the first row of figures read on its own (tesseract, one line) at each of
+    OCR_YEAR_REREAD_DPIS in turn, the first that names the accounts' year taking its place (positions at OCR_READ_DPI). None when there is nothing to re-read or no line gives the years."""
+    import pytesseract
+    start = next((i for i, r in enumerate(rows) if HEAD.search(r.text) or PLAIN_HEADING_LINE.match(r.text.strip())), None)
+    if start is None:
+        return None
+    first = next((i for i in range(start + 1, len(rows)) if sum(bool(NUM.match(w.t)) for w in rows[i].words) >= 2), None)
+    if first is None or any(sum(_header_year(w.t) is not None for w in r.words) >= 2 for r in rows[start + 1:first]):
+        return None
+    for dpi in OCR_YEAR_REREAD_DPIS:
+        image, scale = _render(page, dpi), dpi / OCR_READ_DPI
+        for i in range(start + 1, first):
+            top = max(0, int((min(w.y for w in rows[i].words) - 8) * scale))
+            bottom = min(image.height, int((max(w.y + w.h for w in rows[i].words) + 8) * scale))
+            data = pytesseract.image_to_data(image.crop((0, top, image.width, bottom)), config="--psm 7",
+                                             output_type=pytesseract.Output.DICT)
+            words = [Word(w.t, int(w.x / scale), int(w.y / scale), int(w.w / scale), int(w.h / scale), w.c, w.line)
+                     for w in words_from_tesseract(data)]
+            row = year_row_from_reread(words, int(top / scale), made_up_date)
+            if row is not None:
+                return rows[:i] + [row] + rows[i + 1:]
+    return None
 
 
 def _with_unit_row(rows: List[Row], unit: str) -> List[Row]:

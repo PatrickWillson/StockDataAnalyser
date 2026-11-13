@@ -8,7 +8,7 @@ Companies House: "We impose no rules or requirements on how the information on t
 Rate limit: 600 requests per 5 minutes per key (429 beyond it; repeated breaches can get a key banned).
 """
 
-from typing import Final
+from typing import Final, Tuple
 
 COMPANIES_HOUSE_API_URL: Final[str] = "https://api.company-information.service.gov.uk"
 COMPANIES_HOUSE_USER_AGENT: Final[str] = "StockDataAnalyser research (no-reply@example.invalid)"
@@ -22,3 +22,5 @@ OCR_FIND_DPI: Final[int] = 100          # a quick first look at every page
 OCR_CONFIRM_DPI: Final[int] = 200       # candidate pages re-read to confirm the statement
 OCR_READ_DPI: Final[int] = 300
 OCR_MIN_FIGURE_CONFIDENCE: Final[float] = 60.0
+# a lost year row is re-read on its own at each resolution in turn (a 2017 scan's shaded years read only at 250 dpi)
+OCR_YEAR_REREAD_DPIS: Final[Tuple[int, ...]] = (300, 250, 200)
