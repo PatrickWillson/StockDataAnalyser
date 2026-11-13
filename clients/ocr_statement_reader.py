@@ -15,6 +15,7 @@ read_filing.
 
 import datetime as dt
 import re
+from collections import Counter
 import statistics
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
@@ -329,7 +330,8 @@ def _unreadable(placed: List[Word], mh: float) -> bool:
 
 def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     """
-    Whether the chosen net income reconciles within the statement, in both years (table units, 1 unit of rounding):
+    Whether the chosen net income reconciles within the statement, in both years (table units; rounding of one step of
+    the printed precision: 1 for whole figures, 0.1 for figures to one decimal place):
     profit before tax + tax = profit for the year where all three lines are there; and the net income ties in:
     net income + minority interests = profit for the year (minorities 0 when none is shown), or, with no profit for
     the year line, net income = profit before tax + tax (- minorities). (passed, which identities held or failed.)
@@ -374,16 +376,20 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
             continuing, discontinued, pfy = pfy_lines[0][1], between[0], v
     unit = statement.unit or 1.0
     ni = [statement.net_income[0] / unit, statement.net_income[1] / unit]
+    # rounding: one step of the statement's printed precision (1 for whole figures, 0.1 for £m to one place)
+    places = _decimal_places(html)
+    step = 10.0 ** -Counter(places).most_common(1)[0][0] if places else 1.0
+    tolerance = step + 1e-9
     # the minorities beside the chosen figure: the nearest such line after it in the same attribution list (not the
     # total comprehensive income list's, ALU 2010: 10 there, 6 beside the profit)
-    at = next((i for i, (lab, v) in enumerate(lines) if all(abs(a - b) <= 1 for a, b in zip(v, ni))), None)
+    at = next((i for i, (lab, v) in enumerate(lines) if all(abs(a - b) <= tolerance for a, b in zip(v, ni))), None)
     nci = None
     if at is not None:
         nci = next((v for lab, v in lines[at + 1:at + 4] if re.search(r"non-controlling|minority", lab)), None)
     held, failed = [], []
 
     def check(name, left, right):
-        ok = all(abs(a - b) <= 1 for a, b in zip(left, right))
+        ok = all(abs(a - b) <= tolerance for a, b in zip(left, right))
         (held if ok else failed).append(name)
         return ok
 
@@ -429,12 +435,51 @@ def unit_plausible(html: str, unit: float) -> bool:
     return bool(figures) and max(figures) >= 100_000
 
 
+def _decimal_places(html: str) -> List[int]:
+    """The decimal places of each figure cell of a statement table (not a row's label cell, dashes or years)."""
+    cells = [c for row in re.findall(r"<tr>(.*?)</tr>", html) for c in re.findall(r"<td>([^<]*)</td>", row)[1:]]
+    figures = [c for c in cells if NUM.match(c) and not DASH_TOKEN.match(c) and not re.fullmatch(r"(?:19|20)\d\d", c)]
+    return [len(c.split(".")[1].rstrip(")")) if "." in c else 0 for c in figures]
+
+
+def restore_decimals(html: str) -> Tuple[str, int]:
+    """A statement most of whose figures (at least 8, over half) carry the same number of decimals (£m to one place), with
+    the point restored in a figure OCR read without it ('15' for 1.5, Empresaria 2024): (html, figures restored). Only
+    figure cells (not a row's label cell), never a year-like token. A wrong restoration fails verify's reconciliation."""
+    places = _decimal_places(html)
+    if len(places) < 8 or not any(places):
+        return html, 0
+    d = Counter(p for p in places if p).most_common(1)[0][0]
+    if places.count(d) <= 0.5 * len(places):
+        return html, 0
+    restored = 0
+
+    def fix_row(row):
+        nonlocal restored
+        cells = re.findall(r"<td>([^<]*)</td>", row.group(1))
+        out = cells[:1]
+        for c in cells[1:]:
+            digits = re.sub(r"\D", "", c)
+            if NUM.match(c) and "." not in c and not DASH_TOKEN.match(c) and not re.fullmatch(r"(?:19|20)\d\d", c) \
+                    and len(digits) > d:
+                whole = f"{int(digits[:-d]):,}"
+                c = c.replace(re.sub(r"[()\-]", "", c), f"{whole}.{digits[-d:]}")
+                restored += 1
+            out.append(c)
+        return "<tr>" + "".join(f"<td>{c}</td>" for c in out) + "</tr>"
+
+    html = re.sub(r"<tr>(.*?)</tr>", fix_row, html)
+    return html, restored
+
+
 def read_statement(rows: List[Row], made_up_date: str) -> OcrReading:
     """The statement on a page's rows, with its checks."""
     table = table_html(rows, made_up_date)
     if table is None:
         return OcrReading(None, notes=("no statement heading on the page",))
     html, confs = table
+    html, restored = restore_decimals(html)
+    extra = (f"decimal point restored in {restored} figures",) if restored else ()
     statement = parse_statement(html, 0)
     if statement is None:
         return OcrReading(None, html, min(confs) if confs else None, None, ("statement not read",))
@@ -445,7 +490,7 @@ def read_statement(rows: List[Row], made_up_date: str) -> OcrReading:
     # the profit before tax identity on its own, for reporting (verify() decides acceptance)
     arithmetic = (True if re.search(r"held:[^|]*profit before tax \+ tax", checks.split(" failed:")[0])
                   else False if re.search(r"failed:.*profit before tax \+ tax", checks) else None)
-    return OcrReading(statement, html, min(confs) if confs else None, arithmetic, (checks,), passed)
+    return OcrReading(statement, html, min(confs) if confs else None, arithmetic, (checks,) + extra, passed)
 
 
 # --- OCR (tesseract, pymupdf): imported only when used -----------------------------------------------------------

@@ -332,3 +332,30 @@ def test_a_year_row_re_read_on_its_own_is_used_only_when_it_names_the_accounts_y
     assert year_row_from_reread(line("2009/10", "2008/09"), 0, "2010-03-31") is not None
     assert year_row_from_reread(line("2019", "2018"), 400, "2024-12-31") is None
     assert year_row_from_reread(line("Note", "£m", "£m"), 400, "2024-12-31") is None
+
+
+def test_a_lost_decimal_point_is_restored_in_a_statement_in_tenths_and_must_still_tie_out():
+    """Empresaria 2024 (£m, one decimal): minorities read '15' and '16' for 1.5 and 1.6. The point is restored where
+    nearly every figure has one decimal, noted, and the reading is accepted only because it then reconciles."""
+    def tenths(minorities):
+        rows = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2024", CUR), ("2023", PRI)]),
+                (230, [("£m", CUR), ("£m", PRI)]), (300, [("Revenue", 200), ("246.2", CUR), ("250.3", PRI)]),
+                (350, [("Cost", 100), ("of", 160), ("sales", 280), ("(195.8)", CUR), ("(192.8)", PRI)]),
+                (400, [("Loss", 120), ("before", 270), ("tax", 350), ("(5.2)", CUR), ("0.1", PRI)]),
+                (450, [("Taxation", 200), ("(3.7)", CUR), ("(1.4)", PRI)]),
+                (500, [("Loss", 120), ("for", 200), ("the", 280), ("year", 380), ("(8.9)", CUR), ("(1.3)", PRI)]),
+                (550, [("Attributable", 300), ("to:", 360)]),
+                (600, [("Owners", 160), ("of", 210), ("the", 280), ("Company", 450), ("(10.4)", CUR), ("(2.9)", PRI)]),
+                (650, [("Non-controlling", 330), ("interests", 520), minorities[0], minorities[1]])]
+        return read_statement(rows_from_words(page(rows)), "2024-12-31")
+    reading = tenths((("15", CUR), ("16", PRI)))
+    assert reading.accepted and reading.accepted.net_income == (-10_400_000, -2_900_000)
+    assert any("decimal point restored in 2 figures" in n for n in reading.notes)
+    # restored, but wrong (the true figures were 2.5 and 1.6): it does not tie, so it is not accepted
+    assert tenths((("25", CUR), ("16", PRI))).accepted is None
+    # a £000 statement whose only decimals are the pence of earnings per share is left alone
+    from clients.ocr_statement_reader import restore_decimals
+    pence = "<table>" + "".join(f"<tr><td>Line</td><td>{a}</td><td>{b}</td></tr>" for a, b in
+                                [("1,234", "1,100"), ("(567)", "(500)"), ("667", "600"), ("(120)", "(100)"), ("547", "500"),
+                                 ("4.62", "5.48"), ("4.29", "5.10")]) + "</table>"
+    assert restore_decimals(pence) == (pence, 0)
