@@ -246,15 +246,19 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
             html.append("<tr>" + "".join(f"<td>{y}</td>" for y in years) + "</tr>")
             continue
         placed: Dict[int, Word] = {}
+        stray = []
         for w in r.words:
             if not _is_figure_like(w) or not cols:
                 continue
             j = min(range(len(cols)), key=lambda j: abs(w.x + w.w - cols[j]))
             if abs(w.x + w.w - cols[j]) < 1.5 * mh:
                 placed[j] = w
-        if _unreadable(list(placed.values())):
+            elif w.x + w.w > min(cols) - 8 * mh and not NOTE_REF.match(w.t):
+                stray.append(w)          # a figure-like token in the figure area but in no column
+        if stray or _unreadable(list(placed.values())):
             # a figure misread ('$88' for 888) or uncertain: the line is shown without figures, so never taken
-            html.append(f"<tr><td>{' '.join(w.t for w in r.words if w not in placed.values())} [unreadable]</td></tr>")
+            kept = [w.t for w in r.words if w not in placed.values() and w not in stray]
+            html.append(f"<tr><td>{' '.join(kept)} [unreadable]</td></tr>")
             continue
         label = _clean_label(w.t for w in r.words if w not in placed.values())
         data_started = data_started or bool(placed)

@@ -197,3 +197,10 @@ def test_a_unit_row_read_gm_still_gives_millions():
     words = [Word("gm", w.x, w.y, 40, w.h, w.c, w.line) if w.t == "£'000" else w for w in statement()]
     reading = read_statement(rows_from_words(words), "2025-12-31")
     assert reading.statement.unit == 1e6
+
+
+def test_a_stray_token_between_the_columns_voids_its_line():
+    """Samuel Heath 2025: a stray dash 130 px left of the column must not become a figure (0)."""
+    words = statement(owners=("2,708", "2,333")) + [Word("-", CUR - 230, 550, 20, H, 0.0, (1, 1, 9))]
+    reading = read_statement(rows_from_words(words), "2025-12-31")
+    assert "owners [unreadable]" in reading.html
