@@ -8,7 +8,7 @@ Pure steps (tested on synthetic OCR output, no tesseract needed):
 - rows_from_words: words -> rows (by vertical position), a thousands separator read as a space rejoined ('14 476');
 - is_statement_page: a page's low-resolution text -> whether it is the group income statement;
 - table_html: rows -> a statement table (heading with the register's year end, year columns, one cell per year);
-- read_statement: rows -> OcrReading (the statement, its checks).
+- read_statement: rows -> OcrReading (the statement, its checks: verify()).
 OCR steps (tesseract via pytesseract, pages rendered by pymupdf; imported only when used): find_statement_page,
 read_filing.
 """
@@ -59,7 +59,7 @@ class OcrReading:
     statement: Optional[RnsStatement]
     html: str = ""
     min_confidence: Optional[float] = None
-    arithmetic: Optional[bool] = None            # profit before tax + tax = profit for the year (None: not checkable)
+    arithmetic: Optional[bool] = None            # verify()'s profit before tax + tax identity (None: not checkable)
     notes: Tuple[str, ...] = field(default_factory=tuple)
     verified: bool = False                       # the net income reconciles within the statement, both years (verify)
 
@@ -374,24 +374,6 @@ def _value(token: str) -> float:
     return (-1 if token.startswith("(") else 1) * float(re.sub(r"[(),]", "", token))
 
 
-def arithmetic_ok(html: str) -> Optional[bool]:
-    """Profit before tax + tax = profit for the year (the owners' line when there is no plain one), current column;
-    None when a line is missing."""
-    cells = re.findall(r"<tr><td>([^<]*)</td><td>([^<]*)</td>", html)
-    pbt = next((_value(v) for lab, v in cells if re.search(r"(profit|loss).*before tax", lab, re.I)), None)
-    tax = next((_value(v) for lab, v in cells
-                if re.fullmatch(r"(income )?tax(ation)?( expense| charge| credit)?(.*)", lab.strip(), re.I)
-                or re.match(r"tax(ation)? on (profit|loss)", lab, re.I)), None)
-    pat = next((_value(v) for lab, v in cells if re.search(r"(profit|loss).*(for the (financial )?year|after tax)", lab, re.I)
-                and not re.search(r"attributable|comprehensive|continuing", lab, re.I)), None)
-    if pat is None:
-        pat = next((_value(v) for lab, v in cells if re.search(r"owners|equity holders|parent company", lab, re.I)
-                    and not re.search(r"comprehensive|non-controlling", lab, re.I)), None)
-    if None in (pbt, tax, pat):
-        return None
-    return abs(pbt + tax - pat) <= 1
-
-
 def read_statement(rows: List[Row], made_up_date: str) -> OcrReading:
     """The statement on a page's rows, with its checks."""
     table = table_html(rows, made_up_date)
@@ -400,9 +382,12 @@ def read_statement(rows: List[Row], made_up_date: str) -> OcrReading:
     html, confs = table
     statement = parse_statement(html, 0)
     if statement is None:
-        return OcrReading(None, html, min(confs) if confs else None, arithmetic_ok(html), ("statement not read",))
+        return OcrReading(None, html, min(confs) if confs else None, None, ("statement not read",))
     passed, checks = verify(html, statement)
-    return OcrReading(statement, html, min(confs) if confs else None, arithmetic_ok(html), (checks,), passed)
+    # the profit before tax identity on its own, for reporting (verify() decides acceptance)
+    arithmetic = (True if re.search(r"held:[^|]*profit before tax \+ tax", checks.split(" failed:")[0])
+                  else False if re.search(r"failed:.*profit before tax \+ tax", checks) else None)
+    return OcrReading(statement, html, min(confs) if confs else None, arithmetic, (checks,), passed)
 
 
 # --- OCR (tesseract, pymupdf): imported only when used -----------------------------------------------------------
