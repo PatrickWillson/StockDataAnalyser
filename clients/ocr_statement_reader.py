@@ -157,6 +157,11 @@ def _is_figure_like(w: Word) -> bool:
     return bool(re.search(r"\d", w.t) or re.fullmatch(r"[-\u2013\u2014]", w.t)) and not UNIT_TOKEN.match(w.t)
 
 
+def _clean_label(words) -> str:
+    """A label without the stray punctuation OCR picks up between words ('Profit for the : year')."""
+    return " ".join(t for t in words if not re.fullmatch(r"[^\w£$€()]+", t)).strip()
+
+
 def figure_columns(rows: List[Row]) -> List[float]:
     """
     The figure columns' right edges: the right edges of figure-like words cluster (within 2 x the median word height,
@@ -195,7 +200,7 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
         return None
     cols = figure_columns(body[year_row + 1:])
     mh = _median_height([w for r in body for w in r.words])
-    html, confs = [f"<p>{heading}</p><table>"], []
+    html, confs, pending = [f"<p>{heading}</p><table>"], [], None
     for k, r in enumerate(body):
         if k < year_row:
             html.append(f"<tr><td>{r.text}</td></tr>")
@@ -215,10 +220,19 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
             # a figure misread ('$88' for 888) or uncertain: the line is shown without figures, so never taken
             html.append(f"<tr><td>{' '.join(w.t for w in r.words if w not in placed.values())} [unreadable]</td></tr>")
             continue
-        label = " ".join(w.t for w in r.words if w not in placed.values())
+        label = _clean_label(w.t for w in r.words if w not in placed.values())
         if not placed:
-            html.append(f"<tr><td>{label}</td></tr>")
+            if pending is not None and re.match(r"[a-z]", label):      # a label continued on the next line
+                pending = f"{pending} {label}"
+                html[-1] = f"<tr><td>{pending}</td></tr>"
+            else:
+                pending = label
+                html.append(f"<tr><td>{label}</td></tr>")
             continue
+        if pending is not None and (not re.search(r"[A-Za-z]{3}", label) or re.match(r"[a-z]", label)):
+            html.pop()                                                  # 'Profit for the' / 'year  1,580  1,719'
+            label = f"{pending} {label}".strip()
+        pending = None
         html.append(f"<tr><td>{label}</td>" + "".join(f"<td>{placed[j].t}</td>" for j in sorted(placed)) + "</tr>")
         confs += [w.c for w in placed.values()]
     html.append("</table>")

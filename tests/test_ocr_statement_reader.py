@@ -126,3 +126,13 @@ def test_three_columns_a_year_and_a_note_column():
             (500, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("2,400", U1), ("(400)", E1), ("2,000", T1), ("2,000", U2), ("(160)", E2), ("1,840", T2)])]
     reading = read_statement(rows_from_words(page(rows)), "2025-06-30")
     assert reading.accepted and reading.accepted.net_income == (2_000_000, 1_840_000)
+
+
+def test_a_wrapped_label_is_joined_to_its_line():
+    """'Profit for the :' / 'year  2,708  2,333' (BMTO 2017): stray punctuation dropped, the lines joined."""
+    words = [w for w in statement() if w.y != 500] + page([(500, [("Profit", 140), ("for", 220), ("the", 300), (":", 330)]),
+                                                         (530, [("year", 100), ("2,708", CUR), ("2,333", PRI)])])
+    words = [Word(w.t, w.x, w.y, w.w, w.h, w.c, (2, 1, w.y)) for w in words]          # a line id per y
+    reading = read_statement(rows_from_words(words), "2025-12-31")
+    assert "<td>Profit for the year</td><td>2,708</td>" in reading.html
+    assert reading.accepted and reading.accepted.net_income == (2_708_000, 2_333_000)
