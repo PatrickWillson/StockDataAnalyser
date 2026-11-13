@@ -19,8 +19,8 @@ import statistics
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Tuple
 
-from clients.rns_mapper import RnsStatement, parse_statement
-from config.companies_house_config import OCR_FIND_DPI, OCR_READ_DPI
+from clients.rns_mapper import RnsStatement, _split, _value as _figure, parse_statement, rows_of
+from config.companies_house_config import OCR_FIND_DPI, OCR_MIN_FIGURE_CONFIDENCE, OCR_READ_DPI
 
 HEAD = re.compile(r"(consolidated|group)\s+(income\s+statement|profit\s+and\s+loss\s+account|statement\s+of\s+"
                   r"(comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss)", re.I)
@@ -58,6 +58,12 @@ class OcrReading:
     min_confidence: Optional[float] = None
     arithmetic: Optional[bool] = None            # profit before tax + tax = profit for the year (None: not checkable)
     notes: Tuple[str, ...] = field(default_factory=tuple)
+    verified: bool = False                       # the net income reconciles within the statement, both years (verify)
+
+    @property
+    def accepted(self) -> Optional[RnsStatement]:
+        """The statement, only when its net income reconciled: an OCR figure is never used unchecked."""
+        return self.statement if self.verified else None
 
 
 def words_from_tesseract(data: Mapping[str, List[Any]]) -> List[Word]:
@@ -135,6 +141,10 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
             html.append("<tr>" + "".join(f"<td>{y}</td>" for y, _ in cols) + "</tr>")
             continue
         figs = [w for w in r.words if NUM.match(w.t)]
+        if cols is not None and _unreadable(r.words, cols):
+            # a figure misread ('$88' for 888) or uncertain: the line is shown without figures, so never taken
+            html.append(f"<tr><td>{' '.join(w.t for w in r.words if w not in figs)} [unreadable]</td></tr>")
+            continue
         if not figs or cols is None:
             html.append(f"<tr><td>{r.text}</td></tr>")
             continue
@@ -149,6 +159,61 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
         html.append(f"<tr><td>{label}</td>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>")
     html.append("</table>")
     return "".join(html), confs
+
+
+def _unreadable(words: List[Word], cols: List[Tuple[int, int]]) -> bool:
+    """A token in a figure column that is not a clean figure ('$88', '1,0O6') or below OCR_MIN_FIGURE_CONFIDENCE."""
+    width = max(edge for _, edge in cols)
+    for w in words:
+        in_column = any(abs(w.x + w.w - edge) < 0.12 * width for _, edge in cols)
+        if in_column and re.search(r"\d|^[-\u2013\u2014]$", w.t) and (not NUM.match(w.t) or w.c < OCR_MIN_FIGURE_CONFIDENCE):
+            return True
+    return False
+
+
+def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
+    """
+    Whether the chosen net income reconciles within the statement, in both years (table units, 1 unit of rounding):
+    profit before tax + tax = profit for the year where all three lines are there; and the net income ties in:
+    net income + minority interests = profit for the year (minorities 0 when none is shown), or, with no profit for
+    the year line, net income = profit before tax + tax (- minorities). (passed, which identities held or failed.)
+    """
+    lines = []
+    for cells in rows_of(html):
+        label, figures = _split(cells)
+        if len(figures) >= 2 and label:
+            lines.append((label.lower(), [_figure(f) for f in figures[:2]]))
+
+    def find(pattern, exclude=r"$^"):
+        return next((v for lab, v in lines if re.search(pattern, lab) and not re.search(exclude, lab)), None)
+
+    pbt = find(r"(profit|loss).*before tax")
+    tax = find(r"^(income )?tax(ation)?\b|^tax(ation)? on (profit|loss)|^taxation", r"before tax")
+    pfy = find(r"(profit|loss).*(for the (financial )?(year|period)|after tax)",
+               r"attributable|comprehensive|continuing|discontinued|owners|per share")
+    nci = find(r"non-controlling|minority")
+    unit = statement.unit or 1.0
+    ni = [statement.net_income[0] / unit, statement.net_income[1] / unit]
+    held, failed = [], []
+
+    def check(name, left, right):
+        ok = all(abs(a - b) <= 1 for a, b in zip(left, right))
+        (held if ok else failed).append(name)
+        return ok
+
+    if pbt and tax and pfy:
+        check("profit before tax + tax = profit for the year", [a + b for a, b in zip(pbt, tax)], pfy)
+    minorities = nci or [0.0, 0.0]
+    if pfy:
+        tied = check("net income + minorities = profit for the year", [a + b for a, b in zip(ni, minorities)], pfy)
+    elif pbt and tax:
+        tied = check("net income = profit before tax + tax - minorities",
+                     ni, [a + b - m for a, b, m in zip(pbt, tax, minorities)])
+    else:
+        tied = False
+        failed.append("no profit for the year or profit before tax and tax lines to tie the net income to")
+    passed = tied and not failed
+    return passed, ("held: " + "; ".join(held) if held else "") + (" failed: " + "; ".join(failed) if failed else "")
 
 
 def _value(token: str) -> float:
@@ -183,7 +248,10 @@ def read_statement(rows: List[Row], made_up_date: str) -> OcrReading:
         return OcrReading(None, notes=("no statement heading on the page",))
     html, confs = table
     statement = parse_statement(html, 0)
-    return OcrReading(statement, html, min(confs) if confs else None, arithmetic_ok(html))
+    if statement is None:
+        return OcrReading(None, html, min(confs) if confs else None, arithmetic_ok(html), ("statement not read",))
+    passed, checks = verify(html, statement)
+    return OcrReading(statement, html, min(confs) if confs else None, arithmetic_ok(html), (checks,), passed)
 
 
 # --- OCR (tesseract, pymupdf): imported only when used -----------------------------------------------------------

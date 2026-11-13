@@ -62,3 +62,27 @@ def test_the_statement_page_is_told_from_a_note_that_mentions_it():
                  "Cost of sales (28,440) (27,292)\nProfit before tax 4,089 3,198\nTax (1,381) (865)\n")
     note = "1.20 Inventories\nThe consolidated income statement includes revenue of 50,935 before tax ...\n" * 3
     assert is_statement_page(page_text) and not is_statement_page(note)
+
+
+def test_a_reading_is_accepted_only_when_its_net_income_reconciles():
+    ok = read_statement(rows_from_words(statement(owners=("2,708", "2,333"))), "2025-12-31")
+    assert ok.verified and ok.accepted is ok.statement
+    # the owners' line misread as 2,208: 2,208 + 0 minorities != 2,708 profit for the year
+    bad = read_statement(rows_from_words(statement(owners=("2,208", "2,333"))), "2025-12-31")
+    assert bad.statement.net_income[0] == 2_208_000 and not bad.verified and bad.accepted is None
+    assert "failed: net income + minorities" in bad.notes[0]
+
+
+def test_a_misread_figure_voids_its_line_so_it_is_never_taken():
+    """Samuel Heath: '888' read as '$88'; a stray dash beside it must not become 0."""
+    words = statement(owners=("2,708", "2,333"))
+    words = [Word("$88", w.x, w.y, w.w, w.h, 85.0, w.line) if w.t == "2,708" and w.y == 550 else w for w in words]
+    reading = read_statement(rows_from_words(words), "2025-12-31")
+    assert "[unreadable]" in reading.html
+    assert reading.accepted is None or reading.accepted.net_income[0] == 2_708_000
+
+
+def test_a_low_confidence_figure_voids_its_line():
+    words = [Word(w.t, w.x, w.y, w.w, w.h, 30.0, w.line) if w.t == "2,708" else w for w in statement()]
+    reading = read_statement(rows_from_words(words), "2025-12-31")
+    assert reading.accepted is None
