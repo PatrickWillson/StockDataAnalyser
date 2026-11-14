@@ -494,3 +494,15 @@ def test_pages_are_read_in_parallel_batches_but_the_first_confirmed_page_wins():
     assert find_statement_page([None] * 20, read_text=read_text) == 6
     assert {i for i, d in asked if d == 100} == set(range(8)) and {i for i, d in asked if d == 200} == {3, 6}
     assert find_statement_page([None] * 5, read_text=lambda i, dpi: "Notes\n") is None
+
+
+def test_columns_headed_by_dates_name_their_years():
+    """dotDigital 2025: '30.06.25  30.06.24'; also '30/06/2025'. Not a figure like 30.06 or an impossible date."""
+    from clients.ocr_statement_reader import _header_year
+    assert [_header_year(t) for t in ("30.06.25", "30.06.24", "30/06/2025", "31.12.1999", "2009/10", "2025")] == \
+        [2025, 2024, 2025, 1999, 2010, 2025]
+    assert [_header_year(t) for t in ("30.06", "45.06.25", "30.13.25", "1,234")] == [None, None, None, None]
+    words = [Word("30.06.25", w.x, w.y, w.w, w.h, w.c, w.line) if w.t == "2025" else
+             Word("30.06.24", w.x, w.y, w.w, w.h, w.c, w.line) if w.t == "2024" else w for w in statement()]
+    reading = read_statement(rows_from_words(words), "2025-06-30")
+    assert "<td>2025</td><td>2024</td>" in reading.html and reading.accepted

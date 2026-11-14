@@ -198,11 +198,19 @@ def is_statement_page(text: str, single_entity: bool = False) -> bool:
 YEAR_HEADER = re.compile(r"((?:19|20)\d\d)(?:/(\d\d))?")
 
 
+# a column headed by its date: '30.06.25' (dotDigital), '30/06/2025'
+DATE_HEADER = re.compile(r"(\d{1,2})[./](\d{1,2})[./]((?:19|20)\d\d|\d\d)")
+
+
 def _header_year(token: str) -> Optional[int]:
     m = YEAR_HEADER.fullmatch(token)
-    if not m:
-        return None
-    return int(m.group(1)) + 1 if m.group(2) else int(m.group(1))
+    if m:
+        return int(m.group(1)) + 1 if m.group(2) else int(m.group(1))
+    m = DATE_HEADER.fullmatch(token)
+    if m and 1 <= int(m.group(1)) <= 31 and 1 <= int(m.group(2)) <= 12:
+        year = int(m.group(3))
+        return year if year > 99 else 2000 + year if year < 70 else 1900 + year
+    return None
 
 
 UNIT_TOKEN = re.compile(r"^[£$€]?['\u2019]?0{3}s?$|^[£$€]m$", re.I)
