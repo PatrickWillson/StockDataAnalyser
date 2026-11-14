@@ -130,3 +130,15 @@ def test_no_company_number_gives_a_note_and_no_years(tmp_path):
     history = CompaniesHouseHistorySource(FakeClient(tmp_path, number=None), read_filing=fake_reader({})).history(
         "Example plc", KNOWN, "GBP", 4)
     assert history.income_statements == () and "no single active plc named 'Example plc'" in history.notes[0]
+
+
+def test_a_cached_reading_made_by_other_reader_code_is_read_again(tmp_path, monkeypatch):
+    import clients.companies_house_history as chh
+    values = {"2023": (700, 600), "2022": (600, 500), "2021": (500, 400), "2020": (400, 300), "2019": (300, 200),
+              "2018": (200, 100)}
+    client = FakeClient(tmp_path)
+    CompaniesHouseHistorySource(client, read_filing=fake_reader(values)).history("Example plc", KNOWN, "GBP", 4)
+    first = len(client.pdfs)
+    monkeypatch.setattr(chh, "READING_VERSION", "other-code")
+    CompaniesHouseHistorySource(client, read_filing=fake_reader(values)).history("Example plc", KNOWN, "GBP", 4)
+    assert len(client.pdfs) == 2 * first and len(chh._reader_version()) == 16

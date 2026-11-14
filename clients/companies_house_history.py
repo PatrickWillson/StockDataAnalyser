@@ -32,7 +32,19 @@ from core.errors import DataSourceError
 logger = logging.getLogger(__name__)
 
 SOURCE = "Companies House filed accounts (the company's annual reports, read by OCR)"
-READING_VERSION = "2026-11-14"        # cached OCR readings of another version are read again
+def _reader_version() -> str:
+    """A fingerprint of the code that turns a filing into a reading (the OCR reader and the statement parser): cached
+    readings made by other code are read again, so a fix always reaches the cache."""
+    import hashlib
+    here = os.path.dirname(os.path.abspath(__file__))
+    digest = hashlib.sha256()
+    for name in ("ocr_statement_reader.py", "rns_mapper.py"):
+        with open(os.path.join(here, name), "rb") as f:
+            digest.update(f.read())
+    return digest.hexdigest()[:16]
+
+
+READING_VERSION = _reader_version()
 
 
 @dataclass(frozen=True)
