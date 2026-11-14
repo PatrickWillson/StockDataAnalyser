@@ -638,3 +638,15 @@ def test_a_year_over_the_last_column_of_its_group_names_the_whole_group():
              (800, [("Owners", 160), ("of", 210), ("the", 280), ("parent", 420), ("9.5", T1), ("14.2", T2)])]
     reading = read_statement(rows_from_words(page(lines)), "2023-12-31")
     assert reading.accepted and reading.accepted.net_income == (9_500_000, 12_500_000)
+
+
+def test_a_column_of_dash_bullets_is_not_a_figure_column():
+    """Alumasc 2017: em dashes printed as bullets at the left of the earnings per share lines made a 'column' at the left
+    margin; the year groups then gave it a year and the table became three columns wide. A cluster needs at least two
+    figures that are not dashes."""
+    from clients.ocr_statement_reader import figure_columns
+    words = statement() + page([(600 + 40 * k, [("—", 200), ("Continuing", 420)]) for k in range(4)])
+    words = [Word(w.t, w.x, w.y, w.w, w.h, w.c, (3, 1, w.y)) for w in words]
+    rows = rows_from_words(words)
+    assert figure_columns(rows[3:]) == [CUR, PRI]
+    assert read_statement(rows, "2025-12-31").accepted.net_income == (2_708_000, 2_333_000)

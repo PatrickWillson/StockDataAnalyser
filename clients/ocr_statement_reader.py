@@ -263,6 +263,10 @@ def figure_columns(rows: List[Row]) -> List[float]:
         else:
             clusters.append([w])
     clusters = [c for c in clusters if len(c) >= 4]
+    # dashes left of every column with figures are bullets or a rule (Alumasc 2017's earnings per share lines), not a
+    # column; a mostly-nil column between figure columns (exceptional items: '-' but one year) stays
+    figured = [k for k, c in enumerate(clusters) if sum(not DASH_TOKEN.match(w.t) for w in c) >= 2]
+    clusters = clusters[figured[0]:] if figured else clusters
     # a notes column: mostly plain note numbers ('3', '4,9'), left of the figures; small decimal figures ('12.8' in a
     # £m column, Judges Scientific 2023) also fit a note number, so a column of them is never dropped
     return [statistics.median(w.x + w.w for w in c) for k, c in enumerate(clusters)
