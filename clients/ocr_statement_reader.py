@@ -17,12 +17,12 @@ import datetime as dt
 import re
 from collections import Counter
 import statistics
-from dataclasses import dataclass, field
-from typing import Any, Dict, List, Mapping, Optional, Tuple
+from dataclasses import dataclass, field, replace
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 
 from clients.rns_mapper import RnsStatement, _split, _value as _figure, parse_statement, rows_of
 from config.companies_house_config import (OCR_CONFIRM_DPI, OCR_FIND_DPI, OCR_MIN_FIGURE_CONFIDENCE, OCR_READ_DPI,
-                                           OCR_YEAR_REREAD_DPIS)
+                                           OCR_YEAR_REREAD_DPIS, OCR_FINER_DPIS)
 
 HEAD = re.compile(r"(consolidated|group)\s+(income\s+statement|profit\s+and\s+loss\s+account|statement\s+of\s+"
                   r"(comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss)", re.I)
@@ -533,6 +533,18 @@ def page_rows(page, dpi: int = OCR_READ_DPI) -> List[Row]:
     return rows_from_words(words_from_tesseract(data))
 
 
+def reread_finer(read_at: Callable[[int], OcrReading], reading: OcrReading) -> OcrReading:
+    """A reading that did not reconcile, read again at each of OCR_FINER_DPIS in turn (read_at(dpi)); the first pass that
+    reconciles on its own replaces it, noted. When none does, the reading stands (still refused)."""
+    if reading.verified:
+        return reading
+    for dpi in OCR_FINER_DPIS:
+        finer = read_at(dpi)
+        if finer.verified:
+            return replace(finer, notes=finer.notes + (f"read at {dpi} dpi",))
+    return reading
+
+
 def read_filing(pdf_path: str, made_up_date: str, single_entity: bool = False) -> Tuple[Optional[int], OcrReading]:
     """(the statement page index or None, the reading) for one filed accounts PDF; single_entity when the filing is not a
     group's accounts (AccountsFiling.group)."""
@@ -552,6 +564,7 @@ def read_filing(pdf_path: str, made_up_date: str, single_entity: bool = False) -
         unit = _reread_unit_strip(doc[index], rows)
         if unit and unit.endswith(("000", "m")):
             reading = read_statement(_with_unit_row(rows, unit), made_up_date)
+    reading = reread_finer(lambda dpi: read_statement(page_rows(doc[index], dpi), made_up_date), reading)
     return index, reading
 
 

@@ -412,3 +412,20 @@ def test_the_statutory_profit_before_tax_is_preferred_to_an_adjusted_one():
                    ("equity", 820), ("holders", 980), ("4,024", CUR), ("3,782", PRI)])]
     reading = read_statement(rows_from_words(page(rows)), "2011-02-28")
     assert reading.accepted and reading.accepted.net_income == (4_024_000, 3_782_000)
+
+
+def test_an_unconfirmed_reading_is_retried_finer_and_only_a_confirmed_pass_replaces_it():
+    """RWS 2010: at 300 dpi '476' for 14,476 (refused); at 400 dpi read right and reconciled. Each pass must pass the
+    checks on its own; when none does, the first reading stands."""
+    from clients.ocr_statement_reader import OcrReading, reread_finer
+    first = OcrReading(None, notes=("failed",))
+    passes = {400: OcrReading(None, notes=("failed",)), 450: OcrReading(None, notes=("held",), verified=True)}
+    asked = []
+
+    def read_at(dpi):
+        asked.append(dpi)
+        return passes[dpi]
+    got = reread_finer(read_at, first)
+    assert got.verified and got.notes == ("held", "read at 450 dpi") and asked == [400, 450]
+    assert reread_finer(lambda dpi: OcrReading(None, notes=("failed",)), first) is first
+    assert reread_finer(read_at, passes[450]) is passes[450]           # already confirmed: no second pass

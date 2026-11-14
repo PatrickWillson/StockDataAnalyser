@@ -24,3 +24,5 @@ OCR_READ_DPI: Final[int] = 300
 OCR_MIN_FIGURE_CONFIDENCE: Final[float] = 60.0
 # a lost year row is re-read on its own at each resolution in turn (a 2017 scan's shaded years read only at 250 dpi)
 OCR_YEAR_REREAD_DPIS: Final[Tuple[int, ...]] = (300, 250, 200)
+# a reading that does not reconcile is read again finer, in turn (RWS 2010: '476' for 14,476 at 300 dpi, right at 400)
+OCR_FINER_DPIS: Final[Tuple[int, ...]] = (400, 450)
