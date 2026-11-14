@@ -64,7 +64,7 @@ OWNER_LINE = re.compile(r"^(?:-\s*)?(?:the )?(?:owners|equity holders|equity sha
 COLUMN_HEADER = re.compile(r"^(?:notes?\b|[£$€]|us\$|['\u2019]?000)[\s£$€'\u20190-9a-z]*$", re.I)
 FOR_THE_YEAR = re.compile(r"^(?:net |retained |total )?(?:\(loss\)/profit|profit/\(loss\)|\(profit\)/loss|loss/\(profit\)|"
                           r"\(loss\)|profit|loss)(?: after tax(?:ation)?)?"
-                          r"(?: and (?:total |other )?comprehensive (?:income|loss|expense))?"
+                          r"(?: and (?:total |other )?comprehensive (?:income|loss|expense|charge))?"
                           r"(?: attributable to [a-z ]+)? (?:for|of) (?:the )?(?:financial )?(?:year|period)(?:/(?:year|period))?\b",
                           re.I)
 AFTER_TAX = re.compile(r"^(?:net |total )?(?:\(loss\)/profit|profit/\(loss\)|\(profit\)/loss|loss/\(profit\)|\(loss\)|profit|loss|"

@@ -288,6 +288,8 @@ def test_unit_tokens_allow_ocrs_confusions():
         ["£m", "£m", "£m", "$m", "£000", "£000", "£000", "£000", None, None]
     # Plexus 2025: the apostrophe of £'000 read as a 7; only after a currency sign (a bare 7000 is a figure)
     assert [unit_token(t) for t in ("£7000", "$7000", "7000", "£70000", "£7,000")] == ["£000", "$000", None, None, None]
+    # whole pounds ('2024 / £' in ruled cells, Aeorema 2024): a lone currency sign; unit_plausible still guards it
+    assert [unit_token(t) for t in ("£", "$", "€", "£5")] == ["£", "$", "€", None]
 
 
 def test_a_unit_row_read_gm_still_gives_millions():
@@ -650,3 +652,68 @@ def test_a_column_of_dash_bullets_is_not_a_figure_column():
     rows = rows_from_words(words)
     assert figure_columns(rows[3:]) == [CUR, PRI]
     assert read_statement(rows, "2025-12-31").accepted.net_income == (2_708_000, 2_333_000)
+
+
+def test_a_two_digit_year_after_a_month_name_heads_its_column():
+    """Conygar 2024: 'Year ended | Year ended' over '30 Sep 24 | 30 Sep 23'. A two-digit number is a year only after a
+    month name, so a note '24' or a figure is never one."""
+    words = [w for w in statement() if w.y != 180] + page([(180, [("30", CUR - 200), ("Sep", CUR - 100), ("25", CUR),
+                                                                  ("30", PRI - 200), ("Sep", PRI - 100), ("24", PRI)])])
+    words = [Word(w.t, w.x, w.y, w.w, w.h, w.c, (2, 1, w.y)) for w in words]
+    reading = read_statement(rows_from_words(words), "2025-09-30")
+    assert "<td>2025</td><td>2024</td>" in reading.html and reading.accepted
+
+
+def test_a_year_row_lost_with_the_heading_is_re_read_on_a_confirmed_page():
+    """Aeorema 2024: the page read lost both the heading and the shaded year row; the finder confirmed the page, so the
+    lines above the first figures are re-read for the years (which must name the register's year end)."""
+    from clients.ocr_statement_reader import _year_search_start
+    rows = rows_from_words(page([(100, [("ta", 100)]), (150, [("For", 100), ("the", 160), ("year", 240)]),
+                                 (300, [("Revenue", 200), ("20,288,799", CUR), ("20,230,231", PRI)])]))
+    assert _year_search_start(rows) == -1                     # no heading: from the top of the page
+    with_heading = rows_from_words(statement())
+    assert _year_search_start(with_heading) == 0
+
+
+def test_ruled_lines_are_removed_from_a_strip_but_glyphs_stay():
+    """Aeorema 2024: the year cells' rules touch the digits and defeat tesseract. A pixel column dark through the whole
+    strip, or a pixel row dark across most of it, is a rule; a glyph's strokes are not."""
+    from PIL import Image
+    from clients.ocr_statement_reader import strip_rules
+    img = Image.new("L", (200, 40), 255)
+    for y in range(40):
+        img.putpixel((50, y), 0)                       # a vertical rule through the strip
+    for x in range(200):
+        img.putpixel((x, 2), 0)                        # a horizontal rule across it
+    for y in range(12, 30):
+        img.putpixel((120, y), 0)                      # a glyph stroke (not the full height)
+    out = strip_rules(img)
+    assert out.getpixel((50, 20)) == 255 and out.getpixel((100, 2)) == 255 and out.getpixel((120, 20)) == 0
+
+
+def test_the_gaps_between_lines_above_the_figures_are_strips_too():
+    """Aeorema 2024: the year row was not read as a line at all; the gap where it sits is re-read."""
+    from clients.ocr_statement_reader import header_strips
+    rows = rows_from_words(page([(100, [("For", 100), ("the", 160), ("year", 240)]),
+                                 (300, [("Continuing", 300)]), (340, [("Revenue", 200), ("20,288", CUR), ("20,230", PRI)])]))
+    strips = header_strips(rows, -1)
+    assert (130 + 2, 300 - 2) in [(a, b) for a, b in strips]          # the gap between 'For the year' and 'Continuing'
+
+
+def test_an_underscore_nil_and_a_profit_and_total_comprehensive_line_tie_the_statement():
+    """Conygar 2024: 'Taxation 8 _ 1,714' (the current year's nil read as '_'), 'Loss and total comprehensive charge for
+    the year (33,952) (29,532)' (the profit line, no other comprehensive income), then the attribution lines."""
+    lines = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2024", CUR), ("2023", PRI)]),
+             (230, [("£000", CUR), ("£000", PRI)]), (300, [("Revenue", 200), ("5,941", CUR), ("14,048", PRI)]),
+             (330, [("Direct", 140), ("costs", 260), ("(6,364)", CUR), ("(19,129)", PRI)]),
+             (400, [("Loss", 120), ("before", 270), ("taxation", 430), ("(33,952)", CUR), ("(31,246)", PRI)]),
+             (450, [("Taxation", 200), ("8", 1000), ("_", CUR), ("1,714", PRI)]),
+             (500, [("Loss", 120), ("and", 200), ("total", 290), ("comprehensive", 550), ("charge", 690), ("for", 770),
+                    ("the", 850), ("year", 950), ("(33,952)", CUR), ("(29,532)", PRI)]),
+             (550, [("Attributable", 300), ("to", 360), ("non-controlling", 650), ("interests", 840), ("(283)", CUR), ("-", PRI)]),
+             (600, [("Attributable", 300), ("to", 360), ("shareholders", 620), ("of", 680), ("the", 760), ("Company", 920),
+                    ("(33,669)", CUR), ("(29,532)", PRI)])]
+    reading = read_statement(rows_from_words(page(lines)), "2024-09-30")
+    assert "<td>Taxation 8</td><td>-</td><td>1,714</td>" in reading.html          # the '_' nil written as a dash
+    assert reading.accepted and reading.accepted.net_income == (-33_669_000, -29_532_000)
+    assert "profit before tax + tax = profit for the year" in reading.notes[0]

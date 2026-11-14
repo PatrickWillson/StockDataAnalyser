@@ -42,8 +42,8 @@ HEADING_LINE = re.compile(r"^(?:(?:consolidated|group)\s+(?:income\s+statement|p
                           r"(?:\s+and\s+other\s+comprehensive\s+income)?)"
                           r"|statement\s+of\s+consolidated\s+(?:comprehensive\s+)?(?:income|profit\s+or\s+loss))[\s.:]*$", re.I)
 FIGURE = re.compile(r"\(?\d[\d,.]*\d\)?")
-DASH_TOKEN = re.compile(r"^[-\u2013\u2014]$")
-NUM = re.compile(r"^\(?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?$|^[-–—]$")
+DASH_TOKEN = re.compile(r"^[-\u2013\u2014_]$")          # a nil: also '_' (Conygar 2024)
+NUM = re.compile(r"^\(?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?$|^[-–—_]$")
 
 
 @dataclass(frozen=True)
@@ -219,15 +219,17 @@ NOTE_REF = re.compile(r"^\d{1,2}(?:[.,]\s?\d{1,2})*[a-z]?$")
 
 
 def _is_figure_like(w: Word) -> bool:
-    return bool(re.search(r"\d", w.t) or re.fullmatch(r"[-\u2013\u2014]", w.t)) and not UNIT_TOKEN.match(w.t)
+    return bool(re.search(r"\d", w.t) or DASH_TOKEN.match(w.t)) and not UNIT_TOKEN.match(w.t)
 
 
 def unit_token(text: str) -> Optional[str]:
     """A header word read as a unit, allowing OCR's confusions: '£m', 'gm', '&m' -> '£m'; '£000', "£'000", '£°000'
-    -> '£000', and '£7000' (also $ and €). None for anything else."""
+    -> '£000', and '£7000' (also $ and €); a lone '£', '$' or '€' (whole units). None for anything else."""
     t = text.strip()
     if re.fullmatch(r"[£&g€$]m", t, re.I):
         return ("$" if t[0] == "$" else "€" if t[0] == "€" else "£") + "m"
+    if t in ("£", "$", "€"):
+        return t                         # whole currency units (unit_plausible checks the figures are that size)
     if re.fullmatch(r"[£€$]?['\u2019`°]?0{3}s?|[£€$]70{3}", t):          # '£7000': the apostrophe read as a 7
         return ("$" if t.startswith("$") else "€" if t.startswith("€") else "£") + "000"
     return None
@@ -301,7 +303,7 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
         heading = f"Consolidated income statement for the year ended {day.day} {day:%B %Y}"
     else:
         heading = f"{_no_stray_marks(rows[start].text)} for the year ended {day.day} {day:%B %Y}"
-    body = rows[start + 1:start + 70]
+    body = _month_years(rows[start + 1:start + 70])
     year_row = next((i for i, r in enumerate(body) if sum(_header_year(w.t) is not None for w in r.words) >= 2), None)
     first_figures = next((i for i, r in enumerate(body)
                           if sum(bool(NUM.match(w.t)) and not _header_year(w.t) for w in r.words) >= 2), len(body))
@@ -373,7 +375,8 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
             html.pop()                                                  # 'Profit for the' / 'year  1,580  1,719'
             label = f"{pending} {label}".strip()
         pending = None
-        html.append(f"<tr><td>{label}</td>" + "".join(f"<td>{placed[j].t}</td>" for j in sorted(placed)) + "</tr>")
+        html.append(f"<tr><td>{label}</td>" + "".join(f"<td>{'-' if DASH_TOKEN.match(placed[j].t) else placed[j].t}</td>"
+                                                      for j in sorted(placed)) + "</tr>")
         confs += [w.c for w in placed.values()]
     html.append("</table>")
     return "".join(html), confs
@@ -514,7 +517,9 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     # profit for the year: the last such line when a discontinued-operations line comes before it (the total)
     pfy_lines = [(i, v) for i, (lab, v) in enumerate(lines)
                  if re.search(r"(profit|loss|return).*(for the (financial )?(year|period)|after tax)", lab)
-                 and not re.search(r"attributable|comprehensive|continuing|discontinued|owners|per share", lab)]
+                 and not re.search(r"attributable|continuing|discontinued|owners|per share", lab)
+                 # 'Loss and total comprehensive charge for the year' is the profit line (no other comprehensive income)
+                 and ("comprehensive" not in lab or re.search(r"(profit|loss) and total comprehensive", lab))]
     pfy = pfy_lines[0][1] if pfy_lines else None
     # the statement of comprehensive income's totals (not an attribution of them)
     oci = find(r"^(total )?other comprehensive (income|loss|expense|\(loss\)|\(expense\))\S*( for the (financial )?(year|period))?"
@@ -538,6 +543,8 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     nci = None
     if at is not None:
         nci = next((v for lab, v in lines[at + 1:at + 4] if re.search(r"non-controlling|minority", lab)), None)
+        if nci is None and at > 0 and re.search(r"non-controlling|minority", lines[at - 1][0]):
+            nci = lines[at - 1][1]         # the minorities listed first (Conygar 2024: non-controlling, then shareholders)
     held, failed = [], []
 
     def check(name, left, right):
@@ -774,29 +781,82 @@ def year_row_from_reread(words: List[Word], top: int, made_up_date: str) -> Opti
     return Row(words, sum(w.y + w.h / 2 for w in words) / len(words))
 
 
+def _year_search_start(rows: List[Row]) -> int:
+    """The heading row's index, or -1 when the page read lost it too (Aeorema 2024): the page was confirmed as the
+    statement, so the year row is then sought from the top of the page."""
+    return next((i for i, r in enumerate(rows) if HEAD.search(r.text) or PLAIN_HEADING_LINE.match(r.text.strip())), -1)
+
+
+MONTH = re.compile(r"^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?$", re.I)
+
+
+def _month_years(rows: List[Row]) -> List[Row]:
+    """A two-digit year after a month name ('30 Sep 24', Conygar 2024) as four digits; a two-digit number anywhere
+    else (a note, a figure) is left alone."""
+    def fix(words):
+        return [Word(f"20{w.t}", w.x, w.y, w.w, w.h, w.c, w.line)
+                if re.fullmatch(r"\d{2}", w.t) and k and MONTH.match(words[k - 1].t) else w for k, w in enumerate(words)]
+    return [Row(fix(r.words), r.cy) for r in rows]
+
+
+def header_strips(rows: List[Row], start: int) -> List[Tuple[int, int]]:
+    """(top, bottom) strips, at OCR_READ_DPI, to re-read for the year row: each line between the heading (start; -1:
+    none) and the first row of figures, then each gap between those lines taller than a line (a year row the page read
+    did not see as a line at all: Aeorema 2024)."""
+    first = next((i for i in range(start + 1, len(rows)) if sum(bool(NUM.match(w.t)) for w in rows[i].words) >= 2), None)
+    if first is None:
+        return []
+    lines = rows[max(start, 0):first + 1]
+    mh = _median_height([w for r in lines for w in r.words]) or 20
+    strips = [(int(min(w.y for w in r.words)) - 8, int(max(w.y + w.h for w in r.words)) + 8) for r in rows[start + 1:first]]
+    for a, b in zip(lines, lines[1:]):
+        gap_top, gap_bottom = int(max(w.y + w.h for w in a.words)) + 2, int(min(w.y for w in b.words)) - 2
+        if gap_bottom - gap_top > 1.2 * mh:
+            strips.append((gap_top, gap_bottom))
+    return strips
+
+
+def strip_rules(image):
+    """A strip without its ruled lines: a pixel column dark through the whole strip, or a pixel row dark across most
+    of it, is a table rule (Aeorema 2024: rules touching the year digits); glyph strokes span neither."""
+    import numpy as np
+    from PIL import Image
+    a = np.array(image)
+    dark = a < 128
+    out = a.copy()
+    out[:, dark.mean(axis=0) > 0.9] = 255
+    out[dark.mean(axis=1) > 0.6, :] = 255
+    return Image.fromarray(out)
+
+
 def _reread_year_row(page, rows: List[Row], made_up_date: str) -> Optional[List[Row]]:
-    """The rows with the year row re-read when the page read lost it (Empresaria 2024: a shaded band read 'BRE BOBS'):
-    each line between the heading and the first row of figures read on its own (tesseract, one line) at each of
-    OCR_YEAR_REREAD_DPIS in turn, the first that names the accounts' year taking its place (positions at OCR_READ_DPI). None when there is nothing to re-read or no line gives the years."""
+    """The rows with the year row re-read when the page read lost it (Empresaria 2024: a shaded band read 'BRE BOBS';
+    Aeorema 2024: ruled cells, no line read at all): each strip of header_strips, its rules removed, read on its own at
+    each of OCR_YEAR_REREAD_DPIS in turn; the first that names the accounts' year becomes the year row, in place of its
+    line or inserted at its height (positions at OCR_READ_DPI). None when there is nothing to re-read or no strip gives
+    the years."""
     import pytesseract
-    start = next((i for i, r in enumerate(rows) if HEAD.search(r.text) or PLAIN_HEADING_LINE.match(r.text.strip())), None)
-    if start is None:
-        return None
+    start = _year_search_start(rows)
     first = next((i for i in range(start + 1, len(rows)) if sum(bool(NUM.match(w.t)) for w in rows[i].words) >= 2), None)
     if first is None or any(sum(_header_year(w.t) is not None for w in r.words) >= 2 for r in rows[start + 1:first]):
         return None
+    strips = header_strips(rows, start)
     for dpi in OCR_YEAR_REREAD_DPIS:
         image, scale = _render(page, dpi), dpi / OCR_READ_DPI
-        for i in range(start + 1, first):
-            top = max(0, int((min(w.y for w in rows[i].words) - 8) * scale))
-            bottom = min(image.height, int((max(w.y + w.h for w in rows[i].words) + 8) * scale))
-            data = pytesseract.image_to_data(image.crop((0, top, image.width, bottom)), config="--psm 7",
-                                             output_type=pytesseract.Output.DICT)
-            words = [Word(w.t, int(w.x / scale), int(w.y / scale), int(w.w / scale), int(w.h / scale), w.c, w.line)
-                     for w in words_from_tesseract(data)]
-            row = year_row_from_reread(words, int(top / scale), made_up_date)
-            if row is not None:
-                return rows[:i] + [row] + rows[i + 1:]
+        for top, bottom in strips:
+            crop = image.crop((0, max(0, int(top * scale)), image.width, min(image.height, int(bottom * scale))))
+            for config in ("--psm 7", "--psm 6"):
+                data = pytesseract.image_to_data(strip_rules(crop), config=config, output_type=pytesseract.Output.DICT)
+                words = [Word(w.t, int(w.x / scale), int(w.y / scale), int(w.w / scale), int(w.h / scale), w.c, w.line)
+                         for w in words_from_tesseract(data)]
+                row = year_row_from_reread(words, max(0, top), made_up_date)
+                if row is not None:
+                    kept = [r for r in rows if not (top <= r.cy <= bottom)]
+                    # the unit read in the same cells ('2024 / £', Aeorema 2024) becomes the unit row beneath
+                    units = [u for u in (unit_token(w.t) for w in row.words) if u]
+                    year_words = [w for w in row.words if unit_token(w.t) is None]
+                    added = [Row(year_words, row.cy)] + ([Row([Word(units[0], 0, 0, 0, 0, 100.0)], row.cy + 1)] if units else [])
+                    return sorted(kept + added, key=lambda r: r.cy)
     return None
 
 
