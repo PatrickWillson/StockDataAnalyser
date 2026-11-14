@@ -562,3 +562,16 @@ def test_years_spread_over_header_rows_are_given_to_each_column_so_the_total_is_
     # a repeated year with columns that cannot each be given one: refused, not guessed
     unplaced = [(160, [("2024", C1), ("2024", C2)]), (230, [("£000", C1), ("£000", C2), ("£000", C3), ("£000", C4)])]
     assert read(unplaced).accepted is None
+
+
+def test_a_figure_left_in_a_label_voids_the_line_so_the_years_cannot_be_swapped():
+    """GlobalData (DATA) 2024: the 2023 figure '73.7' shifted off its column and, looking like a note number, stayed in
+    the label ('Operating profit 73.7' | '65.1'); the parser then read 73.7 as the current year. A label ending in a
+    figure other than a plain note number now voids its line. A note number ('Revenue 5', '4,12') is still fine."""
+    words = [w for w in statement() if w.y not in (300, 500)] + page([
+        (300, [("Revenue", 200), ("5", 1000), ("50,935", CUR), ("48,947", PRI)]),
+        (500, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("23.33", 1100), ("2,708", CUR)])])
+    words = [Word(w.t, w.x, w.y, w.w, w.h, w.c, (2, 1, w.y)) for w in words]
+    reading = read_statement(rows_from_words(words), "2025-12-31")
+    assert "<td>Revenue 5</td><td>50,935</td>" in reading.html
+    assert "<td>Profit for the year 23.33 [unreadable]</td></tr>" in reading.html and reading.accepted is None

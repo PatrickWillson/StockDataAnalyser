@@ -213,6 +213,7 @@ def _header_year(token: str) -> Optional[int]:
     return None
 
 
+PLAIN_NOTE = re.compile(r"\d{1,2}(?:,\s?\d{1,2})*[a-z]?")     # a note number before the figures: '5', '4,12', '9a'
 UNIT_TOKEN = re.compile(r"^[£$€]?['\u2019]?0{3}s?$|^[£$€]m$", re.I)
 NOTE_REF = re.compile(r"^\d{1,2}(?:[.,]\s?\d{1,2})*[a-z]?$")
 
@@ -344,6 +345,12 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
             html.append(f"<tr><td>{' '.join(kept)} [unreadable]</td></tr>")
             continue
         label = _clean_label(w.t for w in r.words if w not in placed.values())
+        tail = label.split(" ")[-1] if label else ""
+        if placed and _figure(tail) is not None and not PLAIN_NOTE.fullmatch(tail):
+            # a figure left in the label (DATA 2024: '73.7' off its column, kept as a note number): the parser would
+            # read it as the first figure and swap the years, so the line is shown without figures
+            html.append(f"<tr><td>{label} [unreadable]</td></tr>")
+            continue
         data_started = data_started or bool(placed)
         if not placed:
             if pending is not None and re.match(r"[a-z]", label):      # a label continued on the next line
