@@ -439,3 +439,22 @@ def test_a_header_naming_one_year_per_group_never_narrows_the_table():
         ["Total comprehensive profit for the year, net of tax", "7,304", "11,260"],
         ["Basic earnings per share", "9", "20.3", "25.9"]])
     assert parse_statement(page, 1).net_income == (7_314_000, 9_339_000)
+
+
+def test_an_owners_line_printed_under_the_totals_only_is_read_in_a_wide_table():
+    """Alumasc 2010: before | non-recurring | total per year, and below 'Profit for the year attributable to' /
+    'Equity holders of the parent 2,234 1,052' / 'Non-controlling interest 6 8' with two figures: the owners' net
+    income, not the six-column 'Profit for the year' (2,240, minorities included)."""
+    page = _table("CONSOLIDATED STATEMENT OF COMPREHENSIVE INCOME", [
+        ["For the year ended 30 June 2010"], ["2010", "2010", "2010", "2009", "2009", "2009"],
+        ["Notes", "£000", "£000", "£000", "£000", "£000", "£000"],
+        ["Revenue", "3", "92,972", "-", "92,972", "109,088", "-", "109,088"],
+        ["Cost of sales", "(62,573)", "-", "(62,573)", "(73,337)", "-", "(73,337)"],
+        ["Profit before taxation", "4,061", "(683)", "3,378", "5,172", "(3,368)", "1,804"],
+        ["Tax expense", "9", "(1,235)", "97", "(1,138)", "(1,572)", "828", "(744)"],
+        ["Profit for the year", "2,826", "(586)", "2,240", "3,600", "(2,540)", "1,060"],
+        ["Total comprehensive income for the year attributable to"], ["Equity holders of the parent", "703", "3,551"],
+        ["Non-controlling interest", "10", "35"],
+        ["Profit for the year attributable to"], ["Equity holders of the parent", "2,234", "1,052"],
+        ["Non-controlling interest", "6", "8"]])
+    assert parse_statement(page, 1).net_income == (2_234_000, 1_052_000)

@@ -298,15 +298,18 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
     else:
         picks = (0, 1) if width == 2 else (width // 2 - 1, width - 1)
 
-    def figures_of(tokens: List[str]) -> Optional[Tuple[float, float]]:
+    def figures_of(tokens: List[str], pair: bool = False) -> Optional[Tuple[float, float]]:
+        if pair and width > 2 and len(tokens) == 2:
+            # an attribution line printed under the totals only (owners | minorities lists, Alumasc 2010): current, prior
+            return _value(tokens[0]) * unit, _value(tokens[1]) * unit
         if len(tokens) != width:
             return None
         return _value(tokens[picks[0]]) * unit, _value(tokens[picks[1]]) * unit
 
-    def first(predicate) -> Optional[Tuple[str, Tuple[float, float]]]:
+    def first(predicate, pair: bool = False) -> Optional[Tuple[str, Tuple[float, float]]]:
         for own, joined, tokens in data:
             if predicate(own, joined):
-                got = figures_of(tokens)
+                got = figures_of(tokens, pair)
                 if got is not None:
                     return joined, got
         return None
@@ -332,7 +335,7 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
                                                                      and OWNER_LINE.match(own)))
                    and not excluded(joined)
                    and ("comprehensive" not in joined.lower()
-                        or re.search(r"(?:profit|loss) and total comprehensive", joined, re.I) is not None))
+                        or re.search(r"(?:profit|loss) and total comprehensive", joined, re.I) is not None), pair=True)
              # 'Total (loss)/profit for the year' after continuing and discontinued lines is the year's net income
              or first(lambda own, joined: re.match(r"^total ", own, re.I) is not None and bool(FOR_THE_YEAR.match(own))
                       and "comprehensive" not in own.lower() and not excluded(own))
