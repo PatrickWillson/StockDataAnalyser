@@ -14,6 +14,7 @@ read_filing.
 """
 
 import datetime as dt
+import os
 import re
 from collections import Counter
 import statistics
@@ -22,7 +23,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple
 
 from clients.rns_mapper import RnsStatement, _split, _value as _figure, parse_statement, rows_of
 from config.companies_house_config import (OCR_CONFIRM_DPI, OCR_FIND_DPI, OCR_MIN_FIGURE_CONFIDENCE, OCR_READ_DPI,
-                                           OCR_YEAR_REREAD_DPIS, OCR_FINER_DPIS)
+                                           OCR_YEAR_REREAD_DPIS, OCR_FINER_DPIS, OCR_WORKERS)
 
 HEAD = re.compile(r"(consolidated|group)\s+(income\s+statement|profit\s+and\s+loss\s+account|statement\s+of\s+"
                   r"(comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss)"
@@ -570,15 +571,29 @@ def _render(page, dpi: int):
     return Image.frombytes("L", (pix.width, pix.height), pix.samples)
 
 
-def find_statement_page(doc, single_entity: bool = False) -> Optional[int]:
-    """The index of the group income statement page (or, single_entity, the company's own), or None: every page at
+def find_statement_page(doc, single_entity: bool = False,
+                        read_text: Optional[Callable[[int, int], str]] = None) -> Optional[int]:
+    """The index of the group income statement page (or, single_entity, the company's own), or None: pages read at
     OCR_FIND_DPI for candidates (is_candidate_page), candidates re-read at OCR_CONFIRM_DPI to confirm
-    (is_statement_page)."""
-    import pytesseract
-    for i, page in enumerate(doc):
-        if is_candidate_page(pytesseract.image_to_string(_render(page, OCR_FIND_DPI))) \
-                and is_statement_page(pytesseract.image_to_string(_render(page, OCR_CONFIRM_DPI)), single_entity):
-            return i
+    (is_statement_page). Pages are read OCR_WORKERS at a time; the page returned is the lowest-numbered one that is a
+    candidate and confirms, as a page-by-page search would return. read_text(index, dpi) -> text (tesseract by
+    default, one thread per page: OMP_THREAD_LIMIT=1 unless already set)."""
+    from concurrent.futures import ThreadPoolExecutor
+    if read_text is None:
+        import pytesseract
+        os.environ.setdefault("OMP_THREAD_LIMIT", "1")
+
+        def read_text(i, dpi):
+            return pytesseract.image_to_string(_render(doc[i], dpi))
+    with ThreadPoolExecutor(OCR_WORKERS) as pool:
+        for start in range(0, len(doc), OCR_WORKERS):
+            batch = list(range(start, min(start + OCR_WORKERS, len(doc))))
+            first_look = list(pool.map(lambda i: read_text(i, OCR_FIND_DPI), batch))
+            candidates = [i for i, text in zip(batch, first_look) if is_candidate_page(text)]
+            confirmed = list(pool.map(lambda i: is_statement_page(read_text(i, OCR_CONFIRM_DPI), single_entity), candidates))
+            found = [i for i, ok in zip(candidates, confirmed) if ok]
+            if found:
+                return found[0]
     return None
 
 

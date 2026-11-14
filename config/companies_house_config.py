@@ -26,3 +26,5 @@ OCR_MIN_FIGURE_CONFIDENCE: Final[float] = 60.0
 OCR_YEAR_REREAD_DPIS: Final[Tuple[int, ...]] = (300, 250, 200)
 # a reading that does not reconcile is read again finer, in turn (RWS 2010: '476' for 14,476 at 300 dpi, right at 400)
 OCR_FINER_DPIS: Final[Tuple[int, ...]] = (400, 450)
+# pages read at once while finding the statement (tesseract runs one thread each; 8 on 16 cores: about 3x faster)
+OCR_WORKERS: Final[int] = 8

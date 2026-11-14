@@ -476,3 +476,21 @@ def test_a_year_row_must_name_the_registers_year_end():
     assert names_accounts_year([2025, 2024], "2025-12-31") and not names_accounts_year([2025, 2024], "2019-12-31")
     assert names_accounts_year([2015, 2014], "2016-01-02") and not names_accounts_year([2015, 2014], "2016-02-02")
     assert read_statement(rows_from_words(statement()), "2019-12-31").statement is None
+
+
+def test_pages_are_read_in_parallel_batches_but_the_first_confirmed_page_wins():
+    """The finder reads pages in batches at once; the page it returns is the lowest-numbered page that is a candidate
+    and confirms, as a page-by-page search would return, however the batch's reads finish."""
+    from clients.ocr_statement_reader import find_statement_page
+    statement_text = ("Consolidated income statement\nfor the year ended 31 December 2025\nRevenue 50,935 48,947\n"
+                      "Cost of sales (28,440) (27,292)\nProfit before tax 4,089 3,198\nTax (1,381) (865)\n")
+    pages = {i: "Notes to the accounts\n" for i in range(20)}
+    pages.update({6: statement_text, 11: statement_text, 3: "Consolidated income statement\n(continued)\nnothing\n"})
+    asked = []
+
+    def read_text(i, dpi):
+        asked.append((i, dpi))
+        return pages[i]
+    assert find_statement_page([None] * 20, read_text=read_text) == 6
+    assert {i for i, d in asked if d == 100} == set(range(8)) and {i for i, d in asked if d == 200} == {3, 6}
+    assert find_statement_page([None] * 5, read_text=lambda i, dpi: "Notes\n") is None
