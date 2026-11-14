@@ -303,7 +303,7 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
         heading = f"Consolidated income statement for the year ended {day.day} {day:%B %Y}"
     else:
         heading = f"{_no_stray_marks(rows[start].text)} for the year ended {day.day} {day:%B %Y}"
-    body = _month_years(rows[start + 1:start + 70])
+    body = _box_edges(_month_years(rows[start + 1:start + 70]))
     year_row = next((i for i, r in enumerate(body) if sum(_header_year(w.t) is not None for w in r.words) >= 2), None)
     first_figures = next((i for i, r in enumerate(body)
                           if sum(bool(NUM.match(w.t)) and not _header_year(w.t) for w in r.words) >= 2), len(body))
@@ -740,6 +740,36 @@ def reread_finer(read_at: Callable[[int], OcrReading], reading: OcrReading) -> O
     return reading
 
 
+def two_column_split(rows: List[Row]) -> Optional[int]:
+    """The x at which a second column of the statement starts, when a header row names the two years twice ('2023 2022
+    2023 2022': the statement continues beside itself, Central Asia Metals 2023, MIDW): just right of the first pair."""
+    for r in rows[:15]:
+        years = [w for w in r.words if _header_year(w.t) is not None]
+        if len(years) == 4 and _header_year(years[0].t) == _header_year(years[2].t) \
+                and _header_year(years[1].t) == _header_year(years[3].t):
+            return years[1].x + years[1].w + 15
+    return None
+
+
+def combine_halves(left: List[Row], right: List[Row]) -> List[Row]:
+    """The rows of a two-column page as one statement: the left half, then the right half below it, the right half's
+    figure columns shifted onto the left's (its last column over the left's last)."""
+    lc, rc = figure_columns(left), figure_columns(right)
+    shift = int(lc[-1] - rc[-1]) if lc and rc else 0
+    below = max((w.y + w.h for r in left for w in r.words), default=0) + 100
+    moved = [Row([Word(w.t, w.x + shift, w.y + below, w.w, w.h, w.c, w.line) for w in r.words], r.cy + below)
+             for r in right]
+    return left + moved
+
+
+def _half_rows(page, x0: int, x1: int) -> List[Row]:
+    import pytesseract
+    image = _render(page, OCR_READ_DPI)
+    crop = image.crop((max(0, x0), 0, min(image.width, x1), image.height))
+    data = pytesseract.image_to_data(crop, config="--psm 6", output_type=pytesseract.Output.DICT)
+    return rows_from_words(words_from_tesseract(data))
+
+
 def read_filing(pdf_path: str, made_up_date: str, single_entity: bool = False) -> Tuple[Optional[int], OcrReading]:
     """(the statement page index or None, the reading) for one filed accounts PDF; single_entity when the filing is not a
     group's accounts (AccountsFiling.group)."""
@@ -759,6 +789,13 @@ def read_filing(pdf_path: str, made_up_date: str, single_entity: bool = False) -
         unit = _reread_unit_strip(doc[index], rows)
         if unit and unit.endswith(("000", "m")):
             reading = read_statement(_with_unit_row(rows, unit), made_up_date)
+    split = two_column_split(rows) if not reading.verified else None
+    if split is not None:
+        # the statement in two columns of the page: each half read on its own, the right half after the left
+        halves = combine_halves(_half_rows(doc[index], 0, split), _half_rows(doc[index], split, 10 ** 6))
+        two = read_statement(halves, made_up_date)
+        if two.verified:
+            reading = replace(two, notes=two.notes + ("read in two halves (the statement continues in a second column)",))
     reading = reread_finer(lambda dpi: read_statement(page_rows(doc[index], dpi), made_up_date), reading)
     return index, reading
 
@@ -790,6 +827,18 @@ def _year_search_start(rows: List[Row]) -> int:
 MONTH = re.compile(r"^(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\.?$", re.I)
 
 
+BOX_EDGE = re.compile(r"^[|\[\]{}]+|[|\[\]{}]+$")
+
+
+def _box_edges(rows: List[Row]) -> List[Row]:
+    """A box's edge read onto a figure ('195,280|', '65,008[': a boxed current-year column, Central Asia Metals 2023)
+    dropped when a clean figure remains; any other token is left as read."""
+    def clean(w):
+        t = BOX_EDGE.sub("", w.t)
+        return Word(t, w.x, w.y, w.w, w.h, w.c, w.line) if t != w.t and t and NUM.match(t) else w
+    return [Row([clean(w) for w in r.words], r.cy) for r in rows]
+
+
 def _month_years(rows: List[Row]) -> List[Row]:
     """A two-digit year after a month name ('30 Sep 24', Conygar 2024) as four digits; a two-digit number anywhere
     else (a note, a figure) is left alone."""
@@ -799,20 +848,21 @@ def _month_years(rows: List[Row]) -> List[Row]:
     return [Row(fix(r.words), r.cy) for r in rows]
 
 
-def header_strips(rows: List[Row], start: int) -> List[Tuple[int, int]]:
-    """(top, bottom) strips, at OCR_READ_DPI, to re-read for the year row: each line between the heading (start; -1:
-    none) and the first row of figures, then each gap between those lines taller than a line (a year row the page read
-    did not see as a line at all: Aeorema 2024)."""
+def header_strips(rows: List[Row], start: int) -> List[Tuple[int, int, Optional[int]]]:
+    """(top, bottom, index of the line it replaces or None) strips, at OCR_READ_DPI, to re-read for the year row: each
+    line between the heading (start; -1: none) and the first row of figures, then each gap between those lines taller
+    than a line (a year row the page read did not see as a line at all: Aeorema 2024; it replaces nothing)."""
     first = next((i for i in range(start + 1, len(rows)) if sum(bool(NUM.match(w.t)) for w in rows[i].words) >= 2), None)
     if first is None:
         return []
     lines = rows[max(start, 0):first + 1]
     mh = _median_height([w for r in lines for w in r.words]) or 20
-    strips = [(int(min(w.y for w in r.words)) - 8, int(max(w.y + w.h for w in r.words)) + 8) for r in rows[start + 1:first]]
+    strips = [(int(min(w.y for w in rows[i].words)) - 8, int(max(w.y + w.h for w in rows[i].words)) + 8, i)
+              for i in range(start + 1, first)]
     for a, b in zip(lines, lines[1:]):
         gap_top, gap_bottom = int(max(w.y + w.h for w in a.words)) + 2, int(min(w.y for w in b.words)) - 2
         if gap_bottom - gap_top > 1.2 * mh:
-            strips.append((gap_top, gap_bottom))
+            strips.append((gap_top, gap_bottom, None))
     return strips
 
 
@@ -843,7 +893,7 @@ def _reread_year_row(page, rows: List[Row], made_up_date: str) -> Optional[List[
     strips = header_strips(rows, start)
     for dpi in OCR_YEAR_REREAD_DPIS:
         image, scale = _render(page, dpi), dpi / OCR_READ_DPI
-        for top, bottom in strips:
+        for top, bottom, replaces in strips:
             crop = image.crop((0, max(0, int(top * scale)), image.width, min(image.height, int(bottom * scale))))
             for config in ("--psm 7", "--psm 6"):
                 data = pytesseract.image_to_data(strip_rules(crop), config=config, output_type=pytesseract.Output.DICT)
@@ -851,7 +901,7 @@ def _reread_year_row(page, rows: List[Row], made_up_date: str) -> Optional[List[
                          for w in words_from_tesseract(data)]
                 row = year_row_from_reread(words, max(0, top), made_up_date)
                 if row is not None:
-                    kept = [r for r in rows if not (top <= r.cy <= bottom)]
+                    kept = [r for k, r in enumerate(rows) if k != replaces]      # only the line re-read, if any
                     # the unit read in the same cells ('2024 / £', Aeorema 2024) becomes the unit row beneath
                     units = [u for u in (unit_token(w.t) for w in row.words) if u]
                     year_words = [w for w in row.words if unit_token(w.t) is None]

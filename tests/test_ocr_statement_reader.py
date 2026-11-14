@@ -697,7 +697,9 @@ def test_the_gaps_between_lines_above_the_figures_are_strips_too():
     rows = rows_from_words(page([(100, [("For", 100), ("the", 160), ("year", 240)]),
                                  (300, [("Continuing", 300)]), (340, [("Revenue", 200), ("20,288", CUR), ("20,230", PRI)])]))
     strips = header_strips(rows, -1)
-    assert (130 + 2, 300 - 2) in [(a, b) for a, b in strips]          # the gap between 'For the year' and 'Continuing'
+    assert (130 + 2, 300 - 2, None) in strips              # the gap between 'For the year' and 'Continuing': nothing to replace
+    assert (100 - 8, 130 + 8, 0) in strips                 # a line's own strip names the line it replaces (only that one:
+                                                           # Empresaria's unit line just below the year line must stay)
 
 
 def test_an_underscore_nil_and_a_profit_and_total_comprehensive_line_tie_the_statement():
@@ -717,3 +719,41 @@ def test_an_underscore_nil_and_a_profit_and_total_comprehensive_line_tie_the_sta
     assert "<td>Taxation 8</td><td>-</td><td>1,714</td>" in reading.html          # the '_' nil written as a dash
     assert reading.accepted and reading.accepted.net_income == (-33_669_000, -29_532_000)
     assert "profit before tax + tax = profit for the year" in reading.notes[0]
+
+
+def test_a_box_edge_glued_to_a_figure_is_dropped():
+    """Central Asia Metals 2023: the current year's figures are boxed, the box's edge read onto them ('195,280|',
+    '65,008[', '99,542{'). An edge character at either end is dropped when a clean figure remains."""
+    words = [Word("2,708]" if w.t == "2,708" else "|4,089" if w.t == "4,089" else w.t, w.x, w.y, w.w, w.h, w.c, w.line)
+             for w in statement()]
+    reading = read_statement(rows_from_words(words), "2025-12-31")
+    assert "<td>2,708</td>" in reading.html and "<td>4,089</td>" in reading.html
+    assert reading.accepted and reading.accepted.net_income == (2_708_000, 2_333_000)
+
+
+def test_a_page_of_two_statement_columns_is_split_and_its_halves_read_in_order():
+    """Central Asia Metals 2023 (and MIDW): the income statement continues in a second column of the page, the header
+    naming the two years twice ('2023 2022 | 2023 2022'). The split falls just right of the first pair; the right half
+    follows the left, its figure columns aligned with the left's."""
+    from clients.ocr_statement_reader import combine_halves, two_column_split
+    header = rows_from_words(page([(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]),
+                                   (180, [("2023", 900), ("2022", 1100), ("2023", 2200), ("2022", 2400)])]))
+    assert two_column_split(header) == 1100 + 15
+    assert two_column_split(rows_from_words(statement())) is None
+    left = rows_from_words(page([(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]),
+                                 (180, [("2023", 900), ("2022", 1100)]), (230, [("$000", 900), ("$000", 1100)]),
+                                 (300, [("Revenue", 200), ("195,280", 900), ("220,855", 1100)]),
+                                 (350, [("Cost", 100), ("of", 160), ("sales", 280), ("(92,894)", 900), ("(87,271)", 1100)]),
+                                 (400, [("Profit", 140), ("before", 290), ("tax", 370), ("65,148", 900), ("54,580", 1100)]),
+                                 (450, [("Income", 150), ("tax", 230), ("(27,703)", 900), ("(20,588)", 1100)]),
+                                 (500, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("37,445", 900), ("33,992", 1100)])]))
+    right = rows_from_words(page([(100, [("Profit", 140), ("attributable", 380), ("to:", 440)]),
+                                  (150, [("Non-controlling", 330), ("interests", 520), ("131", 760), ("181", 960)]),
+                                  (200, [("Owners", 160), ("of", 210), ("the", 280), ("parent", 420), ("37,314", 760), ("33,811", 960)]),
+                                  (250, [("Basic", 120), ("eps", 200), ("19.64", 760), ("18.39", 960)]),
+                                  (300, [("Diluted", 140), ("eps", 220), ("19.60", 760), ("18.35", 960)])]))
+    rows = combine_halves(left, right)
+    assert [r.text for r in rows][-4] == "Non-controlling interests 131 181"
+    assert max(w.x + w.w for w in rows[-3].words) == 1100              # aligned with the left's last column
+    reading = read_statement(rows, "2023-12-31")
+    assert reading.accepted and reading.accepted.net_income == (37_314_000, 33_811_000)
