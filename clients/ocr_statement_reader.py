@@ -305,6 +305,8 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
         return None                # no year row, or one for other years than the register's (not this statement)
     cols = figure_columns(body[year_row + 1:])
     mh = _median_height([w for r in body for w in r.words])
+    first_figures = next((i for i, r in enumerate(body)
+                          if sum(bool(NUM.match(w.t)) and not _header_year(w.t) for w in r.words) >= 2), len(body))
     html, confs, pending = [f"<p>{heading}</p><table>"], [], None
     data_started = False
     for k, r in enumerate(body):
@@ -319,6 +321,11 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
                 continue
         if k == year_row:
             years = [_header_year(w.t) for w in r.words if _header_year(w.t) is not None]
+            column_years = _column_years(body[:first_figures], cols, mh)
+            if column_years is not None:
+                years = column_years             # each figure column's own year, from any header row (Microlise 2024)
+            elif len(set(years)) < len(years) and len(years) != len(cols):
+                return None                      # a repeated year ('2024 2024') over columns not all placed: ambiguous
             html.append("<tr>" + "".join(f"<td>{y}</td>" for y in years) + "</tr>")
             continue
         placed: Dict[int, Word] = {}
@@ -354,6 +361,28 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
         confs += [w.c for w in placed.values()]
     html.append("</table>")
     return "".join(html), confs
+
+
+def _column_years(header: List[Row], cols: List[float], mh: float) -> Optional[List[int]]:
+    """The year over each figure column, from the header rows above the first figures: each column takes the year word
+    whose right edge is nearest its own (within 3 text heights). Only when there are three or more columns, every one
+    gets exactly one year and two or more years are named; else None. (Microlise 2024: '2024 2024' over the first two
+    columns, '2024 2023' a line below over the last two.)"""
+    if len(cols) < 3:
+        return None
+    placed: Dict[int, List[int]] = {}
+    for r in header:
+        for w in r.words:
+            year = _header_year(w.t)
+            if year is None:
+                continue
+            j = min(range(len(cols)), key=lambda j: abs(w.x + w.w - cols[j]))
+            if abs(w.x + w.w - cols[j]) <= 3 * mh:
+                placed.setdefault(j, []).append(year)
+    if len(placed) != len(cols) or any(len(v) != 1 for v in placed.values()):
+        return None
+    years = [placed[j][0] for j in range(len(cols))]
+    return years if len(set(years)) >= 2 else None
 
 
 def names_accounts_year(years: List[Optional[int]], made_up_date: str) -> bool:

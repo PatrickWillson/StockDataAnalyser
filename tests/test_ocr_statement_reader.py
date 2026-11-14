@@ -540,3 +540,25 @@ def test_a_net_income_that_is_the_profit_for_the_year_line_is_not_tied_to_itself
     assert reading.statement is not None and reading.accepted is None
     ok = read_statement(rows_from_words(statement()), "2025-12-31")
     assert ok.accepted and "net income + minorities = profit for the year" not in ok.notes[0]
+
+
+def test_years_spread_over_header_rows_are_given_to_each_column_so_the_total_is_taken():
+    """Microlise (SAAS) 2024: underlying 2024 | exceptional 2024 | total 2024 | total 2023, the header '2024 2024' over
+    the first two columns and '2024 2023' a line below over the last two. The halves rule took the exceptional column
+    (-3,285, itself consistent: -4,380 + 1,095); each column's own year gives the total, -2,054."""
+    C1, C2, C3, C4 = 1000, 1250, 1500, 1750
+    def read(header):
+        rows = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)])] + header + [
+                (300, [("Revenue", 200), ("80,995", C1), ("(1,520)", C2), ("79,475", C3), ("71,716", C4)]),
+                (350, [("Expenses", 200), ("(78,950)", C1), ("(2,860)", C2), ("(81,810)", C3), ("(69,209)", C4)]),
+                (400, [("Profit", 140), ("before", 290), ("taxation", 450), ("2,045", C1), ("(4,380)", C2), ("(2,335)", C3), ("2,507", C4)]),
+                (450, [("Taxation", 200), ("(814)", C1), ("1,095", C2), ("281", C3), ("(931)", C4)]),
+                (500, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("1,231", C1), ("(3,285)", C2), ("(2,054)", C3), ("1,576", C4)])]
+        return read_statement(rows_from_words(page(rows)), "2024-12-31")
+    split = [(160, [("2024", C1), ("2024", C2)]), (190, [("2024", C3), ("2023", C4)]),
+             (230, [("£000", C1), ("£000", C2), ("£000", C3), ("£000", C4)])]
+    reading = read(split)
+    assert reading.accepted and reading.accepted.net_income == (-2_054_000, 1_576_000)
+    # a repeated year with columns that cannot each be given one: refused, not guessed
+    unplaced = [(160, [("2024", C1), ("2024", C2)]), (230, [("£000", C1), ("£000", C2), ("£000", C3), ("£000", C4)])]
+    assert read(unplaced).accepted is None
