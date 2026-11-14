@@ -480,8 +480,15 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     elif pbt and tax and pfy:
         check("profit before tax + tax = profit for the year", [a + b for a, b in zip(pbt, tax)], pfy)
     minorities = nci or [0.0, 0.0]
-    if pfy:
+    # the net income is the profit for the year line itself (no owners' line): tying it to that line compares it with
+    # itself and proves nothing, so a real identity must tie it
+    ni_is_pfy = pfy is not None and not re.search(r"attributable|owners|equity holders|shareholders|members",
+                                                  statement.label, re.I)
+    columns = _column_sums(rows, width, years, ni, tolerance)
+    if pfy and not ni_is_pfy:
         tied = check("net income + minorities = profit for the year", [a + b for a, b in zip(ni, minorities)], pfy)
+    elif ni_is_pfy and (continuing is not None or (pbt and tax)):
+        tied = bool(held) and not failed                # profit before tax + tax (and continuing + discontinued) tie it
     elif pbt and tax:
         tied = check("net income = profit before tax + tax - minorities",
                      ni, [a + b - m for a, b, m in zip(pbt, tax, minorities)])
@@ -489,11 +496,36 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
         # no usable tax line (Braime 2010): the statement of comprehensive income below gives the profit back
         tied = check("net income + minorities + other comprehensive income = total comprehensive income",
                      [a + m + o for a, m, o in zip(ni, minorities, oci)], tci)
+    elif columns is not None:
+        # before exceptional items + exceptional items = total, each year, on the net income line itself (WJG 2025)
+        tied = check("columns of the net income line add to its total", columns[0], columns[1])
     else:
         tied = False
         failed.append("no profit for the year or profit before tax and tax lines to tie the net income to")
     passed = tied and not failed
     return passed, ("held: " + "; ".join(held) if held else "") + (" failed: " + "; ".join(failed) if failed else "")
+
+
+def _column_sums(rows, width: int, years: List[int], ni: List[float],
+                 tolerance: float) -> Optional[Tuple[List[float], List[float]]]:
+    """([sum of each year's other columns], [each year's total]) on the net income line of a table with three or more
+    columns per year (underlying | exceptional | total), or None."""
+    if len(years) == width and len(set(years)) >= 2:
+        top = sorted(set(years), reverse=True)[:2]
+        groups = [[i for i, y in enumerate(years) if y == t] for t in top]
+    elif width % 2 == 0:
+        groups = [list(range(width // 2)), list(range(width // 2, width))]
+    else:
+        return None
+    if any(len(g) < 3 for g in groups):
+        return None
+    for label, figures in rows:
+        if len(figures) != width or not label:
+            continue
+        values = [_figure(f) for f in figures]
+        if all(abs(values[g[-1]] - n) <= tolerance for g, n in zip(groups, ni)):
+            return [sum(values[i] for i in g[:-1]) for g in groups], [values[g[-1]] for g in groups]
+    return None
 
 
 def _value(token: str) -> float:

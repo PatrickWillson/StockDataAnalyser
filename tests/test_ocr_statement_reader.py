@@ -511,3 +511,32 @@ def test_columns_headed_by_dates_name_their_years():
              Word("30.06.24", w.x, w.y, w.w, w.h, w.c, w.line) if w.t == "2024" else w for w in statement()]
     reading = read_statement(rows_from_words(words), "2025-06-30")
     assert "<td>2025</td><td>2024</td>" in reading.html and reading.accepted
+
+
+def test_with_no_other_tie_the_net_income_line_ties_across_its_own_columns():
+    """WJG 2025: before exceptional items + exceptional items = total, each year (5,885 - 14,291 = -8,406;
+    9,033 - 7,138 = 1,895), when every other line that could tie it was unreadable."""
+    U1, E1, T1, U2, E2, T2 = 900, 1100, 1300, 1500, 1700, 1900
+    def read(total):
+        rows = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2025", T1), ("2024", T2)]),
+                (230, [("£000", U1), ("£000", E1), ("£000", T1), ("£000", U2), ("£000", E2), ("£000", T2)]),
+                (300, [("Revenue", 200), ("90,000", U1), ("-", E1), ("90,000", T1), ("88,000", U2), ("-", E2), ("88,000", T2)]),
+                (350, [("Disposal", 200), ("8,163", U1), ("-", E1), ("8,163", T1), ("6,260", U2), ("-", E2), ("6,260", T2)]),
+                (400, [("Tax", 80), ("274", U1), ("-", E1), ("274", T1), ("(178)", U2), ("2,380", E2), ("2,202", T2)]),
+                (500, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("5,885", U1), ("(14,291)", E1), (total, T1),
+                       ("9,033", U2), ("(7,138)", E2), ("1,895", T2)])]
+        return read_statement(rows_from_words(page(rows)), "2025-09-30")
+    reading = read("(8,406)")
+    assert reading.accepted and reading.accepted.net_income == (-8_406_000, 1_895_000)
+    assert "columns of the net income line add to its total" in reading.notes[0]
+    assert read("(8,466)").accepted is None
+
+
+def test_a_net_income_that_is_the_profit_for_the_year_line_is_not_tied_to_itself():
+    """With no owners' line, the net income is the profit for the year line: 'net income + 0 = profit for the year' is
+    that line compared with itself and proves nothing. Profit before tax + tax must tie it instead."""
+    tax_unreadable = [Word(w.t, w.x, w.y, w.w, w.h, 30.0 if w.t in ("(1,381)", "(865)") else w.c, w.line) for w in statement()]
+    reading = read_statement(rows_from_words(tax_unreadable), "2025-12-31")
+    assert reading.statement is not None and reading.accepted is None
+    ok = read_statement(rows_from_words(statement()), "2025-12-31")
+    assert ok.accepted and "net income + minorities = profit for the year" not in ok.notes[0]
