@@ -249,7 +249,8 @@ def _clean_label(words) -> str:
 def figure_columns(rows: List[Row]) -> List[float]:
     """
     The figure columns' right edges: the right edges of figure-like words cluster (within 2 x the median word height,
-    at least 4 words) where the columns are; a column of bare note references (mostly '3', '4,5') is left out.
+    at least 4 words) where the columns are; a column of plain note numbers (mostly '3', '4,5'), not the rightmost,
+    is left out.
     """
     words = [w for r in rows for w in r.words if _is_figure_like(w)]
     if not words:
@@ -261,8 +262,11 @@ def figure_columns(rows: List[Row]) -> List[float]:
             clusters[-1].append(w)
         else:
             clusters.append([w])
-    return [statistics.median(w.x + w.w for w in c) for c in clusters
-            if len(c) >= 4 and sum(bool(NOTE_REF.match(w.t)) for w in c) < 0.6 * len(c)]
+    clusters = [c for c in clusters if len(c) >= 4]
+    # a notes column: mostly plain note numbers ('3', '4,9'), left of the figures; small decimal figures ('12.8' in a
+    # £m column, Judges Scientific 2023) also fit a note number, so a column of them is never dropped
+    return [statistics.median(w.x + w.w for w in c) for k, c in enumerate(clusters)
+            if k == len(clusters) - 1 or sum(bool(PLAIN_NOTE.fullmatch(w.t)) for w in c) < 0.6 * len(c)]
 
 
 def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[float]]]:
@@ -306,6 +310,7 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
         return None                # no year row, or one for other years than the register's (not this statement)
     cols = figure_columns(body[year_row + 1:])
     mh = _median_height([w for r in body for w in r.words])
+    body = _decimal_commas(body, year_row, cols, mh)
     first_figures = next((i for i, r in enumerate(body)
                           if sum(bool(NUM.match(w.t)) and not _header_year(w.t) for w in r.words) >= 2), len(body))
     html, confs, pending = [f"<p>{heading}</p><table>"], [], None
@@ -370,11 +375,30 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
     return "".join(html), confs
 
 
+DECIMAL_COMMA = re.compile(r"\(?-?\d{1,3},\d{1,2}\)?")
+
+
+def _decimal_commas(body: List[Row], year_row: int, cols: List[float], mh: float) -> List[Row]:
+    """The rows with a decimal point read as a comma ('(14,9)', Judges Scientific 2023) made a point, when most figures
+    below the year row are decimals (£m to one place) and the token sits on a figure column: a comma before one or two
+    digits is never a thousands separator there, while in the notes column it lists notes ('4,9'). On a page of whole
+    figures nothing changes (such a token stays unreadable)."""
+    figures = [w.t for r in body[year_row + 1:] for w in r.words if NUM.match(w.t) and not DASH_TOKEN.match(w.t)]
+    if not cols or not figures or sum("." in t for t in figures) <= 0.5 * len(figures):
+        return body
+
+    def on_column(w):
+        return min(abs(w.x + w.w - c) for c in cols) < 1.5 * mh
+    return [Row([Word(w.t.replace(",", "."), w.x, w.y, w.w, w.h, w.c, w.line)
+                 if DECIMAL_COMMA.fullmatch(w.t) and on_column(w) else w for w in r.words], r.cy) for r in body]
+
+
 def _column_years(header: List[Row], cols: List[float], mh: float) -> Optional[List[int]]:
     """The year over each figure column, from the header rows above the first figures: each column takes the year word
     whose right edge is nearest its own (within 3 text heights). Only when there are three or more columns, every one
-    gets exactly one year and two or more years are named; else None. (Microlise 2024: '2024 2024' over the first two
-    columns, '2024 2023' a line below over the last two.)"""
+    gets exactly one year and two or more years are named, or each year word sits over the last column of its group
+    (each column then takes the year to its right); else None. (Microlise 2024: '2024 2024' over the first two columns,
+    '2024 2023' a line below over the last two; Judges Scientific 2023: '2023' over the third of six, '2022' the sixth.)"""
     if len(cols) < 3:
         return None
     placed: Dict[int, List[int]] = {}
@@ -386,9 +410,17 @@ def _column_years(header: List[Row], cols: List[float], mh: float) -> Optional[L
             j = min(range(len(cols)), key=lambda j: abs(w.x + w.w - cols[j]))
             if abs(w.x + w.w - cols[j]) <= 3 * mh:
                 placed.setdefault(j, []).append(year)
-    if len(placed) != len(cols) or any(len(v) != 1 for v in placed.values()):
+    if any(len(v) != 1 for v in placed.values()):
         return None
-    years = [placed[j][0] for j in range(len(cols))]
+    if len(placed) != len(cols):
+        # each year over the last column of its group ('Adjusted | Adjusting items | Total 2023', Judges Scientific
+        # 2023): a column takes the year of the first year word at or to its right; the last must be over the last column
+        over = sorted(placed)
+        if len(over) < 2 or over[-1] != len(cols) - 1:
+            return None
+        years = [next(placed[j][0] for j in over if j >= c) for c in range(len(cols))]
+    else:
+        years = [placed[j][0] for j in range(len(cols))]
     return years if len(set(years)) >= 2 else None
 
 
@@ -446,9 +478,12 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
         if len(figures) % 2 and re.fullmatch(r"\d{1,2}", figures[0]):
             figures = figures[1:]                      # a note reference, as the parser drops it
         rows.append((label, figures))
-    header = next((f for lab, f in rows if f and all(re.fullmatch(r"(19|20)\d\d", x) for x in f)), [])
+    # the year row: two or more years (not the heading's '... 31 December 2023')
+    header = next((f for lab, f in rows if len(f) >= 2 and all(re.fullmatch(r"(19|20)\d\d", x) for x in f)), [])
     widths = [len(f) for lab, f in rows if lab and len(f) >= 2]
     width = max(set(widths), key=widths.count) if widths else 2
+    if len(header) >= 2 and len(header) in widths:
+        width = len(header)            # a year named for every column: the table is that wide (as the parser takes it)
     years = [int(y) for y in header]
     if len(years) == width and len(set(years)) >= 2:          # the parser's choice: each year's last column
         top = sorted(set(years), reverse=True)

@@ -275,6 +275,8 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
     if len(data) < 4 or not widths:
         return None
     width = min(w for w, n in widths.items() if n == max(widths.values()))
+    if len(year_columns) >= 2 and widths.get(len(year_columns)):
+        width = len(year_columns)        # the header names a year for every column: the table is that wide
     unit, currency = _unit(" | ".join(header))
     if unit is None:
         return None

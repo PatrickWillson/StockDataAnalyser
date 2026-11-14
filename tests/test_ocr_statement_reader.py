@@ -575,3 +575,66 @@ def test_a_figure_left_in_a_label_voids_the_line_so_the_years_cannot_be_swapped(
     reading = read_statement(rows_from_words(words), "2025-12-31")
     assert "<td>Revenue 5</td><td>50,935</td>" in reading.html
     assert "<td>Profit for the year 23.33 [unreadable]</td></tr>" in reading.html and reading.accepted is None
+
+
+def test_a_column_of_small_decimal_figures_is_not_taken_for_note_numbers():
+    """Judges Scientific 2023 (£m): the 2022 total column reads 18.2, 0.2, 16.0, (3.2), 12.8, 12.5: figures that also fit
+    a note number ('12.3'), so the whole column was dropped as a notes column and every line voided. A notes column holds
+    plain note numbers ('3', '4,9') and lies left of the figures."""
+    from clients.ocr_statement_reader import figure_columns
+    N = 1000
+    lines = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2023", CUR), ("2022", PRI)]),
+             (230, [("£m", CUR), ("£m", PRI)]), (300, [("Revenue", 200), ("3", N), ("136.1", CUR), ("13.2", PRI)]),
+             (330, [("Operating", 200), ("profit", 300), ("3,45", N), ("21.6", CUR), ("18.2", PRI)]),
+             (360, [("Interest", 200), ("income", 300), ("4,9", N), ("0.4", CUR), ("0.2", PRI)]),
+             (400, [("Profit", 140), ("before", 290), ("tax", 370), ("13.4", CUR), ("16.0", PRI)]),
+             (450, [("Tax", 80), ("4,10", N), ("(3.5)", CUR), ("(3.2)", PRI)]),
+             (500, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("9.9", CUR), ("12.8", PRI)])]
+    rows = rows_from_words(page(lines))
+    assert figure_columns(rows[3:]) == [CUR, PRI]
+    reading = read_statement(rows, "2023-12-31")
+    assert reading.accepted and reading.accepted.net_income == (9_900_000, 12_800_000)
+
+
+def test_a_decimal_point_read_as_a_comma_is_a_point_on_a_page_of_decimal_figures():
+    """Judges Scientific 2023 (£m): '(14,9)' for (14.9). A comma before one or two digits is never a thousands separator;
+    on a page whose figures are mostly decimals it is the point. On a page of whole figures it stays unreadable."""
+    def read(minorities, unit="£m", figures=("13.4", "16.0", "(3.5)", "(3.2)", "9.9", "12.8")):
+        pbt_c, pbt_p, tax_c, tax_p, pfy_c, pfy_p = figures
+        lines = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2023", CUR), ("2022", PRI)]),
+                 (230, [(unit, CUR), (unit, PRI)]), (300, [("Revenue", 200), ("136.1", CUR), ("113.2", PRI)]),
+                 (400, [("Profit", 140), ("before", 290), ("tax", 370), (pbt_c, CUR), (pbt_p, PRI)]),
+                 (450, [("Tax", 80), (tax_c, CUR), (tax_p, PRI)]),
+                 (500, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), (pfy_c, CUR), (pfy_p, PRI)]),
+                 (550, [("Attributable", 300), ("to:", 360)]),
+                 (600, [("Owners", 160), ("of", 210), ("the", 280), ("parent", 420), (minorities[0], CUR), ("12.5", PRI)]),
+                 (650, [("Non-controlling", 330), ("interests", 520), ("0.4", CUR), ("0.3", PRI)])]
+        return read_statement(rows_from_words(page(lines)), "2023-12-31")
+    reading = read(("(14,9)", ))
+    assert reading.statement is not None and "<td>(14.9)</td>" in reading.html
+    whole = read(("(14,9)",), unit="£000", figures=("13,400", "16,000", "(3,500)", "(3,200)", "9,900", "12,800"))
+    assert "<td>(14.9)</td>" not in whole.html
+
+
+def test_a_year_over_the_last_column_of_its_group_names_the_whole_group():
+    """Judges Scientific 2023: 'Adjusted | Adjusting items | Total' per year, '2023' over the third column and '2022' over
+    the sixth. Each year names its group of columns, so the total under each year is taken even when many six-figure
+    lines are unreadable and two-figure lines (other comprehensive income) outnumber them."""
+    A1, B1, T1, A2, B2, T2 = 900, 1100, 1300, 1500, 1700, 1900
+    def six(label, values, y):
+        words = [(w, 100 + 140 * k) for k, w in enumerate(label.split())]
+        return (y, words + list(zip(values, (A1, B1, T1, A2, B2, T2))))
+    lines = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2023", T1), ("2022", T2)]),
+             (230, [("£m", c) for c in (A1, B1, T1, A2, B2, T2)]),
+             six("Revenue", ("136.1", "-", "136.1", "113.2", "-", "113.2"), 300),
+             six("Profit for the year", ("24.8", "(14.8)", "9.9", "23.4", "(10.6)", "12.8"), 400),
+             (450, [("Attributable", 300), ("to:", 360)]),
+             six("Owners of the parent", ("24.4", "(14.9)", "9.5", "23.1", "(10.6)", "12.5"), 500),
+             six("Non-controlling interests", ("0.4", "-", "0.4", "0.3", "-", "0.3"), 550),
+             (600, [("Actuarial", 220), ("gain", 300), ("0.1", T1), ("2.1", T2)]),
+             (650, [("Exchange", 220), ("differences", 400), ("(0.1)", T1), ("0.1", T2)]),
+             (700, [("Other", 120), ("comprehensive", 380), ("income", 520), ("-", T1), ("1.7", T2)]),
+             (750, [("Total", 120), ("comprehensive", 380), ("income", 520), ("9.9", T1), ("14.5", T2)]),
+             (800, [("Owners", 160), ("of", 210), ("the", 280), ("parent", 420), ("9.5", T1), ("14.2", T2)])]
+    reading = read_statement(rows_from_words(page(lines)), "2023-12-31")
+    assert reading.accepted and reading.accepted.net_income == (9_500_000, 12_500_000)
