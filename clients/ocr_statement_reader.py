@@ -365,21 +365,24 @@ def names_accounts_year(years: List[Optional[int]], made_up_date: str) -> bool:
 
 def _staggered_years(body: List[Row], made_up_date: str) -> Tuple[List[Row], Optional[int]]:
     """(body, year row index) with the year words of the header rows before the first row of figures gathered into one
-    row, left to right, when no row names two years (NAHL 2025: '2024' a line above '2025 £000'). Only when they are
-    two or more years in distinct columns and include the register's year end; else (body, None)."""
+    row, left to right, when no row names two years (NAHL 2025: '2024' a line above '2025 £000'). Only year words over
+    a figure column, two or more in distinct columns, including the register's year end; else (body, None)."""
     first = next((i for i, r in enumerate(body) if sum(bool(NUM.match(w.t)) and not _header_year(w.t) for w in r.words) >= 2),
                  len(body))
-    dated = [bool(re.search(r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b", r.text, re.I))
-             for r in body[:first]]                         # 'For the year ended 31 December 2025' is not a column header
-    header = [(i, w) for i, r in enumerate(body[:first]) if not dated[i] for w in r.words if _header_year(w.t) is not None]
-    years = [_header_year(w.t) for _, w in header]
     mh = _median_height([w for r in body for w in r.words])
+    cols = figure_columns(body[first:])
+    # column headers sit over the figure columns ('31 March 2024' over its column, RCN 2025); a title's year
+    # ('For the year ended 31 December 2025', NAHL 2025) does not
+    header = [(i, w) for i, r in enumerate(body[:first]) for w in r.words if _header_year(w.t) is not None
+              and cols and min(abs(w.x + w.w - c) for c in cols) <= 3 * mh]
+    years = [_header_year(w.t) for _, w in header]
     edges = sorted(w.x + w.w for _, w in header)
     if len(header) < 2 or not names_accounts_year(years, made_up_date) or any(b - a < 3 * mh for a, b in zip(edges, edges[1:])):
         return body, None
     at = header[0][0]
     merged = Row(sorted((w for _, w in header), key=lambda w: w.x), body[at].cy)
-    kept = [Row([w for w in r.words if dated[i] or _header_year(w.t) is None], r.cy) for i, r in enumerate(body[:first])]
+    used = {id(w) for _, w in header}
+    kept = [Row([w for w in r.words if id(w) not in used], r.cy) for r in body[:first]]
     rows = [r for r in kept[:at] if r.words] + [merged] + [r for r in kept[at:] if r.words] + body[first:]
     return rows, len([r for r in kept[:at] if r.words])
 

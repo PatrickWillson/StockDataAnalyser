@@ -467,6 +467,11 @@ def test_years_staggered_over_two_header_rows_make_one_year_row():
     assert "<td>2025</td><td>2024</td>" in reading.html
     assert reading.accepted and reading.accepted.net_income == (3_257_000, -39_290_000)
     assert read(staggered, "2019-12-31").accepted is None             # not the register's year: no year row made
+    # RCN 2025: the prior year in a column date ('31 March 2024') over its column, the current year a line below
+    dated = [(150, [("Year", 1250), ("ended", 1400)]), (170, [("31", 1560), ("March", 1640), ("2024", PRI)]),
+             (200, [("2025", CUR), ("*Restated", PRI + 60)]), (240, [("£000", CUR), ("£000", PRI)])]
+    reading = read(dated, "2025-03-31")
+    assert "<td>2025</td><td>2024</td>" in reading.html and reading.accepted
 
 
 def test_a_year_row_must_name_the_registers_year_end():
