@@ -40,10 +40,13 @@ class UnfiledCompanySource:
     name = SOURCE_NAME
 
     def __init__(self, yahoo: YFinanceClient, eulerpool: Optional[EulerpoolClient] = None,
-                 rns: Optional[RnsClient] = None):
+                 rns: Optional[RnsClient] = None, companies_house=None):
         self.yahoo = yahoo
         self.eulerpool = eulerpool
         self.rns = rns                  # London listings: the company's results announcements before Eulerpool
+        # London listings: the accounts filed at Companies House (CompaniesHouseHistorySource), for the years before
+        # the announcements reach, before Eulerpool
+        self.companies_house = companies_house
         self._vendor = {}               # Yahoo symbol -> (Eulerpool data or None, note), fetched once per listing
 
     def fetch_fundamentals(self, ticker: str) -> CompanyFundamentals:
@@ -73,16 +76,27 @@ class UnfiledCompanySource:
             "ESEF XBRL on the free routes); price, dividends and profile from this listing"]
         notes.extend(annual.notes)
         yahoo_years = len(annual.income_statements)
-        history_source = "Eulerpool"
-        if self.rns is not None and yahoo.yahoo_symbol.upper().endswith(".L"):
+        london = yahoo.yahoo_symbol.upper().endswith(".L")
+        added = []                      # (source, years added), in order
+        if self.rns is not None and london:
             with_rns = self._with_rns(yahoo, profile, annual, notes)
             if with_rns is not None:
-                annual, history_source = with_rns, "RNS results announcements"
-        if self.eulerpool is not None and history_source == "Eulerpool":
+                added.append(("RNS results announcements", len(with_rns.income_statements) - len(annual.income_statements)))
+                annual = with_rns
+        if self.companies_house is not None and london and len(annual.income_statements) < FULL_HISTORY_YEARS:
+            held = "Yahoo Finance's statements" + (" and the RNS results announcements" if added else "")
+            with_ch = self._with_companies_house(profile, annual, notes, held)
+            if with_ch is not None:
+                added.append(("Companies House filed accounts", len(with_ch.income_statements) - len(annual.income_statements)))
+                annual = with_ch
+        if self.eulerpool is not None and not added:
+            before = len(annual.income_statements)
             annual = self._with_eulerpool(yahoo, profile, annual, notes, yahoo_eps)
+            if len(annual.income_statements) > before:
+                added.append(("Eulerpool", len(annual.income_statements) - before))
         years = len(annual.income_statements)
         if years < FULL_HISTORY_YEARS:
-            older = f"; {years - yahoo_years} from {history_source}" if years > yahoo_years else ""
+            older = "".join(f"; {n} from {name}" for name, n in added if n)
             notes.append(f"History: {years} fiscal years ({yahoo_years} from Yahoo Finance{older}); tests needing more years "
                          "fail or show N/A because of this data limit, not because of the company's record")
         notes.append("No quarterly figures: TTM is N/A")
@@ -131,6 +145,22 @@ class UnfiledCompanySource:
         history = rns_mapper.rns_history(annual, statements, vendor=vendor)
         notes.extend(n.replace("History before the filed years", "History before Yahoo Finance's years")
                      for n in history.notes)
+        if not history.income_statements:
+            return None
+        return replace(annual, income_statements=tuple(sorted(annual.income_statements + history.income_statements,
+                                                              key=lambda r: r.period_end, reverse=True)),
+                       shares_by_year={**history.shares_by_year, **annual.shares_by_year})
+
+    def _with_companies_house(self, profile, annual, notes: List[str], held: str):
+        """
+        The years before the held ones from the accounts filed at Companies House, read by OCR and gated against the
+        held years (clients/companies_house_history.py; GRAHAM_METHODOLOGY §8.12: the reports issued to the
+        stockholders); None when not used.
+        """
+        known = {row.period_end: row.net_income for row in annual.income_statements if row.net_income is not None}
+        history = self.companies_house.history(profile.name or "", known, annual.currency,
+                                               FULL_HISTORY_YEARS - len(annual.income_statements), held)
+        notes.extend(history.notes)
         if not history.income_statements:
             return None
         return replace(annual, income_statements=tuple(sorted(annual.income_statements + history.income_statements,

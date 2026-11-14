@@ -28,3 +28,7 @@ OCR_YEAR_REREAD_DPIS: Final[Tuple[int, ...]] = (300, 250, 200)
 OCR_FINER_DPIS: Final[Tuple[int, ...]] = (400, 450)
 # pages read at once while finding the statement (tesseract runs one thread each; 8 on 16 cores: about 3x faster)
 OCR_WORKERS: Final[int] = 8
+
+# History: at most this many annual accounts are read by OCR for one listing (about 30-40 s each the first time; the
+# readings are cached beside the PDFs): the two overlapping the held years, then the older ones
+CH_MAX_FILINGS_READ: Final[int] = 12

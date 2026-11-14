@@ -204,7 +204,8 @@ def test_router_sends_us_tickers_and_rejects_other_markets():
 def test_free_provider_is_registered():
     provider = ClientFactory.fundamentals_provider("free")
     assert provider.required_env == ("SEC_USER_AGENT",)
-    assert provider.optional_env == provider.secret_env == ("EULERPOOL_API_KEY",)    # optional, redacted from logs
+    # optional, redacted from logs
+    assert provider.optional_env == provider.secret_env == ("EULERPOOL_API_KEY", "COMPANIES_HOUSE_API_KEY")
     router = ClientFactory.create_fundamentals_source({"SEC_USER_AGENT": "Test t@example.invalid"}, "free")
     assert isinstance(router, RoutingFundamentalsSource)
     assert {e for e, src in router.routes.items() if isinstance(src, FreeUSFundamentalsSource)} == {"US", "NYSE", "NASDAQ", "AMEX"}
@@ -376,3 +377,11 @@ def test_a_latest_count_that_is_only_an_average_uses_the_classes():
         {"start": "2025-01-01", "end": "2025-12-31", "val": 63.6e6, "filed": "2026-02-20", "form": "10-K", "fy": 2025, "fp": "FY"}]}}
     f = source(_yahoo_total(61.1e6), edgar).fetch_fundamentals("SO.US")
     assert f.annual_balance_sheets[0].shares_outstanding == 61.1e6
+
+
+def test_the_filed_accounts_route_is_wired_for_london_only_with_a_companies_house_key():
+    def unfiled(env):
+        router = ClientFactory.create_fundamentals_source({"SEC_USER_AGENT": "Test t@example.invalid", **env}, "free")
+        return next(s for s in router.routes["LSE"].sources if type(s).__name__ == "UnfiledCompanySource")
+    assert unfiled({}).companies_house is None
+    assert type(unfiled({"COMPANIES_HOUSE_API_KEY": "test-key"}).companies_house).__name__ == "CompaniesHouseHistorySource"

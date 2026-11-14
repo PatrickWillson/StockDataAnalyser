@@ -15,6 +15,8 @@ from clients.esef_client import EsefClient
 from clients.eulerpool_client import EulerpoolClient
 from clients.european_filings_source import EuropeanFilingsSource
 from clients.foreign_sec_source import ForeignSECFundamentalsSource
+from clients.companies_house_client import CompaniesHouseClient
+from clients.companies_house_history import CompaniesHouseHistorySource
 from clients.rns_client import RnsClient
 from clients.free_us_source import FreeUSFundamentalsSource
 from clients.unfiled_company_source import UnfiledCompanySource
@@ -68,15 +70,16 @@ class ClientFactory:
         return ClientFactory.fundamentals_provider(provider).create(env, debug)
     
     @staticmethod
-    def create_free_source(sec_user_agent: str, debug: bool = False,
-                           eulerpool_api_key: Optional[str] = None) -> FundamentalsSource:
+    def create_free_source(sec_user_agent: str, debug: bool = False, eulerpool_api_key: Optional[str] = None,
+                           companies_house_api_key: Optional[str] = None) -> FundamentalsSource:
         """
         The free resolution path: `.US` -> SEC EDGAR + Yahoo Finance; every other exchange Yahoo prices -> the
         company's SEC filings (20-F / 40-F) found from its home listing; for European exchanges (ESEF_EXCHANGES),
         a company with no SEC filer -> its ESEF annual reports (filings.xbrl.org), with Eulerpool for the years
         before them when `eulerpool_api_key` is given (behind the overlap gate), and then, for a company with
         neither (Germany, Ireland, AIM), Yahoo's annual statements, with the older years gated against them: for a
-        London listing the company's RNS results announcements (rns_client, no key), else Eulerpool's
+        London listing the company's RNS results announcements (rns_client, no key), then the accounts it filed at
+        Companies House read by OCR when `companies_house_api_key` is given (companies_house_history), else Eulerpool's
         (no Yahoo statements: Eulerpool alone, labelled unverified); every other exchange (Switzerland, Japan,
         Australia, Canada, ...): the SEC route, then the same Yahoo statements + Eulerpool route for a company with
         no SEC filer (user decision 2026-11-10, GRAHAM_METHODOLOGY §8.12); none: no dossier.
@@ -87,12 +90,14 @@ class ClientFactory:
         us = FreeUSFundamentalsSource(edgar, yahoo, debug=debug, foreign=foreign)
         eulerpool = EulerpoolClient(eulerpool_api_key, debug=debug) if eulerpool_api_key else None
         rns = RnsClient(debug=debug)      # London listings: results announcements before Eulerpool (no key)
+        filed = (CompaniesHouseHistorySource(CompaniesHouseClient(companies_house_api_key))
+                 if companies_house_api_key else None)      # London listings: filed accounts by OCR, before Eulerpool
         european = FallbackFundamentalsSource(
             (foreign, EuropeanFilingsSource(EsefClient(debug=debug), yahoo, history=eulerpool))
-            + (UnfiledCompanySource(yahoo, eulerpool, rns),),
+            + (UnfiledCompanySource(yahoo, eulerpool, rns, filed),),
             name="SEC EDGAR, then ESEF, then Yahoo statements" + (" + Eulerpool" if eulerpool else ""))
         elsewhere = FallbackFundamentalsSource(
-            (foreign, UnfiledCompanySource(yahoo, eulerpool, rns)),
+            (foreign, UnfiledCompanySource(yahoo, eulerpool, rns, filed)),
             name="SEC EDGAR, then Yahoo statements" + (" + Eulerpool" if eulerpool else ""))
         routes = {exchange: (us if not suffix else european if exchange in ESEF_EXCHANGES else elsewhere)
                   for exchange, suffix in YFinanceClient.EXCHANGE_MAPPING.items()}
@@ -196,12 +201,14 @@ FUNDAMENTALS_PROVIDERS = {
     ),
     # SEC_USER_AGENT: your name and contact email, as the SEC fair-access policy requires; not a secret.
     # EULERPOOL_API_KEY (optional, secret): older history for European companies (Eulerpool, behind the overlap gate)
+    # COMPANIES_HOUSE_API_KEY (optional, secret): older history for London listings from their filed accounts (OCR)
     "free": FundamentalsProvider(
         name="free",
         required_env=("SEC_USER_AGENT",),
-        secret_env=("EULERPOOL_API_KEY",),
-        create=lambda env, debug: ClientFactory.create_free_source(env["SEC_USER_AGENT"], debug=debug,
-                                                                   eulerpool_api_key=env.get("EULERPOOL_API_KEY")),
-        optional_env=("EULERPOOL_API_KEY",),
+        secret_env=("EULERPOOL_API_KEY", "COMPANIES_HOUSE_API_KEY"),
+        create=lambda env, debug: ClientFactory.create_free_source(
+            env["SEC_USER_AGENT"], debug=debug, eulerpool_api_key=env.get("EULERPOOL_API_KEY"),
+            companies_house_api_key=env.get("COMPANIES_HOUSE_API_KEY")),
+        optional_env=("EULERPOOL_API_KEY", "COMPANIES_HOUSE_API_KEY"),
     ),
 }

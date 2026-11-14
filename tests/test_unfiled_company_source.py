@@ -178,6 +178,7 @@ def test_a_filled_latest_year_gets_eulerpools_gated_balance_sheet_on_todays_shar
 from dataclasses import replace as _replace  # noqa: E402
 
 from clients.rns_client import RnsAnnouncement  # noqa: E402
+from core.fundamentals import IncomeStatementRow  # noqa: E402
 
 LONDON = _replace(YAHOO, yahoo_symbol="HBH.L", info={**YAHOO.info, "currency": "GBp", "financialCurrency": "EUR"})
 
@@ -240,3 +241,40 @@ def test_other_exchanges_never_ask_for_announcements():
     rns = FakeRns()
     UnfiledCompanySource(StatementsYahoo(_statements()), None, rns).fetch_fundamentals("HBH.XETRA")
     assert rns.asked == []
+
+
+class FakeCompaniesHouse:
+    """CompaniesHouseHistorySource stand-in: FY2022 and FY2021 before the held years, and what it was asked."""
+    def __init__(self, rows=None):
+        from clients.companies_house_history import CompaniesHouseHistory
+        self.rows = rows if rows is not None else (IncomeStatementRow("2022-02-28", None, 80e6, None),
+                                                   IncomeStatementRow("2021-02-28", None, 70e6, None))
+        self.asked, self._history = [], CompaniesHouseHistory
+
+    def history(self, name, known, currency, wanted_years, held_source=""):
+        self.asked.append((name, sorted(known), currency, wanted_years, held_source))
+        notes = ("History before FY2023: Companies House filed accounts ... for FY2021-FY2022 (2 years)",) if self.rows \
+            else ("History before the held years: Companies House filed accounts not used: no single active plc",)
+        return self._history(tuple(self.rows), {r.period_end[:4]: 0.0 for r in self.rows}, notes)
+
+
+def test_a_london_listing_takes_the_filed_accounts_after_the_announcements():
+    rns, ch, eulerpool = FakeRns(), FakeCompaniesHouse(), FakeEulerpool()
+    f = UnfiledCompanySource(LondonYahoo(), eulerpool, rns, ch).fetch_fundamentals("HBH.LSE")
+    name, known, currency, wanted, held = ch.asked[0]
+    assert "2023-02-28" in known and currency == "EUR" and wanted == 10 - len(known)
+    assert held == "Yahoo Finance's statements and the RNS results announcements"
+    by_end = {r.period_end: r for r in f.annual_income_statements}
+    assert by_end["2022-02-28"].net_income == 80e6 and by_end["2021-02-28"].net_income == 70e6
+    assert f.shares_by_year["2021"] == 0.0
+    assert any("from RNS results announcements; 2 from Companies House filed accounts" in n for n in f.notes)
+
+
+def test_without_filed_accounts_eulerpool_is_still_tried_and_other_exchanges_never_ask():
+    ch = FakeCompaniesHouse(rows=())
+    f = UnfiledCompanySource(LondonYahoo(), FakeEulerpool(), None, ch).fetch_fundamentals("HBH.LSE")
+    assert ch.asked and any("Companies House filed accounts not used" in n for n in f.notes)
+    assert any("Eulerpool" in n for n in f.notes)
+    other = FakeCompaniesHouse()
+    UnfiledCompanySource(StatementsYahoo(_statements()), None, None, other).fetch_fundamentals("HBH.XETRA")
+    assert other.asked == []
