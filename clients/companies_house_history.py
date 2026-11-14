@@ -208,6 +208,11 @@ class CompaniesHouseHistorySource:
             logger.info("Companies House %s: reading the accounts to %s by OCR", number, filing.made_up_date)
             _, reading = self._read_filing(path, filing.made_up_date, single_entity=not filing.group)
             st = reading.accepted
+            if st is not None and not _near(st.period_end, filing.made_up_date):
+                # the register's year end is authoritative: a reading dated otherwise misread its dates (ADF: 2031)
+                logger.info("Companies House %s: reading dated %s, the register %s: not used", number, st.period_end,
+                            filing.made_up_date)
+                st = None
             if st is not None:
                 years = FilingYears(filing.made_up_date, st.period_end, st.prior_end, tuple(st.net_income), st.unit or 1.0,
                                     st.currency, tuple(st.total) if st.total else None)

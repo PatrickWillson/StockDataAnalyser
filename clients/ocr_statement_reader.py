@@ -515,12 +515,15 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     pbt = find(r"^(net )?(\(?(profit|loss|return)\)?/?)+ (on ordinary activities )?before tax(ation)?$") \
         or find(r"(profit|loss|return).*before tax")
     tax = find(r"^(income )?tax(ation)?\b|^tax(ation)? on (profit|loss)|^taxation", r"before tax")
+    other_comprehensive = any(re.search(r"^other comprehensive", lab, re.I) for lab, _ in rows)
     # profit for the year: the last such line when a discontinued-operations line comes before it (the total)
     pfy_lines = [(i, v) for i, (lab, v) in enumerate(lines)
                  if re.search(r"(profit|loss|return).*(for the (financial )?(year|period)|after tax)", lab)
                  and not re.search(r"attributable|continuing|discontinued|owners|per share|before tax", lab)
-                 # 'Loss and total comprehensive charge for the year' is the profit line (no other comprehensive income)
-                 and ("comprehensive" not in lab or re.search(r"(profit|loss) and total comprehensive", lab))]
+                 # 'Loss and total comprehensive charge for the year' is the profit line when there is no other
+                 # comprehensive income (Conygar); with some (Bango: FX on consolidation) it is not
+                 and ("comprehensive" not in lab
+                      or (re.search(r"(profit|loss) and total comprehensive", lab) and not other_comprehensive))]
     pfy = pfy_lines[0][1] if pfy_lines else None
     # the statement of comprehensive income's totals (not an attribution of them)
     oci = find(r"^(total )?other comprehensive (income|loss|expense|\(loss\)|\(expense\))\S*( for the (financial )?(year|period))?"
@@ -847,11 +850,18 @@ def _box_edges(rows: List[Row]) -> List[Row]:
 
 
 def _month_years(rows: List[Row]) -> List[Row]:
-    """A two-digit year after a month name ('30 Sep 24', Conygar 2024) as four digits; a two-digit number anywhere
-    else (a note, a figure) is left alone."""
+    """A two-digit year in a day-month-year date ('30 Sep 24', Conygar 2024) as four digits; a two-digit number anywhere
+    else (a note, a figure, the day of 'December 31 2023') is left alone."""
+    def is_year(words, k):
+        # day month yy: a day before the month, and no four-digit year after ('December 31 2023' is a US date: 31 is
+        # the day, Facilities by ADF)
+        return (re.fullmatch(r"\d{2}", words[k].t) and k >= 2 and MONTH.match(words[k - 1].t)
+                and re.fullmatch(r"\d{1,2}", words[k - 2].t)
+                and not (k + 1 < len(words) and re.fullmatch(r"(?:19|20)\d\d", words[k + 1].t)))
+
     def fix(words):
-        return [Word(f"20{w.t}", w.x, w.y, w.w, w.h, w.c, w.line)
-                if re.fullmatch(r"\d{2}", w.t) and k and MONTH.match(words[k - 1].t) else w for k, w in enumerate(words)]
+        return [Word(f"20{w.t}", w.x, w.y, w.w, w.h, w.c, w.line) if is_year(words, k) else w
+                for k, w in enumerate(words)]
     return [Row(fix(r.words), r.cy) for r in rows]
 
 

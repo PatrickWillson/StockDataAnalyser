@@ -142,3 +142,15 @@ def test_a_cached_reading_made_by_other_reader_code_is_read_again(tmp_path, monk
     monkeypatch.setattr(chh, "READING_VERSION", "other-code")
     CompaniesHouseHistorySource(client, read_filing=fake_reader(values)).history("Example plc", KNOWN, "GBP", 4)
     assert len(client.pdfs) == 2 * first and len(chh._reader_version()) == 16
+
+
+def test_a_reading_whose_year_end_is_not_the_registers_is_dropped(tmp_path):
+    """Facilities by ADF: a misread date made a reading's year end 2031-12-31 for the accounts to 2023-12-31. The
+    register's date for the filing is authoritative: a reading more than 10 days from it is not used."""
+    def misdated(path, made_up_date, single_entity=False):
+        st = SimpleNamespace(period_end=f"2031{made_up_date[4:]}", prior_end=f"{int(made_up_date[:4]) - 1}{made_up_date[4:]}",
+                             net_income=(700 * K, 600 * K), unit=K, currency="GBP", total=None)
+        return 1, OcrReading(st, verified=True)
+    history = CompaniesHouseHistorySource(FakeClient(tmp_path), read_filing=misdated).history("Example plc", KNOWN, "GBP", 4)
+    assert history.income_statements == () and "6 accounts read, 0 reconciled" not in " ".join(history.notes)
+    assert any("no accounts could be read and reconciled" in n for n in history.notes)

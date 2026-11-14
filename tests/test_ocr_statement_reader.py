@@ -815,3 +815,33 @@ def test_a_profit_line_before_taxation_is_never_the_profit_for_the_year():
                     ("to", 840), ("the", 900), ("equity", 1000), ("holders", 1140), ("1,258", CUR), ("967", PRI)])]
     reading = read_statement(rows_from_words(page(lines)), "2023-04-30")
     assert reading.accepted and reading.accepted.net_income == (1_258_000, 967_000)
+
+
+def test_a_day_after_a_month_name_is_not_a_year():
+    """Facilities by ADF: 'December 31 2023' (a US-style date): 31 is the day, never 2031. A two-digit year only in a
+    day-month-year date ('30 Sep 24')."""
+    from clients.ocr_statement_reader import _month_years
+    def texts(*words):
+        row = rows_from_words(page([(100, [(t, 300 * (k + 1)) for k, t in enumerate(words)])]))
+        return [w.t for w in _month_years(row)[0].words]
+    assert texts("30", "Sep", "24") == ["30", "Sep", "2024"]
+    assert texts("December", "31", "2023") == ["December", "31", "2023"]
+    assert texts("31", "December", "23", "2023") == ["31", "December", "23", "2023"]
+
+
+def test_a_profit_and_total_comprehensive_line_is_the_profit_only_without_other_comprehensive_income():
+    """Bango 2022: '(Loss)/profit for the financial year (attributable to equity holders) (2,140) 442', then 'Other
+    comprehensive income', FX (4,921) (214), '(Loss)/profit and total comprehensive income (7,061) 228': that line
+    includes the FX and is not the profit (unlike Conygar's, with no other comprehensive income)."""
+    lines = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2022", CUR), ("2021", PRI)]),
+             (230, [("$000", CUR), ("$000", PRI)]), (300, [("Revenue", 200), ("28,490", CUR), ("20,704", PRI)]),
+             (350, [("Loss", 120), ("before", 270), ("taxation", 430), ("(4,795)", CUR), ("(1,535)", PRI)]),
+             (400, [("Income", 150), ("tax", 230), ("2,655", CUR), ("1,977", PRI)]),
+             (450, [("Loss", 120), ("for", 200), ("the", 280), ("financial", 440), ("year", 540), ("attributable", 770),
+                    ("to", 820), ("equity", 920), ("holders", 1060), ("(2,140)", CUR), ("442", PRI)]),
+             (500, [("Other", 120), ("comprehensive", 380), ("income", 520)]),
+             (550, [("Foreign", 160), ("exchange", 330), ("(4,921)", CUR), ("(214)", PRI)]),
+             (600, [("Loss", 120), ("and", 200), ("total", 290), ("comprehensive", 550), ("income", 690), ("for", 770),
+                    ("the", 850), ("year", 950), ("(7,061)", CUR), ("228", PRI)])]
+    reading = read_statement(rows_from_words(page(lines)), "2022-12-31")
+    assert reading.accepted and reading.accepted.net_income == (-2_140_000, 442_000)
