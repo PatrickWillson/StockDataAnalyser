@@ -95,3 +95,24 @@ def test_a_filing_says_whether_it_is_a_groups_accounts_and_whether_it_is_annual(
     """Maven VCT 3 files full (single-company) accounts each year and interim accounts for its dividends."""
     filing = AccountsFiling("T1", "2025-11-30", description, 40, "https://doc/T1")
     assert (filing.group, filing.annual) == (group, annual)
+
+
+SEARCH = {"items": [
+    {"company_number": "03322928", "title": "PLEXUS HOLDINGS PLC", "company_status": "active", "company_type": "plc"},
+    {"company_number": "LP006377", "title": "AD VALOREM PLEXUS CONTRACTS PARTNERSHIP", "company_status": "active",
+     "company_type": "limited-partnership"},
+    {"company_number": "16104052", "title": "CENTRAL PLEXUS LTD", "company_status": "dissolved", "company_type": "ltd"}]}
+
+
+@pytest.mark.parametrize("name, number", [
+    ("Plexus Holdings plc", "03322928"), ("PLEXUS HOLDINGS P.L.C.", "03322928"),
+    ("Plexus Holdings Public Limited Company", "03322928"), ("Plexus", None), ("Plexus Holdings Ltd", None)])
+def test_a_listed_companys_number_is_found_only_by_an_exact_name_on_an_active_plc(tmp_path, name, number):
+    client = _client(tmp_path, {f"{API}/search/companies": FakeResponse(200, SEARCH)})
+    assert client.company_number(name) == number
+
+
+def test_two_active_plcs_with_the_same_name_give_no_number(tmp_path):
+    twin = {"items": SEARCH["items"][:1] + [dict(SEARCH["items"][0], company_number="SC000001")]}
+    client = _client(tmp_path, {f"{API}/search/companies": FakeResponse(200, twin)})
+    assert client.company_number("Plexus Holdings plc") is None

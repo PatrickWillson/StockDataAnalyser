@@ -6,6 +6,7 @@ apart; a 429 waits COMPANIES_HOUSE_RATE_LIMIT_WAIT and retries (twice).
 """
 
 import os
+import re
 import time
 from dataclasses import dataclass
 from typing import List, Optional
@@ -91,6 +92,23 @@ class CompaniesHouseClient:
                                               item.get("pages"), link))
         return sorted(filings, key=lambda f: f.made_up_date, reverse=True)
 
+    def company_number(self, name: str) -> Optional[str]:
+        """The company number of the active public limited company with exactly this name (normalised: case,
+        punctuation, 'public limited company' = 'plc', '&' = 'and'), or None when there is none or more than one. A
+        listed company is a plc; the overlap check against the listing's figures rejects a wrong company anyway."""
+        wanted = normalise_name(name)
+        if not wanted.endswith(" plc"):
+            return None
+        response = self._get(f"{COMPANIES_HOUSE_API_URL}/search/companies", params={"q": name, "items_per_page": 50})
+        if response.status_code in (401, 403):
+            raise CompaniesHouseRequestError(f"Companies House rejected the API key (HTTP {response.status_code})")
+        if response.status_code != 200:
+            return None
+        found = {item.get("company_number") for item in response.json().get("items") or []
+                 if item.get("company_status") == "active" and item.get("company_type") == "plc"
+                 and normalise_name(item.get("title", "")) == wanted}
+        return found.pop() if len(found) == 1 else None
+
     def fetch_pdf(self, company_number: str, filing: AccountsFiling) -> Optional[str]:
         """The filing's PDF, cached for good; None when Companies House has no PDF for it."""
         path = os.path.join(self.cache_dir, company_number, f"{filing.transaction_id}.pdf")
@@ -103,3 +121,11 @@ class CompaniesHouseClient:
         with open(path, "wb") as f:
             f.write(response.content)
         return path
+
+
+def normalise_name(name: str) -> str:
+    """A company name for comparison: lower case, '&' as 'and', no punctuation, 'public limited company' and 'p.l.c.'
+    as 'plc', single spaces."""
+    text = re.sub(r"\bp\s*\.?\s*l\s*\.?\s*c\b\.?", "plc", name.lower().replace("&", " and "))
+    text = re.sub(r"\bpublic limited company\b", "plc", text)
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", text)).strip()
