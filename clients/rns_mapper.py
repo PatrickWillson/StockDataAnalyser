@@ -265,7 +265,7 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
             continue
         if len(figures) % 2 and NOTE_REF.fullmatch(figures[0]):
             figures = figures[1:]                    # a note reference before the year columns
-        if not OWNER_LINE.match(label) and not re.match(r"non-controlling|minority", label, re.I):
+        if not OWNER_LINE.match(label) and not re.match(r"non.?controlling|minority", label, re.I):
             attribution = ""                         # the list of attributions has ended
         context = attribution if attribution and attribution != prefix else ""
         data.append((label, " ".join(x for x in (context, prefix, label) if x), figures))
@@ -329,7 +329,9 @@ def _read_block(block: List[List[str]], heading: str, announced: Optional[dt.dat
         return joined, figures_of(tokens)
 
     def excluded(text: str) -> bool:
-        return bool(re.search(r"per share|earnings per|dividend|non-controlling|minority|^(?:total )?equity\b", text, re.I))
+        # also an attribution of the profit before tax (Tristel 2010: a pre-tax owners' figure above the after-tax one)
+        return bool(re.search(r"per share|earnings per|dividend|non.?controlling|minority|^(?:total )?equity\b"
+                              r"|before tax", text, re.I))
 
     found = (first(lambda own, joined: bool(OWNERS.search(joined) or (re.search(r"attributable to", joined, re.I)
                                                                      and OWNER_LINE.match(own)))

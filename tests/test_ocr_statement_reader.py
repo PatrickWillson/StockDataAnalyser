@@ -757,3 +757,34 @@ def test_a_page_of_two_statement_columns_is_split_and_its_halves_read_in_order()
     assert max(w.x + w.w for w in rows[-3].words) == 1100              # aligned with the left's last column
     reading = read_statement(rows, "2023-12-31")
     assert reading.accepted and reading.accepted.net_income == (37_314_000, 33_811_000)
+
+
+def test_a_figure_with_one_bracket_is_not_a_clean_figure():
+    """Empresaria 2017: '3.5)' and '(287.7' (a bracket lost): the sign is uncertain, so the line is unreadable, as the
+    parser (paired brackets only) would take it; '(3.5)' and '3.5' are clean."""
+    from clients.ocr_statement_reader import NUM
+    assert [bool(NUM.match(t)) for t in ("(3.5)", "3.5", "(1,234)", "-", "3.5)", "(287.7", "1,234)")] == \
+        [True, True, True, True, False, False, False]
+
+
+def test_the_owners_share_of_profit_after_tax_is_taken_and_a_group_figure_with_minorities_is_refused():
+    """Tristel 2010: 'Profit before tax attributable to' lists the owners' 1,743 (a pre-tax figure), then 'Profit for
+    the year 1,195' with 'Attributable to' non-controlling (20) and equity holders 1,215. The owners' after-tax line
+    is the net income (1,215); the group's 1,195 includes the minorities' share and is never accepted as net income."""
+    def lines(owners_after_tax=("1,215", "919")):
+        return [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2010", CUR), ("2009", PRI)]),
+                (230, [("£000", CUR), ("£000", PRI)]), (300, [("Revenue", 200), ("8,764", CUR), ("6,847", PRI)]),
+                (350, [("Profit", 140), ("before", 290), ("tax", 370), ("1,724", CUR), ("1,285", PRI)]),
+                (380, [("Profit", 140), ("before", 290), ("tax", 370), ("attributable", 600), ("to", 650)]),
+                (410, [("Non", 80), ("controlling", 260), ("interests", 420), ("(19)", CUR), ("-", PRI)]),
+                (440, [("Equity", 120), ("holders", 260), ("of", 310), ("parent", 430), ("1,743", CUR), ("1,285", PRI)]),
+                (480, [("Taxation", 200), ("(529)", CUR), ("(366)", PRI)]),
+                (520, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("1,195", CUR), ("919", PRI)]),
+                (550, [("Attributable", 300), ("to", 360)]),
+                (580, [("Non", 80), ("controlling", 260), ("interests", 420), ("(20)", CUR), ("-", PRI)]),
+                (610, [("Equity", 120), ("holders", 260), ("of", 310), ("parent", 430)] + list(zip(owners_after_tax, (CUR, PRI))))]
+    reading = read_statement(rows_from_words(page(lines())), "2010-06-30")
+    assert reading.accepted and reading.accepted.net_income == (1_215_000, 919_000)
+    # the owners' after-tax line unreadable: the group's 1,195 includes the minorities' (20), so nothing is accepted
+    damaged = read_statement(rows_from_words(page(lines(("l,2l5", "9l9")))), "2010-06-30")
+    assert damaged.accepted is None

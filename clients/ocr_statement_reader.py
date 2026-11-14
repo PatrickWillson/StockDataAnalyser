@@ -43,7 +43,7 @@ HEADING_LINE = re.compile(r"^(?:(?:consolidated|group)\s+(?:income\s+statement|p
                           r"|statement\s+of\s+consolidated\s+(?:comprehensive\s+)?(?:income|profit\s+or\s+loss))[\s.:]*$", re.I)
 FIGURE = re.compile(r"\(?\d[\d,.]*\d\)?")
 DASH_TOKEN = re.compile(r"^[-\u2013\u2014_]$")          # a nil: also '_' (Conygar 2024)
-NUM = re.compile(r"^\(?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?$|^[-–—_]$")
+NUM = re.compile(r"^\(-?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)$|^-?\d{1,3}(?:,\d{3})*(?:\.\d+)?$|^[-–—_]$")   # brackets in pairs ('3.5)': sign unsure)
 
 
 @dataclass(frozen=True)
@@ -542,8 +542,8 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     at = next((i for i, (lab, v) in enumerate(lines) if all(abs(a - b) <= tolerance for a, b in zip(v, ni))), None)
     nci = None
     if at is not None:
-        nci = next((v for lab, v in lines[at + 1:at + 4] if re.search(r"non-controlling|minority", lab)), None)
-        if nci is None and at > 0 and re.search(r"non-controlling|minority", lines[at - 1][0]):
+        nci = next((v for lab, v in lines[at + 1:at + 4] if re.search(r"non.?controlling|minority", lab)), None)
+        if nci is None and at > 0 and re.search(r"non.?controlling|minority", lines[at - 1][0]):
             nci = lines[at - 1][1]         # the minorities listed first (Conygar 2024: non-controlling, then shareholders)
     held, failed = [], []
 
@@ -567,7 +567,13 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     ni_is_pfy = pfy is not None and not re.search(r"attributable|owners|equity holders|shareholders|members",
                                                   statement.label, re.I)
     columns = _column_sums(rows, width, years, ni, tolerance)
-    if pfy and not ni_is_pfy:
+    minorities_shown = any(re.search(r"non.?controlling|minority", lab) and any(abs(v) > tolerance for v in values)
+                           for lab, values in lines)
+    if ni_is_pfy and minorities_shown:
+        # the group's profit includes the minorities' share: not the owners' net income (Tristel 2010)
+        failed.append("the net income is the group's profit for the year, but the statement shows minorities")
+        tied = False
+    elif pfy and not ni_is_pfy:
         tied = check("net income + minorities = profit for the year", [a + b for a, b in zip(ni, minorities)], pfy)
     elif ni_is_pfy and (continuing is not None or (pbt and tax)):
         tied = bool(held) and not failed                # profit before tax + tax (and continuing + discontinued) tie it
