@@ -36,13 +36,13 @@ _MONTH = "|".join(MONTHS)
 DATE = re.compile(rf"\b(\d{{1,2}})(?:st|nd|rd|th)?\s+({_MONTH}),?\s+((?:19|20)\d{{2}})\b|"
                   rf"\b({_MONTH})\s+(\d{{1,2}})(?:st|nd|rd|th)?,?\s+((?:19|20)\d{{2}})\b", re.I)
 HEADING = re.compile(r"^(?:the )?(?:(?:unaudited|audited|condensed|preliminary|summary|summarised|abridged)\s+)*"
-                     r"(?:(?:consolidated|group)\b[^|]{0,40}?\b(?:income statements?|statements? of (?:comprehensive )?income|"
+                     r"(?:(?:consolidated|group)\b[^|]{0,40}?\b(?:income statements?|statements? of (?:comprehensive )?(?:income|loss)|"
                      r"profit and loss(?: account)?|statements? of profit or loss|statements? of total return)|"
-                     r"statements? of (?:consolidated|group) (?:comprehensive )?income)", re.I)
+                     r"statements? of (?:consolidated|group) (?:comprehensive )?(?:income|loss))", re.I)
 # a heading without 'consolidated' or 'group' (a company presenting its group statement plainly), read only when the
 # announcement has no consolidated one; never the parent company's own ('Company statement of ...')
 PLAIN_HEADING = re.compile(r"^(?:the )?(?:(?:unaudited|audited|condensed|preliminary|summary)\s+)*(?:company\s+)?(?:income statements?|"
-                           r"statements? of (?:comprehensive )?income|profit and loss(?: account)?|statements? of profit or loss|"
+                           r"statements? of (?:comprehensive )?(?:income|loss)|profit and loss(?: account)?|statements? of profit or loss|"
                            r"statements? of total return)", re.I)
 OTHER_STATEMENT = re.compile(r"^(?:(?:unaudited|audited|condensed)\s+)*(?:(?:consolidated|group|company|parent)\b[^|]{0,40}?)?"
                              r"\b(?:statements? of financial position|balance sheets?|cash ?flows?|statements? of changes in equity|"

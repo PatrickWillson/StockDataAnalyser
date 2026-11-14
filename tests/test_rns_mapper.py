@@ -458,3 +458,13 @@ def test_an_owners_line_printed_under_the_totals_only_is_read_in_a_wide_table():
         ["Profit for the year attributable to"], ["Equity holders of the parent", "2,234", "1,052"],
         ["Non-controlling interest", "6", "8"]])
     assert parse_statement(page, 1).net_income == (2_234_000, 1_052_000)
+
+
+def test_a_statement_of_comprehensive_loss_is_an_income_statement():
+    """First Development Resources: 'Consolidated statement of comprehensive loss' (a loss-making company)."""
+    page = _table("CONSOLIDATED STATEMENT OF COMPREHENSIVE LOSS", [
+        ["For the year ended 30 June 2024"], ["2024", "2023"], ["£", "£"],
+        ["Administrative expenses", "(812,011)", "(790,100)"], ["Finance income", "1,000", "900"],
+        ["Loss before taxation", "(811,011)", "(789,200)"], ["Taxation", "-", "-"],
+        ["Loss for the year", "(811,011)", "(789,200)"]])
+    assert parse_statement(page, 1).net_income == (-811_011, -789_200)

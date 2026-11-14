@@ -26,19 +26,19 @@ from config.companies_house_config import (OCR_CONFIRM_DPI, OCR_FIND_DPI, OCR_MI
                                            OCR_YEAR_REREAD_DPIS, OCR_FINER_DPIS, OCR_WORKERS)
 
 HEAD = re.compile(r"(consolidated|group)\s+(income\s+statement|profit\s+and\s+loss\s+account|statement\s+of\s+"
-                  r"(comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss)"
+                  r"(comprehensive\s+)?(income|loss)|statement\s+of\s+profit\s+or\s+loss)"
                   r"|statement\s+of\s+consolidated\s+(comprehensive\s+)?(income|profit\s+or\s+loss)", re.I)   # Ortac
 # loose: survives low-resolution damage ('INCOME STATEME!', 'Consol / lated income statement')
-CANDIDATE = re.compile(r"income\s+stat|comprehensive\s+income|statement\s+of\s+compreh|profit\s+and\s+loss\s+acc|"
+CANDIDATE = re.compile(r"income\s+stat|comprehensive\s+(income|loss)|statement\s+of\s+compreh|profit\s+and\s+loss\s+acc|"
                        r"statement\s+of\s+profit", re.I)
 # a single company's own statement (accounts that are not a group's: Maven VCT 3), as a whole line
 PLAIN_HEADING_LINE = re.compile(r"^(?:the\s+)?(?:income\s+statement|profit\s+and\s+loss\s+account|statement\s+of\s+"
-                                r"(?:comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss"
+                                r"(?:comprehensive\s+)?(?:income|loss)|statement\s+of\s+profit\s+or\s+loss"
                                 r"(?:\s+and\s+other\s+comprehensive\s+income)?)[\s.:]*$", re.I)
 # the heading as a whole line of its own anywhere on the page: tesseract can read a page's label column first, putting
 # the heading far below the top (Samuel Heath 2025); a list item ('• the consolidated income statement;') is not one
 HEADING_LINE = re.compile(r"^(?:(?:consolidated|group)\s+(?:income\s+statement|profit\s+and\s+loss\s+account|"
-                          r"statement\s+of\s+(?:comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss"
+                          r"statement\s+of\s+(?:comprehensive\s+)?(?:income|loss)|statement\s+of\s+profit\s+or\s+loss"
                           r"(?:\s+and\s+other\s+comprehensive\s+income)?)"
                           r"|statement\s+of\s+consolidated\s+(?:comprehensive\s+)?(?:income|profit\s+or\s+loss))[\s.:]*$", re.I)
 FIGURE = re.compile(r"\(?\d[\d,.]*\d\)?")
@@ -188,7 +188,8 @@ def is_statement_page(text: str, single_entity: bool = False) -> bool:
         or (single_entity and any(PLAIN_HEADING_LINE.match(line) for line in top))
     # an auditor's report names the statements, sometimes as a short line of its own (Empresaria 2024, two columns)
     return bool(heading and not re.search(r"company\s+(income|profit)|\bauditor", "\n".join(top), re.I)
-                and re.search(r"revenue|turnover|sales|administrative\s+expenses|operating\s+(?:profit|loss|activities)",
+                and re.search(r"revenue|turnover|sales|administrative\s+expenses|operating\s+(?:profit|loss|activities|"
+                              r"income|expenses)|investment\s+income",
                               text, re.I)
                 and _before_tax(text)
                 and len(FIGURE.findall(text)) >= 10)
@@ -517,7 +518,7 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     # profit for the year: the last such line when a discontinued-operations line comes before it (the total)
     pfy_lines = [(i, v) for i, (lab, v) in enumerate(lines)
                  if re.search(r"(profit|loss|return).*(for the (financial )?(year|period)|after tax)", lab)
-                 and not re.search(r"attributable|continuing|discontinued|owners|per share", lab)
+                 and not re.search(r"attributable|continuing|discontinued|owners|per share|before tax", lab)
                  # 'Loss and total comprehensive charge for the year' is the profit line (no other comprehensive income)
                  and ("comprehensive" not in lab or re.search(r"(profit|loss) and total comprehensive", lab))]
     pfy = pfy_lines[0][1] if pfy_lines else None

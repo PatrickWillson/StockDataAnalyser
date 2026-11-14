@@ -788,3 +788,30 @@ def test_the_owners_share_of_profit_after_tax_is_taken_and_a_group_figure_with_m
     # the owners' after-tax line unreadable: the group's 1,195 includes the minorities' (20), so nothing is accepted
     damaged = read_statement(rows_from_words(page(lines(("l,2l5", "9l9")))), "2010-06-30")
     assert damaged.accepted is None
+
+
+def test_a_statement_of_comprehensive_loss_and_an_investment_companys_income_confirm():
+    """First Development Resources 2024: 'CONSOLIDATED STATEMENT OF COMPREHENSIVE LOSS'; Literacy Capital 2024 (an
+    investment company): no revenue line, but investment income, operating income and operating expenses."""
+    loss = ("CONSOLIDATED STATEMENT OF COMPREHENSIVE LOSS\nFOR THE YEAR ENDED 30 JUNE 2024\nAdministrative expenses 4 (812,011) (790,100)\n"
+            "Loss before taxation (812,011) (790,100)\nTaxation 6 - -\nLoss for the year (812,011) (790,100)\n" + "1,234 " * 6)
+    assert is_candidate_page(loss) and is_statement_page(loss)
+    fund = ("Statement of comprehensive income\nFor the year ended 31 December 2024\nGains on investments 3,180,615 51,600,986\n"
+            "Investment income 756,710 4,727,639\nOperating expenses (1,200,761) (1,093,948)\n"
+            "(Loss) / profit for the year before taxation (4,235,020) 48,204,613\nTax - -\n(Loss) / profit for the year (4,235,020) 48,204,613\n")
+    assert is_statement_page(fund, single_entity=True)
+
+
+def test_a_profit_line_before_taxation_is_never_the_profit_for_the_year():
+    """Coral Products 2023: 'Profit for the financial year before taxation 1,252 1,330' was taken as the profit for the
+    year, so profit before tax + tax (1,252 + 6 = 1,258) could never tie; the owners' line is 1,258 / 967."""
+    lines = [(100, [("Group", 150), ("income", 300), ("statement", 500)]), (180, [("2023", CUR), ("2022", PRI)]),
+             (230, [("£000", CUR), ("£000", PRI)]), (300, [("Revenue", 200), ("35,216", CUR), ("14,392", PRI)]),
+             (350, [("Operating", 200), ("profit", 300), ("1,710", CUR), ("1,412", PRI)]),
+             (400, [("Profit", 140), ("for", 220), ("the", 300), ("financial", 460), ("year", 560), ("before", 690),
+                    ("taxation", 850), ("1,252", CUR), ("1,330", PRI)]),
+             (450, [("Taxation", 200), ("6", CUR), ("(363)", PRI)]),
+             (500, [("Profit", 140), ("for", 220), ("the", 300), ("financial", 460), ("year", 560), ("attributable", 790),
+                    ("to", 840), ("the", 900), ("equity", 1000), ("holders", 1140), ("1,258", CUR), ("967", PRI)])]
+    reading = read_statement(rows_from_words(page(lines)), "2023-04-30")
+    assert reading.accepted and reading.accepted.net_income == (1_258_000, 967_000)
