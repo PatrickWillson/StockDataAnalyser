@@ -155,8 +155,13 @@ def is_candidate_page(text: str) -> bool:
 def _with_pairs(lines: List[str]) -> List[str]:
     """The lines, then each line joined to the next: a heading wrapped over two lines ('CONSOLIDATED STATEMENT OF' /
     'COMPREHENSIVE INCOME', NAHL 2025)."""
-    lines = [line.strip() for line in lines if line.strip()]
+    lines = [_no_stray_marks(line) for line in lines if line.strip()]
     return lines + [f"{a} {b}" for a, b in zip(lines, lines[1:])]
+
+
+def _no_stray_marks(text: str) -> str:
+    """A line without lone punctuation tokens: a ruled line read as '|' ('CONSOLIDATED STATEMENT OF |', NAHL 2025)."""
+    return " ".join(t for t in text.split() if not re.fullmatch(r"[^\w£$€()]+", t))
 
 
 def _heading_line(text: str) -> bool:
@@ -259,7 +264,7 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
     """
     start = next((i for i, r in enumerate(rows) if HEAD.search(r.text)), None)
     wrapped = next((i for i in range(min(20, len(rows) - 1)) if not HEAD.search(rows[i].text)
-                    and HEADING_LINE.match(f"{rows[i].text} {rows[i + 1].text}".strip())), None)
+                    and HEADING_LINE.match(_no_stray_marks(f"{rows[i].text} {rows[i + 1].text}"))), None)
     if wrapped is not None and (start is None or wrapped < start):
         # the heading wrapped over two rows ('Statement of consolidated' / 'comprehensive income', Ortac 2025)
         rows = rows[:wrapped] + [Row(rows[wrapped].words + rows[wrapped + 1].words, rows[wrapped].cy)] + rows[wrapped + 2:]
@@ -277,11 +282,18 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
         start = first_years - 1
         heading = f"Consolidated income statement for the year ended {day.day} {day:%B %Y}"
     else:
-        heading = f"{rows[start].text} for the year ended {day.day} {day:%B %Y}"
+        heading = f"{_no_stray_marks(rows[start].text)} for the year ended {day.day} {day:%B %Y}"
     body = rows[start + 1:start + 70]
     year_row = next((i for i, r in enumerate(body) if sum(_header_year(w.t) is not None for w in r.words) >= 2), None)
-    if year_row is None:
-        return None
+    first_figures = next((i for i, r in enumerate(body)
+                          if sum(bool(NUM.match(w.t)) and not _header_year(w.t) for w in r.words) >= 2), len(body))
+    if year_row is None or year_row > first_figures:
+        # no two-year row above the figures (a later one heads earnings per share, NAHL 2025): staggered years
+        staggered, at = _staggered_years(body, made_up_date)
+        if at is not None:
+            body, year_row = staggered, at
+    if year_row is None or not names_accounts_year([_header_year(w.t) for w in body[year_row].words], made_up_date):
+        return None                # no year row, or one for other years than the register's (not this statement)
     cols = figure_columns(body[year_row + 1:])
     mh = _median_height([w for r in body for w in r.words])
     html, confs, pending = [f"<p>{heading}</p><table>"], [], None
@@ -333,6 +345,34 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
         confs += [w.c for w in placed.values()]
     html.append("</table>")
     return "".join(html), confs
+
+
+def names_accounts_year(years: List[Optional[int]], made_up_date: str) -> bool:
+    """Whether a year row names the accounts' own year (the register's year end); a 52/53-week year ending early in
+    January may be headed by the year before ('2015' for the year to 2 January 2016)."""
+    end = dt.date.fromisoformat(made_up_date)
+    return end.year in years or (end.month == 1 and end.day <= 10 and end.year - 1 in years)
+
+
+def _staggered_years(body: List[Row], made_up_date: str) -> Tuple[List[Row], Optional[int]]:
+    """(body, year row index) with the year words of the header rows before the first row of figures gathered into one
+    row, left to right, when no row names two years (NAHL 2025: '2024' a line above '2025 £000'). Only when they are
+    two or more years in distinct columns and include the register's year end; else (body, None)."""
+    first = next((i for i, r in enumerate(body) if sum(bool(NUM.match(w.t)) and not _header_year(w.t) for w in r.words) >= 2),
+                 len(body))
+    dated = [bool(re.search(r"\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b", r.text, re.I))
+             for r in body[:first]]                         # 'For the year ended 31 December 2025' is not a column header
+    header = [(i, w) for i, r in enumerate(body[:first]) if not dated[i] for w in r.words if _header_year(w.t) is not None]
+    years = [_header_year(w.t) for _, w in header]
+    mh = _median_height([w for r in body for w in r.words])
+    edges = sorted(w.x + w.w for _, w in header)
+    if len(header) < 2 or not names_accounts_year(years, made_up_date) or any(b - a < 3 * mh for a, b in zip(edges, edges[1:])):
+        return body, None
+    at = header[0][0]
+    merged = Row(sorted((w for _, w in header), key=lambda w: w.x), body[at].cy)
+    kept = [Row([w for w in r.words if dated[i] or _header_year(w.t) is None], r.cy) for i, r in enumerate(body[:first])]
+    rows = [r for r in kept[:at] if r.words] + [merged] + [r for r in kept[at:] if r.words] + body[first:]
+    return rows, len([r for r in kept[:at] if r.words])
 
 
 def _unreadable(placed: List[Word], mh: float) -> bool:
@@ -596,7 +636,7 @@ def year_row_from_reread(words: List[Word], top: int, made_up_date: str) -> Opti
     row, when it names two or more years and one is the accounts' own (the register's year end): else None."""
     words = [Word(w.t, w.x, w.y + top, w.w, w.h, w.c, w.line) for w in words]
     years = [y for y in (_header_year(w.t) for w in words) if y is not None]
-    if len(years) < 2 or int(made_up_date[:4]) not in years:
+    if len(years) < 2 or not names_accounts_year(years, made_up_date):
         return None
     return Row(words, sum(w.y + w.h / 2 for w in words) / len(words))
 

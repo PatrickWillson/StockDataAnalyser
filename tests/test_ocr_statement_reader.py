@@ -437,10 +437,10 @@ def test_a_heading_wrapped_over_two_lines_or_in_the_other_word_order_is_found():
     body = ("Year ended 31 December 2025 Year ended 31 December 2024\nRevenue 12 40,043 38,805\n"
             "Administration expenses 7 (1,501) (1,529)\nOperating loss (634) (1,071)\nLoss before taxation (225) (2,221)\n"
             "Taxation - -\nLoss for the year (225) (2,221)\n")
-    for heading in ("Statement of consolidated\ncomprehensive income\n", "CONSOLIDATED STATEMENT OF\nCOMPREHENSIVE INCOME\n",
+    for heading in ("Statement of consolidated\ncomprehensive income\n", "CONSOLIDATED STATEMENT OF |\nCOMPREHENSIVE INCOME\n",
                     "Statement of consolidated comprehensive income\n"):
         assert is_candidate_page(heading + body) and is_statement_page(heading + body), heading
-    rows = [(100, [("Statement", 200), ("of", 250), ("consolidated", 500)]), (150, [("comprehensive", 280), ("income", 420)]),
+    rows = [(100, [("Statement", 200), ("of", 250), ("consolidated", 500), ("|", 560)]), (150, [("comprehensive", 280), ("income", 420)]),
             (180, [("2025", CUR), ("2024", PRI)]), (230, [("£000", CUR), ("£000", PRI)]),
             (300, [("Revenue", 200), ("4,089", CUR), ("3,198", PRI)]), (350, [("Expenses", 200), ("(4,314)", CUR), ("(5,419)", PRI)]),
             (400, [("Loss", 120), ("before", 270), ("taxation", 430), ("(225)", CUR), ("(2,221)", PRI)]),
@@ -449,3 +449,30 @@ def test_a_heading_wrapped_over_two_lines_or_in_the_other_word_order_is_found():
     reading = read_statement(rows_from_words(page(rows)), "2025-12-31")
     assert "<p>Statement of consolidated comprehensive income for the year ended 31 December 2025</p>" in reading.html
     assert reading.accepted and reading.accepted.net_income == (-225_000, -2_221_000)
+
+
+def test_years_staggered_over_two_header_rows_make_one_year_row():
+    """NAHL 2025: '2024' a line above '2025 £000' (its 're-represented' note beside it): the years, by column."""
+    def read(years_rows, end="2025-12-31"):
+        rows = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)])] + years_rows + [
+                (300, [("Revenue", 200), ("40,043", CUR), ("38,805", PRI)]), (350, [("Expenses", 200), ("(36,000)", CUR), ("(77,000)", PRI)]),
+                (400, [("Profit", 140), ("before", 290), ("tax", 370), ("4,043", CUR), ("(38,195)", PRI)]),
+                (450, [("Tax", 80), ("(786)", CUR), ("(1,095)", PRI)]),
+                (500, [("Profit", 140), ("for", 220), ("the", 300), ("year", 400), ("3,257", CUR), ("(39,290)", PRI)]),
+                (560, [("2025", CUR), ("2024", PRI)]), (600, [("Basic", 120), ("earnings", 300), ("6.8", CUR), ("(83.1)", PRI)])]
+        return read_statement(rows_from_words(page(rows)), end)          # the later '2025 2024' heads earnings per share
+    staggered = [(140, [("FOR", 200), ("THE", 300), ("YEAR", 400), ("ENDED", 520), ("31", 580), ("DECEMBER", 760), ("2025", 900)]),
+                 (170, [("2024", PRI)]), (200, [("2025", CUR), ("£000", PRI)]), (240, [("Note", 1000), ("£000", CUR), ("re-represented", PRI + 40)])]
+    reading = read(staggered)
+    assert "<td>2025</td><td>2024</td>" in reading.html
+    assert reading.accepted and reading.accepted.net_income == (3_257_000, -39_290_000)
+    assert read(staggered, "2019-12-31").accepted is None             # not the register's year: no year row made
+
+
+def test_a_year_row_must_name_the_registers_year_end():
+    """A statement headed 2025 / 2024 is not the accounts to 31 December 2019 (a misfiled or misread page); a 52-week
+    year to 2 January 2016 may be headed 2015."""
+    from clients.ocr_statement_reader import names_accounts_year
+    assert names_accounts_year([2025, 2024], "2025-12-31") and not names_accounts_year([2025, 2024], "2019-12-31")
+    assert names_accounts_year([2015, 2014], "2016-01-02") and not names_accounts_year([2015, 2014], "2016-02-02")
+    assert read_statement(rows_from_words(statement()), "2019-12-31").statement is None
