@@ -416,3 +416,26 @@ def test_the_profit_after_discontinued_operations_is_the_net_income():
         ["Profit after taxation for the period from discontinued operations", "-", "1,306"],
         ["Profit for the period", "6,540", "6,484"]])
     assert parse_statement(page, 1).net_income == (6_540_000, 6_484_000)
+
+
+def test_a_header_naming_one_year_per_group_never_narrows_the_table():
+    """Alumasc 2026: 'Year ended 30 June 2026 | Year ended 30 June 2025' over underlying | non-underlying | total each;
+    the two-year header must not make the table two columns wide (which dropped every six-figure line)."""
+    page = _table("CONSOLIDATED STATEMENT OF COMPREHENSIVE INCOME", [
+        ["For the year ended 30 June 2026"], ["Year ended 30 June 2026", "Year ended 30 June 2025"],
+        ["Underlying", "Non-underlying", "Total", "Underlying", "Non-underlying", "Total"],
+        ["Notes", "£'000", "£'000", "£'000", "£'000", "£'000", "£'000"],
+        ["Revenue", "4", "107,117", "-", "107,117", "113,414", "-", "113,414"],
+        ["Cost of sales", "(68,110)", "-", "(68,110)", "(70,374)", "-", "(70,374)"],
+        ["Gross profit", "39,007", "-", "39,007", "43,040", "-", "43,040"],
+        ["Operating profit/(loss)", "4, 5", "11,239", "(526)", "10,713", "15,584", "(1,979)", "13,605"],
+        ["Profit/(loss) before taxation", "5", "9,988", "(241)", "9,747", "14,193", "(1,919)", "12,274"],
+        ["Tax (expense)/credit", "7,9", "(2,617)", "184", "(2,433)", "(3,435)", "500", "(2,935)"],
+        ["Profit/(loss) for the year", "7,371", "(57)", "7,314", "10,758", "(1,419)", "9,339"],
+        ["Actuarial (loss)/gain on defined benefit pensions, net of tax", "(27)", "2,077"],
+        ["Effective portion of changes in fair value of cash flow hedges, net of tax", "(20)", "25"],
+        ["Exchange differences on retranslation of foreign operations", "37", "(181)"],
+        ["Other comprehensive (loss)/profit for the year, net of tax", "(10)", "1,921"],
+        ["Total comprehensive profit for the year, net of tax", "7,304", "11,260"],
+        ["Basic earnings per share", "9", "20.3", "25.9"]])
+    assert parse_statement(page, 1).net_income == (7_314_000, 9_339_000)

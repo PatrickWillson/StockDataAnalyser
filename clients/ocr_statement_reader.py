@@ -482,8 +482,8 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
     header = next((f for lab, f in rows if len(f) >= 2 and all(re.fullmatch(r"(19|20)\d\d", x) for x in f)), [])
     widths = [len(f) for lab, f in rows if lab and len(f) >= 2]
     width = max(set(widths), key=widths.count) if widths else 2
-    if len(header) >= 2 and len(header) in widths:
-        width = len(header)            # a year named for every column: the table is that wide (as the parser takes it)
+    if len(header) > width and len(header) in widths:
+        width = len(header)            # a year named for more columns than the commonest line has: as the parser takes it
     years = [int(y) for y in header]
     if len(years) == width and len(set(years)) >= 2:          # the parser's choice: each year's last column
         top = sorted(set(years), reverse=True)
