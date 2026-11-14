@@ -25,7 +25,8 @@ from config.companies_house_config import (OCR_CONFIRM_DPI, OCR_FIND_DPI, OCR_MI
                                            OCR_YEAR_REREAD_DPIS, OCR_FINER_DPIS)
 
 HEAD = re.compile(r"(consolidated|group)\s+(income\s+statement|profit\s+and\s+loss\s+account|statement\s+of\s+"
-                  r"(comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss)", re.I)
+                  r"(comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss)"
+                  r"|statement\s+of\s+consolidated\s+(comprehensive\s+)?(income|profit\s+or\s+loss)", re.I)   # Ortac
 # loose: survives low-resolution damage ('INCOME STATEME!', 'Consol / lated income statement')
 CANDIDATE = re.compile(r"income\s+stat|comprehensive\s+income|statement\s+of\s+compreh|profit\s+and\s+loss\s+acc|"
                        r"statement\s+of\s+profit", re.I)
@@ -35,9 +36,10 @@ PLAIN_HEADING_LINE = re.compile(r"^(?:the\s+)?(?:income\s+statement|profit\s+and
                                 r"(?:\s+and\s+other\s+comprehensive\s+income)?)[\s.:]*$", re.I)
 # the heading as a whole line of its own anywhere on the page: tesseract can read a page's label column first, putting
 # the heading far below the top (Samuel Heath 2025); a list item ('• the consolidated income statement;') is not one
-HEADING_LINE = re.compile(r"^(?:consolidated|group)\s+(?:income\s+statement|profit\s+and\s+loss\s+account|"
+HEADING_LINE = re.compile(r"^(?:(?:consolidated|group)\s+(?:income\s+statement|profit\s+and\s+loss\s+account|"
                           r"statement\s+of\s+(?:comprehensive\s+)?income|statement\s+of\s+profit\s+or\s+loss"
-                          r"(?:\s+and\s+other\s+comprehensive\s+income)?)[\s.:]*$", re.I)
+                          r"(?:\s+and\s+other\s+comprehensive\s+income)?)"
+                          r"|statement\s+of\s+consolidated\s+(?:comprehensive\s+)?(?:income|profit\s+or\s+loss))[\s.:]*$", re.I)
 FIGURE = re.compile(r"\(?\d[\d,.]*\d\)?")
 DASH_TOKEN = re.compile(r"^[-\u2013\u2014]$")
 NUM = re.compile(r"^\(?-?\d{1,3}(?:,\d{3})*(?:\.\d+)?\)?$|^[-–—]$")
@@ -150,8 +152,15 @@ def is_candidate_page(text: str) -> bool:
     return bool((CANDIDATE.search(top) or _heading_line(text)) and not re.search(r"company\s+(income|profit)", top, re.I))
 
 
+def _with_pairs(lines: List[str]) -> List[str]:
+    """The lines, then each line joined to the next: a heading wrapped over two lines ('CONSOLIDATED STATEMENT OF' /
+    'COMPREHENSIVE INCOME', NAHL 2025)."""
+    lines = [line.strip() for line in lines if line.strip()]
+    return lines + [f"{a} {b}" for a, b in zip(lines, lines[1:])]
+
+
 def _heading_line(text: str) -> bool:
-    return any(HEADING_LINE.match(line.strip()) for line in text.splitlines())
+    return any(HEADING_LINE.match(line) for line in _with_pairs(text.splitlines()))
 
 
 def _before_tax(text: str) -> bool:
@@ -169,7 +178,7 @@ def is_statement_page(text: str, single_entity: bool = False) -> bool:
     filing is not a group's) a plain heading near the top ('Income Statement') also counts."""
     top = _top(text)
     heading = any(HEAD.search(line) and len(line) <= 120 and not re.search(r"\b(we|our|the group's|in our opinion)\b", line, re.I)
-                  for line in top) or _heading_line(text) \
+                  for line in _with_pairs(top)) or _heading_line(text) \
         or (single_entity and any(PLAIN_HEADING_LINE.match(line) for line in top))
     # an auditor's report names the statements, sometimes as a short line of its own (Empresaria 2024, two columns)
     return bool(heading and not re.search(r"company\s+(income|profit)|\bauditor", "\n".join(top), re.I)
@@ -249,6 +258,12 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
     each year's total). Returns (html, confidences of the figures placed) or None.
     """
     start = next((i for i, r in enumerate(rows) if HEAD.search(r.text)), None)
+    wrapped = next((i for i in range(min(20, len(rows) - 1)) if not HEAD.search(rows[i].text)
+                    and HEADING_LINE.match(f"{rows[i].text} {rows[i + 1].text}".strip())), None)
+    if wrapped is not None and (start is None or wrapped < start):
+        # the heading wrapped over two rows ('Statement of consolidated' / 'comprehensive income', Ortac 2025)
+        rows = rows[:wrapped] + [Row(rows[wrapped].words + rows[wrapped + 1].words, rows[wrapped].cy)] + rows[wrapped + 2:]
+        start = wrapped
     if start is None:              # a single company's own statement ('Income Statement'), on a page confirmed as one
         start = next((i for i, r in enumerate(rows[:20]) if PLAIN_HEADING_LINE.match(r.text.strip())), None)
     day = dt.date.fromisoformat(made_up_date)

@@ -429,3 +429,23 @@ def test_an_unconfirmed_reading_is_retried_finer_and_only_a_confirmed_pass_repla
     assert got.verified and got.notes == ("held", "read at 450 dpi") and asked == [400, 450]
     assert reread_finer(lambda dpi: OcrReading(None, notes=("failed",)), first) is first
     assert reread_finer(read_at, passes[450]) is passes[450]           # already confirmed: no second pass
+
+
+def test_a_heading_wrapped_over_two_lines_or_in_the_other_word_order_is_found():
+    """Ortac 2025: 'Statement of consolidated' / 'comprehensive income'; NAHL 2025: 'CONSOLIDATED STATEMENT OF' /
+    'COMPREHENSIVE INCOME'."""
+    body = ("Year ended 31 December 2025 Year ended 31 December 2024\nRevenue 12 40,043 38,805\n"
+            "Administration expenses 7 (1,501) (1,529)\nOperating loss (634) (1,071)\nLoss before taxation (225) (2,221)\n"
+            "Taxation - -\nLoss for the year (225) (2,221)\n")
+    for heading in ("Statement of consolidated\ncomprehensive income\n", "CONSOLIDATED STATEMENT OF\nCOMPREHENSIVE INCOME\n",
+                    "Statement of consolidated comprehensive income\n"):
+        assert is_candidate_page(heading + body) and is_statement_page(heading + body), heading
+    rows = [(100, [("Statement", 200), ("of", 250), ("consolidated", 500)]), (150, [("comprehensive", 280), ("income", 420)]),
+            (180, [("2025", CUR), ("2024", PRI)]), (230, [("£000", CUR), ("£000", PRI)]),
+            (300, [("Revenue", 200), ("4,089", CUR), ("3,198", PRI)]), (350, [("Expenses", 200), ("(4,314)", CUR), ("(5,419)", PRI)]),
+            (400, [("Loss", 120), ("before", 270), ("taxation", 430), ("(225)", CUR), ("(2,221)", PRI)]),
+            (450, [("Taxation", 200), ("-", CUR), ("-", PRI)]),
+            (500, [("Loss", 120), ("for", 200), ("the", 280), ("year", 380), ("(225)", CUR), ("(2,221)", PRI)])]
+    reading = read_statement(rows_from_words(page(rows)), "2025-12-31")
+    assert "<p>Statement of consolidated comprehensive income for the year ended 31 December 2025</p>" in reading.html
+    assert reading.accepted and reading.accepted.net_income == (-225_000, -2_221_000)
