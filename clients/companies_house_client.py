@@ -2,7 +2,8 @@
 Companies House public data API and Document API (config/companies_house_config.py): a company's accounts filings and
 each filing's PDF, cached on disk (data/cache/companies_house, gitignored). The key (COMPANIES_HOUSE_API_KEY) is the
 basic-auth user name and never appears in URLs, errors or logs. Requests are at least COMPANIES_HOUSE_MIN_REQUEST_INTERVAL
-apart; a 429 waits COMPANIES_HOUSE_RATE_LIMIT_WAIT and retries (twice).
+apart; a 429 waits COMPANIES_HOUSE_RATE_LIMIT_WAIT and retries, and a timeout or dropped connection retries after a
+short wait (three attempts in all).
 """
 
 import os
@@ -64,6 +65,12 @@ class CompaniesHouseClient:
                 time.sleep(wait)
             try:
                 response = self.session.get(url, params=params, headers=headers, auth=(self._key, ""), timeout=120)
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                self._last_request = time.monotonic()
+                if attempt == 2:
+                    raise CompaniesHouseRequestError(f"Companies House request failed: {type(e).__name__}") from None
+                time.sleep(COMPANIES_HOUSE_MIN_REQUEST_INTERVAL * 5)     # a stalled connection: wait, then retry
+                continue
             except requests.exceptions.RequestException as e:
                 raise CompaniesHouseRequestError(f"Companies House request failed: {type(e).__name__}") from None
             finally:

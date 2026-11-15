@@ -116,3 +116,19 @@ def test_two_active_plcs_with_the_same_name_give_no_number(tmp_path):
     twin = {"items": SEARCH["items"][:1] + [dict(SEARCH["items"][0], company_number="SC000001")]}
     client = _client(tmp_path, {f"{API}/search/companies": FakeResponse(200, twin)})
     assert client.company_number("Plexus Holdings plc") is None
+
+
+def test_a_transient_timeout_is_retried_before_giving_up(tmp_path):
+    """A read timeout (a stalled connection) is retried; only repeated failures raise, still without the key."""
+    route = [requests.exceptions.ReadTimeout("slow"), FakeResponse(200, ITEMS)]
+
+    class Flaky(FakeSession):
+        def get(self, url, **kw):
+            self.calls.append(url)
+            item = route.pop(0)
+            if isinstance(item, Exception):
+                raise item
+            return item
+    client = CompaniesHouseClient(KEY, cache_dir=str(tmp_path))
+    client.session = Flaky({})
+    assert len(client.accounts_filings("00488001")) == 2 and len(client.session.calls) == 2
