@@ -821,10 +821,13 @@ def test_a_day_after_a_month_name_is_not_a_year():
     """Facilities by ADF: 'December 31 2023' (a US-style date): 31 is the day, never 2031. A two-digit year only in a
     day-month-year date ('30 Sep 24')."""
     from clients.ocr_statement_reader import _month_years
-    def texts(*words):
+    def texts(*words, end="2024-09-30"):
         row = rows_from_words(page([(100, [(t, 300 * (k + 1)) for k, t in enumerate(words)])]))
-        return [w.t for w in _month_years(row)[0].words]
-    assert texts("30", "Sep", "24") == ["30", "Sep", "2024"]
+        return [w.t for w in _month_years(row, end)[0].words]
+    assert texts("30", "Sep", "24") == ["30", "Sep", "2024"] and texts("30", "Sep", "23") == ["30", "Sep", "2023"]
+    # First Development Resources: 'Year ended 30 June | Year ended 30 June': the second 30 is a day, not 2030 (only the
+    # accounts' year or the year before can head a column)
+    assert texts("30", "June", "30", "June", end="2024-06-30") == ["30", "June", "30", "June"]
     assert texts("December", "31", "2023") == ["December", "31", "2023"]
     assert texts("31", "December", "23", "2023") == ["31", "December", "23", "2023"]
 

@@ -304,7 +304,7 @@ def table_html(rows: List[Row], made_up_date: str) -> Optional[Tuple[str, List[f
         heading = f"Consolidated income statement for the year ended {day.day} {day:%B %Y}"
     else:
         heading = f"{_no_stray_marks(rows[start].text)} for the year ended {day.day} {day:%B %Y}"
-    body = _box_edges(_month_years(rows[start + 1:start + 70]))
+    body = _box_edges(_month_years(rows[start + 1:start + 70], made_up_date))
     year_row = next((i for i, r in enumerate(body) if sum(_header_year(w.t) is not None for w in r.words) >= 2), None)
     first_figures = next((i for i, r in enumerate(body)
                           if sum(bool(NUM.match(w.t)) and not _header_year(w.t) for w in r.words) >= 2), len(body))
@@ -849,7 +849,7 @@ def _box_edges(rows: List[Row]) -> List[Row]:
     return [Row([clean(w) for w in r.words], r.cy) for r in rows]
 
 
-def _month_years(rows: List[Row]) -> List[Row]:
+def _month_years(rows: List[Row], made_up_date: str) -> List[Row]:
     """A two-digit year in a day-month-year date ('30 Sep 24', Conygar 2024) as four digits; a two-digit number anywhere
     else (a note, a figure, the day of 'December 31 2023') is left alone."""
     def is_year(words, k):
@@ -857,6 +857,8 @@ def _month_years(rows: List[Row]) -> List[Row]:
         # the day, Facilities by ADF)
         return (re.fullmatch(r"\d{2}", words[k].t) and k >= 2 and MONTH.match(words[k - 1].t)
                 and re.fullmatch(r"\d{1,2}", words[k - 2].t)
+                # only the accounts' year or the year before ('30 June 30 June' is two days: First Development Resources)
+                and 2000 + int(words[k].t) in (int(made_up_date[:4]), int(made_up_date[:4]) - 1)
                 and not (k + 1 < len(words) and re.fullmatch(r"(?:19|20)\d\d", words[k + 1].t)))
 
     def fix(words):
