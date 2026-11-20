@@ -51,15 +51,22 @@ class RnsClient:
         self._last_request = 0.0
 
     def _download(self, url: str) -> str:
-        wait = RNS_MIN_REQUEST_INTERVAL - (time.monotonic() - self._last_request)
-        if wait > 0:
-            time.sleep(wait)
-        try:
-            response = self.session.get(url, headers={"User-Agent": RNS_USER_AGENT}, timeout=60)
-        except requests.exceptions.RequestException as e:
-            raise RnsRequestError(f"RNS archive request failed: {type(e).__name__}") from None
-        finally:
-            self._last_request = time.monotonic()
+        for attempt in range(3):
+            wait = RNS_MIN_REQUEST_INTERVAL - (time.monotonic() - self._last_request)
+            if wait > 0:
+                time.sleep(wait)
+            try:
+                response = self.session.get(url, headers={"User-Agent": RNS_USER_AGENT}, timeout=60)
+                break
+            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+                # a stalled archive (DOTD, EMR lost every announcement to one timeout): wait, then retry
+                if attempt == 2:
+                    raise RnsRequestError(f"RNS archive request failed: {type(e).__name__}") from None
+                time.sleep(RNS_MIN_REQUEST_INTERVAL * 5)
+            except requests.exceptions.RequestException as e:
+                raise RnsRequestError(f"RNS archive request failed: {type(e).__name__}") from None
+            finally:
+                self._last_request = time.monotonic()
         if response.status_code == 404:
             return ""
         if response.status_code != 200:

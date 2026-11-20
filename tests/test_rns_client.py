@@ -80,3 +80,20 @@ def test_failures_raise_a_typed_error(tmp_path, route):
     ("notice-of-results", False), ("holding-s-in-company", False)])
 def test_which_announcements_are_annual_results(slug, counted):
     assert bool(rns_client.RESULTS_SLUG.search(f"/announcement/rns/x--y/{slug}/123")) == counted
+
+
+def test_a_transient_timeout_is_retried_before_giving_up(tmp_path):
+    """The archive stalled (DOTD and EMR lost every announcement to one ReadTimeout): retried, then read."""
+    page = f'<a href="{SITE}/announcement/rns/braime-group--bmto/final-results/7">x</a>'
+    route = [requests.exceptions.ReadTimeout("slow"), FakeResponse(200, page), FakeResponse(200, "")]
+
+    class Flaky(FakeSession):
+        def get(self, url, headers=None, timeout=None):
+            self.calls.append((url, headers))
+            item = route.pop(0) if route else FakeResponse(404)
+            if isinstance(item, Exception):
+                raise item
+            return item
+    client = RnsClient(cache_dir=str(tmp_path))
+    client.session = Flaky({})
+    assert [a.announcement_id for a in client.results_announcements("BMTO")] == [7]
