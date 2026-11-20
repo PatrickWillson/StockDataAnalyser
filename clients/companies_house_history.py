@@ -148,13 +148,14 @@ def companies_house_history(known: Mapping[str, float], readings: Sequence[Filin
 
 
 def filings_to_read(filings: Sequence[AccountsFiling], known: Mapping[str, float], wanted_years: int) -> List[AccountsFiling]:
-    """The annual filings worth reading: the two whose year ends are the earliest held years (the overlap), then the
+    """The annual filings worth reading: the three whose year ends are the earliest held years (the overlap: one
+    unreadable still leaves two overlapping years, Enwell), then the
     older ones, newest first, enough for wanted_years more years and one more (the cross-check of the oldest year);
     at most CH_MAX_FILINGS_READ."""
     annual = sorted((f for f in filings if f.annual), key=lambda f: f.made_up_date, reverse=True)
     held = sorted(known)
     first_held = held[0]
-    overlap = [f for f in annual if any(_near(f.made_up_date, e) for e in held[:2])]
+    overlap = [f for f in annual if any(_near(f.made_up_date, e) for e in held[:3])]
     older = [f for f in annual if f.made_up_date < first_held and not _near(f.made_up_date, first_held)]
     return (overlap + older[:max(0, wanted_years)])[:CH_MAX_FILINGS_READ]
 

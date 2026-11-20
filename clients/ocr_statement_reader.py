@@ -535,6 +535,15 @@ def verify(html: str, statement: RnsStatement) -> Tuple[bool, str]:
         between = [w for lab, w in lines[pfy_lines[0][0] + 1:i] if "discontinued" in lab]
         if between:
             continuing, discontinued, pfy = pfy_lines[0][1], between[0], v
+    if continuing is None and pfy is not None:
+        # lines named 'from continuing / discontinued operations' without 'for the year' (Avacta 2024: 'Loss from
+        # continuing operations', 'Loss from discontinued operation, net of tax', then 'Loss for the year')
+        found_continuing = find(r"^(profit|loss)\S*( for the (financial )?(year|period))? from continuing operations",
+                                r"before tax|per share")
+        found_discontinued = find(r"^(profit|loss)\S*( for the (financial )?(year|period))?( after tax)? from discontinued "
+                                  r"operations?", r"before tax|per share")
+        if found_continuing is not None and found_discontinued is not None and found_continuing != pfy:
+            continuing, discontinued = found_continuing, found_discontinued
     unit = statement.unit or 1.0
     ni = [statement.net_income[0] / unit, statement.net_income[1] / unit]
     # rounding: one step of the statement's printed precision (1 for whole figures, 0.1 for £m to one place)

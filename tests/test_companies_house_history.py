@@ -82,7 +82,9 @@ FILINGS = [accounts(f"{y}-12-31") for y in range(2025, 2009, -1)] + [accounts("2
 
 def test_the_overlapping_accounts_are_read_then_the_older_ones_newest_first():
     chosen = filings_to_read(FILINGS, KNOWN, 4)
-    assert [f.made_up_date[:4] for f in chosen] == ["2023", "2022", "2021", "2020", "2019", "2018"]
+    # the accounts at the three earliest held years (Enwell: the 2023 accounts unreadable, the 2024 ones give two more
+    # overlapping years), then the older ones
+    assert [f.made_up_date[:4] for f in chosen] == ["2024", "2023", "2022", "2021", "2020", "2019", "2018"]
     assert all(f.annual for f in chosen)
 
 
@@ -112,15 +114,15 @@ def fake_reader(values, refused=()):
 
 
 def test_the_source_reads_the_accounts_once_and_never_uses_a_refused_reading(tmp_path):
-    values = {"2023": (700, 600), "2022": (600, 500), "2021": (500, 400), "2020": (999, 300), "2019": (300, 200),
-              "2018": (200, 100)}
+    values = {"2024": (800, 700), "2023": (700, 600), "2022": (600, 500), "2021": (500, 400), "2020": (999, 300),
+              "2019": (300, 200), "2018": (200, 100)}
     client = FakeClient(tmp_path)
     source = CompaniesHouseHistorySource(client, read_filing=fake_reader(values, refused={"2020"}))
     history = source.history("Example plc", KNOWN, "GBP", 4)
     # the 2020 accounts (999: refused) are never used; FY2020 is the 2021 accounts' comparative, FY2019 its own accounts'
     assert years(history) == {"2021-12-31": 500, "2020-12-31": 400, "2019-12-31": 300, "2018-12-31": 200,
                               "2017-12-31": 100}
-    assert "00000001; 6 accounts read, 5 reconciled" in history.notes[1]
+    assert "00000001; 7 accounts read, 6 reconciled" in history.notes[1]
     read_once = len(client.pdfs)
     again = CompaniesHouseHistorySource(client, read_filing=lambda *a, **k: 1 / 0).history("Example plc", KNOWN, "GBP", 4)
     assert years(again) == years(history) and len(client.pdfs) == read_once      # from the cache: no PDF, no OCR
@@ -134,8 +136,8 @@ def test_no_company_number_gives_a_note_and_no_years(tmp_path):
 
 def test_a_cached_reading_made_by_other_reader_code_is_read_again(tmp_path, monkeypatch):
     import clients.companies_house_history as chh
-    values = {"2023": (700, 600), "2022": (600, 500), "2021": (500, 400), "2020": (400, 300), "2019": (300, 200),
-              "2018": (200, 100)}
+    values = {"2024": (800, 700), "2023": (700, 600), "2022": (600, 500), "2021": (500, 400), "2020": (400, 300),
+              "2019": (300, 200), "2018": (200, 100)}
     client = FakeClient(tmp_path)
     CompaniesHouseHistorySource(client, read_filing=fake_reader(values)).history("Example plc", KNOWN, "GBP", 4)
     first = len(client.pdfs)

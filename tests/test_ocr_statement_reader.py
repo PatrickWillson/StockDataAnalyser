@@ -848,3 +848,19 @@ def test_a_profit_and_total_comprehensive_line_is_the_profit_only_without_other_
                     ("the", 850), ("year", 950), ("(7,061)", CUR), ("228", PRI)])]
     reading = read_statement(rows_from_words(page(lines)), "2022-12-31")
     assert reading.accepted and reading.accepted.net_income == (-2_140_000, 442_000)
+
+
+def test_continuing_and_discontinued_lines_tie_the_total_when_profit_before_tax_is_unreadable():
+    """Avacta 2024: 'Loss before tax' unreadable; 'Loss from continuing operations (29,427)' + 'Loss from discontinued
+    operation, net of tax (23,414)' = 'Loss for the year (52,841)', each year."""
+    lines = [(100, [("Consolidated", 300), ("income", 450), ("statement", 650)]), (180, [("2024", CUR), ("2023", PRI)]),
+             (230, [("£000", CUR), ("£000", PRI)]), (300, [("Revenue", 200), ("113", CUR), ("2,851", PRI)]),
+             (350, [("Operating", 200), ("loss", 280), ("(32,558)", CUR), ("(23,132)", PRI)]),
+             (400, [("Taxation", 200), ("(444)", CUR), ("1,975", PRI)]),
+             (450, [("Loss", 120), ("from", 200), ("continuing", 380), ("operations", 560), ("(29,427)", CUR), ("(29,150)", PRI)]),
+             (500, [("Loss", 120), ("from", 200), ("discontinued", 400), ("operation,", 580), ("net", 640), ("of", 680), ("tax", 740),
+                    ("(23,414)", CUR), ("(4,106)", PRI)]),
+             (550, [("Loss", 120), ("for", 200), ("the", 280), ("year", 380), ("(52,841)", CUR), ("(33,256)", PRI)])]
+    reading = read_statement(rows_from_words(page(lines)), "2024-12-31")
+    assert reading.accepted and reading.accepted.net_income == (-52_841_000, -33_256_000)
+    assert "continuing + discontinued = profit for the year" in reading.notes[0]
