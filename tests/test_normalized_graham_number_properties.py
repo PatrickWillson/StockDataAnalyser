@@ -686,7 +686,9 @@ def test_dual_calculation_preservation(eps_values, tbvps):
     # Verify they are different (unless the average equals the most recent value)
     # Note: Even with varying EPS values, the average can equal the most recent value
     # Example: [467, 1, 933] has average 467 which equals the most recent value
-    if abs(eps_values[0] - eps_3yr_avg) > 0.01:
+    # (compared unrounded: an EPS 0.33 from the average can move the Graham Number less than half a cent, so the two
+    # round to the same 22.59; Hypothesis found [725.5, 452.0, 1000.0] with tbvps 0.03125)
+    if abs(expected_single_gn - expected_normalized_gn) > 0.02:
         # Allow small tolerance for rounding
         assert abs(metrics['graham_number'] - metrics['normalized_graham_number']) >= 0.009, \
             f"Graham Numbers should differ when most recent EPS differs from average: single={metrics['graham_number']}, normalized={metrics['normalized_graham_number']}"
