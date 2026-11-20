@@ -132,3 +132,19 @@ def test_a_transient_timeout_is_retried_before_giving_up(tmp_path):
     client = CompaniesHouseClient(KEY, cache_dir=str(tmp_path))
     client.session = Flaky({})
     assert len(client.accounts_filings("00488001")) == 2 and len(client.session.calls) == 2
+
+
+def test_a_name_with_the_or_a_yahoo_short_name_cut_at_31_characters_still_finds_the_number(tmp_path):
+    """Baillie Gifford Japan: 'BAILLIE GIFFORD JAPAN TRUST PUBLIC LIMITED COMPANY (THE)'; British & American: Yahoo's
+    long name 'British & American Ord' (a share class), short name 'BRITISH & AMERICAN INVESTMENT T' (cut at 31)."""
+    trusts = {"items": [
+        {"company_number": "SC075954", "title": "BAILLIE GIFFORD JAPAN TRUST PUBLIC LIMITED COMPANY (THE)",
+         "company_status": "active", "company_type": "plc"},
+        {"company_number": "00433137", "title": "BRITISH & AMERICAN INVESTMENT TRUST PLC", "company_status": "active",
+         "company_type": "plc"},
+        {"company_number": "03103806", "title": "BRITISH & AMERICAN FILMS LIMITED", "company_status": "active",
+         "company_type": "ltd"}]}
+    client = _client(tmp_path, {f"{API}/search/companies": FakeResponse(200, trusts)})
+    assert client.company_number("Baillie Gifford Japan Ord", "BAILLIE GIFFORD JAPAN TRUST PLC") == "SC075954"
+    assert client.company_number("British & American Ord", "BRITISH & AMERICAN INVESTMENT T") == "00433137"
+    assert client.company_number("British & American Ord", "BRITISH & AMERICAN") is None     # too short to be a prefix

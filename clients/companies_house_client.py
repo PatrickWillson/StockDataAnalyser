@@ -10,7 +10,7 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import requests
 
@@ -99,22 +99,33 @@ class CompaniesHouseClient:
                                               item.get("pages"), link))
         return sorted(filings, key=lambda f: f.made_up_date, reverse=True)
 
-    def company_number(self, name: str) -> Optional[str]:
-        """The company number of the active public limited company with exactly this name (normalised: case,
-        punctuation, 'public limited company' = 'plc', '&' = 'and'), or None when there is none or more than one. A
-        listed company is a plc; the overlap check against the listing's figures rejects a wrong company anyway."""
-        wanted = normalise_name(name)
-        if not wanted.endswith(" plc"):
-            return None
-        response = self._get(f"{COMPANIES_HOUSE_API_URL}/search/companies", params={"q": name, "items_per_page": 50})
-        if response.status_code in (401, 403):
-            raise CompaniesHouseRequestError(f"Companies House rejected the API key (HTTP {response.status_code})")
-        if response.status_code != 200:
-            return None
-        found = {item.get("company_number") for item in response.json().get("items") or []
-                 if item.get("company_status") == "active" and item.get("company_type") == "plc"
-                 and normalise_name(item.get("title", "")) == wanted}
-        return found.pop() if len(found) == 1 else None
+    def company_number(self, *names: str) -> Optional[str]:
+        """The company number of the one active public limited company matching the listing's names (Yahoo's long
+        and short names, in order): a name ending 'plc' matched exactly (normalised: case, punctuation, 'public limited
+        company' = 'plc', '&' = 'and', a leading or trailing 'the'), else a name of 25 characters or more matched as
+        the start of the company's (Yahoo cuts short names at 31: 'BRITISH & AMERICAN INVESTMENT T'). None when none or
+        more than one matches. The overlap check against the listing's figures rejects a wrong company anyway."""
+        plcs: Dict[str, str] = {}                        # company number -> normalised title, active plcs found
+        for query in dict.fromkeys(SHARE_CLASS.sub("", n).strip() for n in names if n and n.strip()):
+            response = self._get(f"{COMPANIES_HOUSE_API_URL}/search/companies", params={"q": query, "items_per_page": 50})
+            if response.status_code in (401, 403):
+                raise CompaniesHouseRequestError(f"Companies House rejected the API key (HTTP {response.status_code})")
+            if response.status_code != 200:
+                continue
+            for item in response.json().get("items") or []:
+                if item.get("company_status") == "active" and item.get("company_type") == "plc":
+                    plcs[item.get("company_number")] = normalise_name(item.get("title", ""))
+        for name in names:
+            wanted = normalise_name(SHARE_CLASS.sub("", name or ""))
+            if wanted.endswith(" plc"):
+                found = {number for number, title in plcs.items() if title == wanted}
+            elif len(wanted) >= 25:
+                found = {number for number, title in plcs.items() if title.startswith(wanted)}
+            else:
+                continue
+            if found:
+                return found.pop() if len(found) == 1 else None
+        return None
 
     def fetch_pdf(self, company_number: str, filing: AccountsFiling) -> Optional[str]:
         """The filing's PDF, cached for good; None when Companies House has no PDF for it."""
@@ -130,9 +141,13 @@ class CompaniesHouseClient:
         return path
 
 
+SHARE_CLASS = re.compile(r"\s+(?:ord|ords|ordinary(?: shares?)?|shs)\.?$", re.I)   # Yahoo: 'British & American Ord'
+
+
 def normalise_name(name: str) -> str:
     """A company name for comparison: lower case, '&' as 'and', no punctuation, 'public limited company' and 'p.l.c.'
-    as 'plc', single spaces."""
+    as 'plc', a leading or trailing 'the' dropped ('... COMPANY (THE)'), single spaces."""
     text = re.sub(r"\bp\s*\.?\s*l\s*\.?\s*c\b\.?", "plc", name.lower().replace("&", " and "))
     text = re.sub(r"\bpublic limited company\b", "plc", text)
-    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", text)).strip()
+    text = re.sub(r"\s+", " ", re.sub(r"[^a-z0-9 ]", " ", text)).strip()
+    return re.sub(r"^the |\bthe$", "", text).strip()

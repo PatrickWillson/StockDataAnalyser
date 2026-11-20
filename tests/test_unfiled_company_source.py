@@ -262,7 +262,8 @@ def test_a_london_listing_takes_the_filed_accounts_after_the_announcements():
     rns, ch, eulerpool = FakeRns(), FakeCompaniesHouse(), FakeEulerpool()
     f = UnfiledCompanySource(LondonYahoo(), eulerpool, rns, ch).fetch_fundamentals("HBH.LSE")
     name, known, currency, wanted, held = ch.asked[0]
-    assert "2023-02-28" in known and currency == "EUR" and wanted == 10 - len(known)
+    assert name[0] == LONDON.info.get("longName", name[0]) and "2023-02-28" in known and currency == "EUR"
+    assert wanted == 10 - len(known)
     assert held == "Yahoo Finance's statements and the RNS results announcements"
     by_end = {r.period_end: r for r in f.annual_income_statements}
     assert by_end["2022-02-28"].net_income == 80e6 and by_end["2021-02-28"].net_income == 70e6

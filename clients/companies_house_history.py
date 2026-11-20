@@ -176,9 +176,10 @@ class CompaniesHouseHistorySource:
         if not known or wanted_years <= 0:
             return CompaniesHouseHistory()
         try:
-            number = self.client.company_number(name)
+            names = (name,) if isinstance(name, str) else tuple(n for n in name if n)
+            number = self.client.company_number(*names)
             if number is None:
-                return not_used(f"no single active plc named {name!r} at Companies House")
+                return not_used(f"no single active plc named {names[0] if names else ''!r} at Companies House")
             filings = filings_to_read(self.client.accounts_filings(number), known, wanted_years)
             readings = [r for f in filings if (r := self._reading(number, f)) is not None]
         except DataSourceError as e:

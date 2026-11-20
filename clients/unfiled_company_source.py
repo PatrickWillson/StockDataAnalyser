@@ -85,7 +85,7 @@ class UnfiledCompanySource:
                 annual = with_rns
         if self.companies_house is not None and london and len(annual.income_statements) < FULL_HISTORY_YEARS:
             held = "Yahoo Finance's statements" + (" and the RNS results announcements" if added else "")
-            with_ch = self._with_companies_house(profile, annual, notes, held)
+            with_ch = self._with_companies_house(profile, annual, notes, held, (yahoo.info or {}).get("shortName"))
             if with_ch is not None:
                 added.append(("Companies House filed accounts", len(with_ch.income_statements) - len(annual.income_statements)))
                 annual = with_ch
@@ -151,14 +151,16 @@ class UnfiledCompanySource:
                                                               key=lambda r: r.period_end, reverse=True)),
                        shares_by_year={**history.shares_by_year, **annual.shares_by_year})
 
-    def _with_companies_house(self, profile, annual, notes: List[str], held: str):
+    def _with_companies_house(self, profile, annual, notes: List[str], held: str, short_name: Optional[str] = None):
         """
         The years before the held ones from the accounts filed at Companies House, read by OCR and gated against the
         held years (clients/companies_house_history.py; GRAHAM_METHODOLOGY §8.12: the reports issued to the
         stockholders); None when not used.
         """
         known = {row.period_end: row.net_income for row in annual.income_statements if row.net_income is not None}
-        history = self.companies_house.history(profile.name or "", known, annual.currency,
+        # Yahoo's long name, then its short one (an investment trust's long name can be a share class: 'British &
+        # American Ord'; its short name is cut at 31 characters)
+        history = self.companies_house.history((profile.name or "", short_name or ""), known, annual.currency,
                                                FULL_HISTORY_YEARS - len(annual.income_statements), held)
         notes.extend(history.notes)
         if not history.income_statements:
